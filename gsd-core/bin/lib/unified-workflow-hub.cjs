@@ -3,8 +3,8 @@
  * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.0.
  *
  * Unifies the fragmented command landscape into 6 essential manual commands
- * plus 1 autonomous autopilot, with seamless runtime prefix normalization
- * and dedicated interactive /gsd:review --fix integration.
+ * plus 1 autonomous autopilot, with seamless runtime prefix normalization,
+ * dedicated interactive /gsd:review --fix integration, and auto-upgrade support.
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -15,8 +15,14 @@ const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs")
 const livingDocs = require("./living-docs-engine.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const autoUpgrade = require("./auto-upgrade-engine.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const jitTelemetry = require("./jit-telemetry.cjs");
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+const { runAutoUpgrade } = autoUpgrade;
+const { getTelemetrySummary } = jitTelemetry;
 // ─── Command Name Normalizer ──────────────────────────────────────────────────
 const ALIAS_MAP = {
     // 1. Auto
@@ -51,6 +57,12 @@ const ALIAS_MAP = {
     ship: 'ship',
     release: 'ship',
     pr: 'ship',
+    // 8. Migrate / Upgrade
+    migrate: 'migrate',
+    upgrade: 'migrate',
+    'auto-upgrade': 'migrate',
+    'gsd-migrate': 'migrate',
+    'gsd-upgrade': 'migrate',
 };
 /**
  * Normalizes variations across AI runtime conventions (/gsd:plan, /gsd-plan, $gsd-plan, gsd plan)
@@ -125,7 +137,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
     const planningDir = node_path_1.default.join(cwd, '.planning');
     const hasFixFlag = options.flags?.fix === true || options.args.includes('--fix');
     if (!canonicalName) {
-        throw new Error(`Unknown command "${rawCommand}". Expected one of: auto, status, plan, exec, review, verify, ship`);
+        throw new Error(`Unknown command "${rawCommand}". Expected one of: auto, status, plan, exec, review, verify, ship, migrate`);
     }
     switch (canonicalName) {
         case 'auto':
@@ -135,13 +147,19 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
                 message: 'GSD 2.0 Autopilot active. Running phase loop with guardrails.',
             };
-        case 'status':
+        case 'status': {
+            const telemetry = getTelemetrySummary(planningDir);
+            const teleMsg = telemetry.totalInvocations > 0
+                ? ` | JIT Efficiency: ${telemetry.averageEfficiencyPct}% tokens saved (${telemetry.totalTokensSaved} tokens).`
+                : '';
             return {
                 command: 'status',
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
-                message: 'GSD 2.0 Status analyzed. Context and phase roadmap verified.',
+                data: { telemetry },
+                message: `GSD 2.0 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
+        }
         case 'plan':
             return {
                 command: 'plan',
@@ -183,6 +201,16 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 nextStep: 'advance to next milestone or phase',
                 message: 'Release prepared, branch cleaned and ready for PR merge.',
             };
+        case 'migrate': {
+            const report = runAutoUpgrade(planningDir, cwd);
+            return {
+                command: 'migrate',
+                action: 'UPGRADE_LEGACY_PROJECT',
+                nextStep: 'run /gsd:status to review modernized roadmap and intelligence graph',
+                data: report,
+                message: report.message,
+            };
+        }
     }
 }
 module.exports = {

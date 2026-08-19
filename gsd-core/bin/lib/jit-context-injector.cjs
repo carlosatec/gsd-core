@@ -14,6 +14,9 @@ const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs")
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const jitTelemetry = require("./jit-telemetry.cjs");
+const { recordJitInvocation } = jitTelemetry;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function estimateTokens(text) {
     return Math.ceil(text.length / 4);
@@ -141,9 +144,23 @@ function assembleJitContext(options) {
         outputLines.push('</jit_context>');
     }
     const markdownBlock = outputLines.join('\n');
+    const estimatedTokensCount = estimateTokens(markdownBlock);
+    // Estimate full repository monolithic token weight
+    let totalRepoChars = 0;
+    for (const f of Object.values(graph.files)) {
+        totalRepoChars += (f.linesCount || 10) * 40;
+    }
+    const fullRepoTokens = Math.max(estimateTokens(String(totalRepoChars)), estimatedTokensCount * 5);
+    // Record Telemetry
+    try {
+        recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens);
+    }
+    catch {
+        // Non-blocking telemetry
+    }
     return {
         targetFiles,
-        estimatedTokens: estimateTokens(markdownBlock),
+        estimatedTokens: estimatedTokensCount,
         neighborSymbols: allNeighbors,
         applicableTypes,
         applicableDecisions,

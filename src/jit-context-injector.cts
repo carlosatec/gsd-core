@@ -12,6 +12,9 @@ import { platformReadSync } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import jitTelemetry = require('./jit-telemetry.cjs');
+const { recordJitInvocation } = jitTelemetry;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,10 +193,25 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   }
 
   const markdownBlock = outputLines.join('\n');
+  const estimatedTokensCount = estimateTokens(markdownBlock);
+
+  // Estimate full repository monolithic token weight
+  let totalRepoChars = 0;
+  for (const f of Object.values(graph.files) as Array<{ linesCount?: number }>) {
+    totalRepoChars += (f.linesCount || 10) * 40;
+  }
+  const fullRepoTokens = Math.max(estimateTokens(String(totalRepoChars)), estimatedTokensCount * 5);
+
+  // Record Telemetry
+  try {
+    recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens);
+  } catch {
+    // Non-blocking telemetry
+  }
 
   return {
     targetFiles,
-    estimatedTokens: estimateTokens(markdownBlock),
+    estimatedTokens: estimatedTokensCount,
     neighborSymbols: allNeighbors,
     applicableTypes,
     applicableDecisions,
