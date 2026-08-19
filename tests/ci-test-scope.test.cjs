@@ -324,11 +324,11 @@ describe('ci-test-scope superset invariant (#494, narrowed)', () => {
   });
 
   test('B2: docs locale dir change: code_changed is false (docs skip matrix)', () => {
-    const result = scopeFor(['docs/ja-JP/USAGE.md']);
+    const result = scopeFor(['docs/pt-BR/USAGE.md']);
     assert.strictEqual(result.code_changed, false,
-      `expected code_changed=false for docs/ja-JP/** change, got: ${JSON.stringify(result)}`);
+      `expected code_changed=false for docs/pt-BR/** change, got: ${JSON.stringify(result)}`);
     assert.strictEqual(result.product_changed, false,
-      `expected product_changed=false for docs/ja-JP/** change, got: ${JSON.stringify(result)}`);
+      `expected product_changed=false for docs/pt-BR/** change, got: ${JSON.stringify(result)}`);
   });
 
   test('B3: commands/** change selects docs-parity-live-registry', () => {

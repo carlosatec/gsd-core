@@ -4,7 +4,7 @@
 
 **Git. Ship. Done.**
 
-**English** · [Português](README.pt-BR.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md)
+**English** · [Português](README.pt-BR.md)
 
 **A light-weight meta-prompting, context engineering, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
@@ -34,6 +34,18 @@ Each milestone repeats the same five-step loop, one phase at a time:
 3. **Execute** — run plans in parallel waves; each executor starts with a clean 200k-token context
 4. **Verify** — walk through what was built; diagnose and fix before declaring done
 5. **Ship** — create the PR, archive the phase, repeat for the next one
+
+---
+
+## GSD 2.0: Living Documentation & AST Codebase Intelligence
+
+### Living, incremental documentation verified against real code:
+
+- **Continuous Post-Commit Sync:** With each executed task, architecture maps, APIs, routes, interfaces, and technical decisions are automatically updated in `.planning/intel/` and `.planning/codebase/`.
+- **Native AST Code Topology:** The AI navigates a real-time static code graph generated directly from TypeScript/JavaScript files—eliminating hallucinated imports or wrong method signatures.
+- **Drift Prevention & Doc Verification:** A documentation linter ensures that documented schemas, routes, and interfaces match 100% of the active running codebase.
+- **Decision Rationale & ADRs:** The system preserves the *why* behind architectural decisions, enabling any subagent or human engineer to understand past context before refactoring.
+- **Surgical Context Injection (JIT):** Instead of stuffing monolithic 50KB prompts, GSD 2.0 injects only the decisions and contracts relevant to the exact files being edited.
 
 ---
 
@@ -82,7 +94,7 @@ New here? Follow [Your first project](docs/tutorials/your-first-project.md) for 
 - [The phase loop](docs/explanation/the-phase-loop.md)
 - [Architecture](docs/ARCHITECTURE.md)
 
-Full index: [docs/README.md](docs/README.md). Other languages: [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md) · [Português](README.pt-BR.md) · [简体中文](README.zh-CN.md).
+Full index: [docs/README.md](docs/README.md) · [Português](README.pt-BR.md).
 
 ---
 

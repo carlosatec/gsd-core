@@ -22,6 +22,10 @@ import { platformWriteSync, platformReadSync, platformEnsureDir } from './shell-
 import capabilityStateMod = require('./capability-state.cjs');
 const { isCapabilityActive } = capabilityStateMod;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import codebaseAst = require('./codebase-ast-analyzer.cjs');
+const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, querySymbolLocations, queryFileDependencies } = codebaseAst;
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const INTEL_DIR = '.planning/intel';
@@ -32,6 +36,7 @@ const INTEL_FILES: Record<string, string> = {
   deps: 'dependency-graph.json',
   arch: 'arch-decisions.json',
   stack: 'stack.json',
+  graph: 'codebase-graph.json',
 };
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -688,6 +693,55 @@ function intelExtractExports(filePath: string): IntelExtractExportsResult {
   return { file: filePath, exports: [...exports], method };
 }
 
+/**
+ * Builds or refreshes the native AST Codebase Graph and writes to .planning/intel/codebase-graph.json.
+ */
+function intelBuildGraph(planningDir: string): unknown {
+  const cwd = path.dirname(planningDir);
+  const graph = buildCodebaseGraph(cwd);
+  const savedPath = saveCodebaseGraph(planningDir, graph);
+  return {
+    built: true,
+    file: savedPath,
+    stats: graph.stats,
+  };
+}
+
+/**
+ * Queries symbol definitions across the codebase AST graph.
+ */
+function intelQuerySymbol(symbolName: string, planningDir: string): unknown {
+  let graph = loadCodebaseGraph(planningDir);
+  if (!graph) {
+    const cwd = path.dirname(planningDir);
+    graph = buildCodebaseGraph(cwd);
+    saveCodebaseGraph(planningDir, graph);
+  }
+  const results = querySymbolLocations(graph, symbolName);
+  return {
+    symbol: symbolName,
+    totalMatches: results.length,
+    locations: results,
+  };
+}
+
+/**
+ * Queries incoming and outgoing dependencies for a specific file.
+ */
+function intelQueryDeps(targetFile: string, planningDir: string): unknown {
+  let graph = loadCodebaseGraph(planningDir);
+  if (!graph) {
+    const cwd = path.dirname(planningDir);
+    graph = buildCodebaseGraph(cwd);
+    saveCodebaseGraph(planningDir, graph);
+  }
+  const deps = queryFileDependencies(graph, targetFile);
+  return {
+    file: targetFile,
+    dependencies: deps,
+  };
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 export = {
@@ -697,6 +751,9 @@ export = {
   intelStatus,
   intelDiff,
   saveRefreshSnapshot,
+  intelBuildGraph,
+  intelQuerySymbol,
+  intelQueryDeps,
 
   // CLI subcommands
   intelSnapshot,
@@ -713,3 +770,4 @@ export = {
   INTEL_FILES,
   INTEL_DIR,
 };
+

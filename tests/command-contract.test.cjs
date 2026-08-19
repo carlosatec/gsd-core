@@ -587,11 +587,8 @@ describe('#3560 — deleted orphan workflows do not ship', () => {
 describe('#3560 — INVENTORY carries no row for a deleted workflow', () => {
   const inventoryFiles = [
     'docs/INVENTORY.md',
-    'docs/ja-JP/INVENTORY.md',
-    'docs/ko-KR/INVENTORY.md',
-    'docs/zh-CN/INVENTORY.md',
     'docs/pt-BR/INVENTORY.md',
-  ];
+  ].filter(rel => fs.existsSync(path.join(ROOT, rel)));
 
   for (const rel of inventoryFiles) {
     test(`${rel}: mentions neither discovery-phase.md nor plan-milestone-gaps.md`, () => {

@@ -69,6 +69,9 @@ interface IntelModule {
   intelApiSurface(planningDir: string): unknown;
   intelPatchMeta(filePath: string): unknown;
   intelExtractExports(filePath: string): unknown;
+  intelBuildGraph?(planningDir: string): unknown;
+  intelQuerySymbol?(symbolName: string, planningDir: string): unknown;
+  intelQueryDeps?(filePath: string, planningDir: string): unknown;
 }
 
 interface CoreModule {
@@ -106,7 +109,7 @@ function routeIntelCommand({ args, cwd, raw, error, _intel, _core }: RouteIntelC
     args,
     // Alphabetical for stable unknownMessage text; the integration test asserts
     // inclusion of all 9 subcommands, not order.
-    subcommands: ['api-surface', 'diff', 'extract-exports', 'patch-meta', 'query', 'snapshot', 'status', 'update', 'validate'],
+    subcommands: ['api-surface', 'deps', 'diff', 'extract-exports', 'graph', 'patch-meta', 'query', 'snapshot', 'status', 'symbol', 'update', 'validate'],
     handlers: {
       query: () => {
         const term = args[2];
@@ -135,6 +138,26 @@ function routeIntelCommand({ args, cwd, raw, error, _intel, _core }: RouteIntelC
       snapshot: () => {
         const planningDir = path.join(cwd, '.planning');
         c.output(intel.intelSnapshot(planningDir), raw);
+      },
+      graph: () => {
+        const planningDir = path.join(cwd, '.planning');
+        c.output(intel.intelBuildGraph ? intel.intelBuildGraph(planningDir) : null, raw);
+      },
+      symbol: () => {
+        const sym = args[2];
+        if (!sym) {
+          return makeInvalidArgs('symbol', 'Usage: gsd-tools intel symbol <symbolName>', ERROR_REASON.USAGE);
+        }
+        const planningDir = path.join(cwd, '.planning');
+        c.output(intel.intelQuerySymbol ? intel.intelQuerySymbol(sym, planningDir) : null, raw);
+      },
+      deps: () => {
+        const targetFile = args[2];
+        if (!targetFile) {
+          return makeInvalidArgs('file-path', 'Usage: gsd-tools intel deps <filePath>', ERROR_REASON.USAGE);
+        }
+        const planningDir = path.join(cwd, '.planning');
+        c.output(intel.intelQueryDeps ? intel.intelQueryDeps(targetFile, planningDir) : null, raw);
       },
       'patch-meta': () => {
         const filePath = args[2];

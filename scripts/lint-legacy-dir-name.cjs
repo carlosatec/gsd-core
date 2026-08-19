@@ -49,10 +49,7 @@ const REPO_ROOT = process.env.GSD_LINT_LEGACY_REPO_ROOT
 
 const ALLOWLIST_FILES = new Set([
   'CHANGELOG.md',
-  'README.ja-JP.md',
-  'README.ko-KR.md',
   'README.pt-BR.md',
-  'README.zh-CN.md',
 ]);
 
 const ALLOWLIST_DIR_PREFIXES = [
@@ -60,10 +57,7 @@ const ALLOWLIST_DIR_PREFIXES = [
   // CHANGELOG on release — like CHANGELOG itself, they should not be swept by
   // rename PRs and may legitimately contain the legacy token in historical prose.
   '.changeset/',
-  'docs/ja-JP/',
-  'docs/ko-KR/',
   'docs/pt-BR/',
-  'docs/zh-CN/',
 ];
 
 function isAllowlisted(relPath) {

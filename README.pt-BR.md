@@ -4,7 +4,7 @@
 
 **Git. Ship. Done.**
 
-[English](README.md) · **Português** · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md)
+[English](README.md) · **Português**
 
 **Um sistema leve de meta-prompting, engenharia de contexto e desenvolvimento orientado a especificações para Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
@@ -34,6 +34,18 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 3. **Execute** — executar planos em ondas paralelas; cada executor começa com um contexto limpo de 200k tokens
 4. **Verify** — percorrer o que foi construído; diagnosticar e corrigir antes de declarar conclusão
 5. **Ship** — criar o PR, arquivar a fase e repetir para a próxima
+
+---
+
+## GSD 2.0: Documentação Viva e Inteligência AST
+
+### A documentação no GSD 2.0 é viva, incremental e verificada contra o código real:
+
+- **Sincronização Contínua Pós-Commit:** A cada tarefa executada, a arquitetura, rotas, interfaces e decisões técnicas são atualizadas automaticamente em `.planning/intel/` e `.planning/codebase/`.
+- **Análise Topológica AST Nativa:** A IA não adivinha nomes ou contratos — ela navega por um grafo estático de símbolos gerado diretamente do código TypeScript/JavaScript em tempo real.
+- **Verificação Estrita Contra Defasagem:** Um linter de documentação valida se as descrições de rotas, esquemas e dependências correspondem 100% ao código em execução, eliminando documentações obsoletas.
+- **Memória Rationale e Decisões (ADRs):** O sistema registra o *porquê* de cada escolha técnica, permitindo que qualquer subagente ou desenvolvedor compreenda a intenção original antes de refatorar.
+- **Injeção Cirúrgica de Contexto (JIT):** Em vez de sobrecarregar a IA com prompts monolíticos, o GSD 2.0 injeta apenas as decisões e contratos relacionados ao arquivo exato que está sendo modificado.
 
 ---
 
@@ -80,7 +92,7 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 - [O ciclo de fases](docs/pt-BR/explanation/the-phase-loop.md)
 - [Arquitetura](docs/pt-BR/ARCHITECTURE.md)
 
-Índice completo: [docs/pt-BR/README.md](docs/pt-BR/README.md). Outros idiomas: [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md) · [Português](README.pt-BR.md) · [简体中文](README.zh-CN.md).
+Índice completo: [docs/pt-BR/README.md](docs/pt-BR/README.md) · [English](docs/README.md).
 
 ---
 
