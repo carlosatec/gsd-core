@@ -12,29 +12,40 @@ O **GSD (Get Shit Done) 2.1 Universal** é um sistema avançado de meta-promptin
 | **2. 💉 Injeção Cirúrgica de Contexto (JIT)** | Injeta apenas contratos e assinaturas dos arquivos vizinhos relevantes para a tarefa. | Economiza até 85% de tokens e impede que a IA perca o contexto ou sofra alucinações. |
 | **3. 🛡️ Pre-Flight Guardrails & Self-Healing** | Valida quebras de contratos antes de editar e corrige automaticamente falhas de testes. | Impede que a IA remova exportações essenciais silenciosamente e auto-repara bugs em até 3 tentativas. |
 | **4. 🚀 Suíte Enxuta (6+1 Comandos)** | Interface simplificada focada em 6 operações manuais + 1 modo autônomo. | Elimina a confusão de 70 comandos legados, oferecendo controle total com comandos intuitivos. |
-| **5. 🔄 Auto-Upgrade & Telemetria JIT** | Assistente `/gsd:migrate` para modernizar projetos legados e rastreamento de tokens poupados em tempo real. | Migra qualquer projeto antigo em segundos e exibe métricas de eficiência no `/gsd:status`. |
+| **5. 🔄 Auto-Upgrade, i18n & Telemetria JIT** | Assistente `/gsd:migrate`, suporte bilíngue (`EN` / `PT-BR`) nas descrições de autocomplete e métricas de tokens. | Migra qualquer projeto antigo em segundos e adapta o menu da IDE ao seu idioma nativo. |
+
+---
+
+## 📦 Como Instalar & Selecionar o Idioma
+
+Você pode instalar o GSD no seu agente favorito escolhendo o idioma das descrições do menu (`en` ou `pt-br`):
+
+### 1. Instalação com Idioma em Português BR (Recomendado para desenvolvedores no Brasil)
+```bash
+npx gsd-core --antigravity --global --lang=pt-br
+```
+
+### 2. Instalação com Idioma Padrão em Inglês
+```bash
+npx gsd-core --antigravity --global --lang=en
+```
+
+> **Nota Importante:** Os nomes dos comandos permanecem **sempre em inglês** (ex: `gsd-plan`, `gsd-exec`, `gsd-status`), garantindo compatibilidade universal. Apenas as **descrições explicativas** exibidas no autocomplete da IDE são traduzidas.
 
 ---
 
 ## 🧭 Interface Unificada (6 Comandos Chave + 1 Piloto Automático + Migração)
 
-Você pode interagir com o GSD no nível de automação que preferir:
-
-### 🤖 Modo Piloto Automático (`/gsd:auto`)
-```bash
-/gsd:auto              # Executa todo o ciclo de ponta a ponta com guardrails e paradas apenas em checkpoints
-```
-
-### 🎮 Os 6 Comandos Chave de Controle Manual
-| Comando | O que ele faz |
-| :--- | :--- |
-| **`/gsd:status`** | Diagnostica a posição no `STATE.md`, exibe métricas de telemetria JIT e indica a próxima ação. |
-| **`/gsd:plan`** | Cria o plano de tarefas atômicas (`PLAN.md`) organizado em ondas com critérios de verificação. |
-| **`/gsd:exec`** | Executa o plano com paralelização de ondas, JIT context e commits atômicos por tarefa. |
-| **`/gsd:review`** | Revisa qualidade de código, segurança e drift documental (`--fix` para auto-correção). |
-| **`/gsd:verify`** | Conduz validação conversacional (UAT) e checa conformidade com os requisitos da fase. |
-| **`/gsd:ship`** | Prepara o Pull Request, roda testes de integração e finaliza a release. |
-| **`/gsd:migrate`** | *(Novo)* Moderniza um projeto legado ou sem AST para o formato GSD 2.1 Universal instantaneamente. |
+| Comando (Nome Universal) | Descrição em Português (`--lang=pt-br`) | Descrição em Inglês (`--lang=en`) |
+| :--- | :--- | :--- |
+| **`/gsd:status`** | Verificar progresso do projeto, drift de contexto e economia de tokens JIT | Check project progress, context drift, and JIT token efficiency |
+| **`/gsd:plan`** | Criar plano de execução detalhado da fase com ciclo de verificação | Create detailed phase execution plan with verification loop |
+| **`/gsd:exec`** | Executar planos da fase com paralelização em ondas e commits atômicos | Execute phase plans with wave-based parallelism and atomic commits |
+| **`/gsd:review`** | Revisar arquivos alterados contra bugs, segurança e auto-corrigir com `--fix` | Review changed files for bugs, security and auto-fix with `--fix` |
+| **`/gsd:verify`** | Validar funcionalidades através de UAT conversacional e testes de aceitação | Validate built features through conversational UAT and acceptance tests |
+| **`/gsd:ship`** | Preparar branch de release, executar revisão e preparar para merge | Prepare release branch, run review and prepare for PR merge |
+| **`/gsd:auto`** | Executar ciclo autônomo de fases de ponta a ponta com guardrails de segurança | Run end-to-end autonomous phase cycle with pre-flight safety checkpoints |
+| **`/gsd:migrate`** | Modernizar projeto legado para a arquitetura GSD 2.1 Universal | Upgrade legacy project to GSD 2.1 Universal architecture |
 
 > *Dica: Os comandos aceitam tanto `/gsd:comando` quanto `/gsd-comando` ou `$gsd-comando`.*
 

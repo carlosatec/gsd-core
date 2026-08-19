@@ -47,6 +47,8 @@ import { isGlobalScope } from './install-scope.cjs';
 // without this module reaching upward into bin/install.js (ADR-1508).
 import installEffortResolver = require('./install-effort-resolver.cjs');
 const { readGsdEffectiveEffortConfig, resolveInstallTimeEffort, _getGsdEffortCatalog } = installEffortResolver;
+import i18nDescriptions = require('./i18n-descriptions.cjs');
+const { getCommandDescription, normalizeLanguage } = i18nDescriptions;
 
 // #1383: resolve GSD's version WITHOUT a top-level
 // `require('../../../package.json')`. That require ran at module load on every
@@ -966,7 +968,14 @@ function convertClaudeCommandToAntigravitySkill(content, skillName, _runtime = n
   if (!frontmatter) return converted;
 
   const name = skillName || extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
+  let description = extractFrontmatterField(frontmatter, 'description') || '';
+
+  // Localized description if GSD_LANG is configured
+  const currentLang = normalizeLanguage(process.env.GSD_LANG);
+  const localized = getCommandDescription(name, currentLang);
+  if (localized) {
+    description = localized;
+  }
 
   // #2876: quote description so YAML flow indicators in the source
   // (e.g. `[BETA] …`) don't break downstream frontmatter parsers.
