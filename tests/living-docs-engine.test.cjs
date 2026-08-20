@@ -10,7 +10,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const livingDocs = require('../gsd-core/bin/lib/living-docs-engine.cjs');
 const {
   generateArchitectureDoc,
@@ -149,7 +149,7 @@ describe('living-docs-engine — syncLivingDocs & verifyDocsAgainstCode', () => 
       assert.strictEqual(failedVerify.valid, false);
       assert.ok(failedVerify.discrepancies.some(d => d.type === 'missing_symbol' && d.detail.includes('processPayment')));
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 });

@@ -10,7 +10,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const guardrails = require('../gsd-core/bin/lib/preflight-guardrails.cjs');
 const { runPreFlightChecks, executeWithSelfHealing } = guardrails;
 
@@ -57,7 +57,7 @@ describe('preflight-guardrails', () => {
       assert.strictEqual(report.valid, false);
       assert.ok(report.violations.some(v => v.rule === 'CONTRACT_BREAK' && v.message.includes('login')));
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 
@@ -83,7 +83,8 @@ describe('preflight-guardrails', () => {
 
     const result = await executeWithSelfHealing(runFn, repairFn, 3);
     assert.strictEqual(result.success, true);
-    assert.strictEqual(result.attempts, 2);
     assert.strictEqual(result.repaired, true);
+    assert.strictEqual(result.attempts, 2);
+    assert.strictEqual(callCount, 2);
   });
 });

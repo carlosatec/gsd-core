@@ -48,6 +48,9 @@ const ONE_SHOT_MARKERS: RegExp[] = [
   /(?:^|\s)--watch=false\b/,
   /(?:^|\s)--ci\b/, // jest --ci
   /^\s*CI=/, // already forced into CI/run mode via env
+  /(?:^|\s)cargo\s+test\b/, // cargo test (one-shot unless cargo-watch)
+  /(?:^|\s)go\s+test\b/, // go test
+  /(?:^|\s)flutter\s+test\b/, // flutter test
 ];
 
 /** True if the command already runs one-shot (so normalization is a no-op). */
@@ -60,6 +63,9 @@ function isAlreadyOneShot(cmd: string): boolean {
 // are not treated as the runner and are never mangled.
 const VITEST_TOKEN = /(?:^|\s)vitest(?=\s|$)/;
 const JEST_TOKEN = /(?:^|\s)jest(?=\s|$)/;
+const PYTEST_WATCH_TOKEN = /(?:^|\s)(?:ptw|pytest-watch)(?=\s|$)/;
+const CARGO_WATCH_TOKEN = /(?:^|\s)cargo\s+watch\b/;
+const GOW_TOKEN = /(?:^|\s)gow\b/;
 
 /**
  * Linear-time detection of a package-manager `test` script invocation
@@ -152,15 +158,33 @@ function normalizeTestCommand(rawCmd: string, cwd: string): string {
   if (cmd.length > MAX_COMMAND_LENGTH) return rawCmd; // bound all downstream scanning
   if (isAlreadyOneShot(cmd)) return rawCmd;
 
+  // 1. Python pytest / pytest-watch normalizations
+  if (PYTEST_WATCH_TOKEN.test(cmd)) {
+    return cmd.replace(PYTEST_WATCH_TOKEN, 'pytest').replace(/(?:^|\s)(?:-f|--looponfail)\b/g, ' ').trim();
+  }
+  if (/(?:^|\s)pytest\b/.test(cmd) && /(?:^|\s)(?:-f|--looponfail)\b/.test(cmd)) {
+    return cmd.replace(/(?:^|\s)(?:-f|--looponfail)\b/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
+
+  // 2. Rust cargo watch normalizations
+  if (CARGO_WATCH_TOKEN.test(cmd)) {
+    return cmd.replace(/cargo\s+watch\s+(?:-x\s+)?test/g, 'cargo test').trim();
+  }
+
+  // 3. Go watch (gow) normalizations
+  if (GOW_TOKEN.test(cmd)) {
+    return cmd.replace(/gow\s+(?:-c\s+)?test/g, 'go test').trim();
+  }
+
   const isScript = isScriptInvocation(cmd);
 
-  // 1. Direct vitest invocation (`vitest`, `npx vitest`, `pnpm exec vitest`, …):
+  // 4. Direct vitest invocation (`vitest`, `npx vitest`, `pnpm exec vitest`, …):
   //    force the explicit one-shot `run` command and drop any bare --watch.
   if (VITEST_TOKEN.test(cmd) && !isScript) {
     return stripWatchFlags(cmd).replace(/(^|\s)vitest(?=\s|$)/, '$1vitest run');
   }
 
-  // 2. Direct jest invocation with an explicit watch flag: make it one-shot.
+  // 5. Direct jest invocation with an explicit watch flag: make it one-shot.
   if (JEST_TOKEN.test(cmd) && !isScript) {
     if (/(?:^|\s)--watch(?:All)?\b/.test(cmd)) {
       return `${stripWatchFlags(cmd)} --watchAll=false`;
@@ -168,7 +192,7 @@ function normalizeTestCommand(rawCmd: string, cwd: string): string {
     return rawCmd; // jest without --watch already runs once
   }
 
-  // 3. Package-manager `test` script invocation: the runner is inside
+  // 6. Package-manager `test` script invocation: the runner is inside
   //    package.json. If it resolves to a watch runner, force CI/run mode via
   //    the CI env — robust across --dir and pnpm/yarn `--` propagation quirks
   //    (vitest & jest both switch to run/non-interactive mode when CI is set).
@@ -184,6 +208,37 @@ function normalizeTestCommand(rawCmd: string, cwd: string): string {
 }
 
 /**
+ * Detects the native test runner command for a project based on repository manifests.
+ */
+function detectProjectTestCommand(cwd: string): string {
+  try {
+    if (fs.existsSync(path.join(cwd, 'package.json'))) {
+      return 'npm test';
+    }
+    if (
+      fs.existsSync(path.join(cwd, 'pytest.ini')) ||
+      fs.existsSync(path.join(cwd, 'pyproject.toml')) ||
+      fs.existsSync(path.join(cwd, 'setup.cfg')) ||
+      fs.existsSync(path.join(cwd, 'requirements.txt'))
+    ) {
+      return 'pytest';
+    }
+    if (fs.existsSync(path.join(cwd, 'Cargo.toml'))) {
+      return 'cargo test';
+    }
+    if (fs.existsSync(path.join(cwd, 'go.mod'))) {
+      return 'go test ./...';
+    }
+    if (fs.existsSync(path.join(cwd, 'pubspec.yaml'))) {
+      return 'flutter test';
+    }
+  } catch {
+    // Fallback
+  }
+  return 'npm test';
+}
+
+/**
  * CLI handler for `gsd-tools query normalize-test-command <raw-cmd>`: prints the
  * normalized one-shot command to stdout (the gates capture it via `$(…)`).
  */
@@ -193,6 +248,7 @@ function cmdNormalizeTestCommand(cwd: string, rawCmd: string | undefined): void 
 
 export = {
   normalizeTestCommand,
+  detectProjectTestCommand,
   cmdNormalizeTestCommand,
   isAlreadyOneShot,
 };

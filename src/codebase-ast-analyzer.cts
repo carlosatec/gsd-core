@@ -96,6 +96,7 @@ interface CodebaseGraph {
   files: Record<string, FileAnalysisResult>;
   symbolIndex: Record<string, string[]>;
   reverseDependencies: Record<string, string[]>;
+  pageRankScores: Record<string, number>;
   routes: ExtractedRoute[];
 }
 
@@ -1482,6 +1483,40 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
     }
   }
 
+  // Compute PageRank scores (damping factor = 0.85, 20 iterations)
+  const pageRankScores: Record<string, number> = Object.create(null);
+  const fileKeys = Object.keys(filesMap);
+  const N = fileKeys.length;
+  if (N > 0) {
+    const initialScore = 1 / N;
+    for (const k of fileKeys) {
+      pageRankScores[k] = initialScore;
+    }
+
+    const d = 0.85;
+    const iterations = 20;
+
+    for (let it = 0; it < iterations; it++) {
+      const nextScores: Record<string, number> = Object.create(null);
+      for (const k of fileKeys) {
+        let rankSum = 0;
+        const callers = reverseDependencies[k] || [];
+        for (const caller of callers) {
+          const callerData = filesMap[caller];
+          const outDegree = callerData ? callerData.localDeps.length : 0;
+          if (outDegree > 0) {
+            rankSum += (pageRankScores[caller] || initialScore) / outDegree;
+          }
+        }
+        nextScores[k] = (1 - d) / N + d * rankSum;
+      }
+
+      for (const k of fileKeys) {
+        pageRankScores[k] = Number((nextScores[k] || 0).toFixed(6));
+      }
+    }
+  }
+
   const duration = Date.now() - startTime;
 
   let totalSymbols = 0;
@@ -1492,7 +1527,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
   }
 
   return {
-    version: '2.1.0',
+    version: '2.2.0',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     root: rootDir,
@@ -1506,6 +1541,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
     files: filesMap,
     symbolIndex,
     reverseDependencies,
+    pageRankScores,
     routes: allRoutes,
   };
 }
@@ -1566,11 +1602,23 @@ function loadCodebaseGraph(planningDir: string): CodebaseGraph | null {
   }
 }
 
+function queryTopCentralFiles(
+  graph: CodebaseGraph,
+  limit: number = 10
+): Array<{ file: string; score: number }> {
+  const scores = graph.pageRankScores || {};
+  return Object.entries(scores)
+    .map(([file, score]) => ({ file, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
 export = {
   analyzeSourceFile,
   buildCodebaseGraph,
   querySymbolLocations,
   queryFileDependencies,
+  queryTopCentralFiles,
   saveCodebaseGraph,
   loadCodebaseGraph,
 };

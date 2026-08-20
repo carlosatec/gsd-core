@@ -26,6 +26,33 @@ function runPreFlightChecks(ctx) {
     const activeGraph = graph;
     const violations = [];
     const pathExistsCache = new Map();
+    // Detect project root modules for Go and Rust
+    let goRootModule;
+    let rustRootCrate;
+    try {
+        const goModPath = node_path_1.default.join(root, 'go.mod');
+        if (node_fs_1.default.existsSync(goModPath)) {
+            const goModContent = node_fs_1.default.readFileSync(goModPath, 'utf8');
+            const modMatch = goModContent.match(/^module\s+(\S+)/m);
+            if (modMatch)
+                goRootModule = modMatch[1].trim();
+        }
+    }
+    catch {
+        // Non-blocking
+    }
+    try {
+        const cargoPath = node_path_1.default.join(root, 'Cargo.toml');
+        if (node_fs_1.default.existsSync(cargoPath)) {
+            const cargoContent = node_fs_1.default.readFileSync(cargoPath, 'utf8');
+            const crateMatch = cargoContent.match(/name\s*=\s*["']([^"']+)["']/);
+            if (crateMatch)
+                rustRootCrate = crateMatch[1].trim();
+        }
+    }
+    catch {
+        // Non-blocking
+    }
     function checkPathExists(p) {
         if (pathExistsCache.has(p))
             return pathExistsCache.get(p);
@@ -33,21 +60,42 @@ function runPreFlightChecks(ctx) {
             node_fs_1.default.existsSync(p + '.ts') ||
             node_fs_1.default.existsSync(p + '.tsx') ||
             node_fs_1.default.existsSync(p + '.cts') ||
+            node_fs_1.default.existsSync(p + '.mts') ||
             node_fs_1.default.existsSync(p + '.js') ||
+            node_fs_1.default.existsSync(p + '.jsx') ||
             node_fs_1.default.existsSync(p + '.cjs') ||
+            node_fs_1.default.existsSync(p + '.mjs') ||
+            node_fs_1.default.existsSync(p + '.py') ||
+            node_fs_1.default.existsSync(p + '.go') ||
+            node_fs_1.default.existsSync(p + '.rs') ||
+            node_fs_1.default.existsSync(p + '.dart') ||
+            node_fs_1.default.existsSync(p + '.css') ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.ts')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.js'));
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.js')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, '__init__.py')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'mod.rs')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'lib.rs'));
         pathExistsCache.set(p, exists);
         return exists;
     }
-    const normalizedModifying = new Set(ctx.filesToModify.map(f => node_path_1.default.normalize(f).replace(/\\/g, '/').replace(/\.[^/.]+$/, '')));
-    for (const relFile of ctx.filesToModify) {
+    const proposedKeys = ctx.proposedCodeMap ? Object.keys(ctx.proposedCodeMap) : [];
+    const allTargetFiles = Array.from(new Set([...ctx.filesToModify, ...proposedKeys]));
+    const normalizedModifying = new Set(allTargetFiles.map(f => node_path_1.default.normalize(f).replace(/\\/g, '/').replace(/\.[^/.]+$/, '')));
+    // Pre-analyze all proposed files in memory to support mutual contract validation
+    const proposedAnalyses = new Map();
+    if (ctx.proposedCodeMap) {
+        for (const [fName, content] of Object.entries(ctx.proposedCodeMap)) {
+            const norm = fName.replace(/\\/g, '/');
+            proposedAnalyses.set(norm, analyzeSourceFile(node_path_1.default.join(root, fName), content));
+        }
+    }
+    for (const relFile of allTargetFiles) {
         const normalized = relFile.replace(/\\/g, '/');
         const existingFile = activeGraph.files[normalized];
         const proposedContent = ctx.proposedCodeMap ? ctx.proposedCodeMap[relFile] || ctx.proposedCodeMap[normalized] : undefined;
         // Check proposed edits if content was provided
         if (proposedContent !== undefined) {
-            const newAnalysis = analyzeSourceFile(node_path_1.default.join(root, relFile), proposedContent);
+            const newAnalysis = proposedAnalyses.get(normalized) || analyzeSourceFile(node_path_1.default.join(root, relFile), proposedContent);
             // Check 1: Contract Break (removing an exported symbol that other files depend on)
             if (existingFile && existingFile.exports) {
                 const currentDeps = activeGraph.reverseDependencies[normalized] || [];
@@ -55,12 +103,29 @@ function runPreFlightChecks(ctx) {
                     const newExportNames = new Set(newAnalysis.exports.map((e) => e.name));
                     for (const oldExp of existingFile.exports) {
                         if (!newExportNames.has(oldExp.name)) {
-                            violations.push({
-                                rule: 'CONTRACT_BREAK',
-                                severity: 'error',
-                                file: normalized,
-                                message: `Export '${oldExp.name}' is imported by ${currentDeps.join(', ')} and cannot be removed without updating callers.`,
-                            });
+                            // Check if all callers in proposedCodeMap have also updated their imports (co-evolution)
+                            const unmigratedCallers = [];
+                            for (const caller of currentDeps) {
+                                const callerAnalysis = proposedAnalyses.get(caller);
+                                if (callerAnalysis) {
+                                    // Check if caller still imports this removed symbol
+                                    const stillImports = callerAnalysis.imports.some(imp => imp.specifiers.includes(oldExp.name));
+                                    if (stillImports) {
+                                        unmigratedCallers.push(caller);
+                                    }
+                                }
+                                else {
+                                    unmigratedCallers.push(caller);
+                                }
+                            }
+                            if (unmigratedCallers.length > 0) {
+                                violations.push({
+                                    rule: 'CONTRACT_BREAK',
+                                    severity: 'error',
+                                    file: normalized,
+                                    message: `Export '${oldExp.name}' is imported by ${unmigratedCallers.join(', ')} and cannot be removed without updating callers.`,
+                                });
+                            }
                         }
                     }
                 }
@@ -68,7 +133,18 @@ function runPreFlightChecks(ctx) {
             // Check 2: Phantom Local Imports (importing local files that don't exist)
             for (const localDep of newAnalysis.localDeps) {
                 const fileDir = node_path_1.default.dirname(node_path_1.default.join(root, relFile));
-                const resolvedPath = node_path_1.default.resolve(fileDir, localDep);
+                let resolvedPath;
+                if (goRootModule && localDep.startsWith(goRootModule)) {
+                    const relModPath = localDep.slice(goRootModule.length).replace(/^[/\\]+/, '');
+                    resolvedPath = node_path_1.default.resolve(root, relModPath);
+                }
+                else if (localDep.startsWith('crate::')) {
+                    const relCratePath = localDep.slice(7).replace(/::/g, '/');
+                    resolvedPath = node_path_1.default.resolve(root, 'src', relCratePath);
+                }
+                else {
+                    resolvedPath = node_path_1.default.resolve(fileDir, localDep);
+                }
                 const resolvedRelNoExt = node_path_1.default.relative(root, resolvedPath).replace(/\\/g, '/').replace(/\.[^/.]+$/, '');
                 const exists = checkPathExists(resolvedPath);
                 if (!exists && !normalizedModifying.has(resolvedRelNoExt)) {
@@ -115,16 +191,34 @@ function runPreFlightChecks(ctx) {
     };
 }
 // ─── Self-Healing Loop ────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const antiPatternStore = require("./anti-pattern-store.cjs");
+const { recordAntiPattern } = antiPatternStore;
 /**
  * Executes an operation with self-healing retries upon test/execution failure.
  */
-async function executeWithSelfHealing(runFn, repairFn, maxRetries = 3) {
+async function executeWithSelfHealing(runFn, repairFn, maxRetries = 3, planningDir) {
     const history = [];
     let attempts = 0;
     while (attempts < maxRetries) {
         attempts++;
         const outcome = await runFn();
         if (outcome.success) {
+            // If we repaired an earlier failure, record lessons to anti-pattern store
+            if (attempts > 1 && planningDir) {
+                for (const item of history) {
+                    try {
+                        recordAntiPattern(planningDir, {
+                            error: item.error,
+                            repairedAction: item.action,
+                            lesson: `Self-healing repaired error on attempt ${attempts}: "${item.error}"`,
+                        });
+                    }
+                    catch {
+                        // Non-blocking
+                    }
+                }
+            }
             return {
                 success: true,
                 attempts,

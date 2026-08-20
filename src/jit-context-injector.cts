@@ -15,6 +15,9 @@ const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebas
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import jitTelemetry = require('./jit-telemetry.cjs');
 const { recordJitInvocation } = jitTelemetry;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import semanticRag = require('./hybrid-semantic-rag.cjs');
+const { querySemanticSimilarFiles } = semanticRag;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,9 +44,31 @@ interface AssembleJitContextOptions {
   rootDir?: string;
   maxTokens?: number;
   maxDecisions?: number;
+  modelProfile?: string;
+  query?: string;
+  command?: string;
+  phaseId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const LANGUAGE_CHAR_WEIGHTS: Record<string, number> = {
+  typescript: 45,
+  javascript: 45,
+  python: 40,
+  go: 55,
+  rust: 55,
+  sql: 35,
+  csharp: 50,
+  java: 50,
+  ruby: 40,
+  php: 45,
+  dart: 45,
+  html: 40,
+  css: 35,
+  yaml: 35,
+  json: 30,
+};
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
@@ -95,7 +120,21 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
 function assembleJitContext(options: AssembleJitContextOptions): JitContextPackage {
   const resolvedPlanningDir = path.resolve(options.planningDir);
   const root = options.rootDir ? path.resolve(options.rootDir) : path.dirname(resolvedPlanningDir);
-  const maxTokens = options.maxTokens ?? 3500;
+
+  // Calibrate token budget based on model profile if provided
+  let defaultTokenBudget = 3500;
+  if (options.modelProfile) {
+    const prof = options.modelProfile.toLowerCase();
+    if (prof === 'quality' || prof === 'deep' || prof === 'pro') {
+      defaultTokenBudget = 8000;
+    } else if (prof === 'budget' || prof === 'fast' || prof === 'flash') {
+      defaultTokenBudget = 2000;
+    } else if (prof === 'balanced') {
+      defaultTokenBudget = 4500;
+    }
+  }
+
+  const maxTokens = options.maxTokens ?? defaultTokenBudget;
   const maxDecisions = options.maxDecisions ?? 5;
   const { targetFiles } = options;
 
@@ -116,13 +155,35 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
       }
     }
 
-    // Extract types/interfaces from target file if present in graph
+    // Extract type contracts (interfaces, types, structs, classes, traits, models, widgets, tables, enums)
     const normalized = file.replace(/\\/g, '/');
+    const TARGET_TYPE_KINDS = new Set([
+      'interface',
+      'type',
+      'struct',
+      'class',
+      'trait',
+      'model',
+      'widget',
+      'table',
+      'enum',
+    ]);
     if (graph.files[normalized]) {
       for (const s of graph.files[normalized].symbols) {
-        if (s.kind === 'interface' || s.kind === 'type') {
+        if (TARGET_TYPE_KINDS.has(s.kind)) {
           applicableTypes.push(`${s.name} (${s.kind} at line ${s.line})`);
         }
+      }
+    }
+  }
+
+  // Query semantic RAG if a query or task prompt was provided
+  const semanticallyRelated: Array<{ file: string; score: number; preview: string }> = [];
+  if (options.query) {
+    const hits = querySemanticSimilarFiles(options.query, resolvedPlanningDir, root, 3);
+    for (const h of hits) {
+      if (!targetFiles.includes(h.file) && !allNeighbors.some(n => n.file === h.file)) {
+        semanticallyRelated.push(h);
       }
     }
   }
@@ -161,6 +222,14 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     lines.push('');
   }
 
+  if (semanticallyRelated.length > 0) {
+    lines.push('#### Semantically Related Modules:');
+    for (const r of semanticallyRelated) {
+      lines.push(`- **${r.file}** (similarity: ${r.score}): ${r.preview}`);
+    }
+    lines.push('');
+  }
+
   if (applicableTypes.length > 0) {
     lines.push('#### Target Type Contracts:');
     for (const t of applicableTypes) {
@@ -195,16 +264,24 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const markdownBlock = outputLines.join('\n');
   const estimatedTokensCount = estimateTokens(markdownBlock);
 
-  // Estimate full repository monolithic token weight
+  // Estimate full repository monolithic token weight with language-calibrated density
   let totalRepoChars = 0;
-  for (const f of Object.values(graph.files) as Array<{ linesCount?: number }>) {
-    totalRepoChars += (f.linesCount || 10) * 40;
+  for (const f of Object.values(graph.files) as Array<{ linesCount?: number; language?: string }>) {
+    const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
+    totalRepoChars += (f.linesCount || 10) * weight;
   }
   const fullRepoTokens = Math.max(estimateTokens(String(totalRepoChars)), estimatedTokensCount * 5);
 
-  // Record Telemetry
+  // Record Telemetry (Schema v2.0)
   try {
-    recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens);
+    recordJitInvocation(
+      resolvedPlanningDir,
+      targetFiles,
+      estimatedTokensCount,
+      fullRepoTokens,
+      options.command || 'other',
+      options.phaseId
+    );
   } catch {
     // Non-blocking telemetry
   }

@@ -7,7 +7,6 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const ast = require('../gsd-core/bin/lib/codebase-ast-analyzer.cjs');
 const { analyzeSourceFile } = ast;
 

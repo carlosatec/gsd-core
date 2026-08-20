@@ -10,7 +10,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const hub = require('../gsd-core/bin/lib/unified-workflow-hub.cjs');
 const { normalizeCommandName, dispatchUnifiedCommand, executeReview } = hub;
 
@@ -43,6 +43,10 @@ describe('unified-workflow-hub', () => {
         `# State\n## Position\n- Current Phase: Phase 1\n`
       );
 
+      // Direct executeReview check
+      const directReview = executeReview(planningDir, tmpProject, false);
+      assert.strictEqual(directReview.passed, true);
+
       // 1. Without --fix
       const resNoFix = dispatchUnifiedCommand('/gsd:review', {
         args: [],
@@ -60,7 +64,7 @@ describe('unified-workflow-hub', () => {
       assert.strictEqual(resWithFix.action, 'REVIEW_AND_AUTO_FIX');
       assert.ok(resWithFix.fixedIssues && resWithFix.fixedIssues.length > 0);
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 

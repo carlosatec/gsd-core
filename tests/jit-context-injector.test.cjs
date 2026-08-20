@@ -10,9 +10,9 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const jitInjector = require('../gsd-core/bin/lib/jit-context-injector.cjs');
-const { assembleJitContext, queryNeighboringSymbols, estimateTokens } = jitInjector;
+const { assembleJitContext, estimateTokens } = jitInjector;
 
 describe('jit-context-injector', () => {
   test('estimateTokens calculates chars/4 correctly', () => {
@@ -72,7 +72,7 @@ describe('jit-context-injector', () => {
       assert.ok(result.markdownBlock.includes('D-01 [Database]'));
       assert.ok(result.markdownBlock.includes('User (interface'));
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 });

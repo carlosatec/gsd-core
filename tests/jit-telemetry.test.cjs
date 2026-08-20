@@ -10,7 +10,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const telemetry = require('../gsd-core/bin/lib/jit-telemetry.cjs');
 const { recordJitInvocation, getTelemetrySummary } = telemetry;
 
@@ -38,7 +38,7 @@ describe('jit-telemetry', () => {
       assert.strictEqual(summary.averageEfficiencyPct, 85.0);
       assert.strictEqual(summary.lastInvocation.tokensSaved, 4000);
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 });

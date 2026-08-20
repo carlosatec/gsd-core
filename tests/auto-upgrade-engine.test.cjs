@@ -10,9 +10,8 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const upgradeEngine = require('../gsd-core/bin/lib/auto-upgrade-engine.cjs');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const hub = require('../gsd-core/bin/lib/unified-workflow-hub.cjs');
 
 const { runAutoUpgrade } = upgradeEngine;
@@ -61,7 +60,7 @@ describe('auto-upgrade-engine', () => {
       assert.strictEqual(hubRes.action, 'UPGRADE_LEGACY_PROJECT');
       assert.ok(hubRes.message.length > 0);
     } finally {
-      fs.rmSync(tmpProject, { recursive: true, force: true });
+      cleanup(tmpProject);
     }
   });
 });

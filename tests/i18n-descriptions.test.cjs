@@ -7,12 +7,10 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const i18n = require('../gsd-core/bin/lib/i18n-descriptions.cjs');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const converters = require('../gsd-core/bin/lib/runtime-artifact-conversion.cjs');
 
-const { normalizeLanguage, getCommandDescription, CANONICAL_COMMAND_DESCRIPTIONS } = i18n;
+const { normalizeLanguage, getCommandDescription } = i18n;
 const { convertClaudeCommandToAntigravitySkill } = converters;
 
 describe('i18n-descriptions', () => {

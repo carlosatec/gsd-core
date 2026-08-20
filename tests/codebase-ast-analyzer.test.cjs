@@ -10,7 +10,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { cleanup } = require('./helpers.cjs');
 const codebaseAst = require('../gsd-core/bin/lib/codebase-ast-analyzer.cjs');
 const {
   analyzeSourceFile,
@@ -143,7 +143,7 @@ describe('codebase-ast-analyzer — buildCodebaseGraph & Queries', () => {
       const depsA = queryFileDependencies(graph, 'serviceA.ts');
       assert.ok(depsA.importedBy.includes('serviceB.ts'), 'serviceA must be importedBy serviceB.ts');
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      cleanup(tmpDir);
     }
   });
 
@@ -171,7 +171,7 @@ describe('codebase-ast-analyzer — buildCodebaseGraph & Queries', () => {
       assert.strictEqual(loaded.version, '2.0.0');
       assert.deepStrictEqual(loaded.symbolIndex, { myFunc: ['foo.ts'] });
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      cleanup(tmpDir);
     }
   });
 });

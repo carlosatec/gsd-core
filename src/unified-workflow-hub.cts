@@ -17,11 +17,14 @@ import codebaseAst = require('./codebase-ast-analyzer.cjs');
 import autoUpgrade = require('./auto-upgrade-engine.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import jitTelemetry = require('./jit-telemetry.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import tokenDashboard = require('./token-dashboard-renderer.cjs');
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
 const { getTelemetrySummary } = jitTelemetry;
+const { renderTokenDashboard } = tokenDashboard;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +36,8 @@ type UnifiedCommandName =
   | 'review'
   | 'verify'
   | 'ship'
-  | 'migrate';
+  | 'migrate'
+  | 'tokens';
 
 interface UnifiedCommandOptions {
   args: string[];
@@ -99,6 +103,13 @@ const ALIAS_MAP: Record<string, UnifiedCommandName> = {
   'auto-upgrade': 'migrate',
   'gsd-migrate': 'migrate',
   'gsd-upgrade': 'migrate',
+
+  // 9. Tokens & Telemetry
+  tokens: 'tokens',
+  telemetry: 'tokens',
+  'token-stats': 'tokens',
+  'gsd-tokens': 'tokens',
+  'gsd-telemetry': 'tokens',
 };
 
 /**
@@ -277,11 +288,32 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         message: report.message,
       };
     }
+
+    case 'tokens': {
+      const dashboard = renderTokenDashboard(planningDir);
+      const telemetry = getTelemetrySummary(planningDir);
+      return {
+        command: 'tokens',
+        action: 'DISPLAY_TELEMETRY_DASHBOARD',
+        nextStep: 'use surgical JIT context injection in next phase plans',
+        data: telemetry,
+        message: dashboard,
+      };
+    }
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import testScaffolder = require('./test-scaffold-engine.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import canonicalFinder = require('./canonical-examples-finder.cjs');
 
 export = {
   normalizeCommandName,
   dispatchUnifiedCommand,
   executeReview,
+  generateTestScaffold: testScaffolder.generateTestScaffold,
+  findCanonicalExample: canonicalFinder.findCanonicalExample,
+  renderTokenDashboard,
 };
+

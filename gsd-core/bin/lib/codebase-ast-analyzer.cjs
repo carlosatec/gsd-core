@@ -1283,6 +1283,36 @@ function buildCodebaseGraph(rootDir, options = {}) {
             }
         }
     }
+    // Compute PageRank scores (damping factor = 0.85, 20 iterations)
+    const pageRankScores = Object.create(null);
+    const fileKeys = Object.keys(filesMap);
+    const N = fileKeys.length;
+    if (N > 0) {
+        const initialScore = 1 / N;
+        for (const k of fileKeys) {
+            pageRankScores[k] = initialScore;
+        }
+        const d = 0.85;
+        const iterations = 20;
+        for (let it = 0; it < iterations; it++) {
+            const nextScores = Object.create(null);
+            for (const k of fileKeys) {
+                let rankSum = 0;
+                const callers = reverseDependencies[k] || [];
+                for (const caller of callers) {
+                    const callerData = filesMap[caller];
+                    const outDegree = callerData ? callerData.localDeps.length : 0;
+                    if (outDegree > 0) {
+                        rankSum += (pageRankScores[caller] || initialScore) / outDegree;
+                    }
+                }
+                nextScores[k] = (1 - d) / N + d * rankSum;
+            }
+            for (const k of fileKeys) {
+                pageRankScores[k] = Number((nextScores[k] || 0).toFixed(6));
+            }
+        }
+    }
     const duration = Date.now() - startTime;
     let totalSymbols = 0;
     let totalExports = 0;
@@ -1291,7 +1321,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
         totalExports += f.exports.length;
     }
     return {
-        version: '2.1.0',
+        version: '2.2.0',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         root: rootDir,
@@ -1305,6 +1335,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
         files: filesMap,
         symbolIndex,
         reverseDependencies,
+        pageRankScores,
         routes: allRoutes,
     };
 }
@@ -1352,11 +1383,19 @@ function loadCodebaseGraph(planningDir) {
         return null;
     }
 }
+function queryTopCentralFiles(graph, limit = 10) {
+    const scores = graph.pageRankScores || {};
+    return Object.entries(scores)
+        .map(([file, score]) => ({ file, score }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+}
 module.exports = {
     analyzeSourceFile,
     buildCodebaseGraph,
     querySymbolLocations,
     queryFileDependencies,
+    queryTopCentralFiles,
     saveCodebaseGraph,
     loadCodebaseGraph,
 };
