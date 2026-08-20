@@ -112,11 +112,10 @@ Problemas? Consulte [docs/pt-BR/how-to/recover-and-troubleshoot.md](docs/pt-BR/h
 
 ---
 
-## Comunidade
+## Origem e Créditos
 
-| Projeto | Plataforma |
-|---------|----------|
-| [gsd-opencode](https://github.com/rokicool/gsd-opencode) | Port original para OpenCode |
+O GSD Core Nexus é construído sobre a base open-source do [GSD Core (`open-gsd/gsd-core`)](https://github.com/open-gsd/gsd-core), expandindo-o com análise estática AST multi-linguagem nativa, suporte Mobile 360°, RAG semântico Okapi BM25, injeção cirúrgica de contexto JIT e guardrails pré-voo.
+
 ---
 
 ## Licença

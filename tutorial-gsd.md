@@ -12,8 +12,8 @@
 3. [Iniciando um Projeto (Greenfield vs. Brownfield)](#3-iniciando-um-projeto)
 4. [A Interface Canônica 6+1](#4-a-interface-canônica-61)
 5. [O Ciclo de Desenvolvimento em 5 Etapas](#5-o-ciclo-de-desenvolvimento-em-5-etapas)
-6. [Inteligência de Código: AST Universal 360° & Living Docs](#6-inteligência-de-código-ast-universal-360--living-docs)
-7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico)
+6. [Inteligência de Código: AST Universal 360°, Mobile & Living Docs](#6-inteligência-de-código-ast-universal-360-mobile--living-docs)
+7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico-okapi-bm25)
 8. [Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing](#8-segurança-pré-voo-guardrails-anti-patterns--self-healing)
 9. [Telemetria e Observabilidade de Tokens (`/gsd:tokens`)](#9-telemetria-e-observabilidade-de-tokens-gsdtokens)
 10. [Exemplo Passo a Passo: Construindo uma Feature do Zero](#10-exemplo-passo-a-passo-construindo-uma-feature-do-zero)
@@ -180,7 +180,7 @@ Para visualizar em tempo real a economia de contexto e o volume de tokens proces
 **Saída no Terminal (65 Colunas):**
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ GSD Token Telemetry (Observability)                       │
+│ ⚡ GSD Core Nexus Token Telemetry (Observability)            │
 ├─────────────────────────────────────────────────────────────┤
 │ • Total Invocations:     42     executions                  │
 │ • Tokens Used (JIT):     84,500     tokens                  │
