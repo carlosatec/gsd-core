@@ -220,14 +220,15 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
 
       // Check 3: Circular Dependency Detection
       const visited = new Set<string>();
-      function detectCycle(current: string, stack: Set<string>): boolean {
+      function detectCycle(current: string, stack: Set<string>, depth: number = 0): boolean {
+        if (depth > 1000) return false; // Guard against deep recursion / stack overflow
         visited.add(current);
         stack.add(current);
         const callers = activeGraph.reverseDependencies[current] || [];
         for (const caller of callers) {
           if (stack.has(caller)) return true;
           if (!visited.has(caller)) {
-            if (detectCycle(caller, stack)) return true;
+            if (detectCycle(caller, stack, depth + 1)) return true;
           }
         }
         stack.delete(current);

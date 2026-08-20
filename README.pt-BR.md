@@ -41,12 +41,13 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 O GSD Core 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
 
-- **Motor AST Universal Multi-Linguagem (17+ Linguagens):** Análise estática nativa cobrindo TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell e mais — 100% em Node.js puro sem dependências nativas (ADR D-01).
-- **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real.
-- **Grafo Profundo & PageRank de Centralidade:** Módulos ordenados por relevância topológica, permitindo que a IA se ancore em implementações canônicas de referência.
+- **Motor AST Universal Multi-Linguagem & Cache Incremental:** Análise estática nativa cobrindo 17+ linguagens (TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell, etc.) com cache incremental baseado em `mtime` e Modo Lite automático para varreduras rápidas.
+- **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real sem sobrecarga $O(n^2)$.
+- **Grafo Profundo & Âncoras Canônicas:** Módulos ordenados por relevância arquitetural (PageRank), permitindo que a IA se ancore em implementações canônicas de referência.
 - **RAG Semântico Híbrido (Não-Bloqueante):** Busca semântica baseada em TF-IDF e Jaccard sobre conceitos do código com índice isolado e *lazy loading*.
 - **Injeção Cirúrgica de Contexto (JIT):** Elimina prompts monolíticos injetando apenas vizinhos diretos, contratos de tipos e decisões ativas (80% a 90% de economia de tokens).
-- **Pre-Flight Guardrails & Validação em Memória:** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares, imports fantasmas e truncamento acidental para 0 bytes (`EMPTY_FILE_GUARD`) *antes* de gravar no disco.
+- **Pre-Flight Guardrails & Validação em Memória:** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares (limite de 1000 nós no DFS), imports fantasmas e truncamento acidental para 0 bytes (`EMPTY_FILE_GUARD`) *antes* de gravar no disco.
+- **Soft Warning & Planejamento Resiliente:** Auto-síntese de `SPEC.md` a partir do roadmap com avisos não-bloqueantes, eliminando fricção no fluxo de trabalho.
 - **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções com busca transversal inteligente (`errorQuery`) em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
 - **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Java/Kotlin JUnit 5, Python e Node isolados).
 - **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.

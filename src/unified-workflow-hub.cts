@@ -1,5 +1,5 @@
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.0.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.3.
  *
  * Unifies the fragmented command landscape into 6 essential manual commands
  * plus 1 autonomous autopilot, with seamless runtime prefix normalization,
@@ -19,6 +19,8 @@ import autoUpgrade = require('./auto-upgrade-engine.cjs');
 import jitTelemetry = require('./jit-telemetry.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import tokenDashboard = require('./token-dashboard-renderer.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import initMod = require('./init.cjs');
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
@@ -168,9 +170,9 @@ function executeReview(planningDir: string, rootDir: string, autoFix: boolean = 
   if (!driftReport.valid) {
     for (const disc of driftReport.discrepancies) {
       if (disc.type === 'missing_symbol' || disc.type === 'removed_symbol') {
-        warnings.push(`${disc.file}: ${disc.detail}`);
+        warnings.push(`[Missing] ${disc.file}: ${disc.detail}`);
       } else {
-        warnings.push(`${disc.file}: ${disc.detail}`);
+        warnings.push(`[Drift] ${disc.file}: ${disc.detail}`);
       }
     }
   }
@@ -211,11 +213,12 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
 
   switch (canonicalName) {
     case 'auto':
+      initMod.cmdInitAutonomous(cwd, options.raw || true);
       return {
         command: 'auto',
         action: 'AUTOPILOT_CYCLE',
         nextStep: 'executing phase plans sequentially with safety checkpoints',
-        message: 'GSD 2.0 Autopilot active. Running phase loop with guardrails.',
+        message: 'GSD Core 2.3 Autopilot active. Running phase loop with guardrails.',
       };
 
     case 'status': {
@@ -228,11 +231,12 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         action: 'DISPLAY_STATUS',
         nextStep: 'execute next recommended action based on STATE.md',
         data: { telemetry },
-        message: `GSD 2.0 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+        message: `GSD Core 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
       };
     }
 
     case 'plan':
+      initMod.cmdInitPlanPhase(cwd, options.args[1], options.raw || true);
       return {
         command: 'plan',
         action: 'PLAN_PHASE',
@@ -241,6 +245,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
       };
 
     case 'exec':
+      initMod.cmdInitExecutePhase(cwd, options.args[1], options.raw || true);
       return {
         command: 'exec',
         action: 'EXECUTE_PHASE',
@@ -263,6 +268,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
     }
 
     case 'verify':
+      initMod.cmdInitVerifyWork(cwd, options.args[1], options.raw || true);
       return {
         command: 'verify',
         action: 'VERIFY_WORK',
@@ -271,6 +277,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
       };
 
     case 'ship':
+      initMod.cmdInitCompleteMilestone(cwd, options.raw || true);
       return {
         command: 'ship',
         action: 'SHIP_RELEASE',

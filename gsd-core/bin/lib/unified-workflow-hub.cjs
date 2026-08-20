@@ -154,7 +154,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD 2.0 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core 2.3 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
@@ -166,7 +166,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
                 data: { telemetry },
-                message: `GSD 2.0 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                message: `GSD Core 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
         case 'plan':

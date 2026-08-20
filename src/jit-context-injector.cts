@@ -18,6 +18,15 @@ const { recordJitInvocation } = jitTelemetry;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import semanticRag = require('./hybrid-semantic-rag.cjs');
 const { querySemanticSimilarFiles } = semanticRag;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import hostDetection = require('./host-runtime-detection.cjs');
+const { detectHostRuntime } = hostDetection;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import decisionsMod = require('./decisions.cjs');
+const { parseDecisions } = decisionsMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import canonicalMod = require('./canonical-examples-finder.cjs');
+const { findCanonicalExample } = canonicalMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +36,7 @@ interface NeighborSymbolInfo {
   file: string;
   relation: 'import' | 'imported_by';
   exports: Array<{ name: string; kind: string }>;
+  pageRank?: number;
 }
 
 interface JitContextPackage {
@@ -35,6 +45,7 @@ interface JitContextPackage {
   neighborSymbols: NeighborSymbolInfo[];
   applicableTypes: string[];
   applicableDecisions: string[];
+  canonicalExample?: { file: string; content: string; reason: string } | null;
   markdownBlock: string;
 }
 
@@ -83,6 +94,7 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   const normalized = targetFile.replace(/\\/g, '/');
   const deps = queryFileDependencies(graph, normalized);
   const results: NeighborSymbolInfo[] = [];
+  const scores = graph.pageRankScores || {};
 
   // Outgoing dependencies (files that targetFile imports)
   for (const imp of deps.imports) {
@@ -95,6 +107,7 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
         file: matchingKey,
         relation: 'import',
         exports: fileData.exports.map((e: { name: string; kind: string }) => ({ name: e.name, kind: e.kind })),
+        pageRank: scores[matchingKey] || 0,
       });
     }
   }
@@ -107,9 +120,13 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
         file: caller,
         relation: 'imported_by',
         exports: fileData.exports.map((e: { name: string; kind: string }) => ({ name: e.name, kind: e.kind })),
+        pageRank: scores[caller] || 0,
       });
     }
   }
+
+  // Sort neighbors by PageRank importance
+  results.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0));
 
   return results;
 }
@@ -121,10 +138,20 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const resolvedPlanningDir = path.resolve(options.planningDir);
   const root = options.rootDir ? path.resolve(options.rootDir) : path.dirname(resolvedPlanningDir);
 
-  // Calibrate token budget based on model profile if provided
+  // Calibrate token budget based on model profile or detected runtime environment
+  let effectiveProfile = options.modelProfile;
+  if (!effectiveProfile) {
+    const detected = detectHostRuntime();
+    if (detected.runtime === 'codex') {
+      effectiveProfile = 'pro';
+    } else {
+      effectiveProfile = 'balanced';
+    }
+  }
+
   let defaultTokenBudget = 3500;
-  if (options.modelProfile) {
-    const prof = options.modelProfile.toLowerCase();
+  if (effectiveProfile) {
+    const prof = effectiveProfile.toLowerCase();
     if (prof === 'quality' || prof === 'deep' || prof === 'pro') {
       defaultTokenBudget = 8000;
     } else if (prof === 'budget' || prof === 'fast' || prof === 'flash') {
@@ -188,15 +215,27 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
-  // Load relevant decisions from STATE.md if available
+  // Load relevant decisions using native decisions parser
   const statePath = path.join(resolvedPlanningDir, 'STATE.md');
   const stateContent = platformReadSync(statePath);
   if (stateContent) {
-    const decisionMatches = stateContent.match(/-\s+\*\*D-\d+.*?\*\*:.*$/gm);
-    if (decisionMatches) {
-      applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
+    try {
+      const parsed = parseDecisions(stateContent);
+      for (const d of parsed) {
+        applicableDecisions.push(`- **${d.id}**: ${d.summary}${d.rationale ? ' — ' + d.rationale : ''}`);
+        if (applicableDecisions.length >= maxDecisions) break;
+      }
+    } catch {
+      const decisionMatches = stateContent.match(/-\s+\*\*D-\d+.*?\*\*:.*$/gm);
+      if (decisionMatches) {
+        applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
+      }
     }
   }
+
+  // Discover canonical example file for coding style anchor
+  const firstTargetExt = targetFiles[0] ? path.extname(targetFiles[0]) : undefined;
+  const canonicalExample = findCanonicalExample(root, resolvedPlanningDir, firstTargetExt);
 
   // Build markdown representation
   const lines: string[] = [
@@ -219,6 +258,14 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
       const exportList = n.exports.map(e => `${e.name} (${e.kind})`).join(', ');
       lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
     }
+    lines.push('');
+  }
+
+  if (canonicalExample) {
+    lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
+    lines.push('```' + canonicalExample.language);
+    lines.push(canonicalExample.content);
+    lines.push('```');
     lines.push('');
   }
 
@@ -292,6 +339,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     neighborSymbols: allNeighbors,
     applicableTypes,
     applicableDecisions,
+    canonicalExample,
     markdownBlock,
   };
 }

@@ -41,12 +41,13 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 GSD Core 2.3 elevates AI coding agents with a full-stack static analysis and context governance engine:
 
-- **Universal Multi-Language AST (17+ Languages):** Native static code analysis across TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell and more — with zero external or native dependencies (pure Node.js).
-- **Living, Incremental Documentation:** Post-commit sync auto-generates and verifies `.planning/codebase/ARCHITECTURE.md` and `.planning/codebase/APIS.md` directly from active code topology.
-- **Deep Call-Graph & PageRank Centrality:** Modules are ranked by architectural importance, allowing agents to anchor on canonical reference implementations.
+- **Universal Multi-Language AST & Incremental Cache:** Native static code analysis across 17+ languages (TypeScript, Python, Go, Rust, Flutter, C#, Java, SQL, Docker, Shell, etc.) with `mtime`-based incremental AST caching and automatic Lite Mode for rapid scans.
+- **Living, Incremental Documentation:** Post-commit sync auto-generates and verifies `.planning/codebase/ARCHITECTURE.md` and `.planning/codebase/APIS.md` directly from active code topology without $O(n^2)$ overhead.
+- **Deep Call-Graph & Canonical Anchors:** Modules are ranked by PageRank architectural importance, allowing agents to anchor on canonical reference implementations.
 - **Hybrid Semantic RAG (Non-Blocking):** Pure-Node TF-IDF and Jaccard similarity search over codebase concepts with isolated index and lazy loading.
 - **Surgical Context Injection (JIT):** Replaces monolithic prompts by injecting only 1st-degree neighbors, active type contracts, and architectural decisions (yielding 80%–90% token savings).
-- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies, phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`) *before* writing to disk.
+- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies (1000-node DFS limit), phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`) *before* writing to disk.
+- **Soft Warning & Resilient Planning:** Auto-synthesizes missing `SPEC.md` files from roadmap goals with non-blocking guidance, ensuring zero workflow friction.
 - **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
 - **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, Java/Kotlin JUnit 5, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.

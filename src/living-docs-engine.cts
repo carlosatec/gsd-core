@@ -41,7 +41,7 @@ function generateArchitectureDoc(graph: CodebaseGraph): string {
   const lines: string[] = [
     '# Codebase Architecture & Topology (Living Document)',
     '',
-    `> Auto-generated and verified by GSD Core 2.0 Living Docs on ${new Date().toISOString()}.`,
+    `> Auto-generated and verified by GSD Core 2.3 Living Docs on ${new Date().toISOString()}.`,
     '',
     '## System Metrics',
     '',
@@ -159,8 +159,8 @@ function syncLivingDocs(planningDir: string, rootDir?: string): LivingDocsSyncRe
  */
 function verifyDocsAgainstCode(planningDir: string, rootDir?: string): { valid: boolean; discrepancies: DocDiscrepancy[] } {
   const root = rootDir ?? path.dirname(planningDir);
-  const liveGraph = buildCodebaseGraph(root);
   const savedGraph = loadCodebaseGraph(planningDir);
+  const liveGraph = buildCodebaseGraph(root, { previousGraph: savedGraph, liteMode: true });
 
   const discrepancies: DocDiscrepancy[] = [];
 

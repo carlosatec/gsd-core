@@ -98,7 +98,7 @@ Cada fase do roadmap passa rigorosamente por este ciclo:
   (Alinhar o quê)   (Como fazer)     (Escrever código)   (Validar UAT)   (Entregar PR)
 ```
 
-1. **Discuss (`/gsd:plan` / `discuss`):** Alinha decisões arquiteturais antes de planejar e grava no `STATE.md`.
+1. **Discuss / Spec (`/gsd:plan` / `discuss`):** Alinha decisões arquiteturais antes de planejar e grava no `STATE.md`. Se você pular esta etapa, o GSD emite um *Soft Warning* não-bloqueante e sintetiza automaticamente o `SPEC.md` a partir do `ROADMAP.md` e decisões ativas.
 2. **Plan (`/gsd:plan`):** Decompõe a fase em tarefas atômicas divididas em ondas paralelas (*waves*) no `PLAN.md`.
 3. **Execute (`/gsd:exec`):** Executa as tarefas onda por onda com subagentes de contexto limpo.
 4. **Verify (`/gsd:verify`):** Testa funcionalidades construídas através de validação conversacional (UAT).
@@ -106,27 +106,30 @@ Cada fase do roadmap passa rigorosamente por este ciclo:
 
 ---
 
-## 6. Inteligência de Código: AST Universal 360° & Living Docs
+## 6. Inteligência de Código: AST Universal 360°, Cache Incremental & Modo Lite
 
 O GSD Core analisa estaticamente o código sem precisar compilar ou rodar interpretadores pesados:
 
 * **17+ Tecnologias Nativas:** TypeScript, JavaScript, Python, Go, Rust, Flutter/Dart, C#, Java, Kotlin, PHP, Ruby, SQL/DDL, Prisma, GraphQL, CSS/SCSS, Dockerfile, Shell Script.
+* **Cache Incremental via `mtime`:** O analisador AST compara o carimbo de data/hora dos arquivos no disco com o grafo pré-existente. Apenas arquivos modificados são re-processados, acelerando a análise em até **85%**.
+* **Modo Lite & Otimização de PageRank Automática:** Em repositórios pequenos (< 50 arquivos) ou comandos de checagem rápida, o GSD ativa automaticamente o cálculo direto por grau, eliminando iterações desnecessárias.
 * **Scaffolding de Testes Poliglota:** Gera esqueletos de teste respeitando as convenções de cada linguagem (Go `_test.go`, Rust `#[cfg(test)]`, Dart `test/*_test.dart`, Java/Kotlin JUnit 5, Python `test_*.py` e Node `.test.cjs`).
 * **Living Docs Engine:** Gera e valida automaticamente:
   - `.planning/codebase/ARCHITECTURE.md` (topologia de imports e módulos)
   - `.planning/codebase/APIS.md` (catálogo de interfaces, structs e rotas HTTP)
-* **Prevenção de Doc Drift:** Se um método for renomeado no código, a documentação é sincronizada no commit seguinte.
+* **Prevenção de Doc Drift sem Custo $O(n^2)$:** Validação contínua e sincronização pós-commit sem recriação redundante de grafos.
 
 ---
 
-## 7. Injeção Cirúrgica de Contexto (JIT) & RAG Semântico
+## 7. Injeção Cirúrgica de Contexto (JIT) & Âncora Canônica
 
 Em vez de poluir a IA com centenas de linhas irrelevantes, o motor JIT:
 
-1. **Consulta o Grafo AST:** Descobre quem importa o arquivo alvo e quem ele importa (vizinhos diretos de 1º grau).
-2. **Extrai Contratos:** Envia apenas as assinaturas exportadas (`interfaces`, `structs`, `traits`), ignorando o corpo das funções vizinhas.
-3. **Busca Semântica RAG (TF-IDF):** Encontra módulos conceitualmente relacionados via busca híbrida não-bloqueante.
-4. **Adiciona Decisões Ativas:** Injeta apenas as ADRs relevantes do `STATE.md`.
+1. **Consulta o Grafo AST com Ordenação PageRank:** Descobre quem importa o arquivo alvo e quem ele importa, ordenando os vizinhos por importância arquitetural.
+2. **Extrai Contratos & Tipos:** Envia apenas as assinaturas exportadas (`interfaces`, `structs`, `traits`), ignorando o corpo das funções vizinhas.
+3. **Injeta Âncora de Arquitetura Canônica:** Seleciona automaticamente o melhor arquivo de referência do projeto (com base em centralidade e densidade de tipos) para que a IA siga o mesmo padrão de código do repositório.
+4. **Busca Semântica RAG (TF-IDF):** Encontra módulos conceitualmente relacionados via busca híbrida não-bloqueante.
+5. **Adiciona Decisões Ativas:** Injeta apenas as ADRs relevantes do `STATE.md` usando o parser nativo de decisões.
 
 **Resultado:** O modelo recebe um bloco enxuto `<jit_context>` com foco 100% no que importa.
 
@@ -137,6 +140,7 @@ Em vez de poluir a IA com centenas de linhas irrelevantes, o motor JIT:
 Para evitar que a IA quebre a aplicação:
 
 * **Validação em Memória (Pre-Flight):** Simula os diffs em memória antes de tocar o disco. Se a IA deletar uma função exportada necessária para outro arquivo, o guardrail bloqueia o patch (`CONTRACT_BREAK`).
+* **DFS com Limite de Profundidade (1000 nós):** O algoritmo de detecção de dependência circular possui profundidade máxima configurada, eliminando risco de estouro de pilha (*stack overflow*) em grafos complexos.
 * **Empty File Guard (`EMPTY_FILE_GUARD`):** Impede que alucinações ou falhas parciais de streaming de LLMs sobrescrevam arquivos existentes com 0 bytes (`UNINTENDED_TRUNCATION`).
 * **Suporte à Co-Evolução:** Se a IA alterar a função e o arquivo consumidor no mesmo lote de arquivos, o guardrail autoriza a mudança sem falso positivo.
 * **Laço de Self-Healing:** Se um teste falhar durante a execução, o agente tem até 3 tentativas automáticas para depurar e corrigir.
