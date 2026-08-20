@@ -36,7 +36,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'en'),
-      'Upgrade legacy project to GSD 2.1 Universal architecture'
+      'Upgrade legacy project to GSD Core Nexus 2.3 architecture'
     );
   });
 
@@ -51,7 +51,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'pt-br'),
-      'Modernizar projeto legado para a arquitetura GSD 2.1 Universal'
+      'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.3'
     );
     assert.strictEqual(
       getCommandDescription('review', 'pt-br'),

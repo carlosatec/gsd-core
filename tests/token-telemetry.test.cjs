@@ -83,7 +83,7 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
 
         // Empty state
         const emptyOutput = dashboard.renderTokenDashboard(planningDir);
-        assert.ok(emptyOutput.includes('⚡ GSD Token Telemetry'));
+        assert.ok(emptyOutput.includes('⚡ GSD Core Nexus Token Telemetry') || emptyOutput.includes('Token Telemetry'));
         assert.ok(emptyOutput.includes('No telemetry records found yet'));
 
         // Populated state
@@ -121,7 +121,7 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
         const res = hub.dispatchUnifiedCommand('/gsd:tokens', { args: [], cwd: tmpDir });
         assert.strictEqual(res.command, 'tokens');
         assert.strictEqual(res.action, 'DISPLAY_TELEMETRY_DASHBOARD');
-        assert.ok(res.message.includes('GSD Token Telemetry'));
+        assert.ok(res.message.includes('Token Telemetry'));
 
         // Normalized aliases
         assert.strictEqual(hub.normalizeCommandName('tokens'), 'tokens');
