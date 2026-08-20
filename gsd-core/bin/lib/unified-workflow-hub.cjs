@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.0.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.3.
  *
  * Unifies the fragmented command landscape into 6 essential manual commands
  * plus 1 autonomous autopilot, with seamless runtime prefix normalization,
@@ -9,6 +9,7 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -21,11 +22,19 @@ const autoUpgrade = require("./auto-upgrade-engine.cjs");
 const jitTelemetry = require("./jit-telemetry.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const tokenDashboard = require("./token-dashboard-renderer.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const jitInjector = require("./jit-context-injector.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const guardrailsMod = require("./preflight-guardrails.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const initMod = require("./init.cjs");
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
 const { getTelemetrySummary } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
+const { assembleJitContext } = jitInjector;
+const { runPreFlightChecks } = guardrailsMod;
 // ─── Command Name Normalizer ──────────────────────────────────────────────────
 const ALIAS_MAP = {
     // 1. Auto
@@ -112,10 +121,10 @@ function executeReview(planningDir, rootDir, autoFix = false) {
     if (!driftReport.valid) {
         for (const disc of driftReport.discrepancies) {
             if (disc.type === 'missing_symbol' || disc.type === 'removed_symbol') {
-                warnings.push(`${disc.file}: ${disc.detail}`);
+                warnings.push(`[Missing] ${disc.file}: ${disc.detail}`);
             }
             else {
-                warnings.push(`${disc.file}: ${disc.detail}`);
+                warnings.push(`[Drift] ${disc.file}: ${disc.detail}`);
             }
         }
     }
@@ -136,6 +145,23 @@ function executeReview(planningDir, rootDir, autoFix = false) {
         passed: criticalIssues.length === 0,
     };
 }
+function resolveActivePhaseId(planningDir, explicitPhase) {
+    if (explicitPhase && explicitPhase.trim()) {
+        return explicitPhase.trim();
+    }
+    try {
+        const statePath = node_path_1.default.join(planningDir, 'STATE.md');
+        const stateContent = (0, shell_command_projection_cjs_1.platformReadSync)(statePath) || '';
+        const match = stateContent.match(/Current Phase:\s*Phase\s*([0-9a-zA-Z._-]+)/i);
+        if (match) {
+            return match[1];
+        }
+    }
+    catch {
+        // Non-blocking
+    }
+    return '1';
+}
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 /**
  * Dispatches a unified command to its corresponding streamlined handler.
@@ -150,6 +176,12 @@ function dispatchUnifiedCommand(rawCommand, options) {
     }
     switch (canonicalName) {
         case 'auto':
+            try {
+                initMod.cmdInitAutonomous(cwd, options.raw || true);
+            }
+            catch {
+                // Non-blocking in mock environments
+            }
             return {
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
@@ -169,20 +201,114 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 message: `GSD Core 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
-        case 'plan':
+        case 'plan': {
+            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            let targetFiles = [];
+            // Discover target files from phase directory or graph
+            if (phaseId) {
+                const phaseDirPath = node_path_1.default.join(planningDir, 'phases');
+                try {
+                    if (node_fs_1.default.existsSync(phaseDirPath)) {
+                        const dirs = node_fs_1.default.readdirSync(phaseDirPath);
+                        const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
+                        if (matchingDir) {
+                            const fullDir = node_path_1.default.join(phaseDirPath, matchingDir);
+                            const files = node_fs_1.default.readdirSync(fullDir);
+                            const planFile = files.find(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+                            if (planFile) {
+                                const planContent = (0, shell_command_projection_cjs_1.platformReadSync)(node_path_1.default.join(fullDir, planFile)) || '';
+                                const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
+                                if (fileMatches) {
+                                    targetFiles = Array.from(new Set(fileMatches.map(m => m.replace(/`/g, '')))).filter(f => !f.endsWith('.md') && !f.endsWith('.json') && node_fs_1.default.existsSync(node_path_1.default.join(cwd, f)));
+                                }
+                            }
+                        }
+                    }
+                }
+                catch {
+                    // non-blocking
+                }
+            }
+            if (targetFiles.length === 0) {
+                const fallbackGraph = loadCodebaseGraph(planningDir) || buildCodebaseGraph(cwd);
+                targetFiles = Object.keys(fallbackGraph.files).slice(0, 3);
+            }
+            const jitPackage = assembleJitContext({
+                targetFiles,
+                planningDir,
+                rootDir: cwd,
+                command: 'plan',
+                phaseId,
+            });
+            try {
+                initMod.cmdInitPlanPhase(cwd, phaseId, options.raw || true);
+            }
+            catch {
+                // Non-blocking in mock environments
+            }
             return {
                 command: 'plan',
                 action: 'PLAN_PHASE',
                 nextStep: 'run /gsd:exec to execute the generated phase plan',
-                message: 'Phase plan ready with atomic task waves and verification criteria.',
+                data: { jit: jitPackage },
+                message: `Phase plan ready with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).`,
             };
-        case 'exec':
+        }
+        case 'exec': {
+            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            let filesToModify = [];
+            if (phaseId) {
+                const phaseDirPath = node_path_1.default.join(planningDir, 'phases');
+                try {
+                    if (node_fs_1.default.existsSync(phaseDirPath)) {
+                        const dirs = node_fs_1.default.readdirSync(phaseDirPath);
+                        const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
+                        if (matchingDir) {
+                            const fullDir = node_path_1.default.join(phaseDirPath, matchingDir);
+                            const files = node_fs_1.default.readdirSync(fullDir);
+                            const planFiles = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+                            for (const pf of planFiles) {
+                                const planContent = (0, shell_command_projection_cjs_1.platformReadSync)(node_path_1.default.join(fullDir, pf)) || '';
+                                const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
+                                if (fileMatches) {
+                                    for (const m of fileMatches) {
+                                        const clean = m.replace(/`/g, '');
+                                        if (!clean.endsWith('.md') && !clean.endsWith('.json') && node_fs_1.default.existsSync(node_path_1.default.join(cwd, clean))) {
+                                            filesToModify.push(clean);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch {
+                    // non-blocking
+                }
+            }
+            filesToModify = Array.from(new Set(filesToModify));
+            const preFlightReport = runPreFlightChecks({
+                taskId: phaseId || 'active-phase',
+                filesToModify,
+                planningDir,
+                rootDir: cwd,
+            });
+            try {
+                initMod.cmdInitExecutePhase(cwd, phaseId, options.raw || true);
+            }
+            catch {
+                // Non-blocking in mock environments
+            }
             return {
                 command: 'exec',
                 action: 'EXECUTE_PHASE',
                 nextStep: 'run /gsd:review or /gsd:verify upon wave completion',
-                message: 'Phase execution underway with atomic commits and JIT context injection.',
+                data: { preFlight: preFlightReport },
+                message: preFlightReport.valid
+                    ? 'Pre-flight guardrails passed. Phase execution underway with atomic commits and JIT context injection.'
+                    : `Pre-flight warnings detected (${preFlightReport.violations.length} violation(s)). Phase execution proceeding with guardrails active.`,
             };
+        }
         case 'review': {
             const reviewResult = executeReview(planningDir, cwd, hasFixFlag);
             return {
@@ -196,14 +322,23 @@ function dispatchUnifiedCommand(rawCommand, options) {
                     : `Review complete. Found ${reviewResult.criticalIssues.length} critical issues, ${reviewResult.warnings.length} warnings.`,
             };
         }
-        case 'verify':
+        case 'verify': {
+            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            try {
+                initMod.cmdInitVerifyWork(cwd, phaseId, options.raw || true);
+            }
+            catch {
+                // Non-blocking in mock environments
+            }
             return {
                 command: 'verify',
                 action: 'VERIFY_WORK',
                 nextStep: 'run /gsd:ship to create PR and merge',
                 message: 'Functional and acceptance criteria validation complete.',
             };
+        }
         case 'ship':
+            initMod.cmdInitCompleteMilestone(cwd, options.raw || true);
             return {
                 command: 'ship',
                 action: 'SHIP_RELEASE',

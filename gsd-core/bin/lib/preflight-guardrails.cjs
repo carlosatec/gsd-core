@@ -176,7 +176,9 @@ function runPreFlightChecks(ctx) {
             }
             // Check 3: Circular Dependency Detection
             const visited = new Set();
-            function detectCycle(current, stack) {
+            function detectCycle(current, stack, depth = 0) {
+                if (depth > 1000)
+                    return false; // Guard against deep recursion / stack overflow
                 visited.add(current);
                 stack.add(current);
                 const callers = activeGraph.reverseDependencies[current] || [];
@@ -184,7 +186,7 @@ function runPreFlightChecks(ctx) {
                     if (stack.has(caller))
                         return true;
                     if (!visited.has(caller)) {
-                        if (detectCycle(caller, stack))
+                        if (detectCycle(caller, stack, depth + 1))
                             return true;
                     }
                 }

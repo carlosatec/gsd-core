@@ -20,6 +20,15 @@ const { recordJitInvocation } = jitTelemetry;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const semanticRag = require("./hybrid-semantic-rag.cjs");
 const { querySemanticSimilarFiles } = semanticRag;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const hostDetection = require("./host-runtime-detection.cjs");
+const { detectHostRuntime } = hostDetection;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const decisionsMod = require("./decisions.cjs");
+const { parseDecisions } = decisionsMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const canonicalMod = require("./canonical-examples-finder.cjs");
+const { findCanonicalExample } = canonicalMod;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const LANGUAGE_CHAR_WEIGHTS = {
     typescript: 45,
@@ -49,6 +58,7 @@ function queryNeighboringSymbols(graph, targetFile) {
     const normalized = targetFile.replace(/\\/g, '/');
     const deps = queryFileDependencies(graph, normalized);
     const results = [];
+    const scores = graph.pageRankScores || {};
     // Outgoing dependencies (files that targetFile imports)
     for (const imp of deps.imports) {
         const matchingKey = Object.keys(graph.files).find(k => k === imp || k.endsWith(imp) || k.endsWith(imp + '.ts') || k.endsWith(imp + '.cts') || k.endsWith(imp + '.js'));
@@ -58,6 +68,7 @@ function queryNeighboringSymbols(graph, targetFile) {
                 file: matchingKey,
                 relation: 'import',
                 exports: fileData.exports.map((e) => ({ name: e.name, kind: e.kind })),
+                pageRank: scores[matchingKey] || 0,
             });
         }
     }
@@ -69,9 +80,12 @@ function queryNeighboringSymbols(graph, targetFile) {
                 file: caller,
                 relation: 'imported_by',
                 exports: fileData.exports.map((e) => ({ name: e.name, kind: e.kind })),
+                pageRank: scores[caller] || 0,
             });
         }
     }
+    // Sort neighbors by PageRank importance
+    results.sort((a, b) => (b.pageRank || 0) - (a.pageRank || 0));
     return results;
 }
 /**
@@ -80,18 +94,40 @@ function queryNeighboringSymbols(graph, targetFile) {
 function assembleJitContext(options) {
     const resolvedPlanningDir = node_path_1.default.resolve(options.planningDir);
     const root = options.rootDir ? node_path_1.default.resolve(options.rootDir) : node_path_1.default.dirname(resolvedPlanningDir);
-    // Calibrate token budget based on model profile if provided
-    let defaultTokenBudget = 3500;
-    if (options.modelProfile) {
-        const prof = options.modelProfile.toLowerCase();
-        if (prof === 'quality' || prof === 'deep' || prof === 'pro') {
+    // Calibrate token budget based on explicit windowTier, model profile, or detected runtime environment
+    let effectiveProfile = options.modelProfile;
+    if (!effectiveProfile && !options.windowTier) {
+        const detected = detectHostRuntime();
+        if (detected.runtime === 'codex') {
+            effectiveProfile = 'pro';
+        }
+        else {
+            effectiveProfile = 'balanced';
+        }
+    }
+    let defaultTokenBudget = 8000; // Standard 128k-200k baseline (Claude, GPT-4o)
+    if (options.windowTier === 'small') {
+        defaultTokenBudget = 2500; // 32k window (Mistral Small, Qwen, local Ollama)
+    }
+    else if (options.windowTier === 'large') {
+        defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash)
+    }
+    else if (options.windowTier === 'standard') {
+        defaultTokenBudget = 8000;
+    }
+    else if (effectiveProfile) {
+        const prof = effectiveProfile.toLowerCase();
+        if (prof === 'quality' || prof === 'deep' || prof === 'pro' || prof === 'large') {
             defaultTokenBudget = 8000;
         }
-        else if (prof === 'budget' || prof === 'fast' || prof === 'flash') {
-            defaultTokenBudget = 2000;
+        else if (prof === 'budget' || prof === 'fast' || prof === 'flash' || prof === 'small') {
+            defaultTokenBudget = 2500;
+        }
+        else if (prof === 'ultra' || prof === 'mega') {
+            defaultTokenBudget = 24000;
         }
         else if (prof === 'balanced') {
-            defaultTokenBudget = 4500;
+            defaultTokenBudget = 5000;
         }
     }
     const maxTokens = options.maxTokens ?? defaultTokenBudget;
@@ -142,15 +178,33 @@ function assembleJitContext(options) {
             }
         }
     }
-    // Load relevant decisions from STATE.md if available
+    // Load relevant decisions using native decisions parser with regex fallback
     const statePath = node_path_1.default.join(resolvedPlanningDir, 'STATE.md');
     const stateContent = (0, shell_command_projection_cjs_1.platformReadSync)(statePath);
     if (stateContent) {
-        const decisionMatches = stateContent.match(/-\s+\*\*D-\d+.*?\*\*:.*$/gm);
-        if (decisionMatches) {
-            applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
+        try {
+            const parsed = parseDecisions(stateContent);
+            for (const d of parsed) {
+                if (d.id && d.text) {
+                    applicableDecisions.push(`- **${d.id}${d.category ? ' [' + d.category + ']' : ''}**: ${d.text}`);
+                    if (applicableDecisions.length >= maxDecisions)
+                        break;
+                }
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+        if (applicableDecisions.length === 0) {
+            const decisionMatches = stateContent.match(/-\s+\*\*D-[A-Za-z0-9_-]+(?:\[[^\]]+\])?(?:\s*\[[^\]]+\])?(?::\*\*|\*\*:)\s*.*$/gm);
+            if (decisionMatches) {
+                applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
+            }
         }
     }
+    // Discover canonical example file for coding style anchor
+    const firstTargetExt = targetFiles[0] ? node_path_1.default.extname(targetFiles[0]) : undefined;
+    const canonicalExample = findCanonicalExample(root, resolvedPlanningDir, firstTargetExt);
     // Build markdown representation
     const lines = [
         '<jit_context>',
@@ -170,6 +224,13 @@ function assembleJitContext(options) {
             const exportList = n.exports.map(e => `${e.name} (${e.kind})`).join(', ');
             lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
         }
+        lines.push('');
+    }
+    if (canonicalExample) {
+        lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
+        lines.push('```' + canonicalExample.language);
+        lines.push(canonicalExample.content);
+        lines.push('```');
         lines.push('');
     }
     if (semanticallyRelated.length > 0) {
@@ -227,6 +288,7 @@ function assembleJitContext(options) {
         neighborSymbols: allNeighbors,
         applicableTypes,
         applicableDecisions,
+        canonicalExample,
         markdownBlock,
     };
 }

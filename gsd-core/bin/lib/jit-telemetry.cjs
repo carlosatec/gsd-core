@@ -111,6 +111,16 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
     data.commandBreakdown[cmdKey].invocations += 1;
     data.commandBreakdown[cmdKey].tokensUsed += jitTokens;
     data.commandBreakdown[cmdKey].tokensSaved += tokensSaved;
+    // Prune commandBreakdown to max 50 keys
+    const cmdKeys = Object.keys(data.commandBreakdown);
+    if (cmdKeys.length > 50) {
+        cmdKeys.sort((a, b) => data.commandBreakdown[b].invocations - data.commandBreakdown[a].invocations);
+        const pruned = {};
+        for (const k of cmdKeys.slice(0, 50)) {
+            pruned[k] = data.commandBreakdown[k];
+        }
+        data.commandBreakdown = pruned;
+    }
     // Update phase breakdown if available
     if (phaseId) {
         if (!data.phaseBreakdown[phaseId]) {
@@ -119,6 +129,16 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
         data.phaseBreakdown[phaseId].invocations += 1;
         data.phaseBreakdown[phaseId].tokensUsed += jitTokens;
         data.phaseBreakdown[phaseId].tokensSaved += tokensSaved;
+        // Prune phaseBreakdown to max 50 keys
+        const phaseKeys = Object.keys(data.phaseBreakdown);
+        if (phaseKeys.length > 50) {
+            phaseKeys.sort((a, b) => data.phaseBreakdown[b].invocations - data.phaseBreakdown[a].invocations);
+            const pruned = {};
+            for (const k of phaseKeys.slice(0, 50)) {
+                pruned[k] = data.phaseBreakdown[k];
+            }
+            data.phaseBreakdown = pruned;
+        }
     }
     saveTelemetry(planningDir, data);
     return record;

@@ -1,5 +1,5 @@
 /**
- * Auto-Upgrade Engine — Seamless non-destructive upgrade from GSD 1.x to GSD 2.1 Universal.
+ * Auto-Upgrade Engine — Seamless non-destructive upgrade from GSD 1.x to GSD Core 2.3.
  *
  * Scans the repository, creates the multi-language AST topology, materializes
  * living architecture & API contracts, and initializes telemetry.
@@ -80,7 +80,7 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
 
   return {
     success: true,
-    version: '2.1.0',
+    version: '2.3.0',
     isNewMigration,
     indexedFiles: graph.stats.totalFiles,
     detectedLanguages: Array.from(languageSet),
@@ -89,8 +89,8 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
     docsUpdated: syncReport.generatedDocs.length,
     generatedArtifacts,
     message: isNewMigration
-      ? `Successfully upgraded legacy project to GSD 2.1 Universal. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
-      : `Refreshed GSD 2.1 Universal intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+      ? `Successfully upgraded legacy project to GSD Core 2.3. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
+      : `Refreshed GSD Core 2.3 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
   };
 }
 

@@ -71,6 +71,23 @@ describe('jit-context-injector', () => {
       assert.ok(result.markdownBlock.includes('Active Architectural Decisions:'));
       assert.ok(result.markdownBlock.includes('D-01 [Database]'));
       assert.ok(result.markdownBlock.includes('User (interface'));
+
+      // Test windowTier calibration
+      const smallTier = assembleJitContext({
+        targetFiles: ['src/user-repo.ts'],
+        planningDir,
+        rootDir: tmpProject,
+        windowTier: 'small',
+      });
+      assert.ok(smallTier.estimatedTokens > 0);
+
+      const largeTier = assembleJitContext({
+        targetFiles: ['src/user-repo.ts'],
+        planningDir,
+        rootDir: tmpProject,
+        windowTier: 'large',
+      });
+      assert.ok(largeTier.estimatedTokens > 0);
     } finally {
       cleanup(tmpProject);
     }

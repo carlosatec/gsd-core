@@ -88,6 +88,15 @@ describe('unified-workflow-hub', () => {
           const result = dispatchUnifiedCommand(cmd, { args: [], cwd: tmpProject, raw: true });
           assert.strictEqual(result.command, cmd);
           assert.ok(result.message.length > 0);
+
+          if (cmd === 'plan') {
+            assert.ok(result.data && result.data.jit);
+            assert.ok(result.message.includes('JIT context'));
+          }
+          if (cmd === 'exec') {
+            assert.ok(result.data && result.data.preFlight);
+            assert.ok(result.message.includes('guardrails'));
+          }
         } catch (err) {
           // Some commands might legitimately throw in a mock env, but we just want to ensure they dispatch
           if (err.code !== 'ENOENT' && !err.message.includes('No current phase')) {

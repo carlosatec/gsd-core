@@ -7,6 +7,9 @@
 
 import path from 'node:path';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import learningsMod = require('./learnings.cjs');
+const { learningsList } = learningsMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +33,7 @@ interface QueryAntiPatternOptions {
   file?: string;
   rule?: string;
   errorQuery?: string;
+  includeGlobalLearnings?: boolean;
   limit?: number;
 }
 
@@ -97,7 +101,23 @@ function recordAntiPattern(
  */
 function queryAntiPatterns(planningDir: string, opts: QueryAntiPatternOptions = {}): AntiPatternRecord[] {
   const data = loadAntiPatterns(planningDir);
-  let results = data.patterns;
+  let results = [...data.patterns];
+
+  if (opts.includeGlobalLearnings) {
+    try {
+      const globalLearnings = learningsList();
+      for (const gl of globalLearnings) {
+        results.push({
+          id: `global-${gl.id}`,
+          timestamp: gl.date,
+          error: gl.context || 'global-learning',
+          lesson: gl.learning,
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
 
   if (opts.file) {
     const norm = opts.file.replace(/\\/g, '/');
@@ -110,7 +130,7 @@ function queryAntiPatterns(planningDir: string, opts: QueryAntiPatternOptions = 
 
   if (opts.errorQuery) {
     const q = opts.errorQuery.toLowerCase();
-    results = results.filter(p => p.error.toLowerCase().includes(q));
+    results = results.filter(p => p.error.toLowerCase().includes(q) || p.lesson.toLowerCase().includes(q));
   }
 
   const limit = opts.limit ?? 10;

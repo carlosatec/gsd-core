@@ -1,6 +1,6 @@
 "use strict";
 /**
- * i18n Command Descriptions — English & Portuguese (Brazil) for GSD 2.1 Universal.
+ * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Core 2.3.
  *
  * Maintains universal English command names while providing localized descriptions
  * in the IDE slash-command autocomplete palette.
@@ -43,13 +43,13 @@ const CANONICAL_COMMAND_DESCRIPTIONS = {
     },
     migrate: {
         name: 'migrate',
-        en: 'Upgrade legacy project to GSD 2.1 Universal architecture',
-        'pt-br': 'Modernizar projeto legado para a arquitetura GSD 2.1 Universal',
+        en: 'Upgrade legacy project to GSD Core 2.3 architecture',
+        'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core 2.3',
     },
     help: {
         name: 'help',
-        en: 'Display GSD Core 2.1 commands and quick reference guide',
-        'pt-br': 'Exibir comandos do GSD Core 2.1 e guia de referência rápida',
+        en: 'Display GSD Core 2.3 commands and quick reference guide',
+        'pt-br': 'Exibir comandos do GSD Core 2.3 e guia de referência rápida',
     },
 };
 /**

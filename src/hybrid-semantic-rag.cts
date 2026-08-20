@@ -8,6 +8,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import codebaseAst = require('./codebase-ast-analyzer.cjs');
+const { loadCodebaseGraph } = codebaseAst;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,6 +194,15 @@ function querySemanticSimilarFiles(
   const N = index.totalDocs;
   const scoredFiles: SemanticQueryResult[] = [];
 
+  // Load codebase graph for topological ranking enhancement
+  let graph: ReturnType<typeof loadCodebaseGraph> = null;
+  try {
+    graph = loadCodebaseGraph(planningDir);
+  } catch {
+    // Non-blocking
+  }
+  const pageRankScores = graph?.pageRankScores || {};
+
   for (const doc of Object.values(index.docs)) {
     let score = 0;
     let matchingTokens = 0;
@@ -205,10 +217,14 @@ function querySemanticSimilarFiles(
       }
     }
 
-    // Blend in Jaccard token overlap boost
+    // Blend in Jaccard token overlap boost + topological PageRank bonus
     if (matchingTokens > 0) {
       const jaccard = matchingTokens / (queryTokens.length + Object.keys(doc.terms).length - matchingTokens);
-      const finalScore = Number((score * 100 + jaccard * 10).toFixed(4));
+      const prBonus = (pageRankScores[doc.file] || 0) * 5;
+      const fileData = graph?.files[doc.file];
+      const exportBonus = fileData && fileData.exports.length > 0 ? Math.min(2, fileData.exports.length * 0.2) : 0;
+
+      const finalScore = Number((score * 100 + jaccard * 10 + prBonus + exportBonus).toFixed(4));
       if (finalScore > 0) {
         scoredFiles.push({
           file: doc.file,

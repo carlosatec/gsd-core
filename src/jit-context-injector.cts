@@ -56,6 +56,7 @@ interface AssembleJitContextOptions {
   maxTokens?: number;
   maxDecisions?: number;
   modelProfile?: string;
+  windowTier?: 'small' | 'standard' | 'large';
   query?: string;
   command?: string;
   phaseId?: string;
@@ -138,9 +139,9 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const resolvedPlanningDir = path.resolve(options.planningDir);
   const root = options.rootDir ? path.resolve(options.rootDir) : path.dirname(resolvedPlanningDir);
 
-  // Calibrate token budget based on model profile or detected runtime environment
+  // Calibrate token budget based on explicit windowTier, model profile, or detected runtime environment
   let effectiveProfile = options.modelProfile;
-  if (!effectiveProfile) {
+  if (!effectiveProfile && !options.windowTier) {
     const detected = detectHostRuntime();
     if (detected.runtime === 'codex') {
       effectiveProfile = 'pro';
@@ -149,15 +150,24 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
-  let defaultTokenBudget = 3500;
-  if (effectiveProfile) {
+  let defaultTokenBudget = 8000; // Standard 128k-200k baseline (Claude, GPT-4o)
+
+  if (options.windowTier === 'small') {
+    defaultTokenBudget = 2500; // 32k window (Mistral Small, Qwen, local Ollama)
+  } else if (options.windowTier === 'large') {
+    defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash)
+  } else if (options.windowTier === 'standard') {
+    defaultTokenBudget = 8000;
+  } else if (effectiveProfile) {
     const prof = effectiveProfile.toLowerCase();
-    if (prof === 'quality' || prof === 'deep' || prof === 'pro') {
+    if (prof === 'quality' || prof === 'deep' || prof === 'pro' || prof === 'large') {
       defaultTokenBudget = 8000;
-    } else if (prof === 'budget' || prof === 'fast' || prof === 'flash') {
-      defaultTokenBudget = 2000;
+    } else if (prof === 'budget' || prof === 'fast' || prof === 'flash' || prof === 'small') {
+      defaultTokenBudget = 2500;
+    } else if (prof === 'ultra' || prof === 'mega') {
+      defaultTokenBudget = 24000;
     } else if (prof === 'balanced') {
-      defaultTokenBudget = 4500;
+      defaultTokenBudget = 5000;
     }
   }
 
@@ -215,18 +225,24 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
-  // Load relevant decisions using native decisions parser
+  // Load relevant decisions using native decisions parser with regex fallback
   const statePath = path.join(resolvedPlanningDir, 'STATE.md');
   const stateContent = platformReadSync(statePath);
   if (stateContent) {
     try {
       const parsed = parseDecisions(stateContent);
       for (const d of parsed) {
-        applicableDecisions.push(`- **${d.id}**: ${d.summary}${d.rationale ? ' — ' + d.rationale : ''}`);
-        if (applicableDecisions.length >= maxDecisions) break;
+        if (d.id && d.text) {
+          applicableDecisions.push(`- **${d.id}${d.category ? ' [' + d.category + ']' : ''}**: ${d.text}`);
+          if (applicableDecisions.length >= maxDecisions) break;
+        }
       }
     } catch {
-      const decisionMatches = stateContent.match(/-\s+\*\*D-\d+.*?\*\*:.*$/gm);
+      // Non-blocking
+    }
+
+    if (applicableDecisions.length === 0) {
+      const decisionMatches = stateContent.match(/-\s+\*\*D-[A-Za-z0-9_-]+(?:\[[^\]]+\])?(?:\s*\[[^\]]+\])?(?::\*\*|\*\*:)\s*.*$/gm);
       if (decisionMatches) {
         applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
       }

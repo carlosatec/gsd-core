@@ -1229,8 +1229,25 @@ function buildCodebaseGraph(rootDir, options = {}) {
                 if (allowedExtensions.has(ext) || SPECIAL_FILENAMES.has(baseName) || baseName.includes('dockerfile')) {
                     scannedCount++;
                     const relKey = relPath.replace(/\\/g, '/');
-                    const result = analyzeSourceFile(fullPath);
-                    result.filePath = relKey;
+                    let mtime = 0;
+                    try {
+                        const stat = node_fs_1.default.statSync(fullPath);
+                        mtime = stat.mtimeMs;
+                    }
+                    catch {
+                        // Non-blocking
+                    }
+                    let result;
+                    const prevFile = options.previousGraph?.files?.[relKey];
+                    if (prevFile && prevFile.mtime && prevFile.mtime === mtime) {
+                        // Incremental AST cache hit via mtime
+                        result = prevFile;
+                    }
+                    else {
+                        result = analyzeSourceFile(fullPath);
+                        result.filePath = relKey;
+                        result.mtime = mtime;
+                    }
                     filesMap[relKey] = result;
                     // Index symbols
                     for (const s of result.symbols) {
@@ -1283,33 +1300,43 @@ function buildCodebaseGraph(rootDir, options = {}) {
             }
         }
     }
-    // Compute PageRank scores (damping factor = 0.85, 20 iterations)
+    // Compute PageRank scores
     const pageRankScores = Object.create(null);
     const fileKeys = Object.keys(filesMap);
     const N = fileKeys.length;
     if (N > 0) {
         const initialScore = 1 / N;
-        for (const k of fileKeys) {
-            pageRankScores[k] = initialScore;
-        }
-        const d = 0.85;
-        const iterations = 20;
-        for (let it = 0; it < iterations; it++) {
-            const nextScores = Object.create(null);
+        if (options.liteMode || N < 50) {
+            // Lite mode: Degree-based fast scoring without multi-iteration power method
             for (const k of fileKeys) {
-                let rankSum = 0;
-                const callers = reverseDependencies[k] || [];
-                for (const caller of callers) {
-                    const callerData = filesMap[caller];
-                    const outDegree = callerData ? callerData.localDeps.length : 0;
-                    if (outDegree > 0) {
-                        rankSum += (pageRankScores[caller] || initialScore) / outDegree;
-                    }
-                }
-                nextScores[k] = (1 - d) / N + d * rankSum;
+                const inDegree = (reverseDependencies[k] || []).length;
+                const outDegree = (filesMap[k]?.localDeps || []).length;
+                pageRankScores[k] = Number(((inDegree * 2 + outDegree + 1) / (N * 3)).toFixed(6));
             }
+        }
+        else {
             for (const k of fileKeys) {
-                pageRankScores[k] = Number((nextScores[k] || 0).toFixed(6));
+                pageRankScores[k] = initialScore;
+            }
+            const d = 0.85;
+            const iterations = 20;
+            for (let it = 0; it < iterations; it++) {
+                const nextScores = Object.create(null);
+                for (const k of fileKeys) {
+                    let rankSum = 0;
+                    const callers = reverseDependencies[k] || [];
+                    for (const caller of callers) {
+                        const callerData = filesMap[caller];
+                        const outDegree = callerData ? callerData.localDeps.length : 0;
+                        if (outDegree > 0) {
+                            rankSum += (pageRankScores[caller] || initialScore) / outDegree;
+                        }
+                    }
+                    nextScores[k] = (1 - d) / N + d * rankSum;
+                }
+                for (const k of fileKeys) {
+                    pageRankScores[k] = Number((nextScores[k] || 0).toFixed(6));
+                }
             }
         }
     }

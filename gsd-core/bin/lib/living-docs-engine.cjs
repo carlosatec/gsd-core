@@ -123,8 +123,8 @@ function syncLivingDocs(planningDir, rootDir) {
  */
 function verifyDocsAgainstCode(planningDir, rootDir) {
     const root = rootDir ?? node_path_1.default.dirname(planningDir);
-    const liveGraph = buildCodebaseGraph(root);
     const savedGraph = loadCodebaseGraph(planningDir);
+    const liveGraph = buildCodebaseGraph(root, { previousGraph: savedGraph, liteMode: true });
     const discrepancies = [];
     if (!savedGraph) {
         discrepancies.push({

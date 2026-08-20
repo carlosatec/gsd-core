@@ -10,6 +10,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const learningsMod = require("./learnings.cjs");
+const { learningsList } = learningsMod;
 // ─── Functions ────────────────────────────────────────────────────────────────
 /**
  * Loads anti-patterns from `.planning/intel/anti-patterns.json`.
@@ -67,7 +70,23 @@ function recordAntiPattern(planningDir, entry) {
  */
 function queryAntiPatterns(planningDir, opts = {}) {
     const data = loadAntiPatterns(planningDir);
-    let results = data.patterns;
+    let results = [...data.patterns];
+    if (opts.includeGlobalLearnings) {
+        try {
+            const globalLearnings = learningsList();
+            for (const gl of globalLearnings) {
+                results.push({
+                    id: `global-${gl.id}`,
+                    timestamp: gl.date,
+                    error: gl.context || 'global-learning',
+                    lesson: gl.learning,
+                });
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
     if (opts.file) {
         const norm = opts.file.replace(/\\/g, '/');
         results = results.filter(p => !p.file || p.file.replace(/\\/g, '/').includes(norm));
@@ -77,7 +96,7 @@ function queryAntiPatterns(planningDir, opts = {}) {
     }
     if (opts.errorQuery) {
         const q = opts.errorQuery.toLowerCase();
-        results = results.filter(p => p.error.toLowerCase().includes(q));
+        results = results.filter(p => p.error.toLowerCase().includes(q) || p.lesson.toLowerCase().includes(q));
     }
     const limit = opts.limit ?? 10;
     return results.slice(-limit);

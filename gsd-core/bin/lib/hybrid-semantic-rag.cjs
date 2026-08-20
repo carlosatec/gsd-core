@@ -11,6 +11,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const codebaseAst = require("./codebase-ast-analyzer.cjs");
+const { loadCodebaseGraph } = codebaseAst;
 // ─── Tokenizer & Helpers ──────────────────────────────────────────────────────
 const STOP_WORDS = new Set([
     'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'in', 'to', 'for', 'of',
@@ -149,6 +152,15 @@ function querySemanticSimilarFiles(query, planningDir, rootDir, limit = 5) {
         return [];
     const N = index.totalDocs;
     const scoredFiles = [];
+    // Load codebase graph for topological ranking enhancement
+    let graph = null;
+    try {
+        graph = loadCodebaseGraph(planningDir);
+    }
+    catch {
+        // Non-blocking
+    }
+    const pageRankScores = graph?.pageRankScores || {};
     for (const doc of Object.values(index.docs)) {
         let score = 0;
         let matchingTokens = 0;
@@ -161,10 +173,13 @@ function querySemanticSimilarFiles(query, planningDir, rootDir, limit = 5) {
                 score += tf * idf;
             }
         }
-        // Blend in Jaccard token overlap boost
+        // Blend in Jaccard token overlap boost + topological PageRank bonus
         if (matchingTokens > 0) {
             const jaccard = matchingTokens / (queryTokens.length + Object.keys(doc.terms).length - matchingTokens);
-            const finalScore = Number((score * 100 + jaccard * 10).toFixed(4));
+            const prBonus = (pageRankScores[doc.file] || 0) * 5;
+            const fileData = graph?.files[doc.file];
+            const exportBonus = fileData && fileData.exports.length > 0 ? Math.min(2, fileData.exports.length * 0.2) : 0;
+            const finalScore = Number((score * 100 + jaccard * 10 + prBonus + exportBonus).toFixed(4));
             if (finalScore > 0) {
                 scoredFiles.push({
                     file: doc.file,
