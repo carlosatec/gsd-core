@@ -51,6 +51,9 @@ const ONE_SHOT_MARKERS: RegExp[] = [
   /(?:^|\s)cargo\s+test\b/, // cargo test (one-shot unless cargo-watch)
   /(?:^|\s)go\s+test\b/, // go test
   /(?:^|\s)flutter\s+test\b/, // flutter test
+  /(?:^|\s)swift\s+test\b/, // swift test
+  /(?:^|\s)xcodebuild\s+test\b/, // xcodebuild test
+  /(?:^|\s)(?:\.\/)?gradlew?\s+test\b/, // gradle/gradlew test
 ];
 
 /** True if the command already runs one-shot (so normalization is a no-op). */

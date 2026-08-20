@@ -117,7 +117,7 @@ const DEFAULT_EXTENSIONS = new Set([
   // Styles & Design Tokens
   '.css', '.scss', '.sass', '.less',
   // Mobile & Web Templates
-  '.dart', '.html', '.htm', '.vue', '.svelte',
+  '.dart', '.swift', '.m', '.mm', '.html', '.htm', '.vue', '.svelte',
   // Databases & Schemas
   '.sql', '.prisma', '.graphql', '.gql',
   // Backend & Systems
@@ -134,7 +134,13 @@ const SPECIAL_FILENAMES = new Set([
   'compose.yml',
   'compose.yaml',
   '.dockerignore',
-  '.env.example'
+  '.env.example',
+  'package.swift',
+  'podfile',
+  'info.plist',
+  'build.gradle.kts',
+  'settings.gradle.kts',
+  'androidmanifest.xml'
 ]);
 
 const DEFAULT_EXCLUDES = [
@@ -153,7 +159,13 @@ const DEFAULT_EXCLUDES = [
   'obj',
   '__pycache__',
   '.venv',
-  'venv'
+  'venv',
+  'pods',
+  '.gradle',
+  'deriveddata',
+  '.build',
+  'xcuserdata',
+  '.swiftpm'
 ];
 
 // ─── Specialized Language Analyzers ───────────────────────────────────────────
@@ -556,32 +568,55 @@ function analyzeJvmFile(filePath: string, content: string): FileAnalysisResult {
     const lineNum = i + 1;
     const trimmed = line.trim();
 
-    if (!trimmed || trimmed.startsWith('//')) continue;
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
 
     // Imports: import org.springframework.web.bind.annotation.GetMapping;
-    const importMatch = trimmed.match(/^import\s+([A-Za-z0-9_.]+);/);
+    const importMatch = trimmed.match(/^import\s+([A-Za-z0-9_.]+);?/);
     if (importMatch) {
       const source = importMatch[1];
       externalDepsSet.add(source.split('.')[0]);
       imports.push({ source, specifiers: [], isTypeOnly: false, isRelative: false });
     }
 
-    // Classes / Interfaces / Data Classes: public class Foo, data class Bar, interface IBaz
-    const classMatch = trimmed.match(/^(?:public\s+|data\s+|abstract\s+)?(class|interface|enum)\s+([A-Za-z0-9_]+)/);
+    // Kotlin Composable: @Composable fun MyScreen() or previous line had @Composable
+    const isComposable = trimmed.includes('@Composable') || (i > 0 && lines[i - 1].trim().includes('@Composable'));
+
+    // Classes / Interfaces / Data Classes / Sealed Classes / Objects / Enums:
+    const classMatch = trimmed.match(/^(?:(?:public|private|internal|protected|data|sealed|abstract|open|final)\s+)*(class|interface|enum|object)\s+([A-Za-z0-9_]+)/);
     if (classMatch) {
       const kindRaw = classMatch[1];
       const name = classMatch[2];
-      const kind: SymbolKind = kindRaw === 'interface' ? 'interface' : kindRaw === 'enum' ? 'enum' : 'class';
-      symbols.push({ name, kind, line: lineNum, exported: true });
-      exports.push({ name, kind, isTypeOnly: kind === 'interface' });
+      const isHilt = trimmed.includes('@HiltViewModel') || (i > 0 && lines[i - 1].trim().includes('@HiltViewModel'));
+      const kind: SymbolKind = isHilt ? 'service' : kindRaw === 'interface' ? 'interface' : kindRaw === 'enum' ? 'enum' : 'class';
+      const isExported = !trimmed.startsWith('private');
+      symbols.push({ name, kind, line: lineNum, exported: isExported, meta: { isSealed: trimmed.includes('sealed'), isObject: kindRaw === 'object' } });
+      if (isExported) {
+        exports.push({ name, kind, isTypeOnly: kindRaw === 'interface' });
+      }
     }
 
-    // Spring Boot Routes: @GetMapping("/path"), @PostMapping("/path")
-    const routeMatch = trimmed.match(/@(Get|Post|Put|Delete|Patch)Mapping\(\s*["']([^"']+)["']/i);
+    // Kotlin Functions & Methods: fun doSomething(), suspend fun fetchUser()
+    const funcMatch = trimmed.match(/^(?:(?:public|private|internal|protected|override|suspend|inline|tailrec|open|final)\s+)*fun\s+([A-Za-z0-9_]+)/);
+    if (funcMatch) {
+      const name = funcMatch[1];
+      const isSuspend = trimmed.includes('suspend');
+      const kind: SymbolKind = isComposable ? 'component' : 'function';
+      const isExported = !trimmed.startsWith('private');
+      symbols.push({ name, kind, line: lineNum, exported: isExported, meta: { isComposable, isSuspend } });
+      if (isExported) {
+        exports.push({ name, kind, isTypeOnly: false });
+      }
+    }
+
+    // Spring Boot & Ktor Routes
+    const routeMatch = trimmed.match(/@(Get|Post|Put|Delete|Patch)Mapping\(\s*["']([^"']+)["']/i) ||
+                       trimmed.match(/(?:get|post|put|delete|patch)\(\s*["']([^"']+)["']/i);
     if (routeMatch) {
+      const rawMethod = routeMatch[1] ? routeMatch[1].toUpperCase() : 'GET';
+      const method = (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(rawMethod) ? rawMethod : 'GET') as ExtractedRoute['method'];
       routes.push({
-        method: routeMatch[1].toUpperCase() as ExtractedRoute['method'],
-        path: routeMatch[2],
+        method,
+        path: routeMatch[2] || routeMatch[1],
         line: lineNum
       });
     }
@@ -597,6 +632,82 @@ function analyzeJvmFile(filePath: string, content: string): FileAnalysisResult {
     localDeps: Array.from(localDepsSet),
     linesCount: lines.length,
     language: filePath.endsWith('.kt') ? 'kotlin' : 'java'
+  };
+}
+
+/**
+ * 6b. Swift Analyzer (.swift, .m, .mm)
+ */
+function analyzeSwiftFile(filePath: string, content: string): FileAnalysisResult {
+  const lines = content.split('\n');
+  const imports: ExtractedImport[] = [];
+  const exports: ExtractedExport[] = [];
+  const symbols: ExtractedSymbol[] = [];
+  const routes: ExtractedRoute[] = [];
+  const externalDepsSet = new Set<string>();
+  const localDepsSet = new Set<string>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+
+    // Imports: import SwiftUI, import class UIKit.UIView, @testable import MyApp
+    const importMatch = trimmed.match(/^(?:@testable\s+)?import\s+(?:(?:typealias|struct|class|enum|protocol|let|var|func)\s+)?([A-Za-z0-9_.]+)/);
+    if (importMatch) {
+      const source = importMatch[1];
+      externalDepsSet.add(source.split('.')[0]);
+      imports.push({ source, specifiers: [], isTypeOnly: false, isRelative: false });
+    }
+
+    // Structs / Classes / Actors / Protocols / Enums / Extensions
+    const declMatch = trimmed.match(/^(?:(?:public|open|private|fileprivate|internal|final|frozen|indirect)\s+)*(struct|class|actor|protocol|enum|extension)\s+([A-Za-z0-9_]+)/);
+    if (declMatch) {
+      const kindRaw = declMatch[1];
+      const name = declMatch[2];
+      const isView = (kindRaw === 'struct' || kindRaw === 'class') && (trimmed.includes(': View') || trimmed.includes(': some View'));
+      const kind: SymbolKind = isView ? 'component' : (kindRaw === 'protocol' ? 'interface' : kindRaw === 'enum' ? 'enum' : kindRaw === 'struct' ? 'struct' : 'class');
+      const isExported = !trimmed.startsWith('private') && !trimmed.startsWith('fileprivate');
+      symbols.push({ name, kind, line: lineNum, exported: isExported, meta: { isSwiftView: isView } });
+      if (isExported) {
+        exports.push({ name, kind, isTypeOnly: kindRaw === 'protocol' });
+      }
+    }
+
+    // Functions: func fetchData(), static func shared()
+    const funcMatch = trimmed.match(/^(?:(?:public|open|private|fileprivate|internal|static|class|mutating|override|async|throws)\s+)*func\s+([A-Za-z0-9_]+)/);
+    if (funcMatch) {
+      const name = funcMatch[1];
+      const isExported = !trimmed.startsWith('private') && !trimmed.startsWith('fileprivate');
+      symbols.push({ name, kind: 'function', line: lineNum, exported: isExported });
+      if (isExported) {
+        exports.push({ name, kind: 'function', isTypeOnly: false });
+      }
+    }
+
+    // Vapor / Swift Server routes: app.get("path"), routes.post("path")
+    const routeMatch = trimmed.match(/\.(get|post|put|delete|patch)\(\s*["']([^"']+)["']/i);
+    if (routeMatch) {
+      routes.push({
+        method: routeMatch[1].toUpperCase() as ExtractedRoute['method'],
+        path: routeMatch[2],
+        line: lineNum,
+      });
+    }
+  }
+
+  return {
+    filePath,
+    imports,
+    exports,
+    symbols,
+    routes,
+    externalDeps: Array.from(externalDepsSet),
+    localDeps: Array.from(localDepsSet),
+    linesCount: lines.length,
+    language: 'swift',
   };
 }
 
@@ -1123,6 +1234,9 @@ function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisR
 
   // 4. Flutter / Dart
   if (ext === '.dart') return analyzeDartFile(filePath, content);
+
+  // 4b. Swift / iOS
+  if (ext === '.swift' || ext === '.m' || ext === '.mm') return analyzeSwiftFile(filePath, content);
 
   // 5. C# / .NET
   if (ext === '.cs') return analyzeCSharpFile(filePath, content);

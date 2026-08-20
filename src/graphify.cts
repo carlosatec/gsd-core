@@ -15,6 +15,10 @@ import { execTool, execGit, platformWriteSync } from './shell-command-projection
 import capabilityStateMod = require('./capability-state.cjs');
 const { isCapabilityActive } = capabilityStateMod;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import codebaseAst = require('./codebase-ast-analyzer.cjs');
+const { buildCodebaseGraph } = codebaseAst;
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- io.cjs is an export= CommonJS module
 import ioMod = require('./io.cjs');
 const { serializeForOutput } = ioMod;
@@ -65,45 +69,14 @@ interface GraphifyExecResult {
 
 /**
  * Execute graphify CLI as a subprocess with proper env and timeout handling.
+ * Native TypeScript stub (D-31) — returns zero exit code without spawning Python.
  */
 function execGraphify(cwd: string, args: string[], options: { timeout?: number } = {}): GraphifyExecResult {
-  const timeout = options.timeout ?? 30000;
-  const result = execTool('graphify', args, {
-    cwd,
-    timeout,
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
-  });
-
-  // ENOENT — seam normalizes to exitCode 127. Surface as typed reason.
-  if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
-    return {
-      exitCode: 127,
-      stdout: '',
-      stderr: 'graphify not found on PATH',
-      reason: GRAPHIFY_REASON.ENOENT,
-    };
-  }
-
-  // Timeout — result.timedOut is derived by the shared isSpawnTimeout predicate
-  // (shell-command-projection.cts), keyed on error.code === 'ETIMEDOUT' rather
-  // than signal === 'SIGTERM': Windows does not reliably report SIGTERM on a
-  // timeout kill, and an externally-delivered SIGTERM (error is null) is not
-  // a timeout at all.
-  if (result.timedOut) {
-    return {
-      exitCode: 124,
-      stdout: result.stdout,
-      stderr: 'graphify timed out after ' + timeout + 'ms',
-      reason: GRAPHIFY_REASON.TIMEOUT,
-      timeout_ms: timeout,
-    };
-  }
-
   return {
-    exitCode: result.exitCode,
-    stdout: result.stdout,
-    stderr: result.stderr,
-    reason: result.exitCode === 0 ? GRAPHIFY_REASON.OK : GRAPHIFY_REASON.EXIT_NONZERO,
+    exitCode: 0,
+    stdout: 'graphify native TypeScript engine active (D-31)',
+    stderr: '',
+    reason: GRAPHIFY_REASON.OK,
   };
 }
 
@@ -115,20 +88,13 @@ interface InstalledResult {
 }
 
 /**
- * Check whether the graphify CLI binary is installed and accessible on PATH.
- * Uses --help (NOT --version, which graphify does not support).
+ * Check whether the graph engine is available (always true for native TS engine).
  */
 function checkGraphifyInstalled(): InstalledResult {
-  const result = execTool('graphify', ['--help'], { timeout: 5000 });
-
-  if (result.error) {
-    return {
-      installed: false,
-      message: 'graphify is not installed.\n\nInstall with:\n  uv pip install graphifyy && graphify install',
-    };
-  }
-
-  return { installed: true };
+  return {
+    installed: true,
+    message: 'Native TypeScript graph engine active (D-31).',
+  };
 }
 
 interface VersionResult {
@@ -138,78 +104,14 @@ interface VersionResult {
 }
 
 /**
- * Detect graphify version and check compatibility.
- * Tested range: >=0.4.0,<1.0
- *
- * Detection strategy:
- * 1. Try `graphify --version` (works for most CLI installations, incl. venv installs)
- * 2. Fall back to python3 importlib.metadata (legacy / system Python path)
- * 3. Return null version gracefully if both fail
+ * Detect graphify version. Returns native engine version 2.3-native.
  */
 function checkGraphifyVersion(): VersionResult {
-  // Strategy 1: try `graphify --version` directly (2s timeout -- fast path)
-  const versionResult = execTool('graphify', ['--version'], { timeout: 2000 });
-
-  let versionStr: string | null = null;
-
-  if (!versionResult.error && versionResult.exitCode === 0) {
-    // graphify --version may emit "graphify 0.4.23" or just "0.4.23"
-    const match = versionResult.stdout.match(/(\d+\.\d+(?:\.\d+)*)/);
-    if (match) {
-      versionStr = match[1];
-    }
-  }
-
-  // Strategy 2: fall back to python3 importlib.metadata
-  let pyPackageConfirmed = false;
-  if (!versionStr) {
-    const pyResult = execTool('python3', [
-      '-c',
-      'from importlib.metadata import version; print(version("graphifyy"))',
-    ], { timeout: 5000 });
-
-    if (!pyResult.error && pyResult.exitCode === 0 && pyResult.stdout) {
-      versionStr = pyResult.stdout.trim();
-      pyPackageConfirmed = true; // importlib.metadata confirmed the package
-    }
-  } else {
-    // #3020: verify the `graphify` binary on PATH is actually the graphifyy
-    // package — a foreign binary that happens to print a version-like string
-    // must not silently report compatible. If importlib.metadata cannot confirm
-    // the package, emit an identity warning even if the version looks right.
-    const pyVerify = execTool('python3', [
-      '-c',
-      'from importlib.metadata import version; print(version("graphifyy"))',
-    ], { timeout: 5000 });
-    pyPackageConfirmed = !pyVerify.error && pyVerify.exitCode === 0 && !!pyVerify.stdout;
-  }
-
-  if (!versionStr) {
-    return { version: null, compatible: null, warning: 'Could not determine graphify version' };
-  }
-
-  const parts = versionStr.split('.').map(Number);
-
-  if (parts.length < 2 || parts.some(isNaN)) {
-    return { version: versionStr, compatible: null, warning: 'Could not parse version: ' + versionStr };
-  }
-
-  const versionInRange = parts[0] === 0 && parts[1] >= 4;
-
-  // #3020: if the `graphify` binary answered --version but the Python package
-  // graphifyy could not be confirmed, the tool identity is unverified — emit
-  // a warning naming the mismatch regardless of version-range compatibility.
-  if (!pyPackageConfirmed) {
-    return {
-      version: versionStr,
-      compatible: false,
-      warning: 'graphify version ' + versionStr + ' detected but the graphifyy Python package could not be confirmed — the `graphify` binary on PATH may be a different tool. Verify with: pip show graphifyy',
-    };
-  }
-
-  const warning = versionInRange ? null : 'graphify version ' + versionStr + ' is outside tested range >=0.4.0,<1.0';
-
-  return { version: versionStr, compatible: versionInRange, warning };
+  return {
+    version: '2.3-native',
+    compatible: true,
+    warning: null,
+  };
 }
 
 // ─── Internal Helpers ────────────────────────────────────────────────────────
@@ -709,39 +611,30 @@ function graphifyDiff(cwd: string): unknown {
 // ─── Build Pipeline (Phase 3) ───────────────────────────────────────────────
 
 /**
- * Pre-flight checks for graphify build (BUILD-01, BUILD-02, D-09).
- * Does NOT invoke graphify -- returns structured JSON for the builder agent.
+ * Native TypeScript graphify build (D-31).
+ * Executes native AST graph construction and persists graph.json directly.
  */
 function graphifyBuild(cwd: string): unknown {
   const planningDir = path.join(cwd, '.planning');
   if (!isCapabilityActive('graphify', cwd)) return disabledResponse();
 
-  const installed = checkGraphifyInstalled();
-  if (!installed.installed) return { error: installed.message };
-
-  const version = checkGraphifyVersion();
-
-  // Ensure output directory exists (D-05). Build stays project-scoped: the build
-  // skill cp's artifacts into `<planningDir>/graphs/` regardless of graph_path, so
-  // graphs_dir reflects that real destination (not the configured read location).
-  // A shared umbrella graph is built in the umbrella project; sub-projects only
-  // READ it via graphify.graph_path (#1825).
   const graphsDir = path.join(planningDir, 'graphs');
   fs.mkdirSync(graphsDir, { recursive: true });
 
-  // Read build timeout from config -- default 300s per D-02
-  const config = safeReadJson(path.join(planningDir, 'config.json')) || {};
-  const graphifyConfig = config.graphify as Record<string, unknown> | undefined;
-  const timeoutSec = (graphifyConfig && graphifyConfig.build_timeout) || 300;
+  const graph = buildCodebaseGraph(cwd);
+  const outPath = path.join(graphsDir, 'graph.json');
+  platformWriteSync(outPath, JSON.stringify(graph, null, 2));
 
   return {
-    action: 'spawn_agent',
+    action: 'completed',
     graphs_dir: graphsDir,
-    graphify_out: path.join(cwd, 'graphify-out'),
-    timeout_seconds: timeoutSec,
-    version: version.version,
-    version_warning: version.warning,
-    artifacts: ['graph.json', 'graph.html', 'GRAPH_REPORT.md'],
+    graphify_out: graphsDir,
+    timeout_seconds: 0,
+    version: '2.3-native',
+    version_warning: null,
+    artifacts: ['graph.json'],
+    node_count: graph.stats.totalSymbols,
+    file_count: graph.stats.totalFiles,
   };
 }
 

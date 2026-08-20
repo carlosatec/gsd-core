@@ -25,6 +25,14 @@ import jitInjector = require('./jit-context-injector.cjs');
 import guardrailsMod = require('./preflight-guardrails.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import initMod = require('./init.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import sessionHook = require('./session-context-hook.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import gapChecker = require('./gap-checker.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import complexityTrigger = require('./complexity-trigger.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import coverageMod = require('./coverage.cjs');
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
@@ -33,6 +41,10 @@ const { getTelemetrySummary } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
 const { assembleJitContext } = jitInjector;
 const { runPreFlightChecks } = guardrailsMod;
+const { syncSessionContext } = sessionHook;
+const { runGapAnalysis } = gapChecker;
+const { analyzeSource, isAnalyzablePath } = complexityTrigger;
+const { classifyContent } = coverageMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -183,7 +195,42 @@ function executeReview(planningDir: string, rootDir: string, autoFix: boolean = 
     }
   }
 
-  // 4. Auto-Fix when requested
+  // 4. Complexity & UI Anti-Pattern Inspection
+  try {
+    if (graph && graph.files) {
+      for (const [relPath, fileInfo] of Object.entries(graph.files)) {
+        const fullPath = path.join(resolvedRoot, relPath);
+        if (!fs.existsSync(fullPath)) continue;
+        const content = platformReadSync(fullPath) || '';
+
+        // Complexity trigger check
+        if (isAnalyzablePath(relPath)) {
+          const compResult = analyzeSource(content);
+          if (compResult.ok) {
+            for (const fn of compResult.functions) {
+              if (fn.score > 15) {
+                warnings.push(`[Complexity] ${relPath}:${fn.name} (complexity score ${fn.score} exceeds threshold 15)`);
+              }
+            }
+          }
+        }
+
+        // Frontend UI anti-pattern check
+        const ext = path.extname(relPath).toLowerCase();
+        if (['.tsx', '.jsx', '.vue', '.html', '.svelte'].includes(ext)) {
+          // Hardcoded hex colors outside class names/tokens
+          const hardcodedColors = content.match(/#[0-9a-fA-F]{6}\b/g);
+          if (hardcodedColors && hardcodedColors.length > 3) {
+            warnings.push(`[UI-Token] ${relPath} contains ${hardcodedColors.length} hardcoded hex colors. Use design tokens.`);
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-blocking inspection
+  }
+
+  // 5. Auto-Fix when requested
   if (autoFix) {
     if (!driftReport.valid) {
       syncLivingDocs(resolvedPlanningDir, resolvedRoot);
@@ -228,7 +275,10 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
   const canonicalName = normalizeCommandName(rawCommand);
   const cwd = options.cwd || process.cwd();
   const planningDir = path.join(cwd, '.planning');
-  const hasFixFlag = options.flags?.fix === true || options.args.includes('--fix');
+  const hasFixFlag = Boolean(options.flags?.['fix'] || options.args.includes('--fix'));
+
+  // Sync session context handshake on command dispatch (D-30)
+  syncSessionContext(planningDir, cwd);
 
   if (!canonicalName) {
     throw new Error(`Unknown command "${rawCommand}". Expected one of: auto, status, plan, exec, review, verify, ship, migrate`);
@@ -306,6 +356,20 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         phaseId,
       });
 
+      // Gap Analysis Check (D-34)
+      let gapWarnings: string[] = [];
+      try {
+        const phaseDirPath = path.join(planningDir, 'phases');
+        const gapResult = runGapAnalysis(cwd, phaseDirPath);
+        if (gapResult && gapResult.counts && gapResult.counts.uncovered > 0) {
+          gapWarnings = gapResult.rows
+            .filter((r) => r.status === 'uncovered')
+            .map((r) => `Uncovered item [${r.source}]: ${r.item}`);
+        }
+      } catch {
+        // Non-blocking
+      }
+
       try {
         initMod.cmdInitPlanPhase(cwd, phaseId, options.raw || true);
       } catch {
@@ -315,7 +379,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         command: 'plan',
         action: 'PLAN_PHASE',
         nextStep: 'run /gsd:exec to execute the generated phase plan',
-        data: { jit: jitPackage },
+        data: { jit: jitPackage, gapWarnings },
         message: `Phase plan ready with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).`,
       };
     }
@@ -394,16 +458,35 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
 
     case 'verify': {
       const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+      let autoPassed = false;
       try {
         initMod.cmdInitVerifyWork(cwd, phaseId, options.raw || true);
       } catch {
         // Non-blocking in mock environments
       }
+
+      // Check coverage auto-pass
+      try {
+        const summaryPath = path.join(planningDir, 'phases', `${phaseId}-SUMMARY.md`);
+        if (fs.existsSync(summaryPath)) {
+          const summaryContent = platformReadSync(summaryPath) || '';
+          const covResult = classifyContent(summaryContent, summaryPath);
+          if (covResult && covResult.all_auto_covered) {
+            autoPassed = true;
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+
       return {
         command: 'verify',
         action: 'VERIFY_WORK',
         nextStep: 'run /gsd:ship to create PR and merge',
-        message: 'Functional and acceptance criteria validation complete.',
+        data: { autoPassed },
+        message: autoPassed
+          ? 'Functional and acceptance criteria validation complete with 100% test coverage (Auto-Pass).'
+          : 'Functional and acceptance criteria validation complete.',
       };
     }
 

@@ -215,7 +215,46 @@ function generateTestScaffold(filePath: string, content?: string, rootDir: strin
     };
   }
 
-  // 6. Node / TypeScript (*.ts, *.cts, *.js, *.cjs) -> tests/foo.test.cjs
+  // 6. Swift (*.swift) -> Tests/FooTests.swift
+  if (ext === '.swift') {
+    const testFileName = `${baseName}Tests.swift`;
+    const testFilePath = dirName === '.' ? `Tests/${testFileName}` : `Tests/${dirName}/${testFileName}`;
+
+    const lines: string[] = [
+      'import XCTest',
+      `@testable import ${baseName}`,
+      '',
+      `final class ${baseName}Tests: XCTestCase {`,
+      '',
+    ];
+
+    for (const exp of analysis.exports) {
+      lines.push(`    func test${exp.name}() throws {`);
+      lines.push(`        // TODO: implement unit test for ${exp.name}`);
+      lines.push('        XCTAssertTrue(true)');
+      lines.push('    }');
+      lines.push('');
+    }
+
+    if (analysis.exports.length === 0) {
+      lines.push('    func testSmoke() throws {');
+      lines.push('        // TODO: add smoke tests');
+      lines.push('        XCTAssertTrue(true)');
+      lines.push('    }');
+    }
+
+    lines.push('}');
+
+    return {
+      targetFile: normalized,
+      testFilePath,
+      testCode: lines.join('\n'),
+      language: 'swift',
+      isInline: false,
+    };
+  }
+
+  // 7. Node / TypeScript (*.ts, *.cts, *.js, *.cjs) -> tests/foo.test.cjs
   const testFilePath = `tests/${baseName}.test.cjs`;
   const relRequire = dirName === '.' ? `../${baseName}.cjs` : `../${dirName}/${baseName}.cjs`;
 
