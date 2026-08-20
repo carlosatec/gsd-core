@@ -78,6 +78,8 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 
 ## Documentação
 
+**Novidades no GSD Core 2.3** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+
 **Tutoriais** — aprendendo na prática:
 - [Tutorial Prático: Dominando o GSD Core 2.3](tutorial-gsd.md) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
@@ -140,6 +142,6 @@ Licença MIT. Consulte [LICENSE](LICENSE) para detalhes.
 
 <div align="center">
 
-**Claude Code é poderoso. GSD Core o torna confiável.**
+**Agentes de codificação com IA são poderosos. O GSD Core os torna confiáveis, disciplinados e eficientes em tokens.**
 
 </div>

@@ -78,7 +78,7 @@ New here? Check the [Complete Practical GSD Tutorial (Português)](tutorial-gsd.
 
 ## Documentation
 
-**What's new in 1.7.0** → [docs/whats-new-1.7.0.md](docs/whats-new-1.7.0.md)
+**What's new in GSD Core 2.3** → [Complete Practical Tutorial](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
 - [Practical Tutorial: Mastering GSD Core 2.3](tutorial-gsd.md) 🔥
@@ -142,6 +142,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Claude Code is powerful. GSD Core makes it reliable.**
+**AI coding agents are powerful. GSD Core makes them reliable, disciplined, and token-efficient.**
 
 </div>
