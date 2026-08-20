@@ -1,123 +1,231 @@
-# ⚡ Guia Prático do GSD Core 2.1 Universal — Manual Completo e Sem Complicação
+# 🚀 Tutorial Prático: Dominando o GSD Core 2.3
 
-O **GSD (Get Shit Done) 2.1 Universal** é um sistema avançado de meta-prompting, engenharia de contexto e desenvolvimento guiado por especificações para agentes de IA. Ele transforma metas complexas em software testado e entregue através de fases disciplinadas, isolamento de contexto, inteligência AST universal (Full-Stack, Mobile, Dados & DevOps) e commits atômicos.
-
----
-
-## 🎯 Os 5 Pilares de Inteligência do GSD 2.1 Universal
-
-| Pilar | Como Funciona | Benefício |
-| :--- | :--- | :--- |
-| **1. 🧠 Motor AST Universal 360°** | Análise estática profunda em TypeScript/Node.js para **16+ ecossistemas** (TS/JS, Python, Go, Rust, Flutter, SQL, CSS, Docker, Shell, C#, Java, PHP, Ruby, C++). | A documentação viva (`ARCHITECTURE.md`, `APIS.md`) mapeia toda a topologia de código, dados, estilos e containers. |
-| **2. 💉 Injeção Cirúrgica de Contexto (JIT)** | Injeta apenas contratos e assinaturas dos arquivos vizinhos relevantes para a tarefa. | Economiza até 85% de tokens e impede que a IA perca o contexto ou sofra alucinações. |
-| **3. 🛡️ Pre-Flight Guardrails & Self-Healing** | Valida quebras de contratos antes de editar e corrige automaticamente falhas de testes. | Impede que a IA remova exportações essenciais silenciosamente e auto-repara bugs em até 3 tentativas. |
-| **4. 🚀 Suíte Enxuta (6+1 Comandos)** | Interface simplificada focada em 6 operações manuais + 1 modo autônomo. | Elimina a confusão de 70 comandos legados, oferecendo controle total com comandos intuitivos. |
-| **5. 🔄 Auto-Upgrade, i18n & Telemetria JIT** | Assistente `/gsd:migrate`, suporte bilíngue (`EN` / `PT-BR`) nas descrições de autocomplete e métricas de tokens. | Migra qualquer projeto antigo em segundos e adapta o menu da IDE ao seu idioma nativo. |
+> **Git. Ship. Done.**  
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core 2.3**.
 
 ---
 
-## 📦 Como Instalar & Selecionar o Idioma
+## 📖 Índice
 
-Você pode instalar o GSD no seu agente favorito escolhendo o idioma das descrições do menu (`en` ou `pt-br`):
+1. [O que é o GSD Core](#1-o-que-é-o-gsd-core)
+2. [Instalação e Configuração](#2-instalação-e-configuração)
+3. [Iniciando um Projeto (Greenfield vs. Brownfield)](#3-iniciando-um-projeto)
+4. [A Interface Canônica 6+1](#4-a-interface-canônica-61)
+5. [O Ciclo de Desenvolvimento em 5 Etapas](#5-o-ciclo-de-desenvolvimento-em-5-etapas)
+6. [Inteligência de Código: AST Universal 360° & Living Docs](#6-inteligência-de-código-ast-universal-360--living-docs)
+7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico)
+8. [Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing](#8-segurança-pré-voo-guardrails-anti-patterns--self-healing)
+9. [Telemetria e Observabilidade de Tokens (`/gsd:tokens`)](#9-telemetria-e-observabilidade-de-tokens-gsdtokens)
+10. [Exemplo Passo a Passo: Construindo uma Feature do Zero](#10-exemplo-passo-a-passo-construindo-uma-feature-do-zero)
 
-### 1. Instalação com Idioma em Português BR (Recomendado para desenvolvedores no Brasil)
+---
+
+## 1. O que é o GSD Core
+
+O **GSD Core** é um framework de engenharia de contexto e desenvolvimento orientado a especificações. Ele resolve o problema do **Context Rot** (degradação da qualidade da IA à medida que o histórico de conversa se enche de ruídos) através de:
+
+* **Subagentes com Contexto Limpo:** Cada plano de execução roda em uma janela isolada de 200k tokens.
+* **Estado Persistente em Arquivo:** O diretório `.planning/` é a única fonte da verdade — todo o progresso, decisões técnicas e planos ficam versionados no Git.
+* **Injeção Cirúrgica (JIT):** Em vez de enviar o repositório inteiro para o modelo, o GSD envia apenas os contratos e arquivos relevantes, reduzindo o consumo de tokens em **80% a 90%**.
+
+---
+
+## 2. Instalação e Configuração
+
+Instale o GSD Core globalmente ou localmente no seu runtime preferido:
+
 ```bash
-npx gsd-core --antigravity --global --lang=pt-br
+npx @opengsd/gsd-core@latest
 ```
 
-### 2. Instalação com Idioma Padrão em Inglês
+O instalador detectará automaticamente seu ambiente (Claude Code, Antigravity CLI, Gemini CLI, Codex, Copilot, Cursor, Windsurf, OpenCode, Kimi CLI).
+
+---
+
+## 3. Iniciando um Projeto
+
+### Cenário A: Novo Projeto do Zero (Greenfield)
 ```bash
-npx gsd-core --antigravity --global --lang=en
+/gsd-new-project
+```
+O assistente fará perguntas socráticas para entender o objetivo do software, gerando o `PROJECT.md`, `ROADMAP.md` e a primeira fase.
+
+### Cenário B: Projeto Existente (Brownfield / Onboarding)
+```bash
+/gsd-onboard
+```
+O GSD executa o scanner AST 360°, cataloga 17+ linguagens, gera o grafo de dependências e cria a documentação viva em `.planning/codebase/`.
+
+### Cenário C: Modernizar Projeto Legado do GSD 1.x
+```bash
+/gsd:migrate
+```
+Atualiza a estrutura para o padrão GSD 2.3 de forma 100% não-destrutiva.
+
+---
+
+## 4. A Interface Canônica 6+1
+
+Para simplificar a experiência, o GSD 2.3 unificou mais de 30 comandos em **6 comandos canônicos + 1 piloto automático**:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                 INTERFACE CANÔNICA GSD 2.3                  │
+├────────────┬────────────────────────────────────────────────┤
+│ Comando    │ Ação Operacional                               │
+├────────────┼────────────────────────────────────────────────┤
+│ /gsd:status│ Diagnóstico situacional, progresso e roadmap   │
+│ /gsd:plan  │ Criação de plano detalhado com ondas e gates   │
+│ /gsd:exec  │ Execução paralela em ondas com subagentes      │
+│ /gsd:review│ Revisão estática de código com flag --fix      │
+│ /gsd:verify│ Validação conversacional de UAT e aceitação    │
+│ /gsd:ship  │ Preparação de branch, PR e merge               │
+│ /gsd:auto  │ Piloto automático (discuss → plan → exec loop) │
+│ /gsd:tokens│ Painel visual de economia e uso de tokens      │
+└────────────┴────────────────────────────────────────────────┘
 ```
 
-> **Nota Importante:** Os nomes dos comandos permanecem **sempre em inglês** (ex: `gsd-plan`, `gsd-exec`, `gsd-status`), garantindo compatibilidade universal. Apenas as **descrições explicativas** exibidas no autocomplete da IDE são traduzidas.
+> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos automaticamente: `/gsd:plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`.
 
 ---
 
-## 🧭 Interface Unificada (6 Comandos Chave + 1 Piloto Automático + Migração)
+## 5. O Ciclo de Desenvolvimento em 5 Etapas
 
-| Comando (Nome Universal) | Descrição em Português (`--lang=pt-br`) | Descrição em Inglês (`--lang=en`) |
-| :--- | :--- | :--- |
-| **`/gsd:status`** | Verificar progresso do projeto, drift de contexto e economia de tokens JIT | Check project progress, context drift, and JIT token efficiency |
-| **`/gsd:plan`** | Criar plano de execução detalhado da fase com ciclo de verificação | Create detailed phase execution plan with verification loop |
-| **`/gsd:exec`** | Executar planos da fase com paralelização em ondas e commits atômicos | Execute phase plans with wave-based parallelism and atomic commits |
-| **`/gsd:review`** | Revisar arquivos alterados contra bugs, segurança e auto-corrigir com `--fix` | Review changed files for bugs, security and auto-fix with `--fix` |
-| **`/gsd:verify`** | Validar funcionalidades através de UAT conversacional e testes de aceitação | Validate built features through conversational UAT and acceptance tests |
-| **`/gsd:ship`** | Preparar branch de release, executar revisão e preparar para merge | Prepare release branch, run review and prepare for PR merge |
-| **`/gsd:auto`** | Executar ciclo autônomo de fases de ponta a ponta com guardrails de segurança | Run end-to-end autonomous phase cycle with pre-flight safety checkpoints |
-| **`/gsd:migrate`** | Modernizar projeto legado para a arquitetura GSD 2.1 Universal | Upgrade legacy project to GSD 2.1 Universal architecture |
-
-> *Dica: Os comandos aceitam tanto `/gsd:comando` quanto `/gsd-comando` ou `$gsd-comando`.*
-
----
-
-## 🌐 Ecossistema Multi-Linguagem Suportado Nativo
-
-O motor AST analisa de forma nativa e sem necessidade de compiladores ou runtimes externos:
-
-* **Mobile & Web:** Flutter / Dart (`.dart`), HTML, Vue (`.vue`), Svelte (`.svelte`), TSX, JSX.
-* **Estilos & Design Tokens:** CSS, SCSS, SASS, LESS (`--var` custom properties, classes e keyframes).
-* **Bancos de Dados & Schemas:** MySQL, PostgreSQL, SQLite (`.sql`), Prisma ORM (`.prisma`).
-* **DevOps & Containers:** Docker (`Dockerfile`), Docker Compose (`docker-compose.yml`, `compose.yaml`), Shell/Bash (`.sh`, `.bash`, `.zsh`).
-* **Backend & Sistemas:** Python (`.py`), Go (`.go`), Rust (`.rs`), C# / .NET (`.cs`), Java / Kotlin (`.java`, `.kt`), PHP (`.php`), Ruby (`.rb`), C / C++ (`.c`, `.cpp`, `.h`, `.hpp`).
-* **Contratos de API:** GraphQL (`.graphql`, `.gql`), OpenAPI / Swagger (`.yaml`, `.json`).
-
----
-
-## 🚀 1. Modo: Projeto Novo do Zero (Greenfield)
-
-1. **Inicializar o Projeto:**
-   ```bash
-   /gsd-new-project
-   ```
-2. **Ciclo Completo da Fase:**
-   * **Planejar:** `/gsd:plan` *(cria o plano em ondas de execução)*
-   * **Executar:** `/gsd:exec` *(codifica com guardrails e commits rastreáveis)*
-   * **Revisar:** `/gsd:review --fix` *(audita o código e auto-corrige desvios)*
-   * **Verificar:** `/gsd:verify` *(testa critérios de aceitação e UAT)*
-   * **Entregar:** `/gsd:ship` *(conclui a fase e abre PR)*
-
----
-
-## 🦅 2. Modo: Projeto Existente ou Legado (Brownfield & Upgrade)
-
-1. **Fazer Auto-Upgrade para GSD 2.1 Universal:**
-   ```bash
-   /gsd:migrate
-   ```
-   *Varre todo o repositório, detecta todas as linguagens/containers/bancos e gera a pasta `.planning/intel/` e a documentação viva em `.planning/codebase/`.*
-
-2. **Verificar Status e Eficiência:**
-   ```bash
-   /gsd:status
-   ```
-   *Exibe o roadmap e o percentual de tokens economizados pela injeção JIT.*
-
-3. **Executar Novas Fases:**
-   ```bash
-   /gsd:plan ➔ /gsd:exec ➔ /gsd:review --fix ➔ /gsd:verify ➔ /gsd:ship
-   ```
-
----
-
-## 📁 3. Estrutura do Diretório `.planning/`
+Cada fase do roadmap passa rigorosamente por este ciclo:
 
 ```
-.planning/
-├── PROJECT.md          # Visão, requisitos fundamentais e restrições
-├── ROADMAP.md          # Roteiro das fases com status e critérios de sucesso
-├── STATE.md            # Posição exata e decisões técnicas acumuladas
-├── intel/
-│   ├── codebase-graph.json   # Grafo universal de símbolos, rotas, tabelas e containers
-│   └── telemetry.json        # Métricas de telemetria de economia de tokens JIT
-├── codebase/
-│   ├── ARCHITECTURE.md       # Arquitetura viva gerada pela AST multi-linguagem
-│   ├── APIS.md               # Contratos de interfaces, rotas e tipos exportados
-│   └── STACK.md              # Runtimes, frameworks e dependências
-└── phases/
-    ├── 01-living-docs/
-    ├── 02-jit-context/
-    ├── 03-preflight-guardrails/
-    ├── 04-unified-interface/
-    └── 05-multi-language-and-upgrade/
+  1. DISCUSS ──────► 2. PLAN ──────► 3. EXECUTE ──────► 4. VERIFY ──────► 5. SHIP
+  (Alinhar o quê)   (Como fazer)     (Escrever código)   (Validar UAT)   (Entregar PR)
 ```
+
+1. **Discuss (`/gsd:plan` / `discuss`):** Alinha decisões arquiteturais antes de planejar e grava no `STATE.md`.
+2. **Plan (`/gsd:plan`):** Decompõe a fase em tarefas atômicas divididas em ondas paralelas (*waves*) no `PLAN.md`.
+3. **Execute (`/gsd:exec`):** Executa as tarefas onda por onda com subagentes de contexto limpo.
+4. **Verify (`/gsd:verify`):** Testa funcionalidades construídas através de validação conversacional (UAT).
+5. **Ship (`/gsd:ship`):** Limpa o git, filtra commits internos de `.planning/` e abre o Pull Request.
+
+---
+
+## 6. Inteligência de Código: AST Universal 360° & Living Docs
+
+O GSD Core analisa estaticamente o código sem precisar compilar ou rodar interpretadores pesados:
+
+* **17+ Tecnologias Nativas:** TypeScript, JavaScript, Python, Go, Rust, Flutter/Dart, C#, Java, Kotlin, PHP, Ruby, SQL/DDL, Prisma, GraphQL, CSS/SCSS, Dockerfile, Shell Script.
+* **Living Docs Engine:** Gera e valida automaticamente:
+  - `.planning/codebase/ARCHITECTURE.md` (topologia de imports e módulos)
+  - `.planning/codebase/APIS.md` (catálogo de interfaces, structs e rotas HTTP)
+* **Prevenção de Doc Drift:** Se um método for renomeado no código, a documentação é sincronizada no commit seguinte.
+
+---
+
+## 7. Injeção Cirúrgica de Contexto (JIT) & RAG Semântico
+
+Em vez de poluir a IA com centenas de linhas irrelevantes, o motor JIT:
+
+1. **Consulta o Grafo AST:** Descobre quem importa o arquivo alvo e quem ele importa (vizinhos diretos de 1º grau).
+2. **Extrai Contratos:** Envia apenas as assinaturas exportadas (`interfaces`, `structs`, `traits`), ignorando o corpo das funções vizinhas.
+3. **Busca Semântica RAG (TF-IDF):** Encontra módulos conceitualmente relacionados via busca híbrida não-bloqueante.
+4. **Adiciona Decisões Ativas:** Injeta apenas as ADRs relevantes do `STATE.md`.
+
+**Resultado:** O modelo recebe um bloco enxuto `<jit_context>` com foco 100% no que importa.
+
+---
+
+## 8. Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing
+
+Para evitar que a IA quebre a aplicação:
+
+* **Validação em Memória (Pre-Flight):** Simula os diffs em memória antes de tocar o disco. Se a IA deletar uma função exportada necessária para outro arquivo, o guardrail bloqueia o patch (`CONTRACT_BREAK`).
+* **Suporte à Co-Evolução:** Se a IA alterar a função e o arquivo consumidor no mesmo lote de arquivos, o guardrail autoriza a mudança sem falso positivo.
+* **Laço de Self-Healing:** Se um teste falhar durante a execução, o agente tem até 3 tentativas automáticas para depurar e corrigir.
+* **Anti-Pattern Store:** Toda correção bem-sucedida é memorizada em `.planning/intel/anti-patterns.json` para que a IA nunca mais repita o mesmo erro em sessões futuras.
+
+---
+
+## 9. Telemetria e Observabilidade de Tokens (`/gsd:tokens`)
+
+Para visualizar em tempo real a economia de contexto e o volume de tokens processados:
+
+```bash
+/gsd:tokens
+```
+
+**Saída no Terminal (65 Colunas):**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ⚡ GSD Token Telemetry (Observability)                       │
+├─────────────────────────────────────────────────────────────┤
+│ • Total Invocations:     42     executions                  │
+│ • Tokens Used (JIT):     84,500     tokens                  │
+│ • Monolithic Avoided:    820,000    tokens                  │
+│ • Tokens Saved:          735,500    tokens                  │
+│ • Average Efficiency:    89.7 % context saved               │
+│ • Peak Invocation:       3,200  tokens                      │
+├─────────────────────────────────────────────────────────────┤
+│ 🔀 Distribution by Command:                                  │
+│ • exec     [████████░░░░]  60% (50,700 tokens)              │
+│ • plan     [███░░░░░░░░░]  20% (16,900 tokens)              │
+│ • review   [███░░░░░░░░░]  20% (16,900 tokens)              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 10. Exemplo Passo a Passo: Construindo uma Feature do Zero
+
+Acompanhe um fluxo real de ponta a ponta:
+
+### Passo 1: Verificar a Situação Atual
+```bash
+/gsd:status
+```
+> O GSD analisa a árvore git, lê o `STATE.md`, exibe a fase ativa e sugere o próximo passo.
+
+### Passo 2: Planejar a Fase
+```bash
+/gsd:plan
+```
+> O agente analisa a AST do projeto, define as waves de tarefas, gera o `PLAN.md` e estabelece os critérios de aceitação.
+
+### Passo 3: Executar as Tarefas
+```bash
+/gsd:exec
+```
+> Os subagentes executam os planos em paralelo com injeção cirúrgica JIT. Se houver falha em algum teste, o self-healing corrige automaticamente.
+
+### Passo 4: Fazer Code Review com Auto-Correção
+```bash
+/gsd:review --fix
+```
+> O GSD audita os arquivos alterados, detecta inconsistências de estilo ou tipagem e aplica correções autônomas imediatas.
+
+### Passo 5: Validar a Entrega (UAT)
+```bash
+/gsd:verify
+```
+> O agente guia você na validação dos critérios de sucesso e registra a aprovação.
+
+### Passo 6: Entregar e Abrir PR
+```bash
+/gsd:ship
+```
+> Cria a branch limpa, roda os testes finais, gera o resumo da entrega e abre o Pull Request!
+
+---
+
+## 🎯 Resumo Rápido de Comandos
+
+| O que você quer fazer? | Execute este comando |
+|---|---|
+| Saber o que fazer agora | `/gsd:status` |
+| Planejar a próxima fase | `/gsd:plan` |
+| Executar as tarefas planejadas | `/gsd:exec` |
+| Auditar e corrigir código | `/gsd:review --fix` |
+| Testar e aprovar a entrega | `/gsd:verify` |
+| Ver uso e economia de tokens | `/gsd:tokens` |
+| Enviar para produção / Abrir PR | `/gsd:ship` |
+| Executar tudo no piloto automático | `/gsd:auto` |
+
+---
+
+*GSD Core 2.3 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*

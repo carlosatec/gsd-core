@@ -37,15 +37,20 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD 2.0: Documentação Viva e Inteligência AST
+## GSD 2.3: Inteligência Universal, AST 360°, RAG e Telemetria de Tokens
 
-### A documentação no GSD 2.0 é viva, incremental e verificada contra o código real:
+O GSD Core 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
 
-- **Sincronização Contínua Pós-Commit:** A cada tarefa executada, a arquitetura, rotas, interfaces e decisões técnicas são atualizadas automaticamente em `.planning/intel/` e `.planning/codebase/`.
-- **Análise Topológica AST Nativa:** A IA não adivinha nomes ou contratos — ela navega por um grafo estático de símbolos gerado diretamente do código TypeScript/JavaScript em tempo real.
-- **Verificação Estrita Contra Defasagem:** Um linter de documentação valida se as descrições de rotas, esquemas e dependências correspondem 100% ao código em execução, eliminando documentações obsoletas.
-- **Memória Rationale e Decisões (ADRs):** O sistema registra o *porquê* de cada escolha técnica, permitindo que qualquer subagente ou desenvolvedor compreenda a intenção original antes de refatorar.
-- **Injeção Cirúrgica de Contexto (JIT):** Em vez de sobrecarregar a IA com prompts monolíticos, o GSD 2.0 injeta apenas as decisões e contratos relacionados ao arquivo exato que está sendo modificado.
+- **Motor AST Universal Multi-Linguagem (17+ Linguagens):** Análise estática nativa cobrindo TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell e mais — 100% em Node.js puro sem dependências nativas (ADR D-01).
+- **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real.
+- **Grafo Profundo & PageRank de Centralidade:** Módulos ordenados por relevância topológica, permitindo que a IA se ancore em implementações canônicas de referência.
+- **RAG Semântico Híbrido (Não-Bloqueante):** Busca semântica baseada em TF-IDF e Jaccard sobre conceitos do código com índice isolado e *lazy loading*.
+- **Injeção Cirúrgica de Contexto (JIT):** Elimina prompts monolíticos injetando apenas vizinhos diretos, contratos de tipos e decisões ativas (80% a 90% de economia de tokens).
+- **Pre-Flight Guardrails & Validação em Memória:** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares e imports fantasmas *antes* de gravar no disco.
+- **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
+- **Scaffolding de Testes por Topologia:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Go `_test.go` inline, Rust `#[cfg(test)]`, Python e Node isolados).
+- **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.
+- **Interface Canônica 6+1 Unificada:** Simplifica os fluxos de trabalho entre múltiplos runtimes em `status`, `plan`, `exec`, `review` (com `--fix`), `verify`, `ship`, `auto`, `tokens` e `migrate`.
 
 ---
 
@@ -66,13 +71,14 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 /gsd-onboard       # base de código existente
 ```
 
-É a primeira vez? Siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
+É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](tutorial-gsd.md) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
 
 ---
 
 ## Documentação
 
 **Tutoriais** — aprendendo na prática:
+- [Tutorial Prático: Dominando o GSD Core 2.3](tutorial-gsd.md) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 

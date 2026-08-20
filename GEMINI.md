@@ -34,13 +34,15 @@ If you have installed the gsd commands, the workflow is driven by these `/gsd-*`
 slash commands (Antigravity registers gsd's commands under a hyphenated
 namespace):
 
-- `/gsd-new-project` — initialise a project and gather deep context.
-- `/gsd-progress` — the unified situational command: check progress, advance the
-  workflow, or dispatch a freeform intent.
-- `/gsd-plan-phase <N>` — produce a detailed phase plan with a verification loop.
-- `/gsd-execute-phase <N>` — execute a phase's plans with wave-based parallelism.
-- `/gsd-verify-work` — validate built features through conversational UAT.
+- `/gsd-status` — the unified situational command: check progress, context drift, and token savings.
+- `/gsd-plan` — produce a detailed phase plan with a verification loop.
+- `/gsd-exec` — execute a phase's plans with wave-based parallelism.
+- `/gsd-review` — run code review over changed files with optional `--fix` autonomous repairs.
+- `/gsd-verify` — validate built features through conversational UAT.
 - `/gsd-ship` — open a PR, run review, and prepare for merge.
+- `/gsd-auto` — autonomous end-to-end autopilot across phase workflows.
+- `/gsd-tokens` — real-time token telemetry dashboard and savings breakdown.
+- `/gsd-migrate` — one-click non-destructive legacy project upgrade.
 - `/gsd-help` — list every available command.
 
 ## Working with GSD

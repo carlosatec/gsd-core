@@ -37,15 +37,20 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD 2.0: Living Documentation & AST Codebase Intelligence
+## GSD 2.3: Universal Intelligence, AST 360°, RAG & Token Telemetry
 
-### Living, incremental documentation verified against real code:
+GSD Core 2.3 elevates AI coding agents with a full-stack static analysis and context governance engine:
 
-- **Continuous Post-Commit Sync:** With each executed task, architecture maps, APIs, routes, interfaces, and technical decisions are automatically updated in `.planning/intel/` and `.planning/codebase/`.
-- **Native AST Code Topology:** The AI navigates a real-time static code graph generated directly from TypeScript/JavaScript files—eliminating hallucinated imports or wrong method signatures.
-- **Drift Prevention & Doc Verification:** A documentation linter ensures that documented schemas, routes, and interfaces match 100% of the active running codebase.
-- **Decision Rationale & ADRs:** The system preserves the *why* behind architectural decisions, enabling any subagent or human engineer to understand past context before refactoring.
-- **Surgical Context Injection (JIT):** Instead of stuffing monolithic 50KB prompts, GSD 2.0 injects only the decisions and contracts relevant to the exact files being edited.
+- **Universal Multi-Language AST (17+ Languages):** Native static code analysis across TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell and more — with zero external or native dependencies (pure Node.js).
+- **Living, Incremental Documentation:** Post-commit sync auto-generates and verifies `.planning/codebase/ARCHITECTURE.md` and `.planning/codebase/APIS.md` directly from active code topology.
+- **Deep Call-Graph & PageRank Centrality:** Modules are ranked by architectural importance, allowing agents to anchor on canonical reference implementations.
+- **Hybrid Semantic RAG (Non-Blocking):** Pure-Node TF-IDF and Jaccard similarity search over codebase concepts with isolated index and lazy loading.
+- **Surgical Context Injection (JIT):** Replaces monolithic prompts by injecting only 1st-degree neighbors, active type contracts, and architectural decisions (yielding 80%–90% token savings).
+- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies, and phantom imports *before* writing to disk.
+- **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops to prevent recurring mistakes across sessions.
+- **Topology-Aware Test Scaffolding:** Synthesizes test skeletons matching native language conventions (inline `_test.go` for Go, `#[cfg(test)]` for Rust, isolated test suites for Python/Node).
+- **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
+- **Streamlined 6+1 Canonical Commands:** Unifies multi-runtime CLI workflows into `status`, `plan`, `exec`, `review` (with `--fix`), `verify`, `ship`, `auto`, `tokens`, and `migrate`.
 
 ---
 
@@ -66,7 +71,7 @@ Once installed, start a new project or onboard an existing repo:
 /gsd-onboard       # existing codebase
 ```
 
-New here? Follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
+New here? Check the [Complete Practical GSD Tutorial (Português)](tutorial-gsd.md) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
 
 ---
 
@@ -75,6 +80,7 @@ New here? Follow [Your first project](docs/tutorials/your-first-project.md) for 
 **What's new in 1.7.0** → [docs/whats-new-1.7.0.md](docs/whats-new-1.7.0.md)
 
 **Tutorials** — learning by doing:
+- [Practical Tutorial: Mastering GSD Core 2.3](tutorial-gsd.md) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 
