@@ -10,7 +10,6 @@
 
 [![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/mYgfVNfA2r)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
@@ -78,10 +77,10 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 
 ## Documentação
 
-**Novidades no GSD Core 2.3** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.3** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core 2.3](tutorial-gsd.md) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.3](tutorial-gsd.md) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 
@@ -107,7 +106,7 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 
 ## Por que funciona
 
-A maioria das configurações de codificação com IA falha em escala porque o inchaço de contexto degrada silenciosamente a qualidade da saída, não há memória compartilhada entre sessões e nada verifica se o código realmente funciona. O GSD Core resolve os três problemas: o trabalho pesado é executado em subagentes com contexto limpo, artefatos estruturados como `STATE.md` e `CONTEXT.md` sobrevivem às fronteiras de sessão, e a etapa de verificação percorre o que foi construído e gera planos de correção antes de uma fase ser declarada concluída. Consulte [docs/pt-BR/explanation/context-engineering.md](docs/pt-BR/explanation/context-engineering.md) para o raciocínio completo.
+A maioria das configurações de codificação com IA falha em escala porque o inchaço de contexto degrada silenciosamente a qualidade da saída, não há memória compartilhada entre sessões e nada verifica se o código realmente funciona. O GSD Core Nexus resolve os três problemas: o trabalho pesado é executado em subagentes com contexto limpo, artefatos estruturados como `STATE.md` e `CONTEXT.md` sobrevivem às fronteiras de sessão, e a etapa de verificação percorre o que foi construído e gera planos de correção antes de uma fase ser declarada concluída. Consulte [docs/pt-BR/explanation/context-engineering.md](docs/pt-BR/explanation/context-engineering.md) para o raciocínio completo.
 
 Problemas? Consulte [docs/pt-BR/how-to/recover-and-troubleshoot.md](docs/pt-BR/how-to/recover-and-troubleshoot.md).
 
@@ -118,20 +117,6 @@ Problemas? Consulte [docs/pt-BR/how-to/recover-and-troubleshoot.md](docs/pt-BR/h
 | Projeto | Plataforma |
 |---------|----------|
 | [gsd-opencode](https://github.com/rokicool/gsd-opencode) | Port original para OpenCode |
-| [Discord](https://discord.gg/mYgfVNfA2r) | Suporte da comunidade |
-
----
-
-## Histórico de estrelas
-
-<a href="https://star-history.com/#carlosatec/gsd-core&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date" />
- </picture>
-</a>
-
 ---
 
 ## Licença

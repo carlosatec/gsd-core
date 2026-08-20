@@ -10,7 +10,6 @@
 
 [![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/mYgfVNfA2r)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
@@ -78,10 +77,10 @@ New here? Check the [Complete Practical GSD Tutorial (Português)](tutorial-gsd.
 
 ## Documentation
 
-**What's new in GSD Core 2.3** → [Complete Practical Tutorial](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 2.3** → [Complete Practical Tutorial](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core 2.3](tutorial-gsd.md) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 2.3](tutorial-gsd.md) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 
@@ -107,7 +106,7 @@ Full index: [docs/README.md](docs/README.md) · [Português](README.pt-BR.md).
 
 ## Why it works
 
-Most AI-coding setups fail at scale because context bloat silently degrades output quality, there is no shared memory between sessions, and nothing verifies that code actually works. GSD Core solves all three: heavy work runs in fresh subagents, structured artifacts like `STATE.md` and `CONTEXT.md` survive session boundaries, and the verify step walks through what was built and generates fix plans before a phase is declared done. See [docs/explanation/context-engineering.md](docs/explanation/context-engineering.md) for the full reasoning.
+Most AI-coding setups fail at scale because context bloat silently degrades output quality, there is no shared memory between sessions, and nothing verifies that code actually works. GSD Core Nexus solves all three: heavy work runs in fresh subagents, structured artifacts like `STATE.md` and `CONTEXT.md` survive session boundaries, and the verify step walks through what was built and generates fix plans before a phase is declared done. See [docs/explanation/context-engineering.md](docs/explanation/context-engineering.md) for the full reasoning.
 
 Troubleshooting? See [docs/how-to/recover-and-troubleshoot.md](docs/how-to/recover-and-troubleshoot.md).
 
@@ -118,20 +117,6 @@ Troubleshooting? See [docs/how-to/recover-and-troubleshoot.md](docs/how-to/recov
 | Project | Platform |
 |---------|----------|
 | [gsd-opencode](https://github.com/rokicool/gsd-opencode) | Original OpenCode port |
-| [Discord](https://discord.gg/mYgfVNfA2r) | Community support |
-
----
-
-## Star History
-
-<a href="https://star-history.com/#carlosatec/gsd-core&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=carlosatec/gsd-core&type=Date" />
- </picture>
-</a>
-
 ---
 
 ## License
