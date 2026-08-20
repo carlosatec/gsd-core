@@ -1,3 +1,9 @@
+<!-- GSD-SESSION-CONTEXT -->
+> **GSD Active State**: Phase: Phase 10 (Ultra-Convergência, Mobile 360° & Arquitetura do Core) | Status: Complete (27/27 Testes Passando)
+> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship
+<!-- /GSD-SESSION-CONTEXT -->
+
 # GSD Core — Antigravity CLI context
 
 > **Gemini CLI was sunset by Google on 2026-06-18** and is no longer served for
@@ -49,6 +55,7 @@ namespace):
 
 - Treat `.planning/` as the source of truth for project state — read it before
   acting, and keep it current as work progresses.
+
 - Prefer the smallest change that satisfies the phase's verification criteria.
 - Run the project's tests and linters before declaring a phase done.
 - When unsure what to do next, and the gsd commands are installed, `/gsd-progress`

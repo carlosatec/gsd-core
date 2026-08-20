@@ -36,21 +36,22 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD 2.3: Inteligência Universal, AST 360°, RAG e Telemetria de Tokens
+## GSD 2.3: Inteligência Universal, AST 360°, Mobile, RAG BM25 e Telemetria de Tokens
 
 O GSD Core 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
 
-- **Motor AST Universal Multi-Linguagem & Cache Incremental:** Análise estática nativa cobrindo 17+ linguagens (TypeScript/JS, Python, Go, Rust, Flutter/Dart, C#, Java/Kotlin, PHP, Ruby, SQL/Prisma, CSS/SCSS, Docker, Shell, etc.) com cache incremental baseado em `mtime` e Modo Lite automático para varreduras rápidas.
+- **Motor AST Universal & Mobile 360° Nativo:** Análise estática nativa cobrindo mais de 35 extensões com suporte completo **Mobile 360°** para iOS (Swift, SwiftUI, XCTest) e Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
+- **Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** Fachada Graphify nativa em TypeScript puro (`2.3-native`) construindo e consultando o grafo de dependências AST em memória sem dependência de Python externo.
+- **Hook de Contexto de Sessão (Zero Cegueira — D-30):** Injeta e atualiza automaticamente o estado ativo do projeto em `GEMINI.md`, `AGENTS.md` ou regras, fornecendo contexto instantâneo à IA na inicialização.
+- **RAG Semântico Okapi BM25 & Tokenizador Poliglota (D-33):** Recuperação semântica de alta precisão com saturação de termos ($k_1=1.5, b=0.75$), divisão inteligente de identificadores (`camelCase`, `PascalCase`, `kebab-case`, `snake_case`) e exclusão de caches mobile.
 - **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real sem sobrecarga $O(n^2)$.
 - **Grafo Profundo & Âncoras Canônicas:** Módulos ordenados por relevância arquitetural (PageRank), permitindo que a IA se ancore em implementações canônicas de referência.
-- **RAG Semântico Híbrido (Não-Bloqueante):** Busca semântica baseada em TF-IDF e Jaccard sobre conceitos do código com índice isolado e *lazy loading*.
 - **Injeção Cirúrgica de Contexto (JIT):** Elimina prompts monolíticos injetando apenas vizinhos diretos, contratos de tipos e decisões ativas (80% a 90% de economia de tokens).
-- **Pre-Flight Guardrails & Validação em Memória:** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares (limite de 1000 nós no DFS), imports fantasmas e truncamento acidental para 0 bytes (`EMPTY_FILE_GUARD`) *antes* de gravar no disco.
-- **Soft Warning & Planejamento Resiliente:** Auto-síntese de `SPEC.md` a partir do roadmap com avisos não-bloqueantes, eliminando fricção no fluxo de trabalho.
+- **Pre-Flight Guardrails & Verificações de Qualidade (D-34):** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares (limite de 1000 nós no DFS), imports fantasmas e truncamento acidental para 0 bytes (`EMPTY_FILE_GUARD`), além de varreduras de complexidade ciclomática e anti-patterns de UI no `/gsd:review`.
 - **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções com busca transversal inteligente (`errorQuery`) em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
-- **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Java/Kotlin JUnit 5, Python e Node isolados).
+- **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Python e Node isolados).
 - **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.
-- **Interface Canônica 6+1 Unificada:** Simplifica os fluxos de trabalho entre múltiplos runtimes em `status`, `plan`, `exec`, `review` (com `--fix`), `verify`, `ship`, `auto`, `tokens` e `migrate`.
+- **Interface Canônica 6+1 Unificada:** Simplifica os fluxos de trabalho entre múltiplos runtimes em `status`, `plan`, `exec`, `review` (com `--fix`), `verify` (com auto-pass), `ship`, `auto`, `tokens` e `migrate`.
 
 ---
 

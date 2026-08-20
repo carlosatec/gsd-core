@@ -36,21 +36,22 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD 2.3: Universal Intelligence, AST 360°, RAG & Token Telemetry
+## GSD 2.3: Universal Intelligence, AST 360°, Mobile, BM25 RAG & Token Telemetry
 
-GSD Core 2.3 elevates AI coding agents with a full-stack static analysis and context governance engine:
+GSD Core 2.3 elevates AI coding agents with a full-stack static analysis, mobile intelligence, and context governance engine:
 
-- **Universal Multi-Language AST & Incremental Cache:** Native static code analysis across 17+ languages (TypeScript, Python, Go, Rust, Flutter, C#, Java, SQL, Docker, Shell, etc.) with `mtime`-based incremental AST caching and automatic Lite Mode for rapid scans.
+- **Universal Multi-Language AST & Mobile 360°:** Native static code analysis across 35+ extensions (TypeScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL, Docker, Shell, YAML) with full **Mobile 360° support** for iOS (Swift, SwiftUI, XCTest) and Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
+- **100% Native Knowledge Graph (Zero Python — D-31):** Pure-TypeScript Graphify facade (`2.3-native`) building and querying the AST dependency graph in memory with zero external Python dependencies.
+- **Session Context Hook (Zero Context Blindness — D-30):** Automatically injects and keeps active project state updated in `GEMINI.md`, `AGENTS.md`, or rules, giving the AI instant context at startup.
+- **Okapi BM25 RAG & Code-Aware Tokenizer (D-33):** High-precision semantic retrieval with term saturation ($k_1=1.5, b=0.75$), identifier splitting (`camelCase`, `PascalCase`, `kebab-case`, `snake_case`), and mobile build cache exclusions.
 - **Living, Incremental Documentation:** Post-commit sync auto-generates and verifies `.planning/codebase/ARCHITECTURE.md` and `.planning/codebase/APIS.md` directly from active code topology without $O(n^2)$ overhead.
 - **Deep Call-Graph & Canonical Anchors:** Modules are ranked by PageRank architectural importance, allowing agents to anchor on canonical reference implementations.
-- **Hybrid Semantic RAG (Non-Blocking):** Pure-Node TF-IDF and Jaccard similarity search over codebase concepts with isolated index and lazy loading.
 - **Surgical Context Injection (JIT):** Replaces monolithic prompts by injecting only 1st-degree neighbors, active type contracts, and architectural decisions (yielding 80%–90% token savings).
-- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies (1000-node DFS limit), phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`) *before* writing to disk.
-- **Soft Warning & Resilient Planning:** Auto-synthesizes missing `SPEC.md` files from roadmap goals with non-blocking guidance, ensuring zero workflow friction.
+- **Pre-Flight Guardrails & Quality Checks (D-34):** Intercepts breaking export changes, circular dependencies (1000-node DFS limit), phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`), with automated cyclomatic complexity and UI anti-pattern scans in `/gsd:review`.
 - **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
-- **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, Java/Kotlin JUnit 5, isolated test suites for Python/Node).
+- **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (Swift XCTest, Kotlin/Java JUnit 5, inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
-- **Streamlined 6+1 Canonical Commands:** Unifies multi-runtime CLI workflows into `status`, `plan`, `exec`, `review` (with `--fix`), `verify`, `ship`, `auto`, `tokens`, and `migrate`.
+- **Streamlined 6+1 Canonical Commands:** Unifies multi-runtime CLI workflows into `status`, `plan`, `exec`, `review` (with `--fix`), `verify` (with auto-pass), `ship`, `auto`, `tokens`, and `migrate`.
 
 ---
 
