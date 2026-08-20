@@ -1,12 +1,12 @@
 <div align="center">
 
-# GSD Core
+# GSD Core Nexus
 
 **Git. Ship. Done.**
 
 [English](README.md) · **Português**
 
-**Um sistema leve de meta-prompting, engenharia de contexto e desenvolvimento orientado a especificações para Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf e muito mais.**
+**Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
 [![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
@@ -18,9 +18,9 @@
 
 ---
 
-## O que é o GSD Core
+## O que é o GSD Core Nexus
 
-GSD Core é um framework de engenharia de contexto e desenvolvimento orientado a especificações que conduz agentes de codificação com IA (Claude Code, Codex, Gemini CLI, Copilot, Cursor e mais) por meio de um ciclo de fases disciplinado. Ele resolve o [context rot](docs/pt-BR/explanation/context-engineering.md) — a degradação de qualidade que se acumula à medida que uma IA preenche sua janela de contexto — executando todo o trabalho pesado de pesquisa, planejamento e execução em subagentes com contexto limpo, mantendo sua sessão principal enxuta.
+GSD Core Nexus é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações que conduz agentes de codificação com IA (Claude Code, Codex, Antigravity CLI, Copilot, Cursor e mais) por meio de um ciclo de fases disciplinado. Ele resolve o [context rot](docs/pt-BR/explanation/context-engineering.md) — a degradação de qualidade que se acumula à medida que uma IA preenche sua janela de contexto — executando todo o trabalho pesado de pesquisa, planejamento e execução em subagentes com contexto limpo, mantendo sua sessão principal enxuta.
 
 ---
 
@@ -36,9 +36,9 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD 2.3: Inteligência Universal, AST 360°, Mobile, RAG BM25 e Telemetria de Tokens
+## GSD Core Nexus 2.3: Inteligência Universal, AST 360°, Mobile, RAG BM25 e Telemetria de Tokens
 
-O GSD Core 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
+O GSD Core Nexus 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
 
 - **Motor AST Universal & Mobile 360° Nativo:** Análise estática nativa cobrindo mais de 35 extensões com suporte completo **Mobile 360°** para iOS (Swift, SwiftUI, XCTest) e Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** Fachada Graphify nativa em TypeScript puro (`2.3-native`) construindo e consultando o grafo de dependências AST em memória sem dependência de Python externo.
@@ -58,10 +58,10 @@ O GSD Core 2.3 transforma agentes de codificação em uma engenharia autônoma e
 ## Início rápido
 
 ```bash
-npx @opengsd/gsd-core@latest
+npx github:carlosatec/gsd-core
 ```
 
-O instalador solicita seu ambiente de execução (Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf e mais) e se deseja instalar globalmente ou localmente. O instalador é necessário para compatibilidade entre runtimes — não copie arquivos diretamente de `agents/` ou `commands/`.
+O instalador interativo solicita seu ambiente de execução (Claude Code, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf e mais), o escopo (global ou local) e o idioma das descrições (`Português (Brasil)` ou `English`). Também suporta flags diretas como `--lang=pt-br`. O instalador é necessário para compatibilidade entre runtimes — não copie arquivos diretamente de `agents/` ou `commands/`.
 
 Em outro runtime ou sem Node.js? Consulte [Instalar no seu runtime](docs/pt-BR/how-to/install-on-your-runtime.md).
 
@@ -142,6 +142,6 @@ Licença MIT. Consulte [LICENSE](LICENSE) para detalhes.
 
 <div align="center">
 
-**Agentes de codificação com IA são poderosos. O GSD Core os torna confiáveis, disciplinados e eficientes em tokens.**
+**Agentes de codificação com IA são poderosos. O GSD Core Nexus os torna confiáveis, disciplinados e eficientes em tokens.**
 
 </div>

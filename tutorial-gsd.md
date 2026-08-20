@@ -1,13 +1,13 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core 2.3
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.3
 
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core 2.3**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core Nexus 2.3**.
 
 ---
 
 ## 📖 Índice
 
-1. [O que é o GSD Core](#1-o-que-é-o-gsd-core)
+1. [O que é o GSD Core Nexus](#1-o-que-é-o-gsd-core-nexus)
 2. [Instalação e Configuração](#2-instalação-e-configuração)
 3. [Iniciando um Projeto (Greenfield vs. Brownfield)](#3-iniciando-um-projeto)
 4. [A Interface Canônica 6+1](#4-a-interface-canônica-61)
@@ -20,9 +20,9 @@
 
 ---
 
-## 1. O que é o GSD Core
+## 1. O que é o GSD Core Nexus
 
-O **GSD Core** é um framework de engenharia de contexto e desenvolvimento orientado a especificações. Ele resolve o problema do **Context Rot** (degradação da qualidade da IA à medida que o histórico de conversa se enche de ruídos) através de:
+O **GSD Core Nexus** é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações. Ele resolve o problema do **Context Rot** (degradação da qualidade da IA à medida que o histórico de conversa se enche de ruídos) através de:
 
 * **Subagentes com Contexto Limpo:** Cada plano de execução roda em uma janela isolada de 200k tokens.
 * **Estado Persistente em Arquivo:** O diretório `.planning/` é a única fonte da verdade — todo o progresso, decisões técnicas e planos ficam versionados no Git.
@@ -32,13 +32,21 @@ O **GSD Core** é um framework de engenharia de contexto e desenvolvimento orien
 
 ## 2. Instalação e Configuração
 
-Instale o GSD Core globalmente ou localmente no seu runtime preferido:
+Instale o GSD Core Nexus globalmente ou localmente no seu runtime preferido:
 
 ```bash
-npx @opengsd/gsd-core@latest
+npx github:carlosatec/gsd-core
 ```
 
-O instalador detectará automaticamente seu ambiente (Claude Code, Antigravity CLI, Gemini CLI, Codex, Copilot, Cursor, Windsurf, OpenCode, Kimi CLI).
+O instalador interativo guiará você em 3 passos simples:
+1. **Seleção de Runtime:** Detecta ou permite escolher seu ambiente (Claude Code, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
+2. **Escopo de Instalação:** Escolha entre **Global** (disponível em todos os projetos) ou **Local** (apenas no projeto atual).
+3. **Idioma das Descrições (i18n):** Detecta automaticamente o idioma do seu sistema operacional e sugere **Português (Brasil)** ou **English**.
+
+> **Dica — Instalação Direta (One-Liner):** Se preferir rodar sem perguntas no terminal:
+> ```bash
+> npx github:carlosatec/gsd-core --antigravity --global --lang=pt-br
+> ```
 
 ---
 
@@ -247,4 +255,4 @@ Acompanhe um fluxo real de ponta a ponta:
 
 ---
 
-*GSD Core 2.3 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*
+*GSD Core Nexus 2.3 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*

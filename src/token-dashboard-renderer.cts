@@ -33,7 +33,7 @@ function renderTokenDashboard(planningDir: string): string {
 
   const lines: string[] = [
     '┌─────────────────────────────────────────────────────────────┐',
-    '│ ⚡ GSD Token Telemetry (Observability)                       │',
+    '│ ⚡ GSD Core Nexus Token Telemetry (Observability)            │',
     '├─────────────────────────────────────────────────────────────┤',
   ];
 

@@ -1,12 +1,12 @@
 <div align="center">
 
-# GSD Core
+# GSD Core Nexus
 
 **Git. Ship. Done.**
 
 **English** · [Português](README.pt-BR.md)
 
-**A light-weight meta-prompting, context engineering, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
+**A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
 [![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
@@ -18,9 +18,9 @@
 
 ---
 
-## What is GSD Core
+## What is GSD Core Nexus
 
-GSD Core is a context-engineering and spec-driven development framework that drives AI coding agents (Claude Code, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
+GSD Core Nexus is a context-engineering, native static analysis, and spec-driven development framework that drives AI coding agents (Claude Code, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
 
 ---
 
@@ -36,9 +36,9 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD 2.3: Universal Intelligence, AST 360°, Mobile, BM25 RAG & Token Telemetry
+## GSD Core Nexus 2.3: Universal Intelligence, AST 360°, Mobile, BM25 RAG & Token Telemetry
 
-GSD Core 2.3 elevates AI coding agents with a full-stack static analysis, mobile intelligence, and context governance engine:
+GSD Core Nexus 2.3 elevates AI coding agents with a full-stack static analysis, mobile intelligence, and context governance engine:
 
 - **Universal Multi-Language AST & Mobile 360°:** Native static code analysis across 35+ extensions (TypeScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL, Docker, Shell, YAML) with full **Mobile 360° support** for iOS (Swift, SwiftUI, XCTest) and Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **100% Native Knowledge Graph (Zero Python — D-31):** Pure-TypeScript Graphify facade (`2.3-native`) building and querying the AST dependency graph in memory with zero external Python dependencies.
@@ -58,10 +58,10 @@ GSD Core 2.3 elevates AI coding agents with a full-stack static analysis, mobile
 ## Quickstart
 
 ```bash
-npx @opengsd/gsd-core@latest
+npx github:carlosatec/gsd-core
 ```
 
-The installer prompts for your runtime (Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more) and whether to install globally or locally. The installer is required for cross-runtime compatibility — do not copy files from `agents/` or `commands/` directly.
+The interactive installer prompts for your runtime (Claude Code, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf, and more), installation scope (global or local), and language for command descriptions (`Português (Brasil)` or `English`, also configurable via `--lang=pt-br`). The installer is required for cross-runtime compatibility — do not copy files from `agents/` or `commands/` directly.
 
 On another runtime or without Node.js? See [Install on your runtime](docs/how-to/install-on-your-runtime.md).
 
@@ -142,6 +142,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**AI coding agents are powerful. GSD Core makes them reliable, disciplined, and token-efficient.**
+**AI coding agents are powerful. GSD Core Nexus makes them reliable, disciplined, and token-efficient.**
 
 </div>

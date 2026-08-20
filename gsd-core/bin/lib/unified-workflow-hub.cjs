@@ -1,10 +1,9 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core 2.3.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.3.
  *
- * Unifies the fragmented command landscape into 6 essential manual commands
- * plus 1 autonomous autopilot, with seamless runtime prefix normalization,
- * dedicated interactive /gsd:review --fix integration, and auto-upgrade support.
+ * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
+ * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -234,7 +233,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD Core 2.3 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core Nexus 2.3 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
@@ -246,7 +245,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
                 data: { telemetry },
-                message: `GSD Core 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                message: `GSD Core Nexus 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
         case 'plan': {

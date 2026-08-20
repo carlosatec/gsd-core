@@ -4,7 +4,7 @@
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship
 <!-- /GSD-SESSION-CONTEXT -->
 
-# GSD Core — Antigravity CLI context
+# GSD Core Nexus — Antigravity CLI context
 
 > **Gemini CLI was sunset by Google on 2026-06-18** and is no longer served for
 > free/Pro/Ultra tiers. Antigravity CLI is its official successor, and this file
@@ -12,8 +12,8 @@
 > `GEMINI.md`, inherited from the shared Gemini 3 backend).
 
 This context gives Antigravity the operating context for
-[GSD Core](https://github.com/open-gsd/gsd-core), a meta-prompting,
-context-engineering, and spec-driven development system for AI coding agents.
+[GSD Core Nexus](https://github.com/open-gsd/gsd-core), a meta-prompting,
+context-engineering, native static analysis, and spec-driven development system for AI coding agents.
 
 ## What GSD is
 

@@ -66,8 +66,8 @@ function runAutoUpgrade(planningDir, rootDir) {
         docsUpdated: syncReport.generatedDocs.length,
         generatedArtifacts,
         message: isNewMigration
-            ? `Successfully upgraded legacy project to GSD Core 2.3. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
-            : `Refreshed GSD Core 2.3 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+            ? `Successfully upgraded legacy project to GSD Core Nexus 2.3. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
+            : `Refreshed GSD Core Nexus 2.3 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
     };
 }
 module.exports = {

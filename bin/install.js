@@ -819,6 +819,13 @@ const _profileArgRaw = (() => {
   }
   return null;
 })();
+
+// --lang=<en|pt-br> for localized command descriptions (Decision D-09)
+for (const arg of args) {
+  if (arg.startsWith('--lang=')) {
+    process.env.GSD_LANG = arg.slice('--lang='.length);
+  }
+}
 // Resolve active profile name:
 // 1. --minimal / --core-only → 'core' (back-compat alias)
 // 2. --profile=<name> → named profile
@@ -1045,7 +1052,7 @@ const banner = '\n' +
   '  ╚██████╔╝███████║██████╔╝\n' +
   '   ╚═════╝ ╚══════╝╚═════╝' + reset + '\n' +
   '\n' +
-  '  GSD Core ' + dim + 'v' + pkg.version + reset + '\n' +
+  '  GSD Core Nexus ' + dim + 'v' + pkg.version + reset + '\n' +
   '  Git. Ship. Done.\n' +
   '  A meta-prompting, context engineering and spec-driven\n' +
   '  development workflows for Claude Code, OpenCode, Kimi CLI, Kilo, Codex, Copilot, Antigravity, Cursor, Windsurf, Augment, Trae, Qwen Code, Hermes Agent, Cline, CodeBuddy, ZCode and pi.\n';
@@ -12809,7 +12816,84 @@ function promptLocation(runtimes) {
     rl.close();
     const choice = answer.trim() || '1';
     const isGlobal = choice !== '2';
-    installAllRuntimes(runtimes, isGlobal, true);
+    promptLanguage(() => {
+      installAllRuntimes(runtimes, isGlobal, true);
+    });
+  });
+}
+
+/**
+ * Detect default system language (pt-br vs en)
+ */
+function detectSystemLanguage() {
+  const envLang = process.env.LC_ALL || process.env.LC_MESSAGES || process.env.LANG || process.env.LANGUAGE || '';
+  if (/pt[-_]?br|pt/i.test(envLang)) return 'pt-br';
+  try {
+    const intlLocale = Intl.DateTimeFormat().resolvedOptions().locale || '';
+    if (/pt[-_]?br|pt/i.test(intlLocale)) return 'pt-br';
+  } catch {}
+  return 'en';
+}
+
+/**
+ * Build the language-selection prompt text shown by the interactive installer.
+ */
+function buildLanguagePromptText() {
+  const sysLang = detectSystemLanguage();
+  const isPtDefault = sysLang === 'pt-br';
+  const recPt = isPtDefault ? ` ${dim}(Recomendado para seu sistema)${reset}` : '';
+  const recEn = !isPtDefault ? ` ${dim}(System default)${reset}` : '';
+
+  return `  ${yellow}Select language for command descriptions / Idioma para descrições:${reset}\n\n  ${cyan}1${reset}) Português (Brasil)${recPt}
+  ${cyan}2${reset}) English${recEn}
+`;
+}
+
+/**
+ * Parse user input from the language-selection prompt.
+ */
+function parseLanguageInput(answer) {
+  const sysLang = detectSystemLanguage();
+  const defaultChoice = sysLang === 'pt-br' ? '1' : '2';
+  const choice = (answer == null ? '' : String(answer)).trim() || defaultChoice;
+  return choice === '1' ? 'pt-br' : 'en';
+}
+
+/**
+ * Prompt for language selection in interactive mode.
+ */
+function promptLanguage(callback) {
+  if (process.env.GSD_LANG || !process.stdin.isTTY) {
+    callback(process.env.GSD_LANG || 'en');
+    return;
+  }
+
+  const sysLang = detectSystemLanguage();
+  const defaultChoice = sysLang === 'pt-br' ? '1' : '2';
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  let answered = false;
+
+  rl.on('close', () => {
+    if (!answered) {
+      answered = true;
+      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
+      process.exit(0);
+    }
+  });
+
+  console.log(buildLanguagePromptText());
+
+  rl.question(`  Choice ${dim}[${defaultChoice}]${reset}: `, (answer) => {
+    answered = true;
+    rl.close();
+    const lang = parseLanguageInput(answer);
+    process.env.GSD_LANG = lang;
+    callback(lang);
   });
 }
 
@@ -13454,6 +13538,10 @@ module.exports = {
     convertClaudeCommandToClaudeSkill,
     skillFrontmatterName,
     convertClaudeToTraeMarkdown,
+    detectSystemLanguage,
+    buildLanguagePromptText,
+    parseLanguageInput,
+    promptLanguage,
     convertClaudeCommandToTraeSkill,
     convertClaudeAgentToTraeAgent,
     convertClaudeToCodebuddyMarkdown,

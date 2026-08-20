@@ -29,7 +29,7 @@ function renderTokenDashboard(planningDir) {
     const summary = getTelemetrySummary(planningDir);
     const lines = [
         '┌─────────────────────────────────────────────────────────────┐',
-        '│ ⚡ GSD Token Telemetry (Observability)                       │',
+        '│ ⚡ GSD Core Nexus Token Telemetry (Observability)            │',
         '├─────────────────────────────────────────────────────────────┤',
     ];
     if (summary.totalInvocations === 0) {
