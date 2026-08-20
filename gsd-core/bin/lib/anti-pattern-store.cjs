@@ -75,6 +75,10 @@ function queryAntiPatterns(planningDir, opts = {}) {
     if (opts.rule) {
         results = results.filter(p => p.rule === opts.rule);
     }
+    if (opts.errorQuery) {
+        const q = opts.errorQuery.toLowerCase();
+        results = results.filter(p => p.error.toLowerCase().includes(q));
+    }
     const limit = opts.limit ?? 10;
     return results.slice(-limit);
 }

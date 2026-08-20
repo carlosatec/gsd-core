@@ -137,7 +137,85 @@ function generateTestScaffold(filePath: string, content?: string, rootDir: strin
     };
   }
 
-  // 4. Node / TypeScript (*.ts, *.cts, *.js, *.cjs) -> tests/foo.test.cjs
+  // 4. Dart (*.dart) -> test/foo_test.dart
+  if (ext === '.dart') {
+    const testFileName = `${baseName}_test.dart`;
+    const testFilePath = dirName === '.' ? `test/${testFileName}` : `test/${dirName}/${testFileName}`;
+
+    const lines: string[] = [
+      "import 'package:test/test.dart';",
+      `import '../${dirName === '.' ? '' : dirName + '/'}${baseName}.dart';`,
+      '',
+      'void main() {',
+    ];
+
+    for (const exp of analysis.exports) {
+      lines.push(`  test('test ${exp.name}', () {`);
+      lines.push(`    // TODO: implement unit test for ${exp.name}`);
+      lines.push('  });');
+      lines.push('');
+    }
+
+    if (analysis.exports.length === 0) {
+      lines.push("  test('smoke test', () {");
+      lines.push('    // TODO: add smoke tests');
+      lines.push('  });');
+    }
+
+    lines.push('}');
+
+    return {
+      targetFile: normalized,
+      testFilePath,
+      testCode: lines.join('\n'),
+      language: 'dart',
+      isInline: false,
+    };
+  }
+
+  // 5. Java / Kotlin (*.java, *.kt) -> src/test/java/foo/FooTest.java
+  if (ext === '.java' || ext === '.kt') {
+    const isKt = ext === '.kt';
+    const testFileName = `${baseName}Test${ext}`;
+    const langDir = isKt ? 'kotlin' : 'java';
+    const testFilePath = dirName === '.' ? `src/test/${langDir}/${testFileName}` : `src/test/${langDir}/${dirName}/${testFileName}`;
+
+    const lines: string[] = [
+      'import org.junit.jupiter.api.Test;',
+      'import static org.junit.jupiter.api.Assertions.*;',
+      '',
+      `class ${baseName}Test {`,
+      '',
+    ];
+
+    for (const exp of analysis.exports) {
+      lines.push('    @Test');
+      lines.push(`    ${isKt ? 'fun' : 'void'} test${exp.name}() {`);
+      lines.push(`        // TODO: implement unit test for ${exp.name}`);
+      lines.push('    }');
+      lines.push('');
+    }
+
+    if (analysis.exports.length === 0) {
+      lines.push('    @Test');
+      lines.push(`    ${isKt ? 'fun' : 'void'} testSmoke() {`);
+      lines.push('        // TODO: add smoke tests');
+      lines.push('        assertTrue(true);');
+      lines.push('    }');
+    }
+
+    lines.push('}');
+
+    return {
+      targetFile: normalized,
+      testFilePath,
+      testCode: lines.join('\n'),
+      language: isKt ? 'kotlin' : 'java',
+      isInline: false,
+    };
+  }
+
+  // 6. Node / TypeScript (*.ts, *.cts, *.js, *.cjs) -> tests/foo.test.cjs
   const testFilePath = `tests/${baseName}.test.cjs`;
   const relRequire = dirName === '.' ? `../${baseName}.cjs` : `../${dirName}/${baseName}.cjs`;
 

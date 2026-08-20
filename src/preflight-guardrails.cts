@@ -16,7 +16,7 @@ const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph } = codebaseAst
 type CodebaseGraph = ReturnType<typeof buildCodebaseGraph>;
 
 interface PreFlightViolation {
-  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION';
+  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION' | 'UNINTENDED_TRUNCATION';
   severity: 'error' | 'warning';
   file: string;
   message: string;
@@ -134,6 +134,23 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
 
     // Check proposed edits if content was provided
     if (proposedContent !== undefined) {
+      // Guard against unintended file truncation (0 bytes)
+      if (existingFile && proposedContent.trim().length === 0) {
+        try {
+          const currentDiskContent = fs.readFileSync(path.join(root, relFile), 'utf8');
+          if (currentDiskContent.trim().length > 0) {
+            violations.push({
+              rule: 'UNINTENDED_TRUNCATION',
+              severity: 'error',
+              file: relFile,
+              message: `Empty file guard triggered: proposed modification truncates an existing file of ${currentDiskContent.length} bytes to 0 bytes.`
+            });
+            continue; // Skip further checks for this file since it's empty
+          }
+        } catch {
+          // Ignore read errors
+        }
+      }
       const newAnalysis = proposedAnalyses.get(normalized) || analyzeSourceFile(path.join(root, relFile), proposedContent);
 
       // Check 1: Contract Break (removing an exported symbol that other files depend on)

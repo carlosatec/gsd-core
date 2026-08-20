@@ -95,6 +95,24 @@ function runPreFlightChecks(ctx) {
         const proposedContent = ctx.proposedCodeMap ? ctx.proposedCodeMap[relFile] || ctx.proposedCodeMap[normalized] : undefined;
         // Check proposed edits if content was provided
         if (proposedContent !== undefined) {
+            // Guard against unintended file truncation (0 bytes)
+            if (existingFile && proposedContent.trim().length === 0) {
+                try {
+                    const currentDiskContent = node_fs_1.default.readFileSync(node_path_1.default.join(root, relFile), 'utf8');
+                    if (currentDiskContent.trim().length > 0) {
+                        violations.push({
+                            rule: 'UNINTENDED_TRUNCATION',
+                            severity: 'error',
+                            file: relFile,
+                            message: `Empty file guard triggered: proposed modification truncates an existing file of ${currentDiskContent.length} bytes to 0 bytes.`
+                        });
+                        continue; // Skip further checks for this file since it's empty
+                    }
+                }
+                catch {
+                    // Ignore read errors
+                }
+            }
             const newAnalysis = proposedAnalyses.get(normalized) || analyzeSourceFile(node_path_1.default.join(root, relFile), proposedContent);
             // Check 1: Contract Break (removing an exported symbol that other files depend on)
             if (existingFile && existingFile.exports) {

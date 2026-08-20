@@ -111,6 +111,7 @@ Cada fase do roadmap passa rigorosamente por este ciclo:
 O GSD Core analisa estaticamente o código sem precisar compilar ou rodar interpretadores pesados:
 
 * **17+ Tecnologias Nativas:** TypeScript, JavaScript, Python, Go, Rust, Flutter/Dart, C#, Java, Kotlin, PHP, Ruby, SQL/DDL, Prisma, GraphQL, CSS/SCSS, Dockerfile, Shell Script.
+* **Scaffolding de Testes Poliglota:** Gera esqueletos de teste respeitando as convenções de cada linguagem (Go `_test.go`, Rust `#[cfg(test)]`, Dart `test/*_test.dart`, Java/Kotlin JUnit 5, Python `test_*.py` e Node `.test.cjs`).
 * **Living Docs Engine:** Gera e valida automaticamente:
   - `.planning/codebase/ARCHITECTURE.md` (topologia de imports e módulos)
   - `.planning/codebase/APIS.md` (catálogo de interfaces, structs e rotas HTTP)
@@ -136,9 +137,10 @@ Em vez de poluir a IA com centenas de linhas irrelevantes, o motor JIT:
 Para evitar que a IA quebre a aplicação:
 
 * **Validação em Memória (Pre-Flight):** Simula os diffs em memória antes de tocar o disco. Se a IA deletar uma função exportada necessária para outro arquivo, o guardrail bloqueia o patch (`CONTRACT_BREAK`).
+* **Empty File Guard (`EMPTY_FILE_GUARD`):** Impede que alucinações ou falhas parciais de streaming de LLMs sobrescrevam arquivos existentes com 0 bytes (`UNINTENDED_TRUNCATION`).
 * **Suporte à Co-Evolução:** Se a IA alterar a função e o arquivo consumidor no mesmo lote de arquivos, o guardrail autoriza a mudança sem falso positivo.
 * **Laço de Self-Healing:** Se um teste falhar durante a execução, o agente tem até 3 tentativas automáticas para depurar e corrigir.
-* **Anti-Pattern Store:** Toda correção bem-sucedida é memorizada em `.planning/intel/anti-patterns.json` para que a IA nunca mais repita o mesmo erro em sessões futuras.
+* **Anti-Pattern Store & Busca Transversal:** Toda correção bem-sucedida é memorizada em `.planning/intel/anti-patterns.json` com suporte à busca por termo de erro (`errorQuery`) para que a IA nunca mais repita o mesmo erro em sessões futuras.
 
 ---
 

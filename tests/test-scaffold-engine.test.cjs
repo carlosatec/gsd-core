@@ -54,6 +54,28 @@ describe('Wave 5: Scaffolding with Language Topology & Canonical Examples', () =
       assert.ok(scaffold.testCode.includes("describe('runner unit tests'"));
       assert.ok(scaffold.testCode.includes("test('should correctly execute runTask'"));
     });
+
+    test('generates isolated test/*_test.dart scaffold for Dart/Flutter source files', () => {
+      const dartCode = 'void calculateTotal() {}\nvoid printReceipt() {}\n';
+      const scaffold = scaffolder.generateTestScaffold('lib/checkout.dart', dartCode);
+
+      assert.strictEqual(scaffold.language, 'dart');
+      assert.strictEqual(scaffold.isInline, false);
+      assert.strictEqual(scaffold.testFilePath, 'test/lib/checkout_test.dart');
+      assert.ok(scaffold.testCode.includes("import 'package:test/test.dart';"));
+      assert.ok(scaffold.testCode.includes("void main() {"));
+    });
+
+    test('generates isolated src/test/java/... scaffold for Java source files', () => {
+      const javaCode = 'public class OrderService {\n    public void processPayment() {}\n}\n';
+      const scaffold = scaffolder.generateTestScaffold('com/app/OrderService.java', javaCode);
+
+      assert.strictEqual(scaffold.language, 'java');
+      assert.strictEqual(scaffold.isInline, false);
+      assert.strictEqual(scaffold.testFilePath, 'src/test/java/com/app/OrderServiceTest.java');
+      assert.ok(scaffold.testCode.includes('import org.junit.jupiter.api.Test;'));
+      assert.ok(scaffold.testCode.includes('class OrderServiceTest {'));
+    });
   });
 
   describe('Canonical Examples Finder', () => {

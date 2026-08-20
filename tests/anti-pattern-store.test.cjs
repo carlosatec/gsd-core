@@ -72,4 +72,39 @@ describe('Wave 1: Anti-Pattern Store & Self-Healing Feedback Loop', () => {
       cleanup(tmpDir);
     }
   });
+
+  test('queries anti-patterns using case-insensitive errorQuery filter', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-ap-errquery-'));
+    try {
+      const planningDir = path.join(tmpDir, '.planning');
+      fs.mkdirSync(planningDir, { recursive: true });
+
+      antiPatternStore.recordAntiPattern(planningDir, {
+        file: 'src/db.ts',
+        rule: 'QUERY_TIMEOUT',
+        error: 'Fatal connection pool exhausted on port 5432',
+        lesson: 'Increase pool size or recycle connections',
+      });
+
+      antiPatternStore.recordAntiPattern(planningDir, {
+        file: 'src/api.ts',
+        rule: 'SYNTAX_ERROR',
+        error: 'Unexpected token < in JSON at position 0',
+        lesson: 'Validate response content-type before JSON.parse',
+      });
+
+      const poolResults = antiPatternStore.queryAntiPatterns(planningDir, { errorQuery: 'CONNECTION POOL' });
+      assert.strictEqual(poolResults.length, 1);
+      assert.strictEqual(poolResults[0].file, 'src/db.ts');
+
+      const jsonResults = antiPatternStore.queryAntiPatterns(planningDir, { errorQuery: 'json' });
+      assert.strictEqual(jsonResults.length, 1);
+      assert.strictEqual(jsonResults[0].file, 'src/api.ts');
+
+      const noneResults = antiPatternStore.queryAntiPatterns(planningDir, { errorQuery: 'nonexistent error' });
+      assert.strictEqual(noneResults.length, 0);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
 });

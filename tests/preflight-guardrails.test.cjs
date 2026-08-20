@@ -87,4 +87,34 @@ describe('preflight-guardrails', () => {
     assert.strictEqual(result.attempts, 2);
     assert.strictEqual(callCount, 2);
   });
+
+  test('detects UNINTENDED_TRUNCATION when an existing non-empty file is overwritten with 0 bytes', () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), 'preflight-trunc-'));
+
+    try {
+      const srcDir = path.join(tmpProject, 'src');
+      fs.mkdirSync(srcDir, { recursive: true });
+
+      const fileA = path.join(srcDir, 'handler.ts');
+      fs.writeFileSync(fileA, 'export function handle() { return "ok"; }\n');
+
+      const planningDir = path.join(tmpProject, '.planning');
+      fs.mkdirSync(planningDir, { recursive: true });
+
+      const report = runPreFlightChecks({
+        taskId: 'task-empty-guard',
+        filesToModify: ['src/handler.ts'],
+        proposedCodeMap: {
+          'src/handler.ts': '   \n  ', // blank / 0 bytes overwrite
+        },
+        planningDir,
+        rootDir: tmpProject,
+      });
+
+      assert.strictEqual(report.valid, false);
+      assert.ok(report.violations.some(v => v.rule === 'UNINTENDED_TRUNCATION' && v.message.includes('Empty file guard triggered')));
+    } finally {
+      cleanup(tmpProject);
+    }
+  });
 });

@@ -29,6 +29,7 @@ interface AntiPatternStoreData {
 interface QueryAntiPatternOptions {
   file?: string;
   rule?: string;
+  errorQuery?: string;
   limit?: number;
 }
 
@@ -105,6 +106,11 @@ function queryAntiPatterns(planningDir: string, opts: QueryAntiPatternOptions = 
 
   if (opts.rule) {
     results = results.filter(p => p.rule === opts.rule);
+  }
+
+  if (opts.errorQuery) {
+    const q = opts.errorQuery.toLowerCase();
+    results = results.filter(p => p.error.toLowerCase().includes(q));
   }
 
   const limit = opts.limit ?? 10;

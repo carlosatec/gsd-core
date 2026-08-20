@@ -46,9 +46,9 @@ GSD Core 2.3 elevates AI coding agents with a full-stack static analysis and con
 - **Deep Call-Graph & PageRank Centrality:** Modules are ranked by architectural importance, allowing agents to anchor on canonical reference implementations.
 - **Hybrid Semantic RAG (Non-Blocking):** Pure-Node TF-IDF and Jaccard similarity search over codebase concepts with isolated index and lazy loading.
 - **Surgical Context Injection (JIT):** Replaces monolithic prompts by injecting only 1st-degree neighbors, active type contracts, and architectural decisions (yielding 80%–90% token savings).
-- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies, and phantom imports *before* writing to disk.
-- **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops to prevent recurring mistakes across sessions.
-- **Topology-Aware Test Scaffolding:** Synthesizes test skeletons matching native language conventions (inline `_test.go` for Go, `#[cfg(test)]` for Rust, isolated test suites for Python/Node).
+- **Pre-Flight Guardrails & In-Memory Contract Validation:** Intercepts breaking export changes, circular dependencies, phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`) *before* writing to disk.
+- **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
+- **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, Java/Kotlin JUnit 5, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
 - **Streamlined 6+1 Canonical Commands:** Unifies multi-runtime CLI workflows into `status`, `plan`, `exec`, `review` (with `--fix`), `verify`, `ship`, `auto`, `tokens`, and `migrate`.
 
