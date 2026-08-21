@@ -71,29 +71,54 @@ const { composeWorkflow: _composeWorkflow } = workflowFragmentsModule as {
  * Composition: --profile=core,audit resolves to union(closure(core), closure(audit)).
  */
 const PROFILES = Object.freeze({
+  unified: Object.freeze([
+    'status',
+    'plan',
+    'exec',
+    'review',
+    'verify',
+    'ship',
+    'auto',
+    'tokens',
+    'migrate',
+    'help',
+  ]),
   core: Object.freeze([
+    'status',
+    'plan',
+    'exec',
+    'verify',
+    'ship',
+    'help',
     'new-project',
     'discuss-phase',
     'plan-phase',
     'execute-phase',
     'phase',
-    'help',
     'update',
     'surface',
   ]),
   standard: Object.freeze([
-    // Core loop
+    // Unified commands
+    'status',
+    'plan',
+    'exec',
+    'review',
+    'verify',
+    'ship',
+    'auto',
+    'tokens',
+    'migrate',
+    'help',
+    // Core loop & legacy aliases
     'new-project',
     'onboard',
     'discuss-phase',
     'plan-phase',
     'execute-phase',
-    'help',
     'update',
     'surface',
-    // Phase management (hot nodes from audit — required by 38+ skills)
     'phase',
-    'review',
     'config',
     'progress',
     // Workspace / state
@@ -1077,13 +1102,13 @@ function writeActiveProfile(runtimeConfigDir: string, profileName: string): void
  * Rank ordering for profiles (lower index = more restrictive / smaller skill set).
  * Unknown profiles default to the permissive end (treated as 'full').
  */
-const PROFILE_RANK = Object.freeze(['core', 'standard', 'full'] as const);
+const PROFILE_RANK = Object.freeze(['unified', 'core', 'standard', 'full'] as const);
 
 /**
  * Given an array of profile names (one per runtime), return the most-restrictive
  * profile — i.e. the one with the smallest effective skill set.
  *
- * Ordering (most to least restrictive): core < standard < full.
+ * Ordering (most to least restrictive): unified < core < standard < full.
  * Composed profiles (e.g. 'core,audit') and unknown profiles are treated as
  * 'full' for this comparison.
  */
@@ -1107,6 +1132,7 @@ function mostRestrictiveProfile(profileNames: string[]): string {
 interface ResolveEffectiveProfileOpts {
   requestedProfileName: string | null;
   targetDir: string;
+  defaultProfile?: string | null;
 }
 
 /**
@@ -1115,15 +1141,18 @@ interface ResolveEffectiveProfileOpts {
  * Priority:
  *   1. Explicit flag (requestedProfileName != null) → use it as-is.
  *   2. Marker exists in targetDir and is not 'full' → use marker.
- *   3. Else → 'full' (back-compat for fresh non-interactive installs).
+ *   3. Runtime-specific default profile (e.g. 'unified' for Antigravity) → use defaultProfile.
+ *   4. Else → 'full' (back-compat for fresh non-interactive installs).
  */
-function resolveEffectiveProfile({ requestedProfileName, targetDir }: ResolveEffectiveProfileOpts): string {
+function resolveEffectiveProfile({ requestedProfileName, targetDir, defaultProfile }: ResolveEffectiveProfileOpts): string {
   // 1. Explicit flag overrides everything
   if (requestedProfileName != null) return requestedProfileName;
   // 2. Marker-driven (gsd update path)
   const marker = readActiveProfile(targetDir);
   if (marker && marker !== 'full') return marker;
-  // 3. Default
+  // 3. Runtime default if specified
+  if (defaultProfile && (PROFILE_RANK as readonly string[]).includes(defaultProfile)) return defaultProfile;
+  // 4. Default
   return 'full';
 }
 
