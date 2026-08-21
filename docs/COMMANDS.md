@@ -6,10 +6,30 @@
 
 ## Command Syntax
 
-- **Claude Code / Copilot / OpenCode / Kilo:** `/gsd-command-name [args]` (hyphen form)
+- **Claude Code / Copilot / OpenCode / Kilo / Antigravity:** `/gsd-command-name [args]` (hyphen form) or `/gsd:command-name [args]`
 - **Codex:** `$gsd-command-name [args]`
 
 The hyphen and colon forms are *runtime-specific spellings of the same command*. Whichever runtime you're on, the installer writes the correct form into your runtime's command directory.
+
+---
+
+## Canonical Unified Interface (6+1)
+
+Starting in GSD 2.3, the workflow is streamlined into **6 canonical commands + autopilot + observability**:
+
+| Command | Action & Workflow Step |
+|---------|------------------------|
+| `/gsd:status` (`/gsd-status`) | Situational diagnostics, project state, roadmap, and token savings |
+| `/gsd:plan` (`/gsd-plan`) | Decompose phase into atomic parallel waves (`PLAN.md`, `SPEC.md`) |
+| `/gsd:exec` (`/gsd-exec`) | Wave-based execution with fresh 200k subagent contexts & JIT |
+| `/gsd:review` (`/gsd-review`) | Static code analysis with autonomous repairs (`--fix`) |
+| `/gsd:verify` (`/gsd-verify`) | Conversational UAT acceptance and verification walkthrough |
+| `/gsd:ship` (`/gsd-ship`) | Git hygiene, branch preparation, changelog, and Pull Request |
+| `/gsd:auto` (`/gsd-auto`) | End-to-end autonomous autopilot across phase lifecycle |
+| `/gsd:tokens` (`/gsd-tokens`) | Real-time token telemetry dashboard & savings breakdown |
+| `/gsd:migrate` (`/gsd-migrate`) | One-click non-destructive legacy project upgrade |
+
+---
 
 ### Skill Runtime Behavior (Claude Code)
 

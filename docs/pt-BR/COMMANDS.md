@@ -6,11 +6,28 @@
 
 ## Sintaxe de Comandos
 
-- **Claude Code / Copilot / OpenCode / Kilo:** `/gsd-command-name [args]` (forma com hífen)
-- **Gemini CLI:** `/gsd:command-name [args]` (forma com dois-pontos — o Gemini agrupa comandos sob `gsd:`)
+- **Claude Code / Copilot / OpenCode / Kilo / Antigravity:** `/gsd-command-name [args]` (forma com hífen) ou `/gsd:command-name [args]`
 - **Codex:** `$gsd-command-name [args]`
 
 As formas com hífen e com dois-pontos são *variações específicas do runtime para o mesmo comando*. Independente do runtime utilizado, o instalador escreve a forma correta no diretório de comandos do seu runtime.
+
+---
+
+## Interface Canônica Unificada (6+1)
+
+A partir do GSD 2.3, o fluxo de trabalho foi unificado em **6 comandos canônicos + piloto automático + observabilidade**:
+
+| Comando | Ação e Etapa do Fluxo de Trabalho |
+|---------|-----------------------------------|
+| `/gsd:status` (`/gsd-status`) | Diagnóstico situacional, estado do projeto, roadmap e telemetria de tokens |
+| `/gsd:plan` (`/gsd-plan`) | Decomposição da fase em ondas paralelas atômicas (`PLAN.md`, `SPEC.md`) |
+| `/gsd:exec` (`/gsd-exec`) | Execução paralela em ondas com subagentes de 200k tokens e JIT |
+| `/gsd:review` (`/gsd-review`) | Análise estática de código com auto-correção autônoma (`--fix`) |
+| `/gsd:verify` (`/gsd-verify`) | Validação conversacional de UAT e critérios de aceitação |
+| `/gsd:ship` (`/gsd-ship`) | Higiene git, preparação de branch, changelog e Pull Request |
+| `/gsd:auto` (`/gsd-auto`) | Piloto automático ponta a ponta através de todo o ciclo da fase |
+| `/gsd:tokens` (`/gsd-tokens`) | Painel visual de telemetria e economia de tokens em tempo real |
+| `/gsd:migrate` (`/gsd:migrate`) | Modernização não-destrutiva de projetos legados em um clique |
 
 ---
 

@@ -1,7 +1,7 @@
 <!-- GSD-SESSION-CONTEXT -->
 > **GSD Active State**: Phase: Phase 10 (Ultra-Convergência, Mobile 360° & Arquitetura do Core) | Status: Complete (27/27 Testes Passando)
 > **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
-> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship
+> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 
 # GSD Core Nexus — Antigravity CLI context
@@ -12,7 +12,7 @@
 > `GEMINI.md`, inherited from the shared Gemini 3 backend).
 
 This context gives Antigravity the operating context for
-[GSD Core Nexus](https://github.com/open-gsd/gsd-core), a meta-prompting,
+[GSD Core Nexus](https://github.com/carlosatec/gsd-core), a meta-prompting,
 context-engineering, native static analysis, and spec-driven development system for AI coding agents.
 
 ## What GSD is
@@ -31,7 +31,7 @@ files rather than in the conversation.
 > run the dedicated installer:
 >
 > ```bash
-> npx gsd-core --antigravity --global
+> npx github:carlosatec/gsd-core --antigravity --global
 > ```
 >
 > The commands below are available only once that installer has run.
@@ -58,7 +58,7 @@ namespace):
 
 - Prefer the smallest change that satisfies the phase's verification criteria.
 - Run the project's tests and linters before declaring a phase done.
-- When unsure what to do next, and the gsd commands are installed, `/gsd-progress`
+- When unsure what to do next, and the gsd commands are installed, `/gsd-status`
   is the situational entry point.
 
-Learn more: <https://github.com/open-gsd/gsd-core>
+Learn more: <https://github.com/carlosatec/gsd-core>

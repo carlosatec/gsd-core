@@ -244,7 +244,7 @@ Acompanhe um fluxo real de ponta a ponta:
 
 | O que você quer fazer? | Execute este comando |
 |---|---|
-| Saber o que fazer agora | `/gsd:status` |
+| Saber o que fazer agora / Diagnóstico | `/gsd:status` |
 | Planejar a próxima fase | `/gsd:plan` |
 | Executar as tarefas planejadas | `/gsd:exec` |
 | Auditar e corrigir código | `/gsd:review --fix` |
@@ -252,6 +252,8 @@ Acompanhe um fluxo real de ponta a ponta:
 | Ver uso e economia de tokens | `/gsd:tokens` |
 | Enviar para produção / Abrir PR | `/gsd:ship` |
 | Executar tudo no piloto automático | `/gsd:auto` |
+| Modernizar projeto legado | `/gsd:migrate` |
+| Ver ajuda e lista de comandos | `/gsd:help` |
 
 ---
 
