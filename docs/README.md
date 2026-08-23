@@ -100,6 +100,6 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 
 ## Related
 
-- [Complete Practical GSD Tutorial (Português)](../tutorial-gsd.md) — comprehensive end-to-end tutorial
+- [Complete Practical GSD Tutorial (English)](../TUTORIAL.md) · [(Português)](../TUTORIAL.pt-BR.md) — comprehensive end-to-end tutorial
 - [Root README](../README.md) — landing page, quickstart, and documentation overview
 - [Changelog](../CHANGELOG.md) — release history

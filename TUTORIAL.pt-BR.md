@@ -1,7 +1,8 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.3
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.4
 
+> 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](TUTORIAL.md)  
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core Nexus 2.3**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core Nexus 2.4**.
 
 ---
 
@@ -10,7 +11,7 @@
 1. [O que é o GSD Core Nexus](#1-o-que-é-o-gsd-core-nexus)
 2. [Instalação e Configuração](#2-instalação-e-configuração)
 3. [Iniciando um Projeto (Greenfield vs. Brownfield)](#3-iniciando-um-projeto)
-4. [A Interface Canônica 6+1](#4-a-interface-canônica-61)
+4. [A Interface Canônica dos 10 Comandos Unificados](#4-a-interface-canônica-dos-10-comandos-unificados)
 5. [O Ciclo de Desenvolvimento em 5 Etapas](#5-o-ciclo-de-desenvolvimento-em-5-etapas)
 6. [Inteligência de Código: AST Universal 360°, Mobile & Living Docs](#6-inteligência-de-código-ast-universal-360-mobile--living-docs)
 7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico-okapi-bm25)
@@ -27,6 +28,7 @@ O **GSD Core Nexus** é um framework de engenharia de contexto, análise estáti
 * **Subagentes com Contexto Limpo:** Cada plano de execução roda em uma janela isolada de 200k tokens.
 * **Estado Persistente em Arquivo:** O diretório `.planning/` é a única fonte da verdade — todo o progresso, decisões técnicas e planos ficam versionados no Git.
 * **Injeção Cirúrgica (JIT):** Em vez de enviar o repositório inteiro para o modelo, o GSD envia apenas os contratos e arquivos relevantes, reduzindo o consumo de tokens em **80% a 90%**.
+* **Superfície Pública Estrita:** Sem confusão com dezenas de aliases legados — 10 comandos canônicos claros e objetivos.
 
 ---
 
@@ -52,48 +54,50 @@ O instalador interativo guiará você em 3 passos simples:
 
 ## 3. Iniciando um Projeto
 
-### Cenário A: Novo Projeto do Zero (Greenfield)
+### Cenário A: Novo Projeto ou Projeto Existente
 ```bash
-/gsd-new-project
+/gsd:status
 ```
-O assistente fará perguntas socráticas para entender o objetivo do software, gerando o `PROJECT.md`, `ROADMAP.md` e a primeira fase.
+O GSD analisa a árvore git, detecta o estado do repositório e guia a criação do `PROJECT.md`, `ROADMAP.md` e a primeira fase.
 
-### Cenário B: Projeto Existente (Brownfield / Onboarding)
+### Cenário B: Planejar Imediatamente
 ```bash
-/gsd-onboard
+/gsd:plan
 ```
-O GSD executa o scanner AST 360°, cataloga 17+ linguagens, gera o grafo de dependências e cria a documentação viva em `.planning/codebase/`.
+Gera a especificação e o plano da primeira fase com base no objetivo informado.
 
-### Cenário C: Modernizar Projeto Legado do GSD 1.x
+### Cenário C: Modernizar Projeto Legado
 ```bash
 /gsd:migrate
 ```
-Atualiza a estrutura para o padrão GSD 2.3 de forma 100% não-destrutiva.
+Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.4 de forma 100% não-destrutiva.
 
 ---
 
-## 4. A Interface Canônica 6+1
+## 4. A Interface Canônica dos 10 Comandos Unificados
 
-Para simplificar a experiência, o GSD 2.3 unificou mais de 30 comandos em **6 comandos canônicos + 1 piloto automático**:
+No GSD 2.4, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE CANÔNICA GSD 2.3                  │
+│                 INTERFACE CANÔNICA GSD 2.4                  │
 ├────────────┬────────────────────────────────────────────────┤
 │ Comando    │ Ação Operacional                               │
 ├────────────┼────────────────────────────────────────────────┤
 │ /gsd:status│ Diagnóstico situacional, progresso e roadmap   │
-│ /gsd:plan  │ Criação de plano detalhado com ondas e gates   │
+│ /gsd:plan  │ Criação de plano detalhado com ondas e specs   │
 │ /gsd:exec  │ Execução paralela em ondas com subagentes      │
 │ /gsd:review│ Revisão estática de código com flag --fix      │
-│ /gsd:verify│ Validação conversacional de UAT e aceitação    │
+│ /gsd:verify│ Validação conversacional de UAT e Auto-Pass    │
 │ /gsd:ship  │ Preparação de branch, PR e merge               │
 │ /gsd:auto  │ Piloto automático (discuss → plan → exec loop) │
 │ /gsd:tokens│ Painel visual de economia e uso de tokens      │
+│ /gsd:migrate│ Modernização de projetos legados e grafo AST   │
+│ /gsd:help  │ Guia completo de uso e consulta de comandos    │
 └────────────┴────────────────────────────────────────────────┘
 ```
 
-> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos automaticamente: `/gsd:plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`.
+> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd:plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 10 oficiais são rejeitados de forma segura e orientadora.
 
 ---
 
@@ -257,4 +261,4 @@ Acompanhe um fluxo real de ponta a ponta:
 
 ---
 
-*GSD Core Nexus 2.3 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*
+*GSD Core Nexus 2.4 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*

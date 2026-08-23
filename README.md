@@ -73,16 +73,16 @@ Once installed, check status or start planning:
 /gsd-exec         # execute phase plan
 ```
 
-New here? Check the [Complete Practical GSD Tutorial (Português)](tutorial-gsd.md) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
+New here? Check the [Complete Practical GSD Tutorial](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
 
 ---
 
 ## Documentation
 
-**What's new in GSD Core Nexus 2.3** → [Complete Practical Tutorial](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 2.4** → [Complete Practical Tutorial](TUTORIAL.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 2.3](tutorial-gsd.md) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 2.4](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 

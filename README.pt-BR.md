@@ -73,16 +73,16 @@ Após a instalação, verifique o status ou inicie o planejamento:
 /gsd-exec         # executar plano da fase
 ```
 
-É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](tutorial-gsd.md) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
+É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
 
 ---
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.4** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.4** → [Tutorial Prático Completo](TUTORIAL.pt-BR.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 2.3](tutorial-gsd.md) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.4](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 
