@@ -15,6 +15,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { realClock } from './clock.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import coreUtilsMod = require('./core-utils.cjs');
 const { readSubdirectories } = coreUtilsMod;
@@ -393,11 +394,7 @@ function renameVerificationLedgerWithRetry(tmpPath: string, finalPath: string): 
         // Exponential-ish backoff: 25ms, 50ms, 100ms, 200ms. Transient
         // Windows locks usually clear well inside that window.
         const delay = LEDGER_RENAME_BACKOFF_MS * Math.pow(2, attempt);
-        const start = Date.now();
-        while (Date.now() - start < delay) {
-          // Deliberate short busy-wait — no async/timer seam is available
-          // in this synchronous read path.
-        }
+        realClock.sleep(delay);
         continue;
       }
       throw err;

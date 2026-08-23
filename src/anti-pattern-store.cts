@@ -5,7 +5,9 @@
  * to prevent recurring regressions across agent sessions.
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import learningsMod = require('./learnings.cjs');
@@ -58,13 +60,20 @@ function loadAntiPatterns(planningDir: string): AntiPatternStoreData {
 }
 
 /**
- * Persists anti-patterns to `.planning/intel/anti-patterns.json`.
+ * Persists anti-patterns to `.planning/intel/anti-patterns.json` atomically.
  */
 function saveAntiPatterns(planningDir: string, data: AntiPatternStoreData): void {
   const intelDir = path.join(planningDir, 'intel');
   platformEnsureDir(intelDir);
   const storePath = path.join(intelDir, 'anti-patterns.json');
-  platformWriteSync(storePath, JSON.stringify(data, null, 2));
+  const tmpPath = `${storePath}.${process.pid}.tmp`;
+  platformWriteSync(tmpPath, JSON.stringify(data, null, 2));
+  try {
+    fs.renameSync(tmpPath, storePath);
+  } catch {
+    platformWriteSync(storePath, JSON.stringify(data, null, 2));
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+  }
 }
 
 /**
@@ -76,7 +85,7 @@ function recordAntiPattern(
 ): AntiPatternRecord {
   const data = loadAntiPatterns(planningDir);
   const record: AntiPatternRecord = {
-    id: `ap-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: `ap-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     timestamp: new Date().toISOString(),
     rule: entry.rule,
     file: entry.file,

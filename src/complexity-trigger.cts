@@ -34,6 +34,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { realClock } from './clock.cjs';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -1010,10 +1011,7 @@ function renameWithRetry(fsImpl: typeof fs, tmp: string, target: string): void {
         : '';
       if (code && RENAME_RETRY_ERRNOS.has(code) && attempt < RENAME_MAX_ATTEMPTS - 1) {
         const delay = RENAME_BACKOFF_MS * Math.pow(2, attempt);
-        const start = Date.now();
-        while (Date.now() - start < delay) {
-          // Busy-wait a very short time — transient locks usually clear quickly.
-        }
+        realClock.sleep(delay);
         continue;
       }
       throw err;

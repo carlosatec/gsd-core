@@ -485,7 +485,7 @@ export function validateShellArg(value: unknown, label: string | null | undefine
   if (value.includes('\0')) {
     throw new Error(`${label || 'Argument'}: contains null bytes`);
   }
-  if (/[$`]/.test(value) && /\$\(|`/.test(value)) {
+  if (/\$\(|`/.test(value)) {
     throw new Error(`${label || 'Argument'}: contains potential command substitution`);
   }
   return value;

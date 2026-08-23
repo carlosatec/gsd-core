@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
 
 // ─── Temp-file helpers (needed by output()) ──────────────────────────────────
@@ -153,7 +154,7 @@ function output(result: unknown, raw: boolean, rawValue?: unknown): void {
     if (json.length > 50000) {
       reapStaleTempFiles();
       ensureGsdTempDir();
-      const tmpPath = path.join(GSD_TEMP_DIR, `gsd-${Date.now()}.json`);
+      const tmpPath = path.join(GSD_TEMP_DIR, `gsd-${Date.now()}-${process.pid}-${crypto.randomBytes(4).toString('hex')}.json`);
       platformWriteSync(tmpPath, json);
       data = '@file:' + tmpPath;
     } else {

@@ -140,25 +140,11 @@ const CYRILLIC_TRANSLITERATION: Readonly<Record<string, string>> = {
   є: 'ye', і: 'i', ї: 'yi', ґ: 'g', ў: 'u',
 };
 
-const CYRILLIC_TRANSLITERATION_KEYS = Object.keys(CYRILLIC_TRANSLITERATION);
-
-/**
- * Lowercase + transliterate Cyrillic characters to ASCII. The output still
- * contains non-ASCII for scripts outside the map (CJK, etc.) — the caller's
- * existing `[^a-z0-9]+` filter handles those. Latin-script input is returned
- * lowercased with no other change.
- *
- * Shared by `generateSlugInternal` (core-utils) and `slugify` (gsd2-import) so
- * the transliteration step is not duplicated across the two slug helpers (#2848
- * explicitly requires both be fixed).
- */
 function transliterateForSlug(text: string): string {
   const lowered = text.toLowerCase();
   let out = '';
   for (const ch of lowered) {
-    out += CYRILLIC_TRANSLITERATION_KEYS.includes(ch)
-      ? CYRILLIC_TRANSLITERATION[ch]
-      : ch;
+    out += (CYRILLIC_TRANSLITERATION as Record<string, string>)[ch] ?? ch;
   }
   return out;
 }

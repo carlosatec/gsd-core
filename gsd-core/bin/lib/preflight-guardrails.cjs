@@ -13,6 +13,31 @@ const node_path_1 = __importDefault(require("node:path"));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+// ─── Cycle Detection Helper ──────────────────────────────────────────────────
+function detectCycleInGraph(graph, startNode, onDeepRecursion) {
+    const visited = new Set();
+    function dfs(current, stack, depth = 0) {
+        if (depth > 1000) {
+            if (onDeepRecursion)
+                onDeepRecursion(current);
+            return false;
+        }
+        visited.add(current);
+        stack.add(current);
+        const callers = graph.reverseDependencies[current] || [];
+        for (const caller of callers) {
+            if (stack.has(caller))
+                return true;
+            if (!visited.has(caller)) {
+                if (dfs(caller, stack, depth + 1))
+                    return true;
+            }
+        }
+        stack.delete(current);
+        return false;
+    }
+    return dfs(startNode, new Set());
+}
 // ─── Pre-Flight Guardrails ────────────────────────────────────────────────────
 /**
  * Runs pre-execution checks on proposed task file modifications against the AST graph.
@@ -175,25 +200,15 @@ function runPreFlightChecks(ctx) {
                 }
             }
             // Check 3: Circular Dependency Detection
-            const visited = new Set();
-            function detectCycle(current, stack, depth = 0) {
-                if (depth > 1000)
-                    return false; // Guard against deep recursion / stack overflow
-                visited.add(current);
-                stack.add(current);
-                const callers = activeGraph.reverseDependencies[current] || [];
-                for (const caller of callers) {
-                    if (stack.has(caller))
-                        return true;
-                    if (!visited.has(caller)) {
-                        if (detectCycle(caller, stack, depth + 1))
-                            return true;
-                    }
-                }
-                stack.delete(current);
-                return false;
-            }
-            if (detectCycle(normalized, new Set())) {
+            const hasCycle = detectCycleInGraph(activeGraph, normalized, (deepNode) => {
+                violations.push({
+                    rule: 'CIRCULAR_DEPENDENCY',
+                    severity: 'warning',
+                    file: normalized,
+                    message: `Graph recursion depth exceeded 1000 nodes around ${deepNode}. Cycle check inconclusive.`,
+                });
+            });
+            if (hasCycle) {
                 violations.push({
                     rule: 'CIRCULAR_DEPENDENCY',
                     severity: 'warning',

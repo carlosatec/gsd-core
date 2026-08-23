@@ -274,7 +274,7 @@ function assembleJitContext(options) {
         const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
         totalRepoChars += (f.linesCount || 10) * weight;
     }
-    const fullRepoTokens = Math.max(estimateTokens(String(totalRepoChars)), estimatedTokensCount * 5);
+    const fullRepoTokens = Math.max(Math.ceil(totalRepoChars / 4), estimatedTokensCount * 5);
     // Record Telemetry (Schema v2.0)
     try {
         recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens, options.command || 'other', options.phaseId);

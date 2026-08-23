@@ -516,12 +516,12 @@ function analyzeCSharpFile(filePath: string, content: string): FileAnalysisResul
       imports.push({ source, specifiers: [], isTypeOnly: false, isRelative: false });
     }
 
-    // Classes / Interfaces / Records: public class Foo, public interface IBar, public record Baz
-    const typeMatch = trimmed.match(/^(public|internal)?\s*(class|interface|record|enum|struct)\s+([A-Za-z0-9_]+)/);
+    // Classes / Interfaces / Records / Structs: public static class Foo, public abstract class Bar, public record Baz
+    const typeMatch = trimmed.match(/^(?:(?:public|internal|private|protected|static|abstract|sealed|partial|readonly)\s+)*(class|interface|record|enum|struct)\s+([A-Za-z0-9_]+)/);
     if (typeMatch) {
-      const isPublic = typeMatch[1] === 'public';
-      const kindRaw = typeMatch[2];
-      const name = typeMatch[3];
+      const isPublic = !trimmed.startsWith('private') && !trimmed.startsWith('protected');
+      const kindRaw = typeMatch[1];
+      const name = typeMatch[2];
       const kind: SymbolKind = kindRaw === 'interface' ? 'interface' : kindRaw === 'enum' ? 'enum' : 'class';
       symbols.push({ name, kind, line: lineNum, exported: isPublic });
       if (isPublic) exports.push({ name, kind, isTypeOnly: kind === 'interface' });

@@ -33,6 +33,7 @@ import stateIo = require('./state-io.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import shellCommandProjection = require('./shell-command-projection.cjs');
 const { dispatchGsdCommand } = shellCommandProjection;
+import { validatePath } from './security.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -213,16 +214,26 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
     if (name === 'gsd_read_state') {
       const p = asString(a.path);
       if (!p) return { isError: true, content: [{ type: 'text', text: 'gsd_read_state requires string "path".' }] };
+      const planningBase = path.join(cwd, '.planning');
+      const pathCheck = validatePath(p, planningBase, { allowAbsolute: true });
+      if (!pathCheck.safe) {
+        return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
+      }
       const io = stateIo.createStateIO({ io: 'filesystem' });
-      return { content: [{ type: 'text', text: io.read(p) }] };
+      return { content: [{ type: 'text', text: io.read(pathCheck.resolved) }] };
     }
     if (name === 'gsd_write_state') {
       const p = asString(a.path);
       const content = asString(a.content);
       if (!p || content === null) return { isError: true, content: [{ type: 'text', text: 'gsd_write_state requires string "path" and "content".' }] };
+      const planningBase = path.join(cwd, '.planning');
+      const pathCheck = validatePath(p, planningBase, { allowAbsolute: true });
+      if (!pathCheck.safe) {
+        return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
+      }
       const io = stateIo.createStateIO({ io: 'filesystem' });
-      io.write(p, content);
-      return { content: [{ type: 'text', text: JSON.stringify({ ok: true, path: p }) }] };
+      io.write(pathCheck.resolved, content);
+      return { content: [{ type: 'text', text: JSON.stringify({ ok: true, path: pathCheck.resolved }) }] };
     }
     return { isError: true, content: [{ type: 'text', text: `Unknown tool: ${name}` }] };
   } catch (e) {
@@ -331,8 +342,11 @@ export async function runServer({
   output: NodeJS.WritableStream;
   ctx?: McpContext;
 }): Promise<void> {
+  let buffer = '';
   for await (const chunk of input as AsyncIterable<Buffer>) {
-    const lines = chunk.toString('utf-8').split(/\r?\n/);
+    buffer += chunk.toString('utf-8');
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? '';
     for (const line of lines) {
       if (!line.trim()) continue;
       let parsed: unknown;

@@ -118,7 +118,8 @@ if (require.main === module) {
   const key = process.argv[3] as SpecSectionKey | undefined;
   if (!specFile || !key || !VALID_KEYS.includes(key)) {
     process.stderr.write('usage: spec-section.cjs <specFile> <edges|prohibitions>\n');
-    process.exit(2);
+    process.exitCode = 2;
+  } else {
+    process.stdout.write(JSON.stringify(specSectionStatus(specFile, key)) + '\n');
   }
-  process.stdout.write(JSON.stringify(specSectionStatus(specFile, key)) + '\n');
 }

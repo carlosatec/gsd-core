@@ -8,7 +8,9 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const learningsMod = require("./learnings.cjs");
@@ -34,13 +36,24 @@ function loadAntiPatterns(planningDir) {
     }
 }
 /**
- * Persists anti-patterns to `.planning/intel/anti-patterns.json`.
+ * Persists anti-patterns to `.planning/intel/anti-patterns.json` atomically.
  */
 function saveAntiPatterns(planningDir, data) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
     const storePath = node_path_1.default.join(intelDir, 'anti-patterns.json');
-    (0, shell_command_projection_cjs_1.platformWriteSync)(storePath, JSON.stringify(data, null, 2));
+    const tmpPath = `${storePath}.${process.pid}.tmp`;
+    (0, shell_command_projection_cjs_1.platformWriteSync)(tmpPath, JSON.stringify(data, null, 2));
+    try {
+        node_fs_1.default.renameSync(tmpPath, storePath);
+    }
+    catch {
+        (0, shell_command_projection_cjs_1.platformWriteSync)(storePath, JSON.stringify(data, null, 2));
+        try {
+            node_fs_1.default.unlinkSync(tmpPath);
+        }
+        catch { /* ignore */ }
+    }
 }
 /**
  * Records an anti-pattern or repair lesson into durable storage.
@@ -48,7 +61,7 @@ function saveAntiPatterns(planningDir, data) {
 function recordAntiPattern(planningDir, entry) {
     const data = loadAntiPatterns(planningDir);
     const record = {
-        id: `ap-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `ap-${Date.now()}-${node_crypto_1.default.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         rule: entry.rule,
         file: entry.file,

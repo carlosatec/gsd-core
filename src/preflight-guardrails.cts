@@ -43,6 +43,34 @@ interface SelfHealingResult {
   history: Array<{ attempt: number; error: string; action: string; passed: boolean }>;
 }
 
+// ─── Cycle Detection Helper ──────────────────────────────────────────────────
+
+function detectCycleInGraph(
+  graph: CodebaseGraph,
+  startNode: string,
+  onDeepRecursion?: (node: string) => void
+): boolean {
+  const visited = new Set<string>();
+  function dfs(current: string, stack: Set<string>, depth: number = 0): boolean {
+    if (depth > 1000) {
+      if (onDeepRecursion) onDeepRecursion(current);
+      return false;
+    }
+    visited.add(current);
+    stack.add(current);
+    const callers = graph.reverseDependencies[current] || [];
+    for (const caller of callers) {
+      if (stack.has(caller)) return true;
+      if (!visited.has(caller)) {
+        if (dfs(caller, stack, depth + 1)) return true;
+      }
+    }
+    stack.delete(current);
+    return false;
+  }
+  return dfs(startNode, new Set<string>());
+}
+
 // ─── Pre-Flight Guardrails ────────────────────────────────────────────────────
 
 /**
@@ -219,22 +247,15 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
       }
 
       // Check 3: Circular Dependency Detection
-      const visited = new Set<string>();
-      function detectCycle(current: string, stack: Set<string>, depth: number = 0): boolean {
-        if (depth > 1000) return false; // Guard against deep recursion / stack overflow
-        visited.add(current);
-        stack.add(current);
-        const callers = activeGraph.reverseDependencies[current] || [];
-        for (const caller of callers) {
-          if (stack.has(caller)) return true;
-          if (!visited.has(caller)) {
-            if (detectCycle(caller, stack, depth + 1)) return true;
-          }
-        }
-        stack.delete(current);
-        return false;
-      }
-      if (detectCycle(normalized, new Set<string>())) {
+      const hasCycle = detectCycleInGraph(activeGraph, normalized, (deepNode) => {
+        violations.push({
+          rule: 'CIRCULAR_DEPENDENCY',
+          severity: 'warning',
+          file: normalized,
+          message: `Graph recursion depth exceeded 1000 nodes around ${deepNode}. Cycle check inconclusive.`,
+        });
+      });
+      if (hasCycle) {
         violations.push({
           rule: 'CIRCULAR_DEPENDENCY',
           severity: 'warning',
