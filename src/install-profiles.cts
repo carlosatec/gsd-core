@@ -70,62 +70,23 @@ const { composeWorkflow: _composeWorkflow } = workflowFragmentsModule as {
  *
  * Composition: --profile=core,audit resolves to union(closure(core), closure(audit)).
  */
+const CANONICAL_COMMAND_STEMS = Object.freeze([
+  'status',
+  'plan',
+  'exec',
+  'review',
+  'verify',
+  'ship',
+  'auto',
+  'tokens',
+  'migrate',
+  'help',
+]);
+
 const PROFILES = Object.freeze({
-  unified: Object.freeze([
-    'status',
-    'plan',
-    'exec',
-    'review',
-    'verify',
-    'ship',
-    'auto',
-    'tokens',
-    'migrate',
-    'help',
-  ]),
-  core: Object.freeze([
-    'status',
-    'plan',
-    'exec',
-    'verify',
-    'ship',
-    'help',
-    'new-project',
-    'discuss-phase',
-    'plan-phase',
-    'execute-phase',
-    'phase',
-    'update',
-    'surface',
-  ]),
-  standard: Object.freeze([
-    // Unified commands
-    'status',
-    'plan',
-    'exec',
-    'review',
-    'verify',
-    'ship',
-    'auto',
-    'tokens',
-    'migrate',
-    'help',
-    // Core loop & legacy aliases
-    'new-project',
-    'onboard',
-    'discuss-phase',
-    'plan-phase',
-    'execute-phase',
-    'update',
-    'surface',
-    'phase',
-    'config',
-    'progress',
-    // Workspace / state
-    'resume-work',
-    'pause-work',
-    'workspace',
-  ]),
+  unified: CANONICAL_COMMAND_STEMS,
+  core: CANONICAL_COMMAND_STEMS,
+  standard: CANONICAL_COMMAND_STEMS,
   full: '*' as const,
 } as const);
 

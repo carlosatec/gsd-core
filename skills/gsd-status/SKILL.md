@@ -17,6 +17,16 @@ Check project progress, inspect active phase in .planning/STATE.md and .planning
 <execution_context>
 @~/.claude/gsd-core/workflows/progress.md
 @~/.claude/gsd-core/workflows/next.md
+@~/.claude/gsd-core/workflows/health.md
+@~/.claude/gsd-core/workflows/stats.md
+@~/.claude/gsd-core/workflows/inbox.md
+@~/.claude/gsd-core/workflows/forensics.md
+@~/.claude/gsd-core/workflows/scan.md
+@~/.claude/gsd-core/workflows/map-codebase.md
+@~/.claude/gsd-core/workflows/smart-entry.md
+@~/.claude/gsd-core/workflows/session-report.md
+@~/.claude/gsd-core/workflows/diagnose-issues.md
+@~/.claude/gsd-core/workflows/debug.md
 </execution_context>
 
 <process>

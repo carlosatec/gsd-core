@@ -16,6 +16,26 @@ Create a detailed, executable phase plan in .planning/phases/<phase_dir>/<phase>
 
 <execution_context>
 @~/.claude/gsd-core/workflows/plan-phase.md
+@~/.claude/gsd-core/workflows/spec-phase.md
+@~/.claude/gsd-core/workflows/discuss-phase.md
+@~/.claude/gsd-core/workflows/discuss-phase-assumptions.md
+@~/.claude/gsd-core/workflows/discuss-phase-power.md
+@~/.claude/gsd-core/workflows/ultraplan-phase.md
+@~/.claude/gsd-core/workflows/spike.md
+@~/.claude/gsd-core/workflows/spike-wrap-up.md
+@~/.claude/gsd-core/workflows/sketch.md
+@~/.claude/gsd-core/workflows/sketch-wrap-up.md
+@~/.claude/gsd-core/workflows/explore.md
+@~/.claude/gsd-core/workflows/plan-review-convergence.md
+@~/.claude/gsd-core/workflows/ai-integration-phase.md
+@~/.claude/gsd-core/workflows/mvp-phase.md
+@~/.claude/gsd-core/workflows/secure-phase.md
+@~/.claude/gsd-core/workflows/ui-phase.md
+@~/.claude/gsd-core/workflows/add-phase.md
+@~/.claude/gsd-core/workflows/insert-phase.md
+@~/.claude/gsd-core/workflows/edit-phase.md
+@~/.claude/gsd-core/workflows/remove-phase.md
+@~/.claude/gsd-core/workflows/list-phase-assumptions.md
 </execution_context>
 
 <process>

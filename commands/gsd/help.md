@@ -17,6 +17,19 @@ Output ONLY the reference content of the chosen tier. Do NOT add:
 
 <execution_context>
 @~/.claude/gsd-core/workflows/help.md
+@~/.claude/gsd-core/workflows/manager.md
+@~/.claude/gsd-core/workflows/thread.md
+@~/.claude/gsd-core/workflows/note.md
+@~/.claude/gsd-core/workflows/list-workspaces.md
+@~/.claude/gsd-core/workflows/new-workspace.md
+@~/.claude/gsd-core/workflows/remove-workspace.md
+@~/.claude/gsd-core/workflows/list-seeds.md
+@~/.claude/gsd-core/workflows/plant-seed.md
+@~/.claude/gsd-core/workflows/add-todo.md
+@~/.claude/gsd-core/workflows/check-todos.md
+@~/.claude/gsd-core/workflows/add-backlog.md
+@~/.claude/gsd-core/workflows/node-repair.md
+@~/.claude/gsd-core/workflows/transition.md
 </execution_context>
 
 <context>

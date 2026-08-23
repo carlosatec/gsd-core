@@ -180,4 +180,4 @@ every new host.
 - [Interface versioning and deprecation policy](interface-versioning-policy.md)
 - [GSD Registries](../registries/README.md)
 - [How overlay capabilities compose](capability-overlay-model.md)
-- [What's new in 1.7.0](../whats-new-1.7.0.md)
+- [What's new in 1.7.0 (Archive)](../archive/whats-new-1.7.0.md)

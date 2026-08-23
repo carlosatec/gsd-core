@@ -13,21 +13,22 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ---
 
-## Canonical Unified Interface (6+1)
+## Canonical Unified Interface (GSD 2.4)
 
-Starting in GSD 2.3, the workflow is streamlined into **6 canonical commands + autopilot + observability**:
+Starting in GSD 2.4, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step |
 |---------|------------------------|
-| `/gsd:status` (`/gsd-status`) | Situational diagnostics, project state, roadmap, and token savings |
-| `/gsd:plan` (`/gsd-plan`) | Decompose phase into atomic parallel waves (`PLAN.md`, `SPEC.md`) |
-| `/gsd:exec` (`/gsd-exec`) | Wave-based execution with fresh 200k subagent contexts & JIT |
-| `/gsd:review` (`/gsd-review`) | Static code analysis with autonomous repairs (`--fix`) |
-| `/gsd:verify` (`/gsd-verify`) | Conversational UAT acceptance and verification walkthrough |
-| `/gsd:ship` (`/gsd-ship`) | Git hygiene, branch preparation, changelog, and Pull Request |
-| `/gsd:auto` (`/gsd-auto`) | End-to-end autonomous autopilot across phase lifecycle |
-| `/gsd:tokens` (`/gsd-tokens`) | Real-time token telemetry dashboard & savings breakdown |
-| `/gsd:migrate` (`/gsd-migrate`) | One-click non-destructive legacy project upgrade |
+| `/gsd-status` | Situational diagnostics, project state, roadmap, and token savings telemetry |
+| `/gsd-plan` | Decompose phase into atomic parallel waves, specs, and discussions (`PLAN.md`, `SPEC.md`) |
+| `/gsd-exec` | Wave-based execution with fresh 200k subagent contexts & Pre-Flight Guardrails |
+| `/gsd-review` | Deep code, architecture, and UI review with autonomous repairs (`--fix`) |
+| `/gsd-verify` | Conversational UAT acceptance and verification walkthrough (Auto-Pass enabled) |
+| `/gsd-ship` | Git hygiene, branch preparation, changelog, and Pull Request merge |
+| `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle |
+| `/gsd-tokens` | Real-time token telemetry dashboard & savings breakdown |
+| `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync |
+| `/gsd-help` | Comprehensive reference and usage guide for all unified commands |
 
 ---
 

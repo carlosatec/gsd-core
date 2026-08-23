@@ -2,38 +2,38 @@
 
 **Goal:** Turn phase decisions and research into an atomic, verifiable task plan ready for execution.
 
-**Prerequisites:** `.planning/ROADMAP.md` exists. A `{phase}-CONTEXT.md` from `/gsd-discuss-phase` is strongly recommended but not required.
+**Prerequisites:** `.planning/ROADMAP.md` exists. A `{phase}-CONTEXT.md` (or `--spec` / discussion) is strongly recommended but not required.
 
 ---
 
 ## Run the standard planning flow
 
 ```bash
-/gsd-plan-phase 2
+/gsd-plan 2
 ```
 
-This runs three stages in sequence:
+This runs the unified planning pipeline:
 
-1. **Research** — A `gsd-phase-researcher` subagent investigates the domain and writes `{phase}-RESEARCH.md`.
-2. **Plan** — A `gsd-planner` subagent reads context, research, and requirements, then writes one or more `{phase}-{N}-PLAN.md` files.
-3. **Verify** — A `gsd-plan-checker` subagent validates plan quality across eight dimensions and triggers a revision loop (up to three iterations) until quality gates pass.
+1. **Research & Context** — Surgical JIT context injection and domain research.
+2. **Plan & Spec** — Decompose into atomic tasks with explicit acceptance criteria (`{phase}-{N}-PLAN.md`).
+3. **Verify** — Plan-checker validates plan quality and ensures atomic task waves fit clean subagent context windows.
 
-If no phase number is given, the `/gsd-plan-phase` orchestrating workflow reads `ROADMAP.md` and targets the next unplanned phase. This detection happens in the workflow/LLM layer, not in the `gsd-tools.cjs` CLI — its phase-lookup commands require an explicit phase number.
+If no phase number is given, `/gsd-plan` automatically reads `ROADMAP.md` and targets the next unplanned phase.
 
 ---
 
-## Skip or force research
+## Plan customization & options
 
-**If the domain is familiar and you do not need new research:**
+**If the domain is familiar and you want to skip external research:**
 
 ```bash
-/gsd-plan-phase 3 --skip-research
+/gsd-plan 3 --skip-research
 ```
 
-**If RESEARCH.md already exists but you want to force a refresh:**
+**If you want to force refresh research:**
 
 ```bash
-/gsd-plan-phase 3 --research
+/gsd-plan 3 --research
 ```
 
 **If you want to run research only** — write RESEARCH.md and exit before planning:

@@ -13,21 +13,22 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (6+1)
+## Interface Canônica Unificada (GSD 2.4)
 
-A partir do GSD 2.3, o fluxo de trabalho foi unificado em **6 comandos canônicos + piloto automático + observabilidade**:
+A partir do GSD 2.4, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
-| `/gsd:status` (`/gsd-status`) | Diagnóstico situacional, estado do projeto, roadmap e telemetria de tokens |
-| `/gsd:plan` (`/gsd-plan`) | Decomposição da fase em ondas paralelas atômicas (`PLAN.md`, `SPEC.md`) |
-| `/gsd:exec` (`/gsd-exec`) | Execução paralela em ondas com subagentes de 200k tokens e JIT |
-| `/gsd:review` (`/gsd-review`) | Análise estática de código com auto-correção autônoma (`--fix`) |
-| `/gsd:verify` (`/gsd-verify`) | Validação conversacional de UAT e critérios de aceitação |
-| `/gsd:ship` (`/gsd-ship`) | Higiene git, preparação de branch, changelog e Pull Request |
-| `/gsd:auto` (`/gsd-auto`) | Piloto automático ponta a ponta através de todo o ciclo da fase |
-| `/gsd:tokens` (`/gsd-tokens`) | Painel visual de telemetria e economia de tokens em tempo real |
-| `/gsd:migrate` (`/gsd:migrate`) | Modernização não-destrutiva de projetos legados em um clique |
+| `/gsd-status` | Diagnóstico situacional, estado do projeto, roadmap e telemetria de tokens |
+| `/gsd-plan` | Decomposição da fase em ondas paralelas atômicas, especificações e discussões (`PLAN.md`, `SPEC.md`) |
+| `/gsd-exec` | Execução paralela em ondas com subagentes de 200k tokens e Pre-Flight Guardrails |
+| `/gsd-review` | Análise profunda de código e UI com auto-correção autônoma (`--fix`) |
+| `/gsd-verify` | Validação conversacional de UAT e critérios de aceitação (Auto-Pass habilitado) |
+| `/gsd-ship` | Higiene git, preparação de branch, changelog e Pull Request |
+| `/gsd-auto` | Piloto automático ponta a ponta através de todo o ciclo da fase |
+| `/gsd-tokens` | Painel visual de telemetria e economia de tokens em tempo real |
+| `/gsd-migrate` | Modernização não-destrutiva de projetos legados em um clique |
+| `/gsd-help` | Guia de uso e referência rápida para todos os comandos unificados |
 
 ---
 

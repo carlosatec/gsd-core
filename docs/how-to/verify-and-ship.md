@@ -1,25 +1,23 @@
 # How to verify and ship a phase
 
-**Goal:** Walk executed work through user acceptance testing, diagnose and fix any failures, then open a pull request with an auto-generated body.
+**Goal:** Walk executed work through user acceptance testing or automated Auto-Pass, diagnose and fix any failures, then open a pull request with an auto-generated body.
 
 **Prerequisites:** The phase has been executed and has `SUMMARY.md` files. If execution is not yet done, see [Execute a phase](execute-a-phase.md).
 
 ---
 
-## Run user acceptance testing
+## Run user acceptance testing & verification
 
 ```bash
-/gsd-verify-work 1
+/gsd-verify 1
 ```
 
-GSD reads the phase's `SUMMARY.md` files, extracts user-observable deliverables, and walks you through them one at a time. For each checkpoint it presents what *should* happen and asks whether reality matches.
+GSD reads the phase's `SUMMARY.md` and `PLAN.md` files, verifies automated test suite coverage (triggering Auto-Pass when 100% test coverage and validation criteria are satisfied), and walks you through conversational UAT checkpoints if interactive confirmation is needed.
 
 - `yes` / `y` / empty → pass, move to next test
 - Anything else → recorded as an issue, severity inferred from your description
 
-You never need to categorise severity — GSD infers it from your words ("crashes" → blocker, "doesn't work" → major, "looks off" → cosmetic).
-
-Progress is written to `.planning/phases/01-<name>/01-UAT.md` and survives a `/clear`. If a session is interrupted, re-run `/gsd-verify-work 1` and GSD offers to resume from the last checkpoint.
+Progress is written to `.planning/phases/01-<name>/01-VERIFICATION.md` (or `UAT.md`) and survives a `/clear`. If a session is interrupted, re-run `/gsd-verify 1` and GSD resumes from the last checkpoint.
 
 ---
 
@@ -27,24 +25,15 @@ Progress is written to `.planning/phases/01-<name>/01-UAT.md` and survives a `/c
 
 If any tests report issues, GSD proceeds automatically:
 
-1. **Diagnoses root causes** — spawns parallel debug agents, one per issue, and updates `UAT.md` with root causes.
-2. **Plans gap closure** — spawns a `gsd-planner` in gap-closure mode, which reads `UAT.md` (with diagnoses) and writes new `PLAN.md` files.
-3. **Verifies the fix plans** — spawns a `gsd-plan-checker` to ensure the plans are executable. If issues are found, the planner and checker iterate up to three times.
-4. **Presents next step** — when plans pass the checker:
-
-```
-Plans verified and ready for execution.
-
-`/clear` then `/gsd-execute-phase 1 --gaps-only`
-```
-
-Run the suggested command to apply fixes, then re-run `/gsd-verify-work 1` to confirm everything passes.
+1. **Diagnoses root causes** — spawns parallel debug agents to investigate test failures or UAT issues.
+2. **Plans gap closure** — uses surgical context injection to prepare repair plans.
+3. **Presents next step** — execute fixes with `/gsd-exec 1 --gaps-only` or `/gsd-review --fix`.
 
 ---
 
 ## When all tests pass: ship the phase
 
-Once all UAT tests pass (or if this is your first run and no issues are found), the phase is marked complete in `ROADMAP.md` and `STATE.md` automatically.
+Once verification passes (or Auto-Pass triggers), the phase is marked complete in `ROADMAP.md` and `STATE.md` automatically.
 
 ```bash
 /gsd-ship 1

@@ -15,6 +15,16 @@ Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.3 f
 
 <execution_context>
 @~/.claude/gsd-core/workflows/update.md
+@~/.claude/gsd-core/workflows/import.md
+@~/.claude/gsd-core/workflows/onboard.md
+@~/.claude/gsd-core/workflows/new-project.md
+@~/.claude/gsd-core/workflows/settings.md
+@~/.claude/gsd-core/workflows/settings-advanced.md
+@~/.claude/gsd-core/workflows/settings-integrations.md
+@~/.claude/gsd-core/workflows/ingest-docs.md
+@~/.claude/gsd-core/workflows/sync-skills.md
+@~/.claude/gsd-core/workflows/docs-update.md
+@~/.claude/gsd-core/workflows/profile-user.md
 </execution_context>
 
 <process>

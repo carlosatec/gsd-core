@@ -13,6 +13,7 @@ Display real-time token telemetry metrics, including token savings percentage, p
 
 <execution_context>
 @~/.claude/gsd-core/workflows/stats.md
+@~/.claude/gsd-core/workflows/analyze-dependencies.md
 </execution_context>
 
 <process>

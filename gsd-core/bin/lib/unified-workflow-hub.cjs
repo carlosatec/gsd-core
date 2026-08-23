@@ -46,56 +46,22 @@ const { syncSessionContext } = sessionHook;
 const { runGapAnalysis } = gapChecker;
 const { analyzeSource, isAnalyzablePath } = complexityTrigger;
 const { classifyContent } = coverageMod;
-// ─── Command Name Normalizer ──────────────────────────────────────────────────
-const ALIAS_MAP = {
-    // 1. Auto
-    auto: 'auto',
-    autonomous: 'auto',
-    autopilot: 'auto',
-    // 2. Status
-    status: 'status',
-    progress: 'status',
-    next: 'status',
-    state: 'status',
-    // 3. Plan
-    plan: 'plan',
-    'plan-phase': 'plan',
-    spec: 'plan',
-    discuss: 'plan',
-    // 4. Exec
-    exec: 'exec',
-    'execute-phase': 'exec',
-    execute: 'exec',
-    run: 'exec',
-    // 5. Review
-    review: 'review',
-    'code-review': 'review',
-    audit: 'review',
-    // 6. Verify
-    verify: 'verify',
-    'verify-work': 'verify',
-    uat: 'verify',
-    validate: 'verify',
-    // 7. Ship
-    ship: 'ship',
-    release: 'ship',
-    pr: 'ship',
-    // 8. Migrate / Upgrade
-    migrate: 'migrate',
-    upgrade: 'migrate',
-    'auto-upgrade': 'migrate',
-    'gsd-migrate': 'migrate',
-    'gsd-upgrade': 'migrate',
-    // 9. Tokens & Telemetry
-    tokens: 'tokens',
-    telemetry: 'tokens',
-    'token-stats': 'tokens',
-    'gsd-tokens': 'tokens',
-    'gsd-telemetry': 'tokens',
-};
+// ─── Strict Canonical Command Normalizer (D-41 / D-42) ────────────────────────
+const CANONICAL_COMMAND_SET = new Set([
+    'auto',
+    'status',
+    'plan',
+    'exec',
+    'review',
+    'verify',
+    'ship',
+    'migrate',
+    'tokens',
+    'help',
+]);
 /**
- * Normalizes variations across AI runtime conventions (/gsd:plan, /gsd-plan, $gsd-plan, gsd plan)
- * into canonical UnifiedCommandName.
+ * Normalizes command namespace variations (/gsd:plan, /gsd-plan, gsd:plan, plan)
+ * strictly to canonical UnifiedCommandName. Rejects retired/legacy commands (D-42).
  */
 function normalizeCommandName(input) {
     const cleaned = input
@@ -104,7 +70,10 @@ function normalizeCommandName(input) {
         .replace(/^[/\\$]/, '') // strip leading /, \, or $
         .replace(/^gsd[:-]/, '') // strip gsd: or gsd-
         .replace(/^gsd\s+/, ''); // strip "gsd "
-    return ALIAS_MAP[cleaned] ?? null;
+    if (CANONICAL_COMMAND_SET.has(cleaned)) {
+        return cleaned;
+    }
+    return null;
 }
 /**
  * Runs code review over changed files and performs optional autonomous fixes when --fix is set.
@@ -219,7 +188,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
     // Sync session context handshake on command dispatch (D-30)
     syncSessionContext(planningDir, cwd);
     if (!canonicalName) {
-        throw new Error(`Unknown command "${rawCommand}". Expected one of: auto, status, plan, exec, review, verify, ship, migrate`);
+        throw new Error(`Unknown or retired command "${rawCommand}". GSD Core strictly supports only the 10 unified canonical commands: status, plan, exec, review, verify, ship, auto, tokens, migrate, help.`);
     }
     switch (canonicalName) {
         case 'auto':
@@ -445,6 +414,13 @@ function dispatchUnifiedCommand(rawCommand, options) {
                 message: dashboard,
             };
         }
+        case 'help':
+            return {
+                command: 'help',
+                action: 'DISPLAY_HELP',
+                nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
+                message: 'GSD Core Nexus 2.4 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+            };
     }
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports

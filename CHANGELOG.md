@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-08-23
+
+### Added
+- **Strict 10-Command Canonical Surface (D-41 / D-42):** Consolidates public interface into exclusively the 10 Unified Canonical Commands (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`).
+- **Fail-Closed Dispatcher:** Dispatches commands with strict validation, rejecting retired commands and legacy aliases with clear explanatory instructions.
+- **Workflow Graph Reachability (D-45):** Connects all 151 operational playbooks in `gsd-core/workflows/` directly into the execution context tree of canonical commands (`0 unreachable`).
+- **Clean Layer-1 Session Discovery (D-44):** Streamlined session prompt injection generating ~70% token savings at startup.
+- **Unified 2.4.0 Manifest Synchronization (D-46):** Synchronized lockstep versioning across `package.json`, `package-lock.json` and all 48 plugin and capability manifests.
+
+
 ## [1.10.0] - 2026-08-08
 
 ### Added

@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.4.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -27,18 +27,19 @@ GSD Core Nexus é um framework de engenharia de contexto, análise estática nat
 
 Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
-1. **Discuss** — capturar decisões de implementação antes de qualquer planejamento
-2. **Plan** — pesquisar, decompor e verificar se o plano cabe em uma janela de contexto limpa
-3. **Execute** — executar planos em ondas paralelas; cada executor começa com um contexto limpo de 200k tokens
-4. **Verify** — percorrer o que foi construído; diagnosticar e corrigir antes de declarar conclusão
-5. **Ship** — criar o PR, arquivar a fase e repetir para a próxima
+1. **Discuss & Spec** — capturar decisões de implementação antes de qualquer planejamento (`/gsd:plan --spec`)
+2. **Plan** — pesquisar, decompor e verificar se o plano cabe em uma janela de contexto limpa (`/gsd:plan`)
+3. **Execute** — executar planos em ondas paralelas com Pre-Flight static guardrails (`/gsd:exec`)
+4. **Review & Verify** — revisão profunda de código e UI com auto-fix (`/gsd:review --fix`) e UAT (`/gsd:verify`)
+5. **Ship** — release limpa, geração automática de PR, arquivamento de fase e repetição (`/gsd:ship`)
 
 ---
 
-## GSD Core Nexus 2.3: Inteligência Universal, AST 360°, Mobile, RAG BM25 e Telemetria de Tokens
+## GSD Core Nexus 2.4: Skills Unificadas, AST 360°, Superfície Estrita e Governança de Tokens
 
-O GSD Core Nexus 2.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
+O GSD Core Nexus 2.4 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
 
+- **Superfície Pública Estrita de 10 Comandos (D-41 / D-42):** Menu slash simplificado e limpo contendo exclusivamente os 10 Comandos Canônicos Unificados (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`) com despacho fail-closed estrito e zero duplicações.
 - **Motor AST Universal & Mobile 360° Nativo:** Análise estática nativa cobrindo mais de 35 extensões com suporte completo **Mobile 360°** para iOS (Swift, SwiftUI, XCTest) e Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** Fachada Graphify nativa em TypeScript puro (`2.3-native`) construindo e consultando o grafo de dependências AST em memória sem dependência de Python externo.
 - **Hook de Contexto de Sessão (Zero Cegueira — D-30):** Injeta e atualiza automaticamente o estado ativo do projeto em `GEMINI.md`, `AGENTS.md` ou regras, fornecendo contexto instantâneo à IA na inicialização.
@@ -50,7 +51,7 @@ O GSD Core Nexus 2.3 transforma agentes de codificação em uma engenharia autô
 - **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções com busca transversal inteligente (`errorQuery`) em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
 - **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Python e Node isolados).
 - **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.
-- **Interface Canônica 6+1 Unificada:** Simplifica os fluxos de trabalho entre múltiplos runtimes em `status`, `plan`, `exec`, `review` (com `--fix`), `verify` (com auto-pass), `ship`, `auto`, `tokens` e `migrate`.
+- **Blindagem de Concorrência & Segurança (D-35 a D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), confinamento seguro do MCP em `.planning/`, streaming JSON-RPC resiliente a chunks e sincronização de versão nos 48 manifests.
 
 ---
 
@@ -64,11 +65,12 @@ O instalador interativo solicita seu ambiente de execução (Claude Code, Antigr
 
 Em outro runtime ou sem Node.js? Consulte [Instalar no seu runtime](docs/pt-BR/how-to/install-on-your-runtime.md).
 
-Após a instalação, inicie um projeto novo ou integre um repositório existente:
+Após a instalação, verifique o status ou inicie o planejamento:
 
 ```bash
-/gsd-new-project   # projeto greenfield
-/gsd-onboard       # base de código existente
+/gsd-status       # verificar estado do projeto, documentação viva e telemetria
+/gsd-plan         # planejar próxima fase
+/gsd-exec         # executar plano da fase
 ```
 
 É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](tutorial-gsd.md) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
@@ -77,7 +79,7 @@ Após a instalação, inicie um projeto novo ou integre um repositório existent
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.3** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.4** → [Tutorial Prático Completo](tutorial-gsd.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
 - [Tutorial Prático: Dominando o GSD Core Nexus 2.3](tutorial-gsd.md) 🔥

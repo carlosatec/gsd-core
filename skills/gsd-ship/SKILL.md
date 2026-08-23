@@ -12,13 +12,19 @@ allowed-tools:
 ---
 
 <objective>
-Bridge local completion → merged PR. After /gsd-verify-work passes, ship the work: push branch, create PR with auto-generated body, optionally trigger review, and track the merge.
+Bridge local completion → merged PR. After /gsd-verify passes, ship the work: push branch, create PR with auto-generated body, optionally trigger review, and track the merge.
 
 Closes the plan → execute → verify → ship loop.
 </objective>
 
 <execution_context>
 @~/.claude/gsd-core/workflows/ship.md
+@~/.claude/gsd-core/workflows/pr-branch.md
+@~/.claude/gsd-core/workflows/complete-milestone.md
+@~/.claude/gsd-core/workflows/audit-milestone.md
+@~/.claude/gsd-core/workflows/milestone-summary.md
+@~/.claude/gsd-core/workflows/new-milestone.md
+@~/.claude/gsd-core/workflows/graduation.md
 </execution_context>
 
 Execute the ship workflow from @~/.claude/gsd-core/workflows/ship.md end-to-end.

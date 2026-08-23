@@ -1,18 +1,18 @@
 # How to execute a phase
 
-**Goal:** Run a planned phase through wave-based parallel execution and land every plan as an atomic git commit.
+**Goal:** Run a planned phase through wave-based parallel execution, Pre-Flight Guardrails, and land every plan as an atomic git commit.
 
-**Prerequisites:** The phase has at least one `PLAN.md` file. If planning is not yet done, run `/gsd-plan-phase N` first — see [Plan a phase](plan-a-phase.md).
+**Prerequisites:** The phase has at least one `PLAN.md` file. If planning is not yet done, run `/gsd-plan N` first — see [Plan a phase](plan-a-phase.md).
 
 ---
 
 ## Run the full phase
 
 ```bash
-/gsd-execute-phase 1
+/gsd-exec 1
 ```
 
-GSD reads the phase's plan files, groups them into dependency waves, and spawns a fresh executor agent per plan. Each executor commits its work atomically before the next wave begins.
+GSD reads the phase's plan files, verifies Pre-Flight AST contracts, groups tasks into dependency waves, and spawns a fresh executor agent per plan with surgical JIT context injection. Each executor commits its work atomically with test validation before the next wave begins.
 
 Before any agents are dispatched, GSD prints a wave table:
 
@@ -38,7 +38,7 @@ For the underlying agent coordination model, see [Multi-agent orchestration](../
 If you want to execute only one wave — for example, to inspect Wave 1 output before committing to Wave 2 — use `--wave N`:
 
 ```bash
-/gsd-execute-phase 1 --wave 2
+/gsd-exec 1 --wave 2
 ```
 
 GSD executes only Wave 2 plans. It first checks that all earlier waves are complete; if any Wave 1 plan is still marked incomplete, it stops and tells you to finish earlier waves first.
@@ -50,7 +50,7 @@ GSD executes only Wave 2 plans. It first checks that all earlier waves are compl
 If execution stops partway through — a quota error, a network drop, or a crashed session — the wave-level progress is preserved. GSD checks for a `SUMMARY.md` file for each plan; plans that have one are skipped automatically when you re-run:
 
 ```bash
-/gsd-execute-phase 1
+/gsd-exec 1
 ```
 
 GSD will skip plans where `SUMMARY.md` already exists and pick up from the first incomplete plan.

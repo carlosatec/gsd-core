@@ -1,6 +1,6 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 10 (Ultra-Convergência, Mobile 360° & Arquitetura do Core) | Status: Complete (27/27 Testes Passando)
-> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **GSD Active State**: Phase: Phase 12 (Consolidação Unificada de Skills, Superfície Estrita & Versão 2.4.0) | Status: Complete (10 Skills Unificadas, 151 Workflows Conectados, Build Limpo)
+> **Decisions**: **D-41 [Strict 10-Command Surface]:** commands/gsd/ e skills/ contêm exclusivamente os 10 Comandos Canônicos.; **D-42 [No Legacy Aliases]:** Despacho fail-closed estrito sem aliases legados.; **D-45 [Workflow Modernization]:** Playbooks em gsd-core/workflows/ modernizados e 100% integrados.; **D-46 [Version Bump to 2.4.0]:** Ecossistema unificado na versão 2.4.0.
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 

@@ -17,6 +17,7 @@ Run continuous autonomous autopilot across all remaining phases in ROADMAP.md, a
 
 <execution_context>
 @~/.claude/gsd-core/workflows/autonomous.md
+@~/.claude/gsd-core/workflows/extract-learnings.md
 </execution_context>
 
 <process>

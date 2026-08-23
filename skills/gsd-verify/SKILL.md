@@ -17,6 +17,9 @@ Validate built features against phase acceptance criteria, run end-to-end test s
 
 <execution_context>
 @~/.claude/gsd-core/workflows/verify-work.md
+@~/.claude/gsd-core/workflows/validate-phase.md
+@~/.claude/gsd-core/workflows/audit-uat.md
+@~/.claude/gsd-core/workflows/add-tests.md
 </execution_context>
 
 <process>

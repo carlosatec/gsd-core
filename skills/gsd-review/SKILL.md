@@ -1,25 +1,27 @@
 ---
 name: gsd-review
-description: "Request cross-AI peer review of phase plans from external AI CLIs"
-argument-hint: "--phase N [--gemini] [--claude] [--codex] [--opencode] [--qwen] [--cursor] [--agy] [--all]"
+description: "Deep code, architecture, UI/UX, and phase plan review with autonomous repairs (--fix)"
+argument-hint: "[phase-number] [--fix] [--ui] [--backlog]"
 allowed-tools:
   - Read
   - Write
   - Bash
   - Glob
   - Grep
+  - AskUserQuestion
 ---
 
 
 <objective>
-Invoke external AI CLIs (Gemini, Claude, Codex, OpenCode, Qwen Code, Cursor) to independently review phase plans.
-Produces a structured REVIEWS.md with per-reviewer feedback that can be fed back into
-planning via /gsd-plan-phase --reviews.
-
-**Flow:** Detect CLIs → Build review prompt → Invoke each CLI → Collect responses → Write REVIEWS.md
+Run comprehensive static and heuristic code review over modified files, checking complexity, UI/UX consistency, AST contract integrity, and anti-patterns, with optional autonomous repairs (--fix).
 </objective>
 
 <execution_context>
+@~/.claude/gsd-core/workflows/code-review.md
+@~/.claude/gsd-core/workflows/code-review-fix.md
+@~/.claude/gsd-core/workflows/ui-review.md
+@~/.claude/gsd-core/workflows/eval-review.md
+@~/.claude/gsd-core/workflows/audit-fix.md
 @~/.claude/gsd-core/workflows/review.md
 </execution_context>
 

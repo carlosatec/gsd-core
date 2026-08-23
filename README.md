@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-2.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.4.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -27,18 +27,19 @@ GSD Core Nexus is a context-engineering, native static analysis, and spec-driven
 
 Each milestone repeats the same five-step loop, one phase at a time:
 
-1. **Discuss** — capture implementation decisions before anything is planned
-2. **Plan** — research, decompose, and verify the plan fits a fresh context window
-3. **Execute** — run plans in parallel waves; each executor starts with a clean 200k-token context
-4. **Verify** — walk through what was built; diagnose and fix before declaring done
-5. **Ship** — create the PR, archive the phase, repeat for the next one
+1. **Discuss & Spec** — capture implementation decisions before anything is planned (`/gsd:plan --spec`)
+2. **Plan** — research, decompose, and verify the plan fits a fresh context window (`/gsd:plan`)
+3. **Execute** — run plans in parallel waves with Pre-Flight static guardrails (`/gsd:exec`)
+4. **Review & Verify** — deep code & UI review with auto-fix (`/gsd:review --fix`) and acceptance UAT (`/gsd:verify`)
+5. **Ship** — clean release, auto-generate PR, archive phase, and repeat (`/gsd:ship`)
 
 ---
 
-## GSD Core Nexus 2.3: Universal Intelligence, AST 360°, Mobile, BM25 RAG & Token Telemetry
+## GSD Core Nexus 2.4: Unified Skills, AST 360°, Strict Surface & Token Governance
 
-GSD Core Nexus 2.3 elevates AI coding agents with a full-stack static analysis, mobile intelligence, and context governance engine:
+GSD Core Nexus 2.4 elevates AI coding agents with a full-stack static analysis, mobile intelligence, strict canonical surface, and context governance engine:
 
+- **Strict 10-Command Public Surface (D-41 / D-42):** Clean slash-command menu featuring exclusively the 10 Canonical Unified Commands (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`) with strict fail-closed dispatch and zero confusing duplicates.
 - **Universal Multi-Language AST & Mobile 360°:** Native static code analysis across 35+ extensions (TypeScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL, Docker, Shell, YAML) with full **Mobile 360° support** for iOS (Swift, SwiftUI, XCTest) and Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **100% Native Knowledge Graph (Zero Python — D-31):** Pure-TypeScript Graphify facade (`2.3-native`) building and querying the AST dependency graph in memory with zero external Python dependencies.
 - **Session Context Hook (Zero Context Blindness — D-30):** Automatically injects and keeps active project state updated in `GEMINI.md`, `AGENTS.md`, or rules, giving the AI instant context at startup.
@@ -50,7 +51,7 @@ GSD Core Nexus 2.3 elevates AI coding agents with a full-stack static analysis, 
 - **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
 - **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (Swift XCTest, Kotlin/Java JUnit 5, inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
-- **Streamlined 6+1 Canonical Commands:** Unifies multi-runtime CLI workflows into `status`, `plan`, `exec`, `review` (with `--fix`), `verify` (with auto-pass), `ship`, `auto`, `tokens`, and `migrate`.
+- **Concurrency & Security Hardening (D-35 to D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), secure MCP confinement within `.planning/`, chunk-resilient JSON-RPC streaming, and lockstep versioning across all 48 manifests.
 
 ---
 
@@ -64,11 +65,12 @@ The interactive installer prompts for your runtime (Claude Code, OpenCode, Antig
 
 On another runtime or without Node.js? See [Install on your runtime](docs/how-to/install-on-your-runtime.md).
 
-Once installed, start a new project or onboard an existing repo:
+Once installed, check status or start planning:
 
 ```bash
-/gsd-new-project   # greenfield project
-/gsd-onboard       # existing codebase
+/gsd-status       # check project state, living docs & telemetry
+/gsd-plan         # plan next phase
+/gsd-exec         # execute phase plan
 ```
 
 New here? Check the [Complete Practical GSD Tutorial (Português)](tutorial-gsd.md) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.

@@ -55,7 +55,6 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 - [Drive GSD from a tracker issue](how-to/drive-gsd-from-a-tracker-issue.md) — start a phase from a GitHub, Linear, or Jira issue
 - [Migrate from GSD 2](how-to/migrate-from-gsd-2.md) — upgrade an existing GSD 2 project to GSD Core
 - [Update GSD](how-to/update-gsd.md) — re-run the installer to pick up the latest release
-- [Clean up get-shit-done-cc](cleanup-get-shit-done-cc.md) — remove leftover old-package artifacts that cause a spurious `⬆ /gsd-update` indicator after migrating to `@opengsd/gsd-core`
 - [Fix the worktree base-mismatch (exit 42) error](how-to/fix-worktree-base-mismatch.md) — resolve the branch-divergence condition that halts parallel phase execution
 - [Recover and troubleshoot](how-to/recover-and-troubleshoot.md) — fix common problems, rebuild context, and uninstall
 
@@ -101,6 +100,6 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 
 ## Related
 
-- [What's new in 1.7.0](whats-new-1.7.0.md) — curated highlights of the 1.7.0 release
+- [Complete Practical GSD Tutorial (Português)](../tutorial-gsd.md) — comprehensive end-to-end tutorial
 - [Root README](../README.md) — landing page, quickstart, and documentation overview
 - [Changelog](../CHANGELOG.md) — release history
