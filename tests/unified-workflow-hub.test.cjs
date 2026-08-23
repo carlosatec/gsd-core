@@ -15,21 +15,31 @@ const hub = require('../gsd-core/bin/lib/unified-workflow-hub.cjs');
 const { normalizeCommandName, dispatchUnifiedCommand, executeReview } = hub;
 
 describe('unified-workflow-hub', () => {
-  test('normalizes multi-runtime command forms to canonical names', () => {
+  test('normalizes multi-runtime command forms to canonical names and rejects legacy aliases', () => {
     // Gemini CLI style
     assert.strictEqual(normalizeCommandName('/gsd:plan'), 'plan');
     assert.strictEqual(normalizeCommandName('/gsd:review'), 'review');
     assert.strictEqual(normalizeCommandName('/gsd:auto'), 'auto');
+    assert.strictEqual(normalizeCommandName('/gsd:tokens'), 'tokens');
+    assert.strictEqual(normalizeCommandName('/gsd:migrate'), 'migrate');
+    assert.strictEqual(normalizeCommandName('/gsd:help'), 'help');
 
     // Claude / Copilot hyphen style
-    assert.strictEqual(normalizeCommandName('/gsd-plan-phase'), 'plan');
-    assert.strictEqual(normalizeCommandName('/gsd-execute-phase'), 'exec');
-    assert.strictEqual(normalizeCommandName('/gsd-verify-work'), 'verify');
+    assert.strictEqual(normalizeCommandName('/gsd-plan'), 'plan');
+    assert.strictEqual(normalizeCommandName('/gsd-exec'), 'exec');
+    assert.strictEqual(normalizeCommandName('/gsd-verify'), 'verify');
     assert.strictEqual(normalizeCommandName('/gsd-ship'), 'ship');
+    assert.strictEqual(normalizeCommandName('/gsd-status'), 'status');
 
     // Codex style
-    assert.strictEqual(normalizeCommandName('$gsd-progress'), 'status');
+    assert.strictEqual(normalizeCommandName('$gsd-status'), 'status');
     assert.strictEqual(normalizeCommandName('gsd status'), 'status');
+
+    // Strict Fail-Closed Rejection (D-42): retired legacy aliases return null
+    assert.strictEqual(normalizeCommandName('/gsd-plan-phase'), null);
+    assert.strictEqual(normalizeCommandName('/gsd-execute-phase'), null);
+    assert.strictEqual(normalizeCommandName('/gsd-verify-work'), null);
+    assert.strictEqual(normalizeCommandName('$gsd-progress'), null);
   });
 
   test('dispatches /gsd:review with --fix flag and performs auto-repairs', () => {

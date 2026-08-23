@@ -123,10 +123,12 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
         assert.strictEqual(res.action, 'DISPLAY_TELEMETRY_DASHBOARD');
         assert.ok(res.message.includes('Token Telemetry'));
 
-        // Normalized aliases
+        // Normalized canonical aliases and D-42 fail-closed rejection
         assert.strictEqual(hub.normalizeCommandName('tokens'), 'tokens');
-        assert.strictEqual(hub.normalizeCommandName('telemetry'), 'tokens');
+        assert.strictEqual(hub.normalizeCommandName('/gsd:tokens'), 'tokens');
         assert.strictEqual(hub.normalizeCommandName('/gsd-tokens'), 'tokens');
+        assert.strictEqual(hub.normalizeCommandName('$gsd-tokens'), 'tokens');
+        assert.strictEqual(hub.normalizeCommandName('telemetry'), null); // retired legacy alias rejected fail-closed
       } finally {
         cleanup(tmpDir);
       }
