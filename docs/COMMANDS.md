@@ -13,9 +13,9 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ---
 
-## Canonical Unified Interface (GSD 2.5)
+## Canonical Unified Interface (GSD 2.6)
 
-Starting in GSD 2.5, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
+Starting in GSD 2.6, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step |
 |---------|------------------------|
@@ -29,6 +29,43 @@ Starting in GSD 2.5, the public command surface is strictly consolidated into **
 | `/gsd-tokens` | Real-time token telemetry dashboard & savings breakdown |
 | `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync |
 | `/gsd-help` | Comprehensive reference and usage guide for all unified commands |
+
+---
+
+### Session Intelligence & Deterministic Replay CLI
+
+GSD 2.6 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/`. You can inspect, replay, and export sessions via `gsd-tools`:
+
+```bash
+# Replay the latest session timeline in the terminal
+node gsd-core/bin/gsd-tools.cjs session replay latest
+
+# Replay with specific filters
+node gsd-core/bin/gsd-tools.cjs session replay latest --errors-only    # only failures
+node gsd-core/bin/gsd-tools.cjs session replay latest --summary        # 1-line summary per step
+node gsd-core/bin/gsd-tools.cjs session replay latest --diffs          # code mutation diffs
+
+# Export session timeline to Markdown
+node gsd-core/bin/gsd-tools.cjs session export latest --md
+
+# List or clean session ring buffer (50 sessions / 30 days)
+node gsd-core/bin/gsd-tools.cjs session list
+node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
+```
+
+---
+
+### Unified Version Management CLI
+
+To bump and synchronize the entire GSD Core Nexus repository in a single atomic step:
+
+```bash
+# Bump version across package.json, 49 capability manifests, core modules, and badges
+npm run version:bump <new-version>
+
+# Verify lockstep repository synchronization
+npm run version:check
+```
 
 ---
 

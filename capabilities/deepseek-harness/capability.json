@@ -1,9 +1,9 @@
 {
-  "id": "qwen",
+  "id": "deepseek-harness",
   "role": "runtime",
   "version": "2.6.0",
-  "title": "Qwen Code",
-  "description": "Qwen Code (Alibaba) — nested-skill artifact layout; settings-json hook surface; Claude hook event dialect; tier-2 support.",
+  "title": "DeepSeek Harness",
+  "description": "DeepSeek Harness (dsh) — Cordis micro-kernel plugin architecture; commands, skills & agents artifact layout; settings-json hook surface; tier-2 support.",
   "tier": "core",
   "requires": [],
   "engines": {
@@ -12,20 +12,29 @@
   "runtime": {
     "configHome": {
       "kind": "dot-home",
-      "name": ".qwen",
+      "name": ".dsh",
       "env": [
-        "QWEN_CONFIG_DIR"
+        "DEEPSEEK_CONFIG_DIR",
+        "DSH_CONFIG_DIR"
       ]
     },
-    "localConfigDir": ".qwen",
+    "localConfigDir": ".dsh",
     "configFormat": "settings-json",
     "artifactLayout": {
       "global": [
         {
+          "kind": "commands",
+          "destSubpath": "commands",
+          "prefix": "gsd-",
+          "nesting": "flat",
+          "recursive": false,
+          "converter": null
+        },
+        {
           "kind": "skills",
           "destSubpath": "skills",
           "prefix": "gsd-",
-          "nesting": "nested",
+          "nesting": "flat",
           "recursive": false,
           "converter": "convertClaudeCommandToClaudeSkill"
         },
@@ -35,15 +44,23 @@
           "prefix": "gsd-",
           "nesting": "flat",
           "recursive": false,
-          "converter": "convertClaudeAgentToQwenAgent"
+          "converter": null
         }
       ],
       "local": [
         {
+          "kind": "commands",
+          "destSubpath": "commands",
+          "prefix": "gsd-",
+          "nesting": "flat",
+          "recursive": false,
+          "converter": null
+        },
+        {
           "kind": "skills",
           "destSubpath": "skills",
           "prefix": "gsd-",
-          "nesting": "nested",
+          "nesting": "flat",
           "recursive": false,
           "converter": "convertClaudeCommandToClaudeSkill"
         },
@@ -53,7 +70,7 @@
           "prefix": "gsd-",
           "nesting": "flat",
           "recursive": false,
-          "converter": "convertClaudeAgentToQwenAgent"
+          "converter": null
         }
       ]
     },
@@ -76,7 +93,7 @@
       "SubagentStart"
     ],
     "hostIntegration": {
-      "embeddingMode": "imperative",
+      "embeddingMode": "declarative",
       "commandSurface": "slash-file",
       "dispatch": {
         "namedDispatch": true,
@@ -95,45 +112,7 @@
       "effortSurface": "undocumented"
     },
     "hostBehaviors": {
-      "skillPriorityFrontmatter": true,
-      "brandingRewrites": {
-        "CLAUDE.md": "QWEN.md",
-        "Claude Code": "Qwen Code",
-        ".claude/": ".qwen/"
-      },
-      "legacyCommandsGsdCleanup": true,
-      "legacyCommandsGsdInstallMigration": true,
-      "legacyCommandsGsdUninstall": true,
-      "hyphenNameAgentBody": true
+      "reportCommandsDir": true
     }
-  },
-  "reviewer": {
-    "slug": "qwen",
-    "flags": [
-      "--qwen"
-    ],
-    "transport": "spawn",
-    "probe": {
-      "kind": "command-exists",
-      "binary": "qwen"
-    },
-    "invoke": {
-      "binary": "qwen",
-      "args": [
-        "-"
-      ],
-      "promptChannel": "stdin",
-      "outputChannel": "stdout",
-      "modelArg": null,
-      "effortChannel": "none"
-    },
-    "timeoutFloorMs": 900000,
-    "emptyOutput": "stub-with-stderr",
-    "reviewsSection": "Qwen",
-    "evidenceClass": "source-grounded",
-    "requiresBinaries": [],
-    "promptBudgetKey": null,
-    "modelConfigKey": null,
-    "handler": null
   }
 }

@@ -438,6 +438,8 @@
       "security.cjs",
       "semver-compare.cjs",
       "session-context-hook.cjs",
+      "session-logger.cjs",
+      "session-replay.cjs",
       "shell-command-projection.cjs",
       "smart-entry.cjs",
       "spec-section.cjs",

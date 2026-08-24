@@ -80,6 +80,7 @@ const RUNTIME_META = {
   trae:         { localDir: '.trae',             globalSuffix: '.trae' },
   windsurf:     { localDir: '.windsurf',          globalSuffix: path.join('.codeium', 'windsurf') },
   zcode:        { localDir: '.zcode',             globalSuffix: '.zcode' },
+  'deepseek-harness': { localDir: '.dsh',        globalSuffix: '.dsh' },
 };
 
 /**
@@ -569,6 +570,7 @@ function runMinimalInstall({ runtime, scope, extraArgs = [], installScript = INS
       // could ever be exercised. pi's local config dir is `.pi`
       // (capabilities/pi/capability.json runtime.localConfigDir).
       pi: '.pi',
+      'deepseek-harness': '.dsh',
     };
     let configDir;
     let cwd = process.cwd();

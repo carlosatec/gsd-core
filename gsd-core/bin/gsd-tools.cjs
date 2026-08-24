@@ -3613,6 +3613,78 @@ function dispatchOverlayCapabilityCommand({ command, args, cwd, raw, error, load
           );
   }
 
+function routeSession({ args, cwd, raw, error }) {
+  const { SessionLogger } = require('./lib/session-logger.cjs');
+  const { SessionReplay } = require('./lib/session-replay.cjs');
+  const subcommand = args[1];
+  const planningDir = path.join(cwd, '.planning');
+
+  switch (subcommand) {
+    case 'list': {
+      const sessions = SessionLogger.listSessions(planningDir);
+      if (raw) {
+        process.stdout.write(JSON.stringify(sessions, null, 2) + '\n');
+        return;
+      }
+      if (sessions.length === 0) {
+        process.stdout.write('No sessions found in .planning/intel/sessions/\n');
+        return;
+      }
+      process.stdout.write(`Found ${sessions.length} session(s):\n`);
+      for (const s of sessions) {
+        const cmd = s.command ? ` [${s.command}]` : '';
+        const phase = s.phaseId ? ` (phase ${s.phaseId})` : '';
+        process.stdout.write(`  • ${s.id}${cmd}${phase} — ${s.status} (${s.eventCount} events, ${(s.sizeBytes / 1024).toFixed(1)} KB) - ${s.timestamp}\n`);
+      }
+      return;
+    }
+    case 'replay': {
+      const idOrLatest = args[2] && !args[2].startsWith('--') ? args[2] : 'latest';
+      const errorsOnly = args.includes('--errors-only');
+      const showDiffs = args.includes('--diffs');
+      const summaryOnly = args.includes('--summary');
+      const noColor = args.includes('--no-color');
+      const timeline = SessionReplay.loadSession(idOrLatest, planningDir);
+      if (!timeline) {
+        error(`Session not found: ${idOrLatest}`, ERROR_REASON.NOT_FOUND);
+      }
+      const rendered = SessionReplay.renderReplay(timeline, { errorsOnly, showDiffs, summaryOnly, noColor });
+      process.stdout.write(rendered + '\n');
+      return;
+    }
+    case 'export': {
+      const idOrLatest = args[2] && !args[2].startsWith('--') ? args[2] : 'latest';
+      const timeline = SessionReplay.loadSession(idOrLatest, planningDir);
+      if (!timeline) {
+        error(`Session not found: ${idOrLatest}`, ERROR_REASON.NOT_FOUND);
+      }
+      const md = SessionReplay.exportMarkdown(timeline);
+      process.stdout.write(md + '\n');
+      return;
+    }
+    case 'clean': {
+      const maxIdx = args.indexOf('--max');
+      const maxSessions = maxIdx !== -1 ? parseInt(args[maxIdx + 1], 10) : 50;
+      const daysIdx = args.indexOf('--days');
+      const maxAgeDays = daysIdx !== -1 ? parseInt(args[daysIdx + 1], 10) : 30;
+      const sessionsDir = path.join(planningDir, 'intel', 'sessions');
+      const deleted = SessionLogger.rotateSessions(sessionsDir, maxSessions, maxAgeDays);
+      if (raw) {
+        process.stdout.write(JSON.stringify({ ok: true, deleted }) + '\n');
+        return;
+      }
+      process.stdout.write(`Cleaned ${deleted} expired session file(s).\n`);
+      return;
+    }
+    default: {
+      error(
+        `Unknown session subcommand: ${subcommand || '(none)'}. Available: list, replay, export, clean`,
+        ERROR_REASON.SDK_UNKNOWN_COMMAND,
+      );
+    }
+  }
+}
+
 
 /**
  * #3275: resolve a DECLARED command name to the file a spawn can actually start.
@@ -3761,6 +3833,7 @@ const HOST_COMMAND_ROUTERS = {
     'drift-guard': routeDriftGuard,
     'windows': routeWindows,
     'skills-root': routeSkillsRoot,
+    'session': routeSession,
 };
 
 // Returns true when consumed (suppress "Unknown command"), false to fall

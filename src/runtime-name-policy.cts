@@ -31,6 +31,7 @@ const FALLBACK_ALIASES: Readonly<Record<string, string[]>> = {
   'kimi-code': ['kimi-code', 'kimicode', 'kimi_code'],
   codebuddy: ['codebuddy', 'codebuddy-cli'],
   cline: ['cline', 'cline-cli'],
+  'deepseek-harness': ['deepseek-harness', 'deepseek', 'dsh', 'deepseek-cli'],
 };
 
 function normalizeRuntimeToken(value: string): string {
@@ -244,6 +245,7 @@ const RUNTIME_LABELS: Readonly<Record<string, string>> = {
   cline: 'Cline',
   zcode: 'ZCode',
   pi: 'pi',
+  'deepseek-harness': 'DeepSeek Harness',
   // #2103: vscode is a registered (role:runtime) capability for validator +
   // host-integration coverage, even though it is never CLI-installed (no
   // --vscode flag — see NON_INSTALLABLE_RUNTIMES in tests/runtime-flags.test.cjs).
@@ -298,6 +300,7 @@ const GLOBAL_CONFIG_HOME_FRAGMENTS: Readonly<Record<string, string>> = {
   kimi:      "'.config', 'agents'",
   'kimi-code': "'.kimi-code'",
   zcode:     "'.zcode'",
+  'deepseek-harness': "'.dsh'",
   // pi's global config home is ~/.pi/agent (configHome: dot-home-nested,
   // parent '.pi', name 'agent' — capabilities/pi/capability.json), matching
   // resolveConfigHomeFromDescriptor's `path.join(home, parent, name)` for the
@@ -332,7 +335,7 @@ export function getGlobalConfigHomeFragment(runtime: string): string {
 // folds the shared-hooks-install skip).
 const RUNTIME_FLAG_IDS = Object.freeze([
   'opencode', 'kilo', 'codex', 'copilot', 'antigravity', 'cursor',
-  'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'kimi', 'kimi-code', 'zcode', 'pi',
+  'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'kimi', 'kimi-code', 'zcode', 'pi', 'deepseek-harness',
 ] as const);
 
 /**

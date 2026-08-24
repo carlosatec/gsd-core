@@ -1,5 +1,5 @@
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.3.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.6.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -34,6 +34,9 @@ import complexityTrigger = require('./complexity-trigger.cjs');
 import coverageMod = require('./coverage.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import scanPhasePlans = require('./plan-scan.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import sessionLoggerMod = require('./session-logger.cjs');
+const { SessionLogger } = sessionLoggerMod;
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
@@ -249,6 +252,26 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
     );
   }
 
+  const logger = new SessionLogger({ planningDir });
+  logger.startSession({ command: canonicalName, args: options.args });
+
+  try {
+    const result = runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, hasFixFlag);
+    logger.endSession('completed', { action: result.action });
+    return result;
+  } catch (err) {
+    logger.endSession('failed', { error: (err as Error).message });
+    throw err;
+  }
+}
+
+function runInternalUnifiedCommand(
+  canonicalName: UnifiedCommandName,
+  options: UnifiedCommandOptions,
+  cwd: string,
+  planningDir: string,
+  hasFixFlag: boolean
+): UnifiedCommandResult {
   switch (canonicalName) {
     case 'auto':
       try {
@@ -260,7 +283,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         command: 'auto',
         action: 'AUTOPILOT_CYCLE',
         nextStep: 'executing phase plans sequentially with safety checkpoints',
-        message: 'GSD Core Nexus 2.3 Autopilot active. Running phase loop with guardrails.',
+        message: 'GSD Core Nexus 2.6 Autopilot active. Running phase loop with guardrails.',
       };
 
     case 'status': {
@@ -273,7 +296,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         action: 'DISPLAY_STATUS',
         nextStep: 'execute next recommended action based on STATE.md',
         data: { telemetry },
-        message: `GSD Core Nexus 2.3 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+        message: `GSD Core Nexus 2.6 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
       };
     }
 
@@ -491,7 +514,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
         command: 'help',
         action: 'DISPLAY_HELP',
         nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-        message: 'GSD Core Nexus 2.4 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+        message: 'GSD Core Nexus 2.6 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
       };
   }
 }

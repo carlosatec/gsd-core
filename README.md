@@ -6,9 +6,9 @@
 
 **English** · [Português](README.pt-BR.md)
 
-**A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
+**A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-2.5.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.6.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -19,7 +19,7 @@
 
 ## What is GSD Core Nexus
 
-GSD Core Nexus is a context-engineering, native static analysis, and spec-driven development framework that drives AI coding agents (Claude Code, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
+GSD Core Nexus is a context-engineering, native static analysis, and spec-driven development framework that drives AI coding agents (Claude Code, DeepSeek Harness, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
 
 ---
 
@@ -35,10 +35,14 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 2.4: Unified Skills, AST 360°, Strict Surface & Token Governance
+## GSD Core Nexus 2.6: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
 
-GSD Core Nexus 2.4 elevates AI coding agents with a full-stack static analysis, mobile intelligence, strict canonical surface, and context governance engine:
+GSD Core Nexus 2.6 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
+- **DeepSeek Harness 1st-Class Support (`@deepseek-ai/dsh` — D-53):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution (`dsh`, `deepseek`, `deepseek-cli`).
+- **Structured Session Logging & Intelligent Ring Buffer (D-54 / D-55):** Append-only JSONL execution event logging (`.planning/intel/sessions/`) with 32 KB smart trimming for stack traces and code patches, regex-based secret sanitization, transparent hub tracking across all 10 commands, and generous 50-session/30-day disk-bounded retention (~25-40 MB gitignored).
+- **Deterministic Session Replay CLI (`gsd-tools session` — D-56):** Interactive terminal timeline replay with `--summary`, `--errors-only`, `--diffs`, default `latest` resolution, Markdown export, and direct feeding of failure diagnostics into `anti-pattern-store.cts`.
+- **Automated Unified Version Management (`npm run version:bump` — D-57 / D-58):** Single-command atomic release orchestrator (`scripts/bump-version.cjs`) with SemVer validation, lockstep synchronization across 49 capability manifests, README badges, core modules, and derived pipelines (`npm run version:check`).
 - **Strict 10-Command Public Surface (D-41 / D-42):** Clean slash-command menu featuring exclusively the 10 Canonical Unified Commands (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`) with strict fail-closed dispatch and zero confusing duplicates.
 - **Universal Multi-Language AST & Mobile 360°:** Native static code analysis across 35+ extensions (TypeScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL, Docker, Shell, YAML) with full **Mobile 360° support** for iOS (Swift, SwiftUI, XCTest) and Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **100% Native Knowledge Graph (Zero Python — D-31):** Pure-TypeScript Graphify facade (`2.3-native`) building and querying the AST dependency graph in memory with zero external Python dependencies.
@@ -51,7 +55,7 @@ GSD Core Nexus 2.4 elevates AI coding agents with a full-stack static analysis, 
 - **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
 - **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (Swift XCTest, Kotlin/Java JUnit 5, inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
-- **Concurrency & Security Hardening (D-35 to D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), secure MCP confinement within `.planning/`, chunk-resilient JSON-RPC streaming, and lockstep versioning across all 48 manifests.
+- **Concurrency & Security Hardening (D-35 to D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), secure MCP confinement within `.planning/`, chunk-resilient JSON-RPC streaming, and lockstep versioning across all 49 manifests.
 
 ---
 

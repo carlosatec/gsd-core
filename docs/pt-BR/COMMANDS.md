@@ -13,9 +13,9 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (GSD 2.5)
+## Interface Canônica Unificada (GSD 2.6)
 
-A partir do GSD 2.5, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 2.6, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
@@ -29,6 +29,43 @@ A partir do GSD 2.5, a superfície pública de comandos foi estritamente consoli
 | `/gsd-tokens` | Painel visual de telemetria e economia de tokens em tempo real |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados em um clique |
 | `/gsd-help` | Guia de uso e referência rápida para todos os comandos unificados |
+
+---
+
+### Inteligência de Sessão & CLI de Replay Determinístico
+
+O GSD 2.6 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
+
+```bash
+# Replay da última sessão no terminal
+node gsd-core/bin/gsd-tools.cjs session replay latest
+
+# Replay com filtros específicos
+node gsd-core/bin/gsd-tools.cjs session replay latest --errors-only    # apenas falhas/erros
+node gsd-core/bin/gsd-tools.cjs session replay latest --summary        # resumo de 1 linha por passo
+node gsd-core/bin/gsd-tools.cjs session replay latest --diffs          # patches e diffs de arquivos
+
+# Exportação do relatório da sessão em Markdown
+node gsd-core/bin/gsd-tools.cjs session export latest --md
+
+# Listar ou limpar ring buffer de sessões (50 sessões / 30 dias)
+node gsd-core/bin/gsd-tools.cjs session list
+node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
+```
+
+---
+
+### CLI de Controle Unificado de Versão
+
+Para elevar e sincronizar a versão em 100% do repositório em um único passo atômico:
+
+```bash
+# Elevar a versão em todo o ecossistema (package.json, 49 manifestos, módulos core e badges)
+npm run version:bump <nova-versao>
+
+# Verificar sincronismo estrito do repositório
+npm run version:check
+```
 
 ---
 

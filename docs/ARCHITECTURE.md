@@ -21,52 +21,55 @@
 
 ## System Overview
 
-GSD Core is a **meta-prompting framework** that sits between the user and AI coding agents (Claude Code, Kimi CLI, OpenCode, Kilo, Codex, Copilot, Antigravity, Trae, Cline, Augment Code). It provides:
+GSD Core is a **meta-prompting framework** that sits between the user and AI coding agents (Claude Code, DeepSeek Harness, Kimi CLI, OpenCode, Kilo, Codex, Copilot, Antigravity, Trae, Cline, Augment Code). It provides:
 
 1. **Context engineering** — Structured artifacts that give the AI everything it needs per task (see [Context engineering](explanation/context-engineering.md))
 2. **Multi-agent orchestration** — Thin orchestrators that spawn specialized agents with fresh context windows (see [Multi-agent orchestration](explanation/multi-agent-orchestration.md))
 3. **Spec-driven development** — Requirements → research → plans → execution → verification pipeline
-4. **State management** — Persistent project memory across sessions and context resets
+4. **State management & Session Causal Intelligence** — Persistent project memory and deterministic replay across sessions and context resets
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                            GSD CLI & SLASH COMMAND ENTRYPOINTS                              │
-│         bin/install.js · bin/gsd-mcp-server.js · gsd-core/bin/gsd-tools                     │
-└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
-                                               │
-┌──────────────────────────────────────────────▼──────────────────────────────────────────────┐
-│                    NEXUS UNIFIED WORKFLOW HUB (Fases 4 e 12 — D-41)                         │
-│   src/unified-workflow-hub.cts ── Super-Hub dos 10 Comandos Canônicos:                     │
-│   /gsd-status · /gsd-plan · /gsd-exec · /gsd-review · /gsd-verify · /gsd-ship               │
-│   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-help                                        │
-└──────┬───────────────────────────────┬───────────────────────────────┬──────────────────────┘
-       │                               │                               │
-       │ (Despacho com JIT)            │ (Despacho com Guardrails)     │ (Auto-Upgrade & Telemetria)
-┌──────▼────────────────────────┐ ┌────▼────────────────────────┐ ┌────▼───────────────────────────────┐
-│   NEXUS JIT CONTEXT INJECTOR  │ │  PRE-FLIGHT GUARDRAILS &    │ │   NEXUS TELEMETRY & OBSERVABILITY  │
-│   (Fases 2, 8, 9 — D-03, D-27)│ │  SELF-HEALING (Fases 3, 6)  │ │   (Fases 5, 7 — D-08, D-16)        │
-│   src/jit-context-injector.cts│ │  src/preflight-guardrails   │ │   src/jit-telemetry.cts            │
-│   - Injeção cirúrgica ≤ 8k tok│ │  - Detecção CONTRACT_BREAK  │ │   src/token-dashboard-renderer.cts │
-│   - Orçamento elástico por LLM│ │  - EMPTY_FILE_GUARD         │ │   - Dashboard ASCII 65 colunas     │
-│   - Ancoragem Canônica        │ │  - Laço de Auto-Cura        │ │   - Schema v2.0 multidimensional   │
-└──────┬────────────────────────┘ └────┬────────────────────────┘ └────┬───────────────────────────────┘
-       │                               │                               │
-┌──────▼───────────────────────────────▼───────────────────────────────▼───────────────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33)          │
-│   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)               │
-│   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                        │
-│   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                            │
-│   src/anti-pattern-store.cts ── Memória durável de lições de auto-cura (.planning/intel/)            │
-│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift)   │
-└──────┬───────────────────────────────────────────────────────────────┬───────────────────────────────┘
-       │                                                               │
-┌──────▼────────────────────────┐                             ┌────────▼───────────────────────────────┐
-│     STATE MACHINE ENGINE      │                             │   CAPABILITY & SECURITY FOUNDATION     │
-│  src/state.cts (5.1k lines)   │                             │  src/security.cts (Path Traversal Safe)│
-│  src/state-markdown-parser.cts│                             │  src/capability-lifecycle.cts (Ledger) │
-│  src/session-context-hook.cts ◄─── Injeção Session Handshake│  src/clock.cts (Deterministic Sleep)   │
-│  .planning/STATE.md           │    (Fase 10 — D-30)         │  src/worktree-safety.cts (Git Isolate) │
-└───────────────────────────────┘                             └────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                           GSD CLI & SLASH COMMAND ENTRYPOINTS                                           │
+│         bin/install.js · bin/gsd-mcp-server.js · gsd-core/bin/gsd-tools · scripts/bump-version.cjs (Release)            │
+└────────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────┘
+                                                             │
+┌────────────────────────────────────────────────────────────▼────────────────────────────────────────────────────────────┐
+│                                 NEXUS UNIFIED WORKFLOW HUB (Fases 4 e 12 — D-41)                                        │
+│   src/unified-workflow-hub.cts ── Super-Hub dos 10 Comandos Canônicos:                                                 │
+│   /gsd-status · /gsd-plan · /gsd-exec · /gsd-review · /gsd-verify · /gsd-ship                                           │
+│   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-help                                                                    │
+└──────┬─────────────────────────────┬─────────────────────────────┬─────────────────────────────┬────────────────────────┘
+       │                             │                             │                             │
+       │ (Despacho com JIT)          │ (Despacho com Guardrails)   │ (Auto-Upgrade & Telemetria) │ (Logs & Replay — Fase 14)
+┌──────▼──────────────────────┐ ┌────▼──────────────────────┐ ┌────▼────────────────────────┐ ┌────▼────────────────────────┐
+│  NEXUS JIT CONTEXT INJECTOR │ │ PRE-FLIGHT GUARDRAILS &   │ │ NEXUS TELEMETRY &          │ │ NEXUS SESSION INTELLIGENCE │
+│ (Fases 2, 8, 9 — D-03, D-27)│ │ SELF-HEALING (Fases 3, 6) │ │ OBSERVABILITY (Fases 5, 7) │ │ & DETERMINISTIC REPLAY     │
+│ src/jit-context-injector.cts│ │ src/preflight-guardrails  │ │ src/jit-telemetry.cts      │ │ (Fase 14 — D-54, D-55, D-56│
+│ - Injeção cirúrgica ≤ 8k tok│ │ - Detecção CONTRACT_BREAK │ │ src/token-dashboard-render │ │ src/session-logger.cts     │
+│ - Orçamento elástico por LLM│ │ - EMPTY_FILE_GUARD        │ │ - Dashboard ASCII 65 col   │ │ src/session-replay.cts     │
+│ - Ancoragem Canônica        │ │ - Laço de Auto-Cura       │ │ - Schema v2.0 multidimens. │ │ - Smart Trimming (32 KB)   │
+└──────┬──────────────────────┘ └────┬──────────────────────┘ └────┬───────────────────────┘ │ - Ring Buffer (50/30d)     │
+       │                             │                             │                         │ - Sanitização de Segredos  │
+       │                             │                             │                         │ - Alimentação Anti-Patterns│
+       │                             │                             │                         └────┬───────────────────────┘
+       │                             │                             │                              │
+┌──────▼─────────────────────────────▼─────────────────────────────▼──────────────────────────────▼───────────────────────┐
+│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33)                             │
+│   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)                                  │
+│   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                                           │
+│   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                                               │
+│   src/anti-pattern-store.cts ◄── Memória durável de lições de auto-cura & replay de sessão (.planning/intel/)           │
+│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift)                      │
+└──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
+       │                                                           │
+┌──────▼──────────────────────┐                           ┌────────▼───────────────────────────────┐
+│     STATE MACHINE ENGINE    │                           │    CAPABILITY & SECURITY FOUNDATION    │
+│  src/state.cts (5.1k lines) │                           │  src/security.cts (Secret Redact/Path) │
+│  src/state-markdown-parser  │                           │  src/capability-lifecycle.cts (Ledger) │
+│  src/session-context-hook   ◄── Injeção Session Handshk │  src/clock.cts (Deterministic Sleep)   │
+│  .planning/STATE.md         │   (Fase 10 — D-30)        │  src/worktree-safety.cts (Git Isolate) │
+└─────────────────────────────┘                           └────────────────────────────────────────┘
 ```
 
 ---
@@ -350,6 +353,27 @@ gsd-tools query research-plan          ← Research Provider: check cache, build
 ```
 
 Agents always return a `RESEARCH.md` path, never raw fetched content. Context discipline is enforced through subagent isolation, compact provider output, and fetch-to-disk. See [ADR-0656](adr/0656-research-module-seam.md).
+
+### Session Intelligence & Deterministic Replay Engine (`src/session-logger.cts`, `src/session-replay.cts`, Phase 14 — D-54, D-55, D-56, D-58)
+
+The Session Intelligence subsystem provides causal observability and deterministic reproduction of AI coding agent runs across all 10 canonical commands:
+
+1. **Append-Only JSON Lines Stream (`src/session-logger.cts`):**
+   - Emits structured events to `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
+   - Typed schema covers `session_start`, `tool_call`, `tool_result`, `file_mutation` (with unified patch chunks), `guardrail_intercept`, `test_result`, and `session_end`.
+   - **Smart 32 KB Trimming:** Output buffers and stack traces larger than 32 KB preserve both head (16 KB) and tail (16 KB) with informative `[truncated N bytes]` markers, ensuring zero context explosion while preserving exception root causes.
+   - **Secret Redaction:** Regex-based sanitization automatically masks sensitive API keys (`sk-ant-*`, `sk-*`, `ghp_*`, `Bearer *`, etc.) before disk persistence.
+   - **Ring Buffer Retention:** Local retention bound to 50 sessions / 30 days (~25-40 MB gitignored disk budget) with Windows file lock safety (`EPERM`/`EBUSY` recovery).
+   - **Transparent Hub Hook:** Seamlessly integrated into `src/unified-workflow-hub.cts` wrapping every canonical slash command invocation.
+
+2. **Deterministic Replay Core (`src/session-replay.cts`):**
+   - Reconstructs execution timelines in the terminal with ANSI styling and filter flags (`--summary`, `--errors-only`, `--diffs`, `--no-color`).
+   - Resolves `latest` alias automatically when no session ID is supplied.
+   - **Anti-Pattern Store Feeding:** Directly extracts failure diagnostics and learned lessons into `src/anti-pattern-store.cts` to prevent recurring errors across subsequent agent sessions.
+   - **Markdown Export:** Generates standardized post-mortem and execution reports for issues or team documentation via `gsd-tools session export <id> --md`.
+
+3. **Unified Version Management & Release System (`scripts/bump-version.cjs` — D-58):**
+   - Orchestrates atomic, 1-step SemVer bumps (`npm run version:bump <version>`) across `package.json`, 49 capability manifests, core TypeScript modules, badges, and derived artifact pipelines (`npm run version:check`).
 
 ### Context Predicate Fact-Store (`src/context-predicates.cts`, ADR-1671)
 

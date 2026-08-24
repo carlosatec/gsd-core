@@ -1,7 +1,7 @@
 {
   "name": "gsd-core",
   "displayName": "GSD Core",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "GSD Core is a meta-prompting, context engineering, and spec-driven development system for AI coding agents.",
   "author": {
     "name": "open-gsd",

@@ -1,6 +1,6 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 13 (Estabilização Arquitetural, Linter Hardening & Versão 2.5.0) | Status: Complete (10 Skills Unificadas, 151 Workflows Conectados, 294/294 Testes, Build Limpo)
-> **Decisions**: **D-41 [Strict 10-Command Surface]:** commands/gsd/ e skills/ contêm exclusivamente os 10 Comandos Canônicos.; **D-42 [No Legacy Aliases]:** Despacho fail-closed estrito sem aliases legados.; **D-45 [Workflow Modernization]:** Playbooks em gsd-core/workflows/ modernizados e 100% integrados.; **D-46 [Version Bump to 2.5.0]:** Ecossistema unificado na versão 2.5.0.
+> **GSD Active State**: Phase: Phase 14 (DeepSeek Harness Adapter, Rich Session Logging & Deterministic Replay) | Status: Complete (DeepSeek Harness 1ª Classe, Session Logger 50/30d JSONL, Replay CLI, Versão 2.6.0 & Version Manager, 19/19 Testes, Build Limpo, 0 Lint Warnings)
+> **Decisions**: **D-53 [DeepSeek Harness Adapter]:** Suporte declarativo a @deepseek-ai/dsh.; **D-54 [Rich Session Logging]:** Log append-only em JSONL com 32KB smart trimming.; **D-55 [Ring Buffer Retention]:** 50 sessões / 30 dias de retenção.; **D-56 [Deterministic Replay]:** Replay determinístico via CLI com filtros e anti-pattern feeding.; **D-57 [Release v2.6.0]:** Elevação uniforme para a versão 2.6.0 em todo o ecossistema.; **D-58 [Automated Version Manager]:** Orquestrador atômico scripts/bump-version.cjs.
 > **Unified Commands**: /gsd-status, /gsd-plan, /gsd-exec, /gsd-review, /gsd-verify, /gsd-ship, /gsd-auto, /gsd-tokens, /gsd-migrate, /gsd-help
 <!-- /GSD-SESSION-CONTEXT -->
 

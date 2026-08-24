@@ -983,6 +983,35 @@ User-facing entry point: `/gsd-graphify` (see [Command Reference](COMMANDS.md#gs
 
 ---
 
+## Session Commands
+
+Manage and replay deterministic AI coding sessions recorded in `.planning/intel/sessions/`.
+
+```bash
+# List all recorded sessions with metadata and exit status
+node gsd-tools.cjs session list [--raw]
+
+# Replay latest session timeline in terminal
+node gsd-tools.cjs session replay [latest]
+
+# Replay specific session by ID
+node gsd-tools.cjs session replay <session-id>
+
+# Replay with filters
+node gsd-tools.cjs session replay [latest] --errors-only    # show only failed tools/commands
+node gsd-tools.cjs session replay [latest] --diffs          # show file mutation patches
+node gsd-tools.cjs session replay [latest] --summary        # compact 1-line per step summary
+node gsd-tools.cjs session replay [latest] --no-color       # plain text without ANSI codes
+
+# Export session timeline to Markdown for issues or documentation
+node gsd-tools.cjs session export [latest|<session-id>] --md
+
+# Clean/prune old sessions according to retention rules (default: 50 sessions / 30 days)
+node gsd-tools.cjs session clean [--max 50] [--days 30] [--raw]
+```
+
+---
+
 ## Module Architecture
 
 | Module | File | Exports |
@@ -1012,6 +1041,8 @@ User-facing entry point: `/gsd-graphify` (see [Command Reference](COMMANDS.md#gs
 | Capability State | `lib/capability-state.cjs` | Capability-state resolver — composes install profile, surface, and config into per-capability `enabled`/`active` view |
 | Capability Writer | `lib/capability-writer.cjs` | Capability-state writer (ADR-1213) — write-side inverse; projects `--on`/`--off`/`--gate` onto surface + config substrates then re-resolves |
 | Worktree Base Ref | `lib/worktree-base-ref.cjs` | Worktree fork-base detection and `worktree base-check` / `set-baseref` commands (#683) |
+| Session Logger | `lib/session-logger.cjs` | Structured append-only JSONL session logging, 32KB smart trimming, secret redaction, 50-session/30-day ring buffer |
+| Session Replay | `lib/session-replay.cjs` | Deterministic timeline replay, ANSI rendering, Markdown export, anti-pattern diagnostic extraction |
 
 ---
 

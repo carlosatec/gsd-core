@@ -75,5 +75,12 @@
   "cline": [
     "cline",
     "cline-cli"
+  ],
+  "deepseek-harness": [
+    "deepseek-harness",
+    "deepseek",
+    "dsh",
+    "deepseek-cli"
   ]
 }
+

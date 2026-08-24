@@ -1,6 +1,6 @@
 {
   "name": "@opengsd/gsd-core",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "GSD Core Nexus is a meta-prompting, context engineering, native static analysis, and spec-driven development system for AI coding agents.",
   "main": ".opencode/plugins/gsd-core.js",
   "bin": {
@@ -106,6 +106,8 @@
     "gen:registry": "node scripts/gen-registry.cjs --write",
     "gen:install-tree": "node scripts/gen-install-tree-fixtures.cjs",
     "gen:section-manifest": "node scripts/gen-section-manifest.cjs --write",
+    "version:bump": "node scripts/bump-version.cjs",
+    "version:check": "node scripts/bump-version.cjs --check",
     "regen:derived": "npm run build && npm run gen:registry && node scripts/gen-adr-index.cjs --write && node scripts/gen-capability-matrix.cjs --write && node scripts/gen-inventory-manifest.cjs --write && node scripts/gen-context-index.cjs --write && npm run gen:section-manifest && node scripts/sync-manifest-versions.cjs && npm run gen:install-tree",
     "validate:registry": "node scripts/validate-registry.cjs",
     "prepack": "npm run build:lib",

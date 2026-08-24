@@ -6,9 +6,9 @@
 
 [English](README.md) · **Português**
 
-**Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
+**Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.5.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.6.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -19,7 +19,7 @@
 
 ## O que é o GSD Core Nexus
 
-GSD Core Nexus é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações que conduz agentes de codificação com IA (Claude Code, Codex, Antigravity CLI, Copilot, Cursor e mais) por meio de um ciclo de fases disciplinado. Ele resolve o [context rot](docs/pt-BR/explanation/context-engineering.md) — a degradação de qualidade que se acumula à medida que uma IA preenche sua janela de contexto — executando todo o trabalho pesado de pesquisa, planejamento e execução em subagentes com contexto limpo, mantendo sua sessão principal enxuta.
+GSD Core Nexus é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações que conduz agentes de codificação com IA (Claude Code, DeepSeek Harness, Codex, Antigravity CLI, Copilot, Cursor e mais) por meio de um ciclo de fases disciplinado. Ele resolve o [context rot](docs/pt-BR/explanation/context-engineering.md) — a degradação de qualidade que se acumula à medida que uma IA preenche sua janela de contexto — executando todo o trabalho pesado de pesquisa, planejamento e execução em subagentes com contexto limpo, mantendo sua sessão principal enxuta.
 
 ---
 
@@ -35,10 +35,14 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD Core Nexus 2.4: Skills Unificadas, AST 360°, Superfície Estrita e Governança de Tokens
+## GSD Core Nexus 2.6: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
 
-O GSD Core Nexus 2.4 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão:
+O GSD Core Nexus 2.6 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
+- **Suporte de 1ª Classe ao DeepSeek Harness (`@deepseek-ai/dsh` — D-53):** Adaptador declarativo completo com suporte ao micro-kernel Cordis, transporte MCP e resolução de aliases de CLI (`dsh`, `deepseek`, `deepseek-cli`).
+- **Log Estruturado de Sessão & Retenção Inteligente (D-54 / D-55):** Gravação append-only em JSON Lines (`.planning/intel/sessions/`) com smart trimming de 32 KB para stack traces e diffs, sanitização automática de segredos por regex, hook transparente no Hub e retenção generosa de 50 sessões / 30 dias delimitada em disco (~25-40 MB gitignored).
+- **CLI de Replay Determinístico de Sessão (`gsd-tools session` — D-56):** Reconstrução interativa da linha do tempo com `--summary`, `--errors-only`, `--diffs`, atalho default `latest`, exportação Markdown e alimentação direta de diagnósticos de falha no `anti-pattern-store.cts`.
+- **Sistema Unificado de Versionamento & Release (`npm run version:bump` — D-57 / D-58):** Orquestrador atômico em um único comando (`scripts/bump-version.cjs`) com validação SemVer, sincronização em lockstep de todos os 49 manifestos, badges, módulos core e regeneração de pipelines derivados (`npm run version:check`).
 - **Superfície Pública Estrita de 10 Comandos (D-41 / D-42):** Menu slash simplificado e limpo contendo exclusivamente os 10 Comandos Canônicos Unificados (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`) com despacho fail-closed estrito e zero duplicações.
 - **Motor AST Universal & Mobile 360° Nativo:** Análise estática nativa cobrindo mais de 35 extensões com suporte completo **Mobile 360°** para iOS (Swift, SwiftUI, XCTest) e Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
 - **Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** Fachada Graphify nativa em TypeScript puro (`2.3-native`) construindo e consultando o grafo de dependências AST em memória sem dependência de Python externo.
@@ -51,7 +55,7 @@ O GSD Core Nexus 2.4 transforma agentes de codificação em uma engenharia autô
 - **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções com busca transversal inteligente (`errorQuery`) em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
 - **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Python e Node isolados).
 - **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.
-- **Blindagem de Concorrência & Segurança (D-35 a D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), confinamento seguro do MCP em `.planning/`, streaming JSON-RPC resiliente a chunks e sincronização de versão nos 48 manifests.
+- **Blindagem de Concorrência & Segurança (D-35 a D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), confinamento seguro do MCP em `.planning/`, streaming JSON-RPC resiliente a chunks e sincronização de versão nos 49 manifests.
 
 ---
 
