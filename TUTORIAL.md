@@ -1,8 +1,8 @@
-# 🚀 Practical Tutorial: Mastering GSD Core Nexus 2.4
+# 🚀 Practical Tutorial: Mastering GSD Core Nexus 2.6
 
 > 🌐 **Language / Idioma:** **English** | [Versão em Português (Brasil)](TUTORIAL.pt-BR.md)  
 > **Git. Ship. Done.**  
-> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, and AI governance with **GSD Core Nexus 2.4**.
+> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 2.6**.
 
 ---
 
@@ -17,18 +17,22 @@
 7. [Surgical Context Injection (JIT) & Okapi BM25 Semantic RAG](#7-surgical-context-injection-jit--okapi-bm25-semantic-rag)
 8. [Pre-Flight Safety: Guardrails, Anti-Patterns & Self-Healing](#8-pre-flight-safety-guardrails-anti-patterns--self-healing)
 9. [Token Telemetry & Observability Dashboard (`/gsd:tokens`)](#9-token-telemetry--observability-dashboard-gsdtokens)
-10. [Step-by-Step Example: Building a Feature from Scratch](#10-step-by-step-example-building-a-feature-from-scratch)
+10. [Session Intelligence & Deterministic Replay CLI (`gsd-tools session`)](#10-session-intelligence--deterministic-replay-cli)
+11. [Unified Version Management & Release System (`npm run version:bump`)](#11-unified-version-management--release-system)
+12. [Step-by-Step Example: Building a Feature from Scratch](#12-step-by-step-example-building-a-feature-from-scratch)
+13. [Quick Command Cheat Sheet](#-quick-command-cheat-sheet)
 
 ---
 
 ## 1. What is GSD Core Nexus
 
-**GSD Core Nexus** is a meta-prompting, context-engineering, native static analysis, and spec-driven development framework for AI coding agents. It solves the **Context Rot** problem (the degradation of AI accuracy and hallucination as conversation history accumulates noise) through:
+**GSD Core Nexus** is a meta-prompting, context-engineering, native static analysis, and spec-driven development framework for AI coding agents (Claude Code, DeepSeek Harness, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more). It solves the **Context Rot** problem (the degradation of AI accuracy and hallucination as conversation history accumulates noise) through:
 
 * **Subagents with Clean Context:** Every execution plan runs in an isolated, fresh 200k context window.
 * **Persistent File-Backed State:** The `.planning/` directory is the single source of truth — progress, technical decisions, and plans are tracked in Git.
 * **Surgical Just-In-Time (JIT) Injection:** Instead of dumping the entire repository into prompt context, GSD injects only relevant interface contracts and neighbor symbols, slashing token usage by **80% to 90%**.
 * **Strict Public Surface:** Zero confusion with dozens of legacy aliases — 10 clear, canonical, and unified commands.
+* **Deterministic Session Intelligence & Replay:** Every unified command execution is recorded into structured append-only JSONL events with smart trimming and terminal timeline replay.
 
 ---
 
@@ -41,7 +45,7 @@ npx github:carlosatec/gsd-core
 ```
 
 The interactive installer guides you through 3 simple steps:
-1. **Runtime Detection & Selection:** Automatically detects or lets you choose your environment (Claude Code, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
+1. **Runtime Detection & Selection:** Automatically detects or lets you choose your environment (Claude Code, DeepSeek Harness, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
 2. **Installation Scope:** Choose between **Global** (available across all projects) or **Local** (scoped to the current repository).
 3. **Descriptions Language (i18n):** Automatically senses your OS locale and configures **English** or **Português (Brasil)**.
 
@@ -70,17 +74,17 @@ Generates the specification and task plans for the upcoming milestone phase base
 ```bash
 /gsd:migrate
 ```
-Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 2.4 non-destructively.
+Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 2.6 non-destructively.
 
 ---
 
 ## 4. The 10 Canonical Unified Commands Surface
 
-In GSD 2.4, the user-facing command surface is strictly consolidated into **10 canonical commands**, while all 150+ operational playbooks are dynamically loaded on-demand via execution context:
+In GSD 2.6, the user-facing command surface is strictly consolidated into **10 canonical commands**, while all operational playbooks are dynamically loaded on-demand via execution context:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 GSD 2.4 CANONICAL INTERFACE                 │
+│                 GSD 2.6 CANONICAL INTERFACE                 │
 ├────────────┬────────────────────────────────────────────────┤
 │ Command    │ Operational Purpose                            │
 ├────────────┼────────────────────────────────────────────────┤
@@ -202,7 +206,58 @@ Inspect token savings and context utilization in real time:
 
 ---
 
-## 10. Step-by-Step Example: Building a Feature from Scratch
+## 10. Session Intelligence & Deterministic Replay CLI
+
+GSD 2.6 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
+
+### Key Capabilities:
+- **Smart 32 KB Trimming:** Output buffers and stack traces larger than 32 KB preserve both the start (16 KB) and end (16 KB) with `... [truncated N bytes] ...`, preventing disk explosion while keeping root causes.
+- **Secret Redaction:** Masks API keys (`sk-*`, `ghp_*`, Bearer tokens) automatically before disk write.
+- **Ring Buffer (50/30d):** Retains up to 50 sessions / 30 days (~25-40 MB budget) safely gitignored.
+
+### Replay Commands (`gsd-tools session`):
+
+```bash
+# 1. Replay latest session in terminal
+node gsd-core/bin/gsd-tools.cjs session replay latest
+
+# 2. View summary (1 line per step)
+node gsd-core/bin/gsd-tools.cjs session replay latest --summary
+
+# 3. Filter for errors and failed tools only
+node gsd-core/bin/gsd-tools.cjs session replay latest --errors-only
+
+# 4. View file modification diffs
+node gsd-core/bin/gsd-tools.cjs session replay latest --diffs
+
+# 5. Export session to Markdown report
+node gsd-core/bin/gsd-tools.cjs session export latest --md
+
+# 6. List all recorded sessions or clean old ones
+node gsd-core/bin/gsd-tools.cjs session list
+node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
+```
+
+---
+
+## 11. Unified Version Management & Release System
+
+GSD Core Nexus 2.6 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
+
+```bash
+# 1. Elevate version across all 49 capability manifests, core modules, lockfiles, and badges
+npm run version:bump 2.7.0
+
+# 2. Verify strict lockstep synchronization across the repository
+npm run version:check
+
+# 3. Preview changes without writing to disk
+node scripts/bump-version.cjs 2.7.0 --dry-run
+```
+
+---
+
+## 12. Step-by-Step Example: Building a Feature from Scratch
 
 Follow a complete end-to-end GSD development flow:
 
@@ -254,6 +309,10 @@ Follow a complete end-to-end GSD development flow:
 | Audit and repair code | `/gsd:review --fix` |
 | Validate UAT deliverables | `/gsd:verify` |
 | View token savings dashboard | `/gsd:tokens` |
+| Replay latest AI session | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
+| Export session post-mortem | `node gsd-core/bin/gsd-tools.cjs session export latest --md` |
+| Bump ecosystem version | `npm run version:bump <version>` |
+| Check repository sync | `npm run version:check` |
 | Ship branch / Open PR | `/gsd:ship` |
 | Autonomous autopilot | `/gsd:auto` |
 | Upgrade legacy project | `/gsd:migrate` |
@@ -261,4 +320,4 @@ Follow a complete end-to-end GSD development flow:
 
 ---
 
-*GSD Core Nexus 2.4 — Develop with surgical precision, zero context rot, and peak efficiency.*
+*GSD Core Nexus 2.6 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*

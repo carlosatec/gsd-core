@@ -10,7 +10,7 @@ const {
   validateSemVer,
   getMajorMinor,
   updatePackageManifests,
-  updateReadmeBadges,
+  updateDocumentationFiles,
   updateCoreSourceModules,
   checkRepositoryVersionSync,
   bumpVersion,
@@ -44,11 +44,11 @@ test('bumpVersion dry-run produces a complete report without touching files', ()
   assert.equal(report.targetVersion, '2.7.0');
   assert.equal(report.majorMinor, '2.7');
   assert.ok(report.manifestsUpdated.length > 0);
-  assert.ok(report.readmesUpdated.length > 0);
+  assert.ok(report.docsUpdated.length > 0);
   assert.ok(report.coreModulesUpdated.length > 0);
 });
 
-test('updatePackageManifests and updateReadmeBadges update mock directory atomically', () => {
+test('updatePackageManifests and updateDocumentationFiles update mock directory atomically', () => {
   const os = require('node:os');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-version-mock-'));
 
@@ -57,19 +57,25 @@ test('updatePackageManifests and updateReadmeBadges update mock directory atomic
     const mockLock = { name: '@opengsd/gsd-core', version: '2.5.0', packages: { '': { version: '2.5.0' } } };
     fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify(mockPkg, null, 2));
     fs.writeFileSync(path.join(tmp, 'package-lock.json'), JSON.stringify(mockLock, null, 2));
-    fs.writeFileSync(path.join(tmp, 'README.md'), '[![version](https://img.shields.io/badge/version-2.5.0-CB3837)](ROADMAP.md)');
+    fs.writeFileSync(path.join(tmp, 'README.md'), '[![version](https://img.shields.io/badge/version-2.5.0-CB3837)](ROADMAP.md)\n# GSD Core Nexus 2.5');
+    fs.writeFileSync(path.join(tmp, 'TUTORIAL.md'), '# Practical Tutorial: Mastering GSD Core Nexus 2.5\nGSD 2.5 CANONICAL INTERFACE');
 
     const changedPkg = updatePackageManifests(tmp, '2.7.0', false);
     assert.deepEqual(changedPkg.sort(), ['package-lock.json', 'package.json']);
 
-    const changedReadme = updateReadmeBadges(tmp, '2.7.0', false);
-    assert.deepEqual(changedReadme, ['README.md']);
+    const changedDocs = updateDocumentationFiles(tmp, '2.7.0', '2.7', false);
+    assert.deepEqual(changedDocs.sort(), ['README.md', 'TUTORIAL.md']);
 
     const updatedPkg = JSON.parse(fs.readFileSync(path.join(tmp, 'package.json'), 'utf8'));
     assert.equal(updatedPkg.version, '2.7.0');
 
     const updatedReadme = fs.readFileSync(path.join(tmp, 'README.md'), 'utf8');
     assert.ok(updatedReadme.includes('version-2.7.0-'));
+    assert.ok(updatedReadme.includes('GSD Core Nexus 2.7'));
+
+    const updatedTutorial = fs.readFileSync(path.join(tmp, 'TUTORIAL.md'), 'utf8');
+    assert.ok(updatedTutorial.includes('GSD Core Nexus 2.7'));
+    assert.ok(updatedTutorial.includes('GSD 2.7 CANONICAL INTERFACE'));
   } finally {
     helpers.cleanup(tmp);
   }

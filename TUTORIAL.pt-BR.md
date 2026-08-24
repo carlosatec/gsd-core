@@ -1,8 +1,8 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.4
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.6
 
 > 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](TUTORIAL.md)  
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto e governança de IA com o **GSD Core Nexus 2.4**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 2.6**.
 
 ---
 
@@ -17,18 +17,22 @@
 7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico-okapi-bm25)
 8. [Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing](#8-segurança-pré-voo-guardrails-anti-patterns--self-healing)
 9. [Telemetria e Observabilidade de Tokens (`/gsd:tokens`)](#9-telemetria-e-observabilidade-de-tokens-gsdtokens)
-10. [Exemplo Passo a Passo: Construindo uma Feature do Zero](#10-exemplo-passo-a-passo-construindo-uma-feature-do-zero)
+10. [Inteligência de Sessão & CLI de Replay Determinístico (`gsd-tools session`)](#10-inteligência-de-sessão--cli-de-replay-determinístico)
+11. [Sistema Unificado de Versionamento & Release (`npm run version:bump`)](#11-sistema-unificado-de-versionamento--release)
+12. [Exemplo Passo a Passo: Construindo uma Feature do Zero](#12-exemplo-passo-a-passo-construindo-uma-feature-do-zero)
+13. [Tabela Resumo de Comandos Rápidos](#-tabela-resumo-de-comandos-rápidos)
 
 ---
 
 ## 1. O que é o GSD Core Nexus
 
-O **GSD Core Nexus** é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações. Ele resolve o problema do **Context Rot** (degradação da qualidade da IA à medida que o histórico de conversa se enche de ruídos) através de:
+O **GSD Core Nexus** é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para agentes de codificação com IA (Claude Code, DeepSeek Harness, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor e mais). Ele resolve o problema do **Context Rot** (degradação da qualidade da IA à medida que o histórico de conversa se enche de ruídos) através de:
 
 * **Subagentes com Contexto Limpo:** Cada plano de execução roda em uma janela isolada de 200k tokens.
 * **Estado Persistente em Arquivo:** O diretório `.planning/` é a única fonte da verdade — todo o progresso, decisões técnicas e planos ficam versionados no Git.
 * **Injeção Cirúrgica (JIT):** Em vez de enviar o repositório inteiro para o modelo, o GSD envia apenas os contratos e arquivos relevantes, reduzindo o consumo de tokens em **80% a 90%**.
 * **Superfície Pública Estrita:** Sem confusão com dezenas de aliases legados — 10 comandos canônicos claros e objetivos.
+* **Inteligência de Sessão & Replay Determinístico:** Toda a execução de comandos é registrada em eventos append-only JSONL com smart trimming e replay interativo no terminal.
 
 ---
 
@@ -41,7 +45,7 @@ npx github:carlosatec/gsd-core
 ```
 
 O instalador interativo guiará você em 3 passos simples:
-1. **Seleção de Runtime:** Detecta ou permite escolher seu ambiente (Claude Code, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
+1. **Seleção de Runtime:** Detecta ou permite escolher seu ambiente (Claude Code, DeepSeek Harness, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
 2. **Escopo de Instalação:** Escolha entre **Global** (disponível em todos os projetos) ou **Local** (apenas no projeto atual).
 3. **Idioma das Descrições (i18n):** Detecta automaticamente o idioma do seu sistema operacional e sugere **Português (Brasil)** ou **English**.
 
@@ -70,17 +74,17 @@ Gera a especificação e o plano da primeira fase com base no objetivo informado
 ```bash
 /gsd:migrate
 ```
-Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.4 de forma 100% não-destrutiva.
+Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.6 de forma 100% não-destrutiva.
 
 ---
 
 ## 4. A Interface Canônica dos 10 Comandos Unificados
 
-No GSD 2.4, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
+No GSD 2.6, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE CANÔNICA GSD 2.4                  │
+│                 INTERFACE CANÔNICA GSD 2.6                  │
 ├────────────┬────────────────────────────────────────────────┤
 │ Comando    │ Ação Operacional                               │
 ├────────────┼────────────────────────────────────────────────┤
@@ -120,62 +124,62 @@ Cada fase do roadmap passa rigorosamente por este ciclo:
 
 ## 6. Inteligência de Código: AST Universal 360°, Mobile & Living Docs
 
-O GSD Core analisa estaticamente o código sem precisar compilar ou rodar interpretadores pesados:
+O GSD Core analisa estaticamente seu repositório sem dependência de compiladores pesados:
 
-* **35+ Tecnologias e Extensões Nativas:** TypeScript, JavaScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL/DDL, Prisma, GraphQL, CSS/SCSS/LESS, HTML/Vue/Svelte, Dockerfile, Shell Script, YAML.
-* **📱 Mobile 360° Nativo:**
-  - **iOS (Swift & SwiftUI):** Analisador AST nativo para arquivos `.swift`, `.m`, `.mm`, extraindo `struct`, `class`, `protocol`, `enum`, `extension`, `func` e componentes SwiftUI (`View`, `body: some View`). Suporte a manifestos `Package.swift`, `Podfile`, `Info.plist` e scaffolds de teste `XCTestCase`.
-  - **Android (Kotlin & Jetpack Compose):** Detecção automática de `@Composable fun` (como componentes de UI), `sealed class`, `object` (singletons), `@HiltViewModel` (como serviços de injeção) e `suspend fun`. Suporte a `build.gradle.kts`, `settings.gradle.kts` e `AndroidManifest.xml`.
-  - **Runners One-Shot Mobile:** Reconhecimento automático de `swift test`, `xcodebuild test`, `./gradlew test` e `gradle test`.
-* **🌐 Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** O motor Graphify foi totalmente reimplementado em TypeScript puro (versão `2.3-native`), gerando o grafo AST e salvando `graph.json` em memória sem depender de `uv pip install graphifyy`.
-* **Cache Incremental via `mtime`:** O analisador AST compara o carimbo de data/hora dos arquivos no disco com o grafo pré-existente. Apenas arquivos modificados são re-processados, acelerando a análise em até **85%**.
-* **Modo Lite & Otimização de PageRank Automática:** Em repositórios pequenos (< 50 arquivos) ou comandos de checagem rápida, o GSD ativa automaticamente o cálculo direto por grau, eliminando iterações desnecessárias.
-* **Scaffolding de Testes Poliglota:** Gera esqueletos de teste respeitando as convenções de cada linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go`, Rust `#[cfg(test)]`, Dart `test/*_test.dart`, Python `test_*.py` e Node `.test.cjs`).
-* **Living Docs Engine:** Gera e valida automaticamente:
-  - `.planning/codebase/ARCHITECTURE.md` (topologia de imports e módulos)
-  - `.planning/codebase/APIS.md` (catálogo de interfaces, structs e rotas HTTP)
-* **Prevenção de Doc Drift sem Custo $O(n^2)$:** Validação contínua e sincronização pós-commit sem recriação redundante de grafos.
+* **Mais de 35 Tecnologias & Extensões Nativas:** TypeScript, JavaScript, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, SQL/DDL, Prisma, GraphQL, CSS/SCSS/LESS, HTML/Vue/Svelte, Dockerfile, Shell Script, YAML.
+* **📱 Suporte Nativo Mobile 360°:**
+  - **iOS (Swift & SwiftUI):** Parser AST nativo para `.swift`, `.m`, `.mm` extraindo `struct`, `class`, `protocol`, `enum`, `extension`, `func` e componentes SwiftUI (`View`, `body: some View`). Reconhece `Package.swift`, `Podfile`, `Info.plist` e scaffolds `XCTestCase`.
+  - **Android (Kotlin & Jetpack Compose):** Detecção automática de `@Composable fun` (como componentes de UI), `sealed class`, `object` (singletons), `@HiltViewModel` (serviços de injeção de dependência) e `suspend fun`. Suporta `build.gradle.kts`, `settings.gradle.kts` e `AndroidManifest.xml`.
+  - **Executores Mobile Automáticos:** Detecção inteligente para `swift test`, `xcodebuild test`, `./gradlew test` e `gradle test`.
+* **🌐 Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** O motor Graphify foi implementado integralmente em TypeScript puro (`2.3-native`), gerando e consultando `codebase-graph.json` em milissegundos sem requerer interpretador Python externo.
+* **Cache Incremental por `mtime`:** Compara timestamps de modificação dos arquivos, reprocessando apenas arquivos alterados e acelerando varreduras em até **85%**.
+* **Modo Lite & Otimização Auto-PageRank:** Em repositórios compactos (< 50 arquivos), o GSD utiliza scoring direto de grau, eliminando cálculos iterativos desnecessários.
+* **Scaffolding de Testes Poliglota:** Gera esqueletos de teste respeitando as convenções da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go`, Rust `#[cfg(test)]`, Dart `test/*_test.dart`, Python `test_*.py`, Node `.test.cjs`).
+* **Documentação Viva (Living Docs):** Gera e valida automaticamente:
+  - `.planning/codebase/ARCHITECTURE.md` (topologia de módulos e grafo de dependências)
+  - `.planning/codebase/APIS.md` (catálogo de tipos exportados, structs e rotas HTTP)
+* **Prevenção de Desvio de Docs:** Validação contínua pós-commit sem recálculo custoso de $O(n^2)$.
 
 ---
 
 ## 7. Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25
 
-Em vez de poluir a IA com centenas de linhas irrelevantes, o motor JIT:
+Em vez de saturar a janela de contexto da LLM com centenas de linhas irrelevantes, o motor JIT:
 
-1. **Consulta o Grafo AST com Ordenação PageRank:** Descobre quem importa o arquivo alvo e quem ele importa, ordenando os vizinhos por importância arquitetural.
-2. **Extrai Contratos & Tipos:** Envia apenas as assinaturas exportadas (`interfaces`, `structs`, `traits`), ignorando o corpo das funções vizinhas.
-3. **Injeta Âncora de Arquitetura Canônica:** Seleciona automaticamente o melhor arquivo de referência do projeto (com base em centralidade e densidade de tipos) para que a IA siga o mesmo padrão de código do repositório.
+1. **Consulta o Grafo AST Ordenado por PageRank:** Identifica módulos consumidores e dependências diretas ordenados por centralidade arquitetural.
+2. **Extrai Assinaturas de Contratos:** Alimenta apenas interfaces, structs e cabeçalhos de função exportados, ocultando corpos de implementação de arquivos vizinhos.
+3. **Injeta Âncoras Canônicas de Arquitetura:** Seleciona automaticamente o arquivo de referência mais representativo do projeto para orientar o estilo de codificação.
 4. **Motor RAG Semântico Okapi BM25 (D-33):**
-   - **Algoritmo BM25:** Parâmetros calibrados ($k_1 = 1.5, b = 0.75$) com saturação de frequência de termos e normalização por comprimento médio de documento (`avgdl`).
-   - **Code Tokenizer Multilíngue:** Divisão inteligente de identificadores em `camelCase` (`userRepository` → `user`, `repository`), `PascalCase` (`HTMLParser` → `html`, `parser`), `kebab-case` e `snake_case`.
-   - **Cobertura Universal:** Indexação de mais de 35 extensões de arquivo com exclusão automática de pastas de build mobile (`Pods`, `.gradle`, `DerivedData`, `.build`, `xcuserdata`).
-5. **Adiciona Decisões Ativas:** Injeta apenas as ADRs relevantes do `STATE.md` usando o parser nativo de decisões.
-6. **⚡ Hook Automático de Contexto de Sessão (D-30):** Injeta instantaneamente o briefing do projeto (≤ 15 linhas) no `GEMINI.md`, `AGENTS.md` ou `.agents/rules/gsd-session.md` na inicialização de qualquer comando, eliminando a perda de contexto em novas sessões de chat com a IA.
+   - **Calibragem Matemática:** Parâmetros ($k_1 = 1.5, b = 0.75$) com saturação de frequência de termos e normalização pelo tamanho médio dos documentos (`avgdl`).
+   - **Tokenizador de Código Poliglota:** Divide identificadores em `camelCase`, `PascalCase`, `kebab-case` e `snake_case`.
+   - **Cobertura Universal:** Indexa mais de 35 formatos de arquivo excluindo caches pesados (`Pods`, `.gradle`, `DerivedData`, `.build`, `node_modules`).
+5. **Anexa Decisões Ativas:** Injeta apenas ADRs relevantes de `STATE.md` via parser nativo de decisões.
+6. **⚡ Hook Automático de Contexto de Sessão (D-30):** Injeta automaticamente o briefing do projeto (≤ 15 linhas) em `GEMINI.md`, `AGENTS.md` ou regras a cada invocação, eliminando a cegueira de contexto.
 
-**Resultado:** O modelo recebe um bloco enxuto `<jit_context>` com foco 100% no que importa.
+**Resultado:** O modelo recebe um bloco compacto `<jit_context>` com 100% de sinal e consumo mínimo de tokens.
 
 ---
 
 ## 8. Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing
 
-Para evitar que a IA quebre a aplicação:
+Para garantir que as edições da IA jamais quebrem o repositório:
 
-* **Validação em Memória (Pre-Flight):** Simula os diffs em memória antes de tocar o disco. Se a IA deletar uma função exportada necessária para outro arquivo, o guardrail bloqueia o patch (`CONTRACT_BREAK`).
-* **DFS com Limite de Profundidade (1000 nós):** O algoritmo de detecção de dependência circular possui profundidade máxima configurada, eliminando risco de estouro de pilha (*stack overflow*) em grafos complexos.
-* **Empty File Guard (`EMPTY_FILE_GUARD`):** Impede que alucinações ou falhas parciais de streaming de LLMs sobrescrevam arquivos existentes com 0 bytes (`UNINTENDED_TRUNCATION`).
-* **Guardrails de Qualidade e UI/UX no Hub (D-34):**
-  - **No `/gsd:plan`:** Executa `runGapAnalysis` e alerta sobre requisitos não cobertos.
-  - **No `/gsd:review`:** Executa `analyzeSource` para detectar funções com complexidade ciclomática excessiva (> 15) e varre componentes frontend por cores hexadecimais soltas sem design tokens e botões sem acessibilidade (`aria-label`).
-  - **No `/gsd:verify`:** Ativa `autoPassed: true` automaticamente quando a cobertura de testes atinge 100%.
-* **Suporte à Co-Evolução:** Se a IA alterar a função e o arquivo consumidor no mesmo lote de arquivos, o guardrail autoriza a mudança sem falso positivo.
-* **Laço de Self-Healing:** Se um teste falhar durante a execução, o agente tem até 3 tentativas automáticas para depurar e corrigir.
-* **Anti-Pattern Store & Busca Transversal:** Toda correção bem-sucedida é memorizada em `.planning/intel/anti-patterns.json` com suporte à busca por termo de erro (`errorQuery`) para que a IA nunca mais repita o mesmo erro em sessões futuras.
+* **Diffing AST Pré-Voo em Memória:** Simula patches em memória antes da escrita em disco. Se uma edição remove uma função exportada consumida por outro módulo, o patch é bloqueado (`CONTRACT_BREAK`).
+* **DFS com Limite de Profundidade (1.000 Nós):** Previne loops infinitos ou estouro de pilha em grafos com dependências circulares.
+* **Proteção contra Arquivos Vazios (`EMPTY_FILE_GUARD`):** Intercepta alucinações ou quedas de stream da IA que poderiam zerar arquivos (`UNINTENDED_TRUNCATION`).
+* **Guardrails de Qualidade e UI/UX (D-34):**
+  - **No `/gsd:plan`:** Executa análise de lacunas (gap analysis) alertando sobre requisitos não mapeados.
+  - **No `/gsd:review`:** Alerta sobre complexidade ciclomática (> 15) e varre interfaces procurando cores fixadas sem tokens ou botões sem rótulos de acessibilidade (`aria-label`).
+  - **No `/gsd:verify`:** Dispara `autoPassed: true` automaticamente quando a cobertura e asserções dos testes atingem 100%.
+* **Autorização de Co-Evolução:** Quando uma função e seus chamadores são modificados no mesmo commit atômico, o pré-voo aprova a mudança sem falsos positivos.
+* **Laço de Auto-Cura (Self-Healing):** Se um teste falhar durante a execução, o subagente entra em um laço autônomo de reparo (até 3 tentativas) para diagnosticar e corrigir a falha.
+* **Armazenamento de Anti-Patterns entre Sessões:** Toda correção bem-sucedida é gravada em `.planning/intel/anti-patterns.json` com busca indexada (`errorQuery`), impedindo reincidência de erros.
 
 ---
 
 ## 9. Telemetria e Observabilidade de Tokens (`/gsd:tokens`)
 
-Para visualizar em tempo real a economia de contexto e o volume de tokens processados:
+Acompanhe a economia de tokens e uso de contexto em tempo real:
 
 ```bash
 /gsd:tokens
@@ -184,81 +188,136 @@ Para visualizar em tempo real a economia de contexto e o volume de tokens proces
 **Saída no Terminal (65 Colunas):**
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ GSD Core Nexus Token Telemetry (Observability)            │
+│ ⚡ GSD Core Nexus Telemetria de Tokens (Observabilidade)     │
 ├─────────────────────────────────────────────────────────────┤
-│ • Total Invocations:     42     executions                  │
-│ • Tokens Used (JIT):     84,500     tokens                  │
-│ • Monolithic Avoided:    820,000    tokens                  │
-│ • Tokens Saved:          735,500    tokens                  │
-│ • Average Efficiency:    89.7 % context saved               │
-│ • Peak Invocation:       3,200  tokens                      │
+│ • Total de Invocações:   42     execuções                   │
+│ • Tokens Utilizados (JIT): 84.500   tokens                  │
+│ • Monolítico Evitado:    820.000    tokens                  │
+│ • Tokens Economizados:   735.500    tokens                  │
+│ • Eficiência Média:      89.7 % contexto economizado        │
+│ • Pico por Invocação:    3.200  tokens                      │
 ├─────────────────────────────────────────────────────────────┤
-│ 🔀 Distribution by Command:                                  │
-│ • exec     [████████░░░░]  60% (50,700 tokens)              │
-│ • plan     [███░░░░░░░░░]  20% (16,900 tokens)              │
-│ • review   [███░░░░░░░░░]  20% (16,900 tokens)              │
+│ 🔀 Distribuição por Comando:                                │
+│ • exec     [████████░░░░]  60% (50.700 tokens)              │
+│ • plan     [███░░░░░░░░░]  20% (16.900 tokens)              │
+│ • review   [███░░░░░░░░░]  20% (16.900 tokens)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 10. Exemplo Passo a Passo: Construindo uma Feature do Zero
+## 10. Inteligência de Sessão & CLI de Replay Determinístico
 
-Acompanhe um fluxo real de ponta a ponta:
+O GSD 2.6 grava automaticamente eventos append-only de execução para todos os 10 comandos canônicos em `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
 
-### Passo 1: Verificar a Situação Atual
+### Recursos Principais:
+- **Smart Trimming de 32 KB:** Saídas longas de comandos e stack traces preservam o início (16 KB) e o fim (16 KB) com marcadores informativos `... [truncated N bytes] ...`, eliminando estouro de disco sem perder a causa-raiz de falhas.
+- **Sanitização de Segredos:** Chaves de API (`sk-*`, `ghp_*`, Bearer tokens) são automaticamente mascaradas por regex antes da gravação no disco.
+- **Ring Buffer (50 sessões / 30 dias):** Retenção generosa de até 50 sessões / 30 dias (~25-40 MB) 100% confinada e ignorada no Git.
+
+### Comandos de Replay (`gsd-tools session`):
+
+```bash
+# 1. Reproduzir a última sessão no terminal
+node gsd-core/bin/gsd-tools.cjs session replay latest
+
+# 2. Visualizar em modo resumo (1 linha por passo)
+node gsd-core/bin/gsd-tools.cjs session replay latest --summary
+
+# 3. Filtrar apenas erros e ferramentas com falha
+node gsd-core/bin/gsd-tools.cjs session replay latest --errors-only
+
+# 4. Exibir diffs e patches de arquivos modificados
+node gsd-core/bin/gsd-tools.cjs session replay latest --diffs
+
+# 5. Exportar relatório completo da sessão em Markdown
+node gsd-core/bin/gsd-tools.cjs session export latest --md
+
+# 6. Listar todas as sessões gravadas ou limpar antigas
+node gsd-core/bin/gsd-tools.cjs session list
+node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
+```
+
+---
+
+## 11. Sistema Unificado de Versionamento & Release
+
+O GSD Core Nexus 2.6 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
+
+```bash
+# 1. Elevar a versão em todos os 49 manifestos, módulos core, lockfiles e badges
+npm run version:bump 2.7.0
+
+# 2. Verificar se o repositório está em sincronismo lockstep estrito
+npm run version:check
+
+# 3. Pré-visualizar alterações sem gravar no disco (Dry-Run)
+node scripts/bump-version.cjs 2.7.0 --dry-run
+```
+
+---
+
+## 12. Exemplo Passo a Passo: Construindo uma Feature do Zero
+
+Acompanhe um fluxo completo de desenvolvimento no GSD:
+
+### Passo 1: Verificar o Estado Atual
 ```bash
 /gsd:status
 ```
-> O GSD analisa a árvore git, lê o `STATE.md`, exibe a fase ativa e sugere o próximo passo.
+> O GSD lê o status do git e o `STATE.md`, exibindo a fase ativa e o próximo passo recomendado.
 
 ### Passo 2: Planejar a Fase
 ```bash
 /gsd:plan
 ```
-> O agente analisa a AST do projeto, define as waves de tarefas, gera o `PLAN.md` e estabelece os critérios de aceitação.
+> O planejador analisa o grafo AST, cria as ondas de tarefas no `PLAN.md` e estabelece os critérios de aceitação.
 
 ### Passo 3: Executar as Tarefas
 ```bash
 /gsd:exec
 ```
-> Os subagentes executam os planos em paralelo com injeção cirúrgica JIT. Se houver falha em algum teste, o self-healing corrige automaticamente.
+> Subagentes executam as ondas em paralelo com contexto JIT. Se um teste falhar, a auto-cura age automaticamente.
 
-### Passo 4: Fazer Code Review com Auto-Correção
+### Passo 4: Rodar Revisão de Código com Auto-Fix
 ```bash
 /gsd:review --fix
 ```
-> O GSD audita os arquivos alterados, detecta inconsistências de estilo ou tipagem e aplica correções autônomas imediatas.
+> O GSD revisa os arquivos alterados, detecta problemas de tipagem/estilo e aplica correções automáticas.
 
 ### Passo 5: Validar a Entrega (UAT)
 ```bash
 /gsd:verify
 ```
-> O agente guia você na validação dos critérios de sucesso e registra a aprovação.
+> O agente percorre os pontos de verificação conversacional e confirma a aprovação da fase.
 
-### Passo 6: Entregar e Abrir PR
+### Passo 6: Finalizar e Abrir PR
 ```bash
 /gsd:ship
 ```
-> Cria a branch limpa, roda os testes finais, gera o resumo da entrega e abre o Pull Request!
+> Valida a árvore de trabalho, executa verificações finais, faz push da branch e abre o Pull Request!
 
 ---
 
-## 🎯 Resumo Rápido de Comandos
+## 🎯 Tabela Resumo de Comandos Rápidos
 
-| O que você quer fazer? | Execute este comando |
+| O que você deseja fazer? | Comando recomendado |
 |---|---|
-| Saber o que fazer agora / Diagnóstico | `/gsd:status` |
-| Planejar a próxima fase | `/gsd:plan` |
-| Executar as tarefas planejadas | `/gsd:exec` |
+| Diagnóstico situacional / Próximo passo | `/gsd:status` |
+| Planejar próxima fase | `/gsd:plan` |
+| Executar tarefas planejadas | `/gsd:exec` |
 | Auditar e corrigir código | `/gsd:review --fix` |
-| Testar e aprovar a entrega | `/gsd:verify` |
-| Ver uso e economia de tokens | `/gsd:tokens` |
-| Enviar para produção / Abrir PR | `/gsd:ship` |
-| Executar tudo no piloto automático | `/gsd:auto` |
+| Validar critérios de aceitação (UAT) | `/gsd:verify` |
+| Ver painel de telemetria de tokens | `/gsd:tokens` |
+| Reproduzir última sessão de IA | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
+| Exportar post-mortem de sessão | `node gsd-core/bin/gsd-tools.cjs session export latest --md` |
+| Elevar versão do ecossistema | `npm run version:bump <versão>` |
+| Checar sincronismo do repositório | `npm run version:check` |
+| Enviar branch / Criar PR | `/gsd:ship` |
+| Piloto automático ponta a ponta | `/gsd:auto` |
 | Modernizar projeto legado | `/gsd:migrate` |
 | Ver ajuda e lista de comandos | `/gsd:help` |
 
 ---
 
-*GSD Core Nexus 2.4 — Desenvolva com precisão cirúrgica, zero context rot e eficiência máxima.*
+*GSD Core Nexus 2.6 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*

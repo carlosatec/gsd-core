@@ -93,22 +93,58 @@ function updatePackageManifests(root, version, dryRun = false) {
 }
 
 /**
- * Updates README badges with the new version.
+ * Updates documentation files (READMEs, TUTORIALs, COMMAND references) with new version & majorMinor.
  */
-function updateReadmeBadges(root, version, dryRun = false) {
+function updateDocumentationFiles(root, version, majorMinor, dryRun = false) {
   const changed = [];
-  const files = ['README.md', 'README.pt-BR.md'];
 
-  for (const rel of files) {
+  // 1. README badges & headers
+  for (const rel of ['README.md', 'README.pt-BR.md']) {
     const abs = path.join(root, rel);
     if (fs.existsSync(abs)) {
-      const content = fs.readFileSync(abs, 'utf8');
-      const updated = content.replace(
+      let content = fs.readFileSync(abs, 'utf8');
+      const prev = content;
+      content = content.replace(
         /img\.shields\.io\/badge\/version-([^-\s]+)-/g,
         `img.shields.io/badge/version-${version}-`
       );
-      if (updated !== content) {
-        if (!dryRun) fs.writeFileSync(abs, updated, 'utf8');
+      content = content.replace(/GSD Core Nexus \d+\.\d+/g, `GSD Core Nexus ${majorMinor}`);
+      if (content !== prev) {
+        if (!dryRun) fs.writeFileSync(abs, content, 'utf8');
+        changed.push(rel);
+      }
+    }
+  }
+
+  // 2. TUTORIALs
+  for (const rel of ['TUTORIAL.md', 'TUTORIAL.pt-BR.md']) {
+    const abs = path.join(root, rel);
+    if (fs.existsSync(abs)) {
+      let content = fs.readFileSync(abs, 'utf8');
+      const prev = content;
+      content = content.replace(/GSD Core Nexus \d+\.\d+/g, `GSD Core Nexus ${majorMinor}`);
+      content = content.replace(/GSD \d+\.\d+ CANONICAL INTERFACE/g, `GSD ${majorMinor} CANONICAL INTERFACE`);
+      content = content.replace(/INTERFACE CANÔNICA GSD \d+\.\d+/g, `INTERFACE CANÔNICA GSD ${majorMinor}`);
+      content = content.replace(/INTERFACE CANONICA GSD \d+\.\d+/g, `INTERFACE CANONICA GSD ${majorMinor}`);
+      if (content !== prev) {
+        if (!dryRun) fs.writeFileSync(abs, content, 'utf8');
+        changed.push(rel);
+      }
+    }
+  }
+
+  // 3. Command References
+  for (const rel of ['docs/COMMANDS.md', 'docs/pt-BR/COMMANDS.md']) {
+    const abs = path.join(root, rel);
+    if (fs.existsSync(abs)) {
+      let content = fs.readFileSync(abs, 'utf8');
+      const prev = content;
+      content = content.replace(/Canonical Unified Interface \(GSD \d+\.\d+\)/g, `Canonical Unified Interface (GSD ${majorMinor})`);
+      content = content.replace(/Interface Canônica Unificada \(GSD \d+\.\d+\)/g, `Interface Canônica Unificada (GSD ${majorMinor})`);
+      content = content.replace(/Starting in GSD \d+\.\d+/g, `Starting in GSD ${majorMinor}`);
+      content = content.replace(/A partir do GSD \d+\.\d+/g, `A partir do GSD ${majorMinor}`);
+      if (content !== prev) {
+        if (!dryRun) fs.writeFileSync(abs, content, 'utf8');
         changed.push(rel);
       }
     }
@@ -182,6 +218,7 @@ function updateCoreSourceModules(root, version, majorMinor, dryRun = false) {
 function checkRepositoryVersionSync(opts = {}) {
   const root = opts.root || ROOT;
   const version = opts.version || getPackageVersion(root);
+  const majorMinor = getMajorMinor(version);
   const drift = [];
 
   // Check manifest drifts
@@ -196,6 +233,18 @@ function checkRepositoryVersionSync(opts = {}) {
       const m = content.match(/img\.shields\.io\/badge\/version-([^-\s]+)-/);
       if (m && m[1] !== version) {
         drift.push({ manifest: rel, found: m[1], expected: version });
+      }
+    }
+  }
+
+  // Check TUTORIALs
+  for (const rel of ['TUTORIAL.md', 'TUTORIAL.pt-BR.md']) {
+    const abs = path.join(root, rel);
+    if (fs.existsSync(abs)) {
+      const content = fs.readFileSync(abs, 'utf8');
+      const m = content.match(/GSD Core Nexus (\d+\.\d+)/);
+      if (m && m[1] !== majorMinor) {
+        drift.push({ manifest: rel, found: m[1], expected: majorMinor });
       }
     }
   }
@@ -228,7 +277,7 @@ function bumpVersion(targetVersion, opts = {}) {
     targetVersion,
     majorMinor,
     manifestsUpdated: [],
-    readmesUpdated: [],
+    docsUpdated: [],
     coreModulesUpdated: [],
     capabilitiesUpdated: [],
   };
@@ -236,8 +285,8 @@ function bumpVersion(targetVersion, opts = {}) {
   // 1. Update package.json and package-lock.json
   report.manifestsUpdated.push(...updatePackageManifests(root, version, dryRun));
 
-  // 2. Update README badges
-  report.readmesUpdated.push(...updateReadmeBadges(root, version, dryRun));
+  // 2. Update Documentation (README, TUTORIAL, COMMANDS)
+  report.docsUpdated.push(...updateDocumentationFiles(root, version, majorMinor, dryRun));
 
   // 3. Update Core TypeScript modules
   report.coreModulesUpdated.push(...updateCoreSourceModules(root, version, majorMinor, dryRun));
@@ -272,7 +321,7 @@ module.exports = {
   validateSemVer,
   getMajorMinor,
   updatePackageManifests,
-  updateReadmeBadges,
+  updateDocumentationFiles,
   updateCoreSourceModules,
   checkRepositoryVersionSync,
   bumpVersion,
@@ -305,7 +354,7 @@ Examples:
       process.exitCode = 1;
     } else {
       const totalCaps = listCapabilityManifests().length;
-      console.log(`✅ All package manifests, ${totalCaps} capability descriptors, core modules, and README badges are in 100% lockstep sync at version ${getPackageVersion()}.`);
+      console.log(`✅ All package manifests, ${totalCaps} capability descriptors, core modules, and documentation files are in 100% lockstep sync at version ${getPackageVersion()}.`);
     }
   } else {
     const targetVersion = args[0];
@@ -321,7 +370,7 @@ Examples:
       console.log(`  - Package Manifests: ${report.manifestsUpdated.length} files`);
       console.log(`  - Capabilities: ${report.capabilitiesUpdated.length} descriptors`);
       console.log(`  - Core Modules: ${report.coreModulesUpdated.length} modules`);
-      console.log(`  - Documentation Badges: ${report.readmesUpdated.length} files`);
+      console.log(`  - Documentation Files: ${report.docsUpdated.length} files`);
     } catch (err) {
       console.error(`❌ Error during version bump: ${err.message}`);
       process.exitCode = 1;
