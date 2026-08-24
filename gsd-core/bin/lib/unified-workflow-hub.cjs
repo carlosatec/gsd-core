@@ -35,6 +35,8 @@ const gapChecker = require("./gap-checker.cjs");
 const complexityTrigger = require("./complexity-trigger.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const coverageMod = require("./coverage.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const scanPhasePlans = require("./plan-scan.cjs");
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
@@ -111,7 +113,7 @@ function executeReview(planningDir, rootDir, autoFix = false) {
     // 4. Complexity & UI Anti-Pattern Inspection
     try {
         if (graph && graph.files) {
-            for (const [relPath, fileInfo] of Object.entries(graph.files)) {
+            for (const relPath of Object.keys(graph.files)) {
                 const fullPath = node_path_1.default.join(resolvedRoot, relPath);
                 if (!node_fs_1.default.existsSync(fullPath))
                     continue;
@@ -229,8 +231,8 @@ function dispatchUnifiedCommand(rawCommand, options) {
                         const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
                         if (matchingDir) {
                             const fullDir = node_path_1.default.join(phaseDirPath, matchingDir);
-                            const files = node_fs_1.default.readdirSync(fullDir);
-                            const planFile = files.find(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+                            const { planFiles } = scanPhasePlans(fullDir);
+                            const planFile = planFiles[0];
                             if (planFile) {
                                 const planContent = (0, shell_command_projection_cjs_1.platformReadSync)(node_path_1.default.join(fullDir, planFile)) || '';
                                 const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
@@ -295,8 +297,7 @@ function dispatchUnifiedCommand(rawCommand, options) {
                         const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
                         if (matchingDir) {
                             const fullDir = node_path_1.default.join(phaseDirPath, matchingDir);
-                            const files = node_fs_1.default.readdirSync(fullDir);
-                            const planFiles = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+                            const { planFiles } = scanPhasePlans(fullDir);
                             for (const pf of planFiles) {
                                 const planContent = (0, shell_command_projection_cjs_1.platformReadSync)(node_path_1.default.join(fullDir, pf)) || '';
                                 const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);

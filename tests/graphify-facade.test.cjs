@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const helpers = require('./helpers.cjs');
 
 const graphify = require('../gsd-core/bin/lib/graphify.cjs');
 const {
@@ -41,11 +42,7 @@ export class UserService {
   });
 
   afterEach(() => {
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      // non-blocking cleanup
-    }
+    helpers.cleanup(tmpDir);
   });
 
   it('should report installed = true and version = 2.3-native without Python on PATH', () => {
@@ -88,5 +85,7 @@ export class UserService {
     const queryRes = graphifyQuery(tmpDir, 'UserService');
     assert.equal(typeof queryRes, 'object');
     assert.equal(queryRes !== null, true);
+    assert.equal(Array.isArray(queryRes.nodes), true);
+    assert.equal(queryRes.nodes.some(n => n.label.includes('UserService')), true);
   });
 });

@@ -312,6 +312,22 @@ export default tseslint.config(
       'gsd-core/bin/lib/workflow-fragments.cjs',
       // ADR-1671 Phase 5 (#2932): tsc-generated runtime artifact — lint the src/section-manifest.cts source.
       'gsd-core/bin/lib/section-manifest.cjs',
+      // ADR-457 / Nexus Phases 1-12: tsc-generated runtime artifacts — lint the src/*.cts sources.
+      'gsd-core/bin/lib/anti-pattern-store.cjs',
+      'gsd-core/bin/lib/auto-upgrade-engine.cjs',
+      'gsd-core/bin/lib/canonical-examples-finder.cjs',
+      'gsd-core/bin/lib/codebase-ast-analyzer.cjs',
+      'gsd-core/bin/lib/hybrid-semantic-rag.cjs',
+      'gsd-core/bin/lib/i18n-descriptions.cjs',
+      'gsd-core/bin/lib/jit-context-injector.cjs',
+      'gsd-core/bin/lib/jit-telemetry.cjs',
+      'gsd-core/bin/lib/living-docs-engine.cjs',
+      'gsd-core/bin/lib/preflight-guardrails.cjs',
+      'gsd-core/bin/lib/session-context-hook.cjs',
+      'gsd-core/bin/lib/state-markdown-parser.cjs',
+      'gsd-core/bin/lib/test-scaffold-engine.cjs',
+      'gsd-core/bin/lib/token-dashboard-renderer.cjs',
+      'gsd-core/bin/lib/unified-workflow-hub.cjs',
       // #3477 follow-up: verbatim third-party artifact vendored so gsd-core/bin/**
       // carries zero external requires (installed trees have no node_modules).
       // See gsd-core/bin/lib/vendor/README.md; never lint/edit these by hand.

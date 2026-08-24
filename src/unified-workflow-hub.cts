@@ -32,6 +32,8 @@ import gapChecker = require('./gap-checker.cjs');
 import complexityTrigger = require('./complexity-trigger.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import coverageMod = require('./coverage.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import scanPhasePlans = require('./plan-scan.cjs');
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
@@ -159,7 +161,7 @@ function executeReview(planningDir: string, rootDir: string, autoFix: boolean = 
   // 4. Complexity & UI Anti-Pattern Inspection
   try {
     if (graph && graph.files) {
-      for (const [relPath, fileInfo] of Object.entries(graph.files)) {
+      for (const relPath of Object.keys(graph.files)) {
         const fullPath = path.join(resolvedRoot, relPath);
         if (!fs.existsSync(fullPath)) continue;
         const content = platformReadSync(fullPath) || '';
@@ -288,8 +290,8 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
             const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
             if (matchingDir) {
               const fullDir = path.join(phaseDirPath, matchingDir);
-              const files = fs.readdirSync(fullDir);
-              const planFile = files.find(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+              const { planFiles } = scanPhasePlans(fullDir);
+              const planFile = planFiles[0];
               if (planFile) {
                 const planContent = platformReadSync(path.join(fullDir, planFile)) || '';
                 const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
@@ -359,8 +361,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
             const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
             if (matchingDir) {
               const fullDir = path.join(phaseDirPath, matchingDir);
-              const files = fs.readdirSync(fullDir);
-              const planFiles = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+              const { planFiles } = scanPhasePlans(fullDir);
               for (const pf of planFiles) {
                 const planContent = platformReadSync(path.join(fullDir, pf)) || '';
                 const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);

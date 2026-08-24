@@ -6,6 +6,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import jitTelemetry = require('./jit-telemetry.cjs');
+import { clampPercent } from './phase-lifecycle.cjs';
 const { getTelemetrySummary } = jitTelemetry;
 
 /**
@@ -72,7 +73,7 @@ function renderTokenDashboard(planningDir: string): string {
     const totalUsed = Math.max(1, summary.totalJitTokensUsed);
     for (const cmd of cmdKeys) {
       const stat = summary.commandBreakdown[cmd];
-      const pct = Math.round((stat.tokensUsed / totalUsed) * 100);
+      const pct = clampPercent(stat.tokensUsed, totalUsed);
       const bar = makeProgressBar(pct, 12);
       const cmdPad = cmd.padEnd(8);
       const pctPad = `${pct}%`.padStart(4);

@@ -6,7 +6,6 @@
  * targeted files, avoiding massive monolithic prompt overhead.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { platformReadSync } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -304,7 +303,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   lines.push('</jit_context>');
 
   // Enforce token budget with line-aware truncation
-  let outputLines: string[] = [];
+  const outputLines: string[] = [];
   let currentTokens = 0;
   const maxCharBudget = maxTokens * 4;
   let isTruncated = false;

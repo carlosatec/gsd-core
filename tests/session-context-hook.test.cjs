@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const helpers = require('./helpers.cjs');
 
 const sessionHook = require('../gsd-core/bin/lib/session-context-hook.cjs');
 const { syncSessionContext, extractSessionBrief, START_MARKER, END_MARKER } = sessionHook;
@@ -30,11 +31,7 @@ describe('Session Context Hook (D-30)', () => {
   });
 
   afterEach(() => {
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      // non-blocking cleanup
-    }
+    helpers.cleanup(tmpDir);
   });
 
   it('should extract a concise session brief <= 15 lines', () => {

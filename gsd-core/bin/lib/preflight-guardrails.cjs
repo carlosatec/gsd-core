@@ -70,7 +70,7 @@ function runPreFlightChecks(ctx) {
         const cargoPath = node_path_1.default.join(root, 'Cargo.toml');
         if (node_fs_1.default.existsSync(cargoPath)) {
             const cargoContent = node_fs_1.default.readFileSync(cargoPath, 'utf8');
-            const crateMatch = cargoContent.match(/name\s*=\s*["']([^"']+)["']/);
+            const crateMatch = cargoContent.match(/name\s*=\s*["']([^"']{1,200})["']/);
             if (crateMatch)
                 rustRootCrate = crateMatch[1].trim();
         }
@@ -183,6 +183,10 @@ function runPreFlightChecks(ctx) {
                 }
                 else if (localDep.startsWith('crate::')) {
                     const relCratePath = localDep.slice(7).replace(/::/g, '/');
+                    resolvedPath = node_path_1.default.resolve(root, 'src', relCratePath);
+                }
+                else if (rustRootCrate && localDep.startsWith(rustRootCrate)) {
+                    const relCratePath = localDep.slice(rustRootCrate.length).replace(/^::/, '').replace(/::/g, '/');
                     resolvedPath = node_path_1.default.resolve(root, 'src', relCratePath);
                 }
                 else {

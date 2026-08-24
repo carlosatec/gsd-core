@@ -6,6 +6,7 @@
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jitTelemetry = require("./jit-telemetry.cjs");
+const phase_lifecycle_cjs_1 = require("./phase-lifecycle.cjs");
 const { getTelemetrySummary } = jitTelemetry;
 /**
  * Creates a visual ASCII progress bar of specified length.
@@ -54,7 +55,7 @@ function renderTokenDashboard(planningDir) {
         const totalUsed = Math.max(1, summary.totalJitTokensUsed);
         for (const cmd of cmdKeys) {
             const stat = summary.commandBreakdown[cmd];
-            const pct = Math.round((stat.tokensUsed / totalUsed) * 100);
+            const pct = (0, phase_lifecycle_cjs_1.clampPercent)(stat.tokensUsed, totalUsed);
             const bar = makeProgressBar(pct, 12);
             const cmdPad = cmd.padEnd(8);
             const pctPad = `${pct}%`.padStart(4);

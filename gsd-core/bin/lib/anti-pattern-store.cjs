@@ -12,6 +12,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const clock_cjs_1 = require("./clock.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const learningsMod = require("./learnings.cjs");
 const { learningsList } = learningsMod;
@@ -44,10 +45,23 @@ function saveAntiPatterns(planningDir, data) {
     const storePath = node_path_1.default.join(intelDir, 'anti-patterns.json');
     const tmpPath = `${storePath}.${process.pid}.tmp`;
     (0, shell_command_projection_cjs_1.platformWriteSync)(tmpPath, JSON.stringify(data, null, 2));
-    try {
-        node_fs_1.default.renameSync(tmpPath, storePath);
+    let renamed = false;
+    for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+            node_fs_1.default.renameSync(tmpPath, storePath);
+            renamed = true;
+            break;
+        }
+        catch (err) {
+            const code = err?.code;
+            if ((code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') && attempt < 4) {
+                clock_cjs_1.realClock.sleep(25 * (attempt + 1));
+                continue;
+            }
+            break;
+        }
     }
-    catch {
+    if (!renamed) {
         (0, shell_command_projection_cjs_1.platformWriteSync)(storePath, JSON.stringify(data, null, 2));
         try {
             node_fs_1.default.unlinkSync(tmpPath);

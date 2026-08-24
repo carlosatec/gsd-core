@@ -41,7 +41,7 @@ function extractSessionBrief(planningDir: string): string {
   const briefLines = [
     `> **GSD Active State**: Phase: ${currentPhase} | Status: ${status}`,
     `> **Decisions**: ${decisions.length > 0 ? decisions.join('; ') : 'Standard constraints active'}`,
-    `> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship`
+    `> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help`
   ];
 
   return briefLines.join('\n');

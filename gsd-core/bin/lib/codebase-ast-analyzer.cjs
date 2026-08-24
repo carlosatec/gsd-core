@@ -19,7 +19,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
-const typescript_1 = __importDefault(require("typescript"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 // ─── Constants ───────────────────────────────────────────────────────────────
 const DEFAULT_EXTENSIONS = new Set([
@@ -1094,7 +1093,7 @@ function analyzeSourceFile(filePath, sourceText) {
         baseName.includes('compose')) {
         return analyzeDevOpsAndShellFile(filePath, content);
     }
-    // 15. TypeScript / JavaScript AST Compiler
+    // 15. TypeScript / JavaScript AST Lexer (Native TypeScript - Zero External Dependencies D-01)
     const lines = content.split('\n');
     const imports = [];
     const exports = [];
@@ -1102,161 +1101,149 @@ function analyzeSourceFile(filePath, sourceText) {
     const routes = [];
     const externalDepsSet = new Set();
     const localDepsSet = new Set();
-    const sourceFile = typescript_1.default.createSourceFile(filePath, content, typescript_1.default.ScriptTarget.Latest, true, filePath.endsWith('.tsx') || filePath.endsWith('.jsx') ? typescript_1.default.ScriptKind.TSX : typescript_1.default.ScriptKind.TS);
-    function getLineNumber(pos) {
-        return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
-    }
-    function isExportedNode(node) {
-        const modifiers = typescript_1.default.canHaveModifiers(node) ? typescript_1.default.getModifiers(node) : undefined;
-        return !!modifiers?.some(m => m.kind === typescript_1.default.SyntaxKind.ExportKeyword);
-    }
-    function visit(node) {
-        if (typescript_1.default.isImportDeclaration(node)) {
-            const moduleSpecifier = node.moduleSpecifier;
-            if (typescript_1.default.isStringLiteral(moduleSpecifier)) {
-                const source = moduleSpecifier.text;
-                const isRelative = source.startsWith('.') || source.startsWith('/');
-                const isTypeOnly = !!node.importClause?.isTypeOnly;
-                const specifiers = [];
-                if (node.importClause) {
-                    if (node.importClause.name) {
-                        specifiers.push(node.importClause.name.text);
-                    }
-                    if (node.importClause.namedBindings) {
-                        if (typescript_1.default.isNamedImports(node.importClause.namedBindings)) {
-                            for (const element of node.importClause.namedBindings.elements) {
-                                specifiers.push(element.name.text);
-                            }
-                        }
-                        else if (typescript_1.default.isNamespaceImport(node.importClause.namedBindings)) {
-                            specifiers.push(node.importClause.namedBindings.name.text);
-                        }
-                    }
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lineNum = i + 1;
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*'))
+            continue;
+        // 1. ES Imports: import ... from '...'
+        const importMatch = trimmed.match(/^import\s+(?:type\s+)?(?:([a-zA-Z0-9_$]+)|\{([^}]+)\}|\*\s+as\s+([a-zA-Z0-9_$]+))\s+from\s+['"]([^'"]+)['"]/);
+        if (importMatch) {
+            const defaultSpec = importMatch[1];
+            const namedSpecs = importMatch[2];
+            const nsSpec = importMatch[3];
+            const source = importMatch[4];
+            const isRelative = source.startsWith('.') || source.startsWith('/');
+            const isTypeOnly = trimmed.startsWith('import type');
+            const specifiers = [];
+            if (defaultSpec)
+                specifiers.push(defaultSpec.trim());
+            if (nsSpec)
+                specifiers.push(nsSpec.trim());
+            if (namedSpecs) {
+                for (const part of namedSpecs.split(',')) {
+                    const spec = part.trim().split(/\s+as\s+/)[0].trim();
+                    if (spec)
+                        specifiers.push(spec);
                 }
-                imports.push({ source, specifiers, isTypeOnly, isRelative });
-                if (isRelative)
-                    localDepsSet.add(source);
-                else {
-                    const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
-                    if (!pkgName.startsWith('node:'))
-                        externalDepsSet.add(pkgName);
-                }
+            }
+            imports.push({ source, specifiers, isTypeOnly, isRelative });
+            if (isRelative)
+                localDepsSet.add(source);
+            else {
+                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+                if (!pkgName.startsWith('node:'))
+                    externalDepsSet.add(pkgName);
             }
         }
-        if (typescript_1.default.isCallExpression(node)) {
-            if (typescript_1.default.isIdentifier(node.expression) && node.expression.text === 'require' && node.arguments.length > 0) {
-                const firstArg = node.arguments[0];
-                if (typescript_1.default.isStringLiteral(firstArg)) {
-                    const source = firstArg.text;
-                    const isRelative = source.startsWith('.') || source.startsWith('/');
-                    imports.push({ source, specifiers: [], isTypeOnly: false, isRelative });
-                    if (isRelative)
-                        localDepsSet.add(source);
-                    else {
-                        const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
-                        if (!pkgName.startsWith('node:'))
-                            externalDepsSet.add(pkgName);
-                    }
+        // 2. CommonJS require: const ... = require('...')
+        const requireMatch = trimmed.match(/(?:const|let|var)\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/);
+        if (requireMatch) {
+            const namedSpecs = requireMatch[1];
+            const defaultSpec = requireMatch[2];
+            const source = requireMatch[3];
+            const isRelative = source.startsWith('.') || source.startsWith('/');
+            const specifiers = [];
+            if (defaultSpec)
+                specifiers.push(defaultSpec.trim());
+            if (namedSpecs) {
+                for (const part of namedSpecs.split(',')) {
+                    const spec = part.trim().split(/\s*:\s*/)[0].trim();
+                    if (spec)
+                        specifiers.push(spec);
                 }
             }
-            if (typescript_1.default.isPropertyAccessExpression(node.expression)) {
-                const methodName = node.expression.name.text.toUpperCase();
-                const validMethods = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'ALL', 'USE']);
-                if (validMethods.has(methodName) && node.arguments.length > 0) {
-                    const firstArg = node.arguments[0];
-                    if (typescript_1.default.isStringLiteral(firstArg) && firstArg.text.startsWith('/')) {
-                        routes.push({
-                            method: methodName,
-                            path: firstArg.text,
-                            line: getLineNumber(node.getStart(sourceFile)),
-                        });
-                    }
-                }
+            imports.push({ source, specifiers, isTypeOnly: false, isRelative });
+            if (isRelative)
+                localDepsSet.add(source);
+            else {
+                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+                if (!pkgName.startsWith('node:'))
+                    externalDepsSet.add(pkgName);
             }
         }
-        if (typescript_1.default.isFunctionDeclaration(node) && node.name) {
-            const isExported = isExportedNode(node);
-            const name = node.name.text;
-            const line = getLineNumber(node.getStart(sourceFile));
-            symbols.push({ name, kind: 'function', line, exported: isExported });
+        // 3. Functions
+        const funcMatch = trimmed.match(/^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)/);
+        if (funcMatch) {
+            const name = funcMatch[1];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind: 'function', line: lineNum, exported: isExported });
             if (isExported)
                 exports.push({ name, kind: 'function', isTypeOnly: false });
         }
-        if (typescript_1.default.isClassDeclaration(node) && node.name) {
-            const isExported = isExportedNode(node);
-            const name = node.name.text;
-            const line = getLineNumber(node.getStart(sourceFile));
-            symbols.push({ name, kind: 'class', line, exported: isExported });
+        // 4. Classes
+        const classMatch = trimmed.match(/^(?:export\s+)?(?:abstract\s+)?class\s+([a-zA-Z0-9_$]+)/);
+        if (classMatch) {
+            const name = classMatch[1];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind: 'class', line: lineNum, exported: isExported });
             if (isExported)
                 exports.push({ name, kind: 'class', isTypeOnly: false });
         }
-        if (typescript_1.default.isInterfaceDeclaration(node)) {
-            const isExported = isExportedNode(node);
-            const name = node.name.text;
-            const line = getLineNumber(node.getStart(sourceFile));
-            symbols.push({ name, kind: 'interface', line, exported: isExported, isTypeOnly: true });
+        // 5. Interfaces
+        const ifaceMatch = trimmed.match(/^(?:export\s+)?interface\s+([a-zA-Z0-9_$]+)/);
+        if (ifaceMatch) {
+            const name = ifaceMatch[1];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind: 'interface', line: lineNum, exported: isExported, isTypeOnly: true });
             if (isExported)
                 exports.push({ name, kind: 'interface', isTypeOnly: true });
         }
-        if (typescript_1.default.isTypeAliasDeclaration(node)) {
-            const isExported = isExportedNode(node);
-            const name = node.name.text;
-            const line = getLineNumber(node.getStart(sourceFile));
-            symbols.push({ name, kind: 'type', line, exported: isExported, isTypeOnly: true });
+        // 6. Types
+        const typeMatch = trimmed.match(/^(?:export\s+)?type\s+([a-zA-Z0-9_$]+)\s*=/);
+        if (typeMatch) {
+            const name = typeMatch[1];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind: 'type', line: lineNum, exported: isExported, isTypeOnly: true });
             if (isExported)
                 exports.push({ name, kind: 'type', isTypeOnly: true });
         }
-        if (typescript_1.default.isEnumDeclaration(node)) {
-            const isExported = isExportedNode(node);
-            const name = node.name.text;
-            const line = getLineNumber(node.getStart(sourceFile));
-            symbols.push({ name, kind: 'enum', line, exported: isExported });
+        // 7. Enums
+        const enumMatch = trimmed.match(/^(?:export\s+)?(?:const\s+)?enum\s+([a-zA-Z0-9_$]+)/);
+        if (enumMatch) {
+            const name = enumMatch[1];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind: 'enum', line: lineNum, exported: isExported });
             if (isExported)
                 exports.push({ name, kind: 'enum', isTypeOnly: false });
         }
-        if (typescript_1.default.isVariableStatement(node)) {
-            const isExported = isExportedNode(node);
-            for (const declaration of node.declarationList.declarations) {
-                if (typescript_1.default.isIdentifier(declaration.name)) {
-                    const name = declaration.name.text;
-                    const line = getLineNumber(declaration.getStart(sourceFile));
-                    const kind = node.declarationList.flags & typescript_1.default.NodeFlags.Const ? 'const' : 'variable';
-                    symbols.push({ name, kind, line, exported: isExported });
-                    if (isExported)
-                        exports.push({ name, kind, isTypeOnly: false });
-                }
+        // 8. Variables / Consts
+        const varMatch = trimmed.match(/^(?:export\s+)?(const|let|var)\s+([a-zA-Z0-9_$]+)/);
+        if (varMatch && !trimmed.startsWith('const enum')) {
+            const kind = varMatch[1] === 'const' ? 'const' : 'variable';
+            const name = varMatch[2];
+            const isExported = trimmed.startsWith('export');
+            symbols.push({ name, kind, line: lineNum, exported: isExported });
+            if (isExported)
+                exports.push({ name, kind, isTypeOnly: false });
+        }
+        // 9. Named exports: export { a, b as c }
+        const namedExportMatch = trimmed.match(/^export\s+(?:type\s+)?\{([^}]+)\}/);
+        if (namedExportMatch) {
+            const isTypeOnly = trimmed.startsWith('export type');
+            for (const part of namedExportMatch[1].split(',')) {
+                const spec = part.trim().split(/\s+as\s+/)[0].trim();
+                if (spec)
+                    exports.push({ name: spec, kind: 'variable', isTypeOnly });
             }
         }
-        if (typescript_1.default.isExportDeclaration(node)) {
-            const isTypeOnly = !!node.isTypeOnly;
-            if (node.exportClause && typescript_1.default.isNamedExports(node.exportClause)) {
-                for (const element of node.exportClause.elements) {
-                    exports.push({ name: element.name.text, kind: 'variable', isTypeOnly: isTypeOnly || !!element.isTypeOnly });
-                }
-            }
-        }
-        if (typescript_1.default.isExportAssignment(node)) {
+        // 10. Default export: export default ...
+        if (trimmed.startsWith('export default')) {
             exports.push({ name: 'default', kind: 'default', isTypeOnly: false });
         }
-        if (typescript_1.default.isBinaryExpression(node)) {
-            if (typescript_1.default.isPropertyAccessExpression(node.left) &&
-                node.left.expression.getText(sourceFile) === 'module' &&
-                node.left.name.text === 'exports' &&
-                typescript_1.default.isObjectLiteralExpression(node.right)) {
-                for (const prop of node.right.properties) {
-                    if (typescript_1.default.isPropertyAssignment(prop) || typescript_1.default.isShorthandPropertyAssignment(prop)) {
-                        exports.push({ name: prop.name.getText(sourceFile), kind: 'variable', isTypeOnly: false });
-                    }
-                }
-            }
-            else if (typescript_1.default.isPropertyAccessExpression(node.left) &&
-                node.left.expression.getText(sourceFile) === 'exports') {
-                exports.push({ name: node.left.name.text, kind: 'variable', isTypeOnly: false });
-            }
+        // 11. module.exports = { ... } / exports.foo = ...
+        const cjsExportMatch = trimmed.match(/^(?:module\.)?exports\.([a-zA-Z0-9_$]+)\s*=/);
+        if (cjsExportMatch) {
+            exports.push({ name: cjsExportMatch[1], kind: 'variable', isTypeOnly: false });
         }
-        typescript_1.default.forEachChild(node, visit);
+        // 12. HTTP Routes: app.get('/...'), router.post('/...'), server.put('/...')
+        const routeMatch = trimmed.match(/(?:app|router|server|api)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/i);
+        if (routeMatch && routeMatch[2].startsWith('/')) {
+            const method = routeMatch[1].toUpperCase();
+            routes.push({ method, path: routeMatch[2], line: lineNum });
+        }
     }
-    visit(sourceFile);
     return {
         filePath,
         imports,

@@ -57,7 +57,7 @@ function findCanonicalExample(rootDir, planningDir, targetExt) {
     try {
         const rawContent = node_fs_1.default.readFileSync(fullPath, 'utf8');
         // Truncate to first 40 lines (signatures/types) to prevent prompt explosion
-        const truncated = rawContent.split('\n').slice(0, 40).join('\n');
+        const truncated = rawContent.split(/\r?\n/).slice(0, 40).join('\n');
         return {
             file: best.file,
             content: truncated,

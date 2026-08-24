@@ -1,6 +1,4 @@
 const { spawnSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
 
 const testFiles = [
   'tests/installer-language-prompt.test.cjs',
@@ -34,7 +32,7 @@ const result = spawnSync(process.execPath, args, { stdio: 'inherit' });
 
 if (result.status !== 0) {
   console.error(`\n❌ Tests failed with status ${result.status}`);
-  process.exit(result.status || 1);
+  process.exitCode = result.status || 1;
+} else {
+  console.log(`\n✅ All GSD Core Nexus tests passed successfully!\n`);
 }
-
-console.log(`\n✅ All GSD Core Nexus tests passed successfully!\n`);

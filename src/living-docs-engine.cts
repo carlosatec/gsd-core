@@ -5,9 +5,8 @@
  * active code changes, preventing stale documentation and context drift.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
-import { platformWriteSync, platformReadSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph } = codebaseAst;
@@ -41,7 +40,7 @@ function generateArchitectureDoc(graph: CodebaseGraph): string {
   const lines: string[] = [
     '# Codebase Architecture & Topology (Living Document)',
     '',
-    `> Auto-generated and verified by GSD Core Nexus 2.3 Living Docs on ${new Date().toISOString()}.`,
+    `> Auto-generated and verified by GSD Core Nexus 2.5 Living Docs on ${new Date().toISOString()}.`,
     '',
     '## System Metrics',
     '',

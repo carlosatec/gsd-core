@@ -1,6 +1,6 @@
 "use strict";
 /**
- * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 2.3.
+ * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 2.5.
  *
  * Maintains universal English command names while providing localized descriptions
  * in the IDE slash-command autocomplete palette.
@@ -41,15 +41,20 @@ const CANONICAL_COMMAND_DESCRIPTIONS = {
         en: 'Run end-to-end autonomous phase cycle with pre-flight safety checkpoints',
         'pt-br': 'Executar ciclo autônomo de fases de ponta a ponta com guardrails de segurança',
     },
+    tokens: {
+        name: 'tokens',
+        en: 'Real-time token telemetry dashboard, cost metrics, and JIT savings breakdown',
+        'pt-br': 'Dashboard de telemetria de tokens em tempo real, métricas de custo e economia JIT',
+    },
     migrate: {
         name: 'migrate',
-        en: 'Upgrade legacy project to GSD Core Nexus 2.3 architecture',
-        'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.3',
+        en: 'Upgrade legacy project to GSD Core Nexus 2.5 architecture',
+        'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.5',
     },
     help: {
         name: 'help',
-        en: 'Display GSD Core Nexus 2.3 commands and quick reference guide',
-        'pt-br': 'Exibir comandos do GSD Core Nexus 2.3 e guia de referência rápida',
+        en: 'Display GSD Core Nexus 2.5 commands and quick reference guide',
+        'pt-br': 'Exibir comandos do GSD Core Nexus 2.5 e guia de referência rápida',
     },
 };
 /**

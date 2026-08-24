@@ -35,8 +35,12 @@ describe('i18n-descriptions', () => {
       'Check project progress, context drift, and JIT token efficiency'
     );
     assert.strictEqual(
+      getCommandDescription('tokens', 'en'),
+      'Real-time token telemetry dashboard, cost metrics, and JIT savings breakdown'
+    );
+    assert.strictEqual(
       getCommandDescription('migrate', 'en'),
-      'Upgrade legacy project to GSD Core Nexus 2.3 architecture'
+      'Upgrade legacy project to GSD Core Nexus 2.5 architecture'
     );
   });
 
@@ -50,8 +54,12 @@ describe('i18n-descriptions', () => {
       'Verificar progresso do projeto, drift de contexto e economia de tokens JIT'
     );
     assert.strictEqual(
+      getCommandDescription('tokens', 'pt-br'),
+      'Dashboard de telemetria de tokens em tempo real, métricas de custo e economia JIT'
+    );
+    assert.strictEqual(
       getCommandDescription('migrate', 'pt-br'),
-      'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.3'
+      'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.5'
     );
     assert.strictEqual(
       getCommandDescription('review', 'pt-br'),

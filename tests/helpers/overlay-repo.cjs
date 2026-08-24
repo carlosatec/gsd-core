@@ -158,7 +158,21 @@ function buildOverlayRepo(fileOverrides, opts = {}) {
     }
     for (const de of fs.readdirSync(srcDir, { withFileTypes: true })) {
       if (isTop && OVERLAY_SKIP_TOP.has(de.name)) {
-        fs.symlinkSync(path.join(srcDir, de.name), path.join(destDir, de.name));
+        const topSrc = path.join(srcDir, de.name);
+        const topDest = path.join(destDir, de.name);
+        try {
+          if (process.platform === 'win32') {
+            fs.symlinkSync(topSrc, topDest, 'junction');
+          } else {
+            fs.symlinkSync(topSrc, topDest);
+          }
+        } catch {
+          try {
+            fs.symlinkSync(topSrc, topDest, 'dir');
+          } catch {
+            // non-fatal fallback
+          }
+        }
         continue;
       }
       const srcPath = path.join(srcDir, de.name);

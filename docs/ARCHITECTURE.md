@@ -29,40 +29,44 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
 4. **State management** — Persistent project memory across sessions and context resets
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                      USER                            │
-│            /gsd-command [args]                        │
-└─────────────────────┬────────────────────────────────┘
-                      │
-┌─────────────────────▼────────────────────────────────┐
-│              COMMAND LAYER                            │
-│   commands/gsd/*.md — Prompt-based command files      │
-│   (Claude Code custom commands / Codex skills)        │
-└─────────────────────┬────────────────────────────────┘
-                      │
-┌─────────────────────▼────────────────────────────────┐
-│              WORKFLOW LAYER                           │
-│   gsd-core/workflows/*.md — Orchestration logic  │
-│   (Reads references, spawns agents, manages state)    │
-└──────┬──────────────┬─────────────────┬──────────────┘
-       │              │                 │
-┌──────▼──────┐ ┌─────▼─────┐ ┌────────▼───────┐
-│  AGENT      │ │  AGENT    │ │  AGENT         │
-│  (fresh     │ │  (fresh   │ │  (fresh        │
-│   context)  │ │   context)│ │   context)     │
-└──────┬──────┘ └─────┬─────┘ └────────┬───────┘
-       │              │                 │
-┌──────▼──────────────▼─────────────────▼──────────────┐
-│              CLI TOOLS LAYER                          │
-│   gsd-tools.cjs command families + domain modules      │
-│   command-routing-hub + observability seams            │
-└──────────────────────┬───────────────────────────────┘
-                       │
-┌──────────────────────▼───────────────────────────────┐
-│              FILE SYSTEM (.planning/)                 │
-│   PROJECT.md | REQUIREMENTS.md | ROADMAP.md          │
-│   STATE.md | config.json | phases/ | research/       │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                            GSD CLI & SLASH COMMAND ENTRYPOINTS                              │
+│         bin/install.js · bin/gsd-mcp-server.js · gsd-core/bin/gsd-tools                     │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │
+┌──────────────────────────────────────────────▼──────────────────────────────────────────────┐
+│                    NEXUS UNIFIED WORKFLOW HUB (Fases 4 e 12 — D-41)                         │
+│   src/unified-workflow-hub.cts ── Super-Hub dos 10 Comandos Canônicos:                     │
+│   /gsd-status · /gsd-plan · /gsd-exec · /gsd-review · /gsd-verify · /gsd-ship               │
+│   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-help                                        │
+└──────┬───────────────────────────────┬───────────────────────────────┬──────────────────────┘
+       │                               │                               │
+       │ (Despacho com JIT)            │ (Despacho com Guardrails)     │ (Auto-Upgrade & Telemetria)
+┌──────▼────────────────────────┐ ┌────▼────────────────────────┐ ┌────▼───────────────────────────────┐
+│   NEXUS JIT CONTEXT INJECTOR  │ │  PRE-FLIGHT GUARDRAILS &    │ │   NEXUS TELEMETRY & OBSERVABILITY  │
+│   (Fases 2, 8, 9 — D-03, D-27)│ │  SELF-HEALING (Fases 3, 6)  │ │   (Fases 5, 7 — D-08, D-16)        │
+│   src/jit-context-injector.cts│ │  src/preflight-guardrails   │ │   src/jit-telemetry.cts            │
+│   - Injeção cirúrgica ≤ 8k tok│ │  - Detecção CONTRACT_BREAK  │ │   src/token-dashboard-renderer.cts │
+│   - Orçamento elástico por LLM│ │  - EMPTY_FILE_GUARD         │ │   - Dashboard ASCII 65 colunas     │
+│   - Ancoragem Canônica        │ │  - Laço de Auto-Cura        │ │   - Schema v2.0 multidimensional   │
+└──────┬────────────────────────┘ └────┬────────────────────────┘ └────┬───────────────────────────────┘
+       │                               │                               │
+┌──────▼───────────────────────────────▼───────────────────────────────▼───────────────────────────────┐
+│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33)          │
+│   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)               │
+│   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                        │
+│   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                            │
+│   src/anti-pattern-store.cts ── Memória durável de lições de auto-cura (.planning/intel/)            │
+│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift)   │
+└──────┬───────────────────────────────────────────────────────────────┬───────────────────────────────┘
+       │                                                               │
+┌──────▼────────────────────────┐                             ┌────────▼───────────────────────────────┐
+│     STATE MACHINE ENGINE      │                             │   CAPABILITY & SECURITY FOUNDATION     │
+│  src/state.cts (5.1k lines)   │                             │  src/security.cts (Path Traversal Safe)│
+│  src/state-markdown-parser.cts│                             │  src/capability-lifecycle.cts (Ledger) │
+│  src/session-context-hook.cts ◄─── Injeção Session Handshake│  src/clock.cts (Deterministic Sleep)   │
+│  .planning/STATE.md           │    (Fase 10 — D-30)         │  src/worktree-safety.cts (Git Isolate) │
+└───────────────────────────────┘                             └────────────────────────────────────────┘
 ```
 
 ---

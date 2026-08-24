@@ -1,7 +1,7 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 12 (Consolidação Unificada de Skills, Superfície Estrita & Versão 2.4.0) | Status: Complete (10 Skills Unificadas, 151 Workflows Conectados, Build Limpo)
-> **Decisions**: **D-41 [Strict 10-Command Surface]:** commands/gsd/ e skills/ contêm exclusivamente os 10 Comandos Canônicos.; **D-42 [No Legacy Aliases]:** Despacho fail-closed estrito sem aliases legados.; **D-45 [Workflow Modernization]:** Playbooks em gsd-core/workflows/ modernizados e 100% integrados.; **D-46 [Version Bump to 2.4.0]:** Ecossistema unificado na versão 2.4.0.
-> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
+> **GSD Active State**: Phase: Phase 13 (Estabilização Arquitetural, Linter Hardening & Versão 2.5.0) | Status: Complete (10 Skills Unificadas, 151 Workflows Conectados, 294/294 Testes, Build Limpo)
+> **Decisions**: **D-41 [Strict 10-Command Surface]:** commands/gsd/ e skills/ contêm exclusivamente os 10 Comandos Canônicos.; **D-42 [No Legacy Aliases]:** Despacho fail-closed estrito sem aliases legados.; **D-45 [Workflow Modernization]:** Playbooks em gsd-core/workflows/ modernizados e 100% integrados.; **D-46 [Version Bump to 2.5.0]:** Ecossistema unificado na versão 2.5.0.
+> **Unified Commands**: /gsd-status, /gsd-plan, /gsd-exec, /gsd-review, /gsd-verify, /gsd-ship, /gsd-auto, /gsd-tokens, /gsd-migrate, /gsd-help
 <!-- /GSD-SESSION-CONTEXT -->
 
 # GSD Core Nexus — Antigravity CLI context

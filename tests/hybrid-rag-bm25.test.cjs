@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const helpers = require('./helpers.cjs');
 
 const ragEngine = require('../gsd-core/bin/lib/hybrid-semantic-rag.cjs');
 const {
@@ -46,11 +47,7 @@ def authenticate_user(token: str) -> bool:
   });
 
   afterEach(() => {
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      // non-blocking cleanup
-    }
+    helpers.cleanup(tmpDir);
   });
 
   it('should tokenize camelCase, PascalCase, kebab-case, and snake_case properly', () => {

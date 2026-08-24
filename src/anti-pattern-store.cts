@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { realClock } from './clock.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import learningsMod = require('./learnings.cjs');
 const { learningsList } = learningsMod;
@@ -68,9 +69,22 @@ function saveAntiPatterns(planningDir: string, data: AntiPatternStoreData): void
   const storePath = path.join(intelDir, 'anti-patterns.json');
   const tmpPath = `${storePath}.${process.pid}.tmp`;
   platformWriteSync(tmpPath, JSON.stringify(data, null, 2));
-  try {
-    fs.renameSync(tmpPath, storePath);
-  } catch {
+  let renamed = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.renameSync(tmpPath, storePath);
+      renamed = true;
+      break;
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if ((code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') && attempt < 4) {
+        realClock.sleep(25 * (attempt + 1));
+        continue;
+      }
+      break;
+    }
+  }
+  if (!renamed) {
     platformWriteSync(storePath, JSON.stringify(data, null, 2));
     try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
   }

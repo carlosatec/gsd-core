@@ -249,7 +249,7 @@ function assembleJitContext(options) {
     }
     lines.push('</jit_context>');
     // Enforce token budget with line-aware truncation
-    let outputLines = [];
+    const outputLines = [];
     let currentTokens = 0;
     const maxCharBudget = maxTokens * 4;
     let isTruncated = false;

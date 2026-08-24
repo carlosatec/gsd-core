@@ -93,8 +93,8 @@ const IGNORED_DIRS = new Set([
  */
 function buildSemanticIndex(rootDir: string, planningDir?: string): SemanticIndexData {
   const resolvedRoot = path.resolve(rootDir);
-  const docs: Record<string, DocTermStats> = Object.create(null);
-  const docFreq: Record<string, number> = Object.create(null);
+  const docs: Record<string, DocTermStats> = Object.create(null) as Record<string, DocTermStats>;
+  const docFreq: Record<string, number> = Object.create(null) as Record<string, number>;
   let totalTermLength = 0;
 
   function scan(dir: string): void {
@@ -120,7 +120,7 @@ function buildSemanticIndex(rootDir: string, planningDir?: string): SemanticInde
             const tokens = tokenize(content);
             if (tokens.length === 0) continue;
 
-            const termCounts: Record<string, number> = Object.create(null);
+            const termCounts: Record<string, number> = Object.create(null) as Record<string, number>;
             const seenInDoc = new Set<string>();
 
             for (const t of tokens) {

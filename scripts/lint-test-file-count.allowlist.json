@@ -16,6 +16,7 @@
       "files": [
         "graphify-auto-update.slow.test.cjs",
         "graphify-command-cutover.test.cjs",
+        "graphify-facade.test.cjs",
         "graphify-graph-path.test.cjs",
         "graphify-query.test.cjs",
         "graphify-visualization.test.cjs",

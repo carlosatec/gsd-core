@@ -9,7 +9,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execTool, execGit, platformWriteSync } from './shell-command-projection.cjs';
+import { execGit, platformWriteSync } from './shell-command-projection.cjs';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import capabilityStateMod = require('./capability-state.cjs');
@@ -71,7 +71,7 @@ interface GraphifyExecResult {
  * Execute graphify CLI as a subprocess with proper env and timeout handling.
  * Native TypeScript stub (D-31) — returns zero exit code without spawning Python.
  */
-function execGraphify(cwd: string, args: string[], options: { timeout?: number } = {}): GraphifyExecResult {
+function execGraphify(_cwd: string, _args: string[], _options: { timeout?: number } = {}): GraphifyExecResult {
   return {
     exitCode: 0,
     stdout: 'graphify native TypeScript engine active (D-31)',
@@ -149,7 +149,29 @@ interface Graph {
 function safeReadJson(filePath: string): Graph | null {
   try {
     if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Graph;
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Graph;
+    if (raw && typeof raw === 'object') {
+      if (!Array.isArray(raw.nodes) && raw.files && typeof raw.files === 'object') {
+        const nodes: GraphNode[] = [];
+        const edges: GraphEdge[] = [];
+        const filesObj = raw.files as Record<string, { symbols?: Array<{ name: string; kind: string }>; localDeps?: string[] }>;
+        for (const [filePathKey, fileData] of Object.entries(filesObj)) {
+          nodes.push({ id: filePathKey, label: filePathKey, description: `File: ${filePathKey}` });
+          for (const sym of fileData.symbols || []) {
+            const symId = `${filePathKey}#${sym.name}`;
+            nodes.push({ id: symId, label: sym.name, description: `${sym.kind} ${sym.name} in ${filePathKey}` });
+            edges.push({ source: filePathKey, target: symId, label: 'defines' });
+          }
+          for (const dep of fileData.localDeps || []) {
+            edges.push({ source: filePathKey, target: dep, label: 'depends_on' });
+          }
+        }
+        raw.nodes = nodes;
+        raw.edges = edges;
+      }
+      return raw;
+    }
+    return null;
   } catch {
     return null;
   }

@@ -2,7 +2,6 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 
 const codebaseAst = require('../gsd-core/bin/lib/codebase-ast-analyzer.cjs');
 const testScaffolder = require('../gsd-core/bin/lib/test-scaffold-engine.cjs');

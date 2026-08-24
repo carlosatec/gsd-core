@@ -106,7 +106,7 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
     const cargoPath = path.join(root, 'Cargo.toml');
     if (fs.existsSync(cargoPath)) {
       const cargoContent = fs.readFileSync(cargoPath, 'utf8');
-      const crateMatch = cargoContent.match(/name\s*=\s*["']([^"']+)["']/);
+      const crateMatch = cargoContent.match(/name\s*=\s*["']([^"']{1,200})["']/);
       if (crateMatch) rustRootCrate = crateMatch[1].trim();
     }
   } catch {
@@ -228,6 +228,9 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
           resolvedPath = path.resolve(root, relModPath);
         } else if (localDep.startsWith('crate::')) {
           const relCratePath = localDep.slice(7).replace(/::/g, '/');
+          resolvedPath = path.resolve(root, 'src', relCratePath);
+        } else if (rustRootCrate && localDep.startsWith(rustRootCrate)) {
+          const relCratePath = localDep.slice(rustRootCrate.length).replace(/^::/, '').replace(/::/g, '/');
           resolvedPath = path.resolve(root, 'src', relCratePath);
         } else {
           resolvedPath = path.resolve(fileDir, localDep);
