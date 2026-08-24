@@ -12,6 +12,7 @@ const {
   updatePackageManifests,
   updateDocumentationFiles,
   updateCoreSourceModules,
+  updateTestFiles,
   checkRepositoryVersionSync,
   bumpVersion,
 } = require('../scripts/bump-version.cjs');
@@ -46,6 +47,7 @@ test('bumpVersion dry-run produces a complete report without touching files', ()
   assert.ok(report.manifestsUpdated.length > 0);
   assert.ok(report.docsUpdated.length > 0);
   assert.ok(report.coreModulesUpdated.length > 0);
+  assert.ok(report.testFilesUpdated.length > 0);
 });
 
 test('updatePackageManifests and updateDocumentationFiles update mock directory atomically', () => {
@@ -114,6 +116,30 @@ test('updateCoreSourceModules updates core TypeScript files in mock directory', 
 
     const updatedLiving = fs.readFileSync(path.join(srcDir, 'living-docs-engine.cts'), 'utf8');
     assert.ok(updatedLiving.includes('GSD Core Nexus 2.7 Living Docs'));
+  } finally {
+    helpers.cleanup(tmp);
+  }
+});
+
+test('updateTestFiles updates test files in mock directory', () => {
+  const os = require('node:os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-version-tests-mock-'));
+  const testsDir = path.join(tmp, 'tests');
+  fs.mkdirSync(testsDir, { recursive: true });
+
+  try {
+    fs.writeFileSync(
+      path.join(testsDir, 'i18n-descriptions.test.cjs'),
+      "getCommandDescription('migrate', 'en'), 'Upgrade legacy project to GSD Core Nexus 2.5 architecture'\ngetCommandDescription('migrate', 'pt-br'), 'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.5'"
+    );
+
+    const changed = updateTestFiles(tmp, '2.7.0', '2.7', false);
+    assert.equal(changed.length, 1);
+    assert.equal(changed[0], 'tests/i18n-descriptions.test.cjs');
+
+    const updated = fs.readFileSync(path.join(testsDir, 'i18n-descriptions.test.cjs'), 'utf8');
+    assert.ok(updated.includes('GSD Core Nexus 2.7 architecture'));
+    assert.ok(updated.includes('GSD Core Nexus 2.7'));
   } finally {
     helpers.cleanup(tmp);
   }

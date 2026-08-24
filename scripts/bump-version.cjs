@@ -213,6 +213,34 @@ function updateCoreSourceModules(root, version, majorMinor, dryRun = false) {
 }
 
 /**
+ * Updates test files with new version & majorMinor expectations.
+ */
+function updateTestFiles(root, version, majorMinor, dryRun = false) {
+  const changed = [];
+
+  // 1. tests/i18n-descriptions.test.cjs
+  const i18nTestPath = path.join(root, 'tests', 'i18n-descriptions.test.cjs');
+  if (fs.existsSync(i18nTestPath)) {
+    let content = fs.readFileSync(i18nTestPath, 'utf8');
+    const prev = content;
+    content = content.replace(
+      /Upgrade legacy project to GSD Core Nexus \d+\.\d+ architecture/g,
+      `Upgrade legacy project to GSD Core Nexus ${majorMinor} architecture`
+    );
+    content = content.replace(
+      /Modernizar projeto legado para a arquitetura GSD Core Nexus \d+\.\d+/g,
+      `Modernizar projeto legado para a arquitetura GSD Core Nexus ${majorMinor}`
+    );
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(i18nTestPath, content, 'utf8');
+      changed.push('tests/i18n-descriptions.test.cjs');
+    }
+  }
+
+  return changed;
+}
+
+/**
  * Checks if repository artifacts are in sync with the specified (or package.json) version.
  */
 function checkRepositoryVersionSync(opts = {}) {
@@ -259,6 +287,16 @@ function checkRepositoryVersionSync(opts = {}) {
     }
   }
 
+  // Check tests/i18n-descriptions.test.cjs
+  const i18nTestPath = path.join(root, 'tests', 'i18n-descriptions.test.cjs');
+  if (fs.existsSync(i18nTestPath)) {
+    const content = fs.readFileSync(i18nTestPath, 'utf8');
+    const m = content.match(/Upgrade legacy project to GSD Core Nexus (\d+\.\d+) architecture/);
+    if (m && m[1] !== majorMinor) {
+      drift.push({ manifest: 'tests/i18n-descriptions.test.cjs', found: m[1], expected: majorMinor });
+    }
+  }
+
   return drift;
 }
 
@@ -279,6 +317,7 @@ function bumpVersion(targetVersion, opts = {}) {
     manifestsUpdated: [],
     docsUpdated: [],
     coreModulesUpdated: [],
+    testFilesUpdated: [],
     capabilitiesUpdated: [],
   };
 
@@ -291,7 +330,10 @@ function bumpVersion(targetVersion, opts = {}) {
   // 3. Update Core TypeScript modules
   report.coreModulesUpdated.push(...updateCoreSourceModules(root, version, majorMinor, dryRun));
 
-  // 4. Update Registered Manifests and Capabilities
+  // 4. Update Test Files
+  report.testFilesUpdated.push(...updateTestFiles(root, version, majorMinor, dryRun));
+
+  // 5. Update Registered Manifests and Capabilities
   if (!dryRun) {
     report.manifestsUpdated.push(...syncManifestVersions({ root, version }));
     report.capabilitiesUpdated.push(...syncCapabilityVersions({ root, version }));
@@ -301,13 +343,13 @@ function bumpVersion(targetVersion, opts = {}) {
     return report;
   }
 
-  // 5. Run Derived Regeneration Pipeline
+  // 6. Run Derived Regeneration Pipeline
   if (!skipRegen) {
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
     execFileSync(npmCmd, ['run', 'regen:derived'], { cwd: root, stdio: 'inherit' });
   }
 
-  // 6. Run Quality Verification Gates
+  // 7. Run Quality Verification Gates
   if (!skipLint) {
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
     execFileSync(npmCmd, ['run', 'lint:generated-sync'], { cwd: root, stdio: 'inherit' });
@@ -323,6 +365,7 @@ module.exports = {
   updatePackageManifests,
   updateDocumentationFiles,
   updateCoreSourceModules,
+  updateTestFiles,
   checkRepositoryVersionSync,
   bumpVersion,
 };
@@ -334,7 +377,7 @@ if (require.main === module) {
 GSD Core Nexus — Unified Version Manager
 
 Usage:
-  node scripts/bump-version.cjs <version>       Bump version across all 49+ manifests, core modules, badges, and regen derived files
+  node scripts/bump-version.cjs <version>       Bump version across all 49+ manifests, core modules, tests, badges, and regen derived files
   node scripts/bump-version.cjs --check         Check if all files are in 100% lockstep sync with package.json
   node scripts/bump-version.cjs <version> --dry-run  Preview all files that would be modified
 
@@ -354,7 +397,7 @@ Examples:
       process.exitCode = 1;
     } else {
       const totalCaps = listCapabilityManifests().length;
-      console.log(`✅ All package manifests, ${totalCaps} capability descriptors, core modules, and documentation files are in 100% lockstep sync at version ${getPackageVersion()}.`);
+      console.log(`✅ All package manifests, ${totalCaps} capability descriptors, core modules, test files, and documentation files are in 100% lockstep sync at version ${getPackageVersion()}.`);
     }
   } else {
     const targetVersion = args[0];
@@ -370,6 +413,7 @@ Examples:
       console.log(`  - Package Manifests: ${report.manifestsUpdated.length} files`);
       console.log(`  - Capabilities: ${report.capabilitiesUpdated.length} descriptors`);
       console.log(`  - Core Modules: ${report.coreModulesUpdated.length} modules`);
+      console.log(`  - Test Files: ${report.testFilesUpdated.length} files`);
       console.log(`  - Documentation Files: ${report.docsUpdated.length} files`);
     } catch (err) {
       console.error(`❌ Error during version bump: ${err.message}`);

@@ -22,7 +22,10 @@ const testFiles = [
   'tests/ios-scaffold-safety.test.cjs',
   'tests/ast-diff-guardrails.test.cjs',
   'tests/installed-surface-resolver.test.cjs',
-  'tests/gsd-statusline.test.cjs'
+  'tests/gsd-statusline.test.cjs',
+  'tests/deepseek-harness-adapter.test.cjs',
+  'tests/session-logger-replay.test.cjs',
+  'tests/bump-version.test.cjs'
 ];
 
 console.log(`\n🚀 Running GSD Core Nexus test suite (${testFiles.length} suites)...\n`);
