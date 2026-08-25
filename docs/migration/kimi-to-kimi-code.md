@@ -28,7 +28,7 @@ If `~/.kimi-code/config.toml` exists and `~/.kimi/config.toml` does not, you're 
 ### 1. Re-install with `--kimi-code`
 
 ```bash
-npx @opengsd/gsd-core --kimi-code --global
+npx github:carlosatec/gsd-core --kimi-code --global
 ```
 
 This installs the correct Agent Skills surface at `~/.kimi-code/skills/gsd-*/SKILL.md` (Phase 2) and activates the Phase 0 guard normalization (the dormant-guard fix). The Phase 5 installer will warn you if you accidentally pick the wrong variant.
@@ -70,4 +70,4 @@ What that does and does not buy you (#2547):
 ## Questions
 
 - **Can I keep both `--kimi` and `--kimi-code` installs?** Yes — they install to separate config dirs (`~/.kimi/` vs `~/.kimi-code/`). Run both if you genuinely use both products.
-- **Do I need to uninstall the old `--kimi` install first?** No — `--kimi-code --global` writes to `~/.kimi-code/`, which is separate. But if you no longer use Python kimi-cli, uninstalling the old install keeps things clean: `npx @opengsd/gsd-core --kimi --global --uninstall`.
+- **Do I need to uninstall the old `--kimi` install first?** No — `--kimi-code --global` writes to `~/.kimi-code/`, which is separate. But if you no longer use Python kimi-cli, uninstalling the old install keeps things clean: `npx github:carlosatec/gsd-core --kimi --global --uninstall`.

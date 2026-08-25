@@ -11,14 +11,14 @@ Install GSD Core with a small skill footprint to keep cold-start context low, th
 To install only the core main-loop skills, add `--minimal` to the installer:
 
 ```bash
-npx @opengsd/gsd-core@latest --claude --global --minimal
+npx github:carlosatec/gsd-core --claude --global --minimal
 ```
 
 `--minimal` has two aliases — use whichever reads best to you; they are identical:
 
 ```bash
-npx @opengsd/gsd-core@latest --claude --global --core-only
-npx @opengsd/gsd-core@latest --claude --global --profile=core
+npx github:carlosatec/gsd-core --claude --global --core-only
+npx github:carlosatec/gsd-core --claude --global --profile=core
 ```
 
 A minimal install gives you the eight skills needed to run the core phase loop:
@@ -50,14 +50,14 @@ If `core` is too small, pick a wider profile instead. Pass it with `--profile=<n
 
 ```bash
 # Standard: the core loop plus everyday management commands
-npx @opengsd/gsd-core@latest --claude --global --profile=standard
+npx github:carlosatec/gsd-core --claude --global --profile=standard
 ```
 
 If you want a named profile plus one extra cluster, compose them with a comma. The installer writes the union of both:
 
 ```bash
 # Core loop plus the audit/review skills, nothing else
-npx @opengsd/gsd-core@latest --claude --global --profile=core,audit
+npx github:carlosatec/gsd-core --claude --global --profile=core,audit
 ```
 
 ---
@@ -109,10 +109,10 @@ Surface changes take effect in your next session — restart the runtime to pick
 
 ```bash
 # Re-run the installer without --minimal to record `full` as your profile
-npx @opengsd/gsd-core@latest --claude --global
+npx github:carlosatec/gsd-core --claude --global
 
 # ...or pin a specific profile
-npx @opengsd/gsd-core@latest --claude --global --profile=standard
+npx github:carlosatec/gsd-core --claude --global --profile=standard
 ```
 
 Running `/gsd-update` re-reads the `.gsd-profile` marker and reinstalls at that profile, so a one-off reinstall at a new profile is all you need — subsequent updates follow it automatically.

@@ -21,7 +21,7 @@ O GSD irá:
 3. Buscar o changelog e exibir o que mudou entre sua versão instalada e a mais recente.
 4. Solicitar confirmação antes de alterar qualquer coisa.
 5. Fazer backup de quaisquer arquivos adicionados pelo usuário encontrados dentro de diretórios gerenciados pelo GSD para `gsd-user-files-backup/`.
-6. Executar o instalador (`npx @opengsd/gsd-core@latest --<runtime> --<scope>`).
+6. Executar o instalador (`npx github:carlosatec/gsd-core --<runtime> --<scope>`).
 7. Limpar o cache de verificação de atualização para que o indicador na barra de status seja redefinido.
 8. Informar se arquivos GSD modificados localmente foram copiados para `gsd-local-patches/`.
 

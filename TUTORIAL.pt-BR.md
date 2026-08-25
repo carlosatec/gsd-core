@@ -45,14 +45,32 @@ npx github:carlosatec/gsd-core
 ```
 
 O instalador interativo guiará você em 3 passos simples:
-1. **Seleção de Runtime:** Detecta ou permite escolher seu ambiente (Claude Code, DeepSeek Harness, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc.).
-2. **Escopo de Instalação:** Escolha entre **Global** (disponível em todos os projetos) ou **Local** (apenas no projeto atual).
-3. **Idioma das Descrições (i18n):** Detecta automaticamente o idioma do seu sistema operacional e sugere **Português (Brasil)** ou **English**.
+1. **Seleção de Idioma (i18n):** O instalador detecta o idioma do sistema e recomenda `1) Português (Brasil)` ou `2) English`. Todos os prompts, menus e logs seguintes serão apresentados no idioma escolhido.
+2. **Seleção de Runtime:** Detecta ou permite escolher seu ambiente (Antigravity `~/.gemini/config`, DeepSeek Harness `~/.dsh`, Claude Code, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Kilo, etc. — 19 runtimes suportados).
+3. **Escopo de Instalação:** Escolha entre **Global** (disponível em todos os projetos) ou **Local** (apenas no projeto atual).
 
 > **Dica — Instalação Direta (One-Liner):** Se preferir rodar sem perguntas no terminal:
 > ```bash
 > npx github:carlosatec/gsd-core --antigravity --global --lang=pt-br
 > ```
+
+### Desinstalação e Limpeza Segura
+
+Para desinstalar o GSD Core Nexus de forma limpa de qualquer ou de todos os runtimes:
+
+```bash
+# Desinstalar de todos os runtimes globalmente:
+npx github:carlosatec/gsd-core --all --global --uninstall
+
+# Desinstalar de um runtime específico (ex: Antigravity):
+npx github:carlosatec/gsd-core --antigravity --global --uninstall
+
+# Desinstalar instalação local de projeto:
+npx github:carlosatec/gsd-core --claude --local --uninstall
+```
+
+> [!NOTE]
+> A desinstalação do GSD é totalmente não-destrutiva: ela remove apenas os arquivos de motor, hooks e manifestos do GSD, preservando seus arquivos de planejamento `.planning/`, configurações customizadas e `USER-PROFILE.md`.
 
 ---
 
@@ -80,7 +98,7 @@ Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.7 de forma 100% n
 
 ## 4. A Interface Canônica dos 10 Comandos Unificados
 
-No GSD 2.6, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
+No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -100,6 +118,48 @@ No GSD 2.6, a superfície de comandos é estritamente consolidada em **10 comand
 │ /gsd:help  │ Guia completo de uso e consulta de comandos    │
 └────────────┴────────────────────────────────────────────────┘
 ```
+
+### 📋 O que cada comando faz em detalhes:
+
+1. **`/gsd:status` — Diagnóstico Situacional e Roadmap:**
+   - **O que faz:** Analisa o estado do repositório, verifica a fase ativa no `.planning/STATE.md`, detecta possíveis desvios de contexto (*context drift*) e exibe um resumo da telemetria de tokens.
+   - **Quando usar:** No início de qualquer sessão ou quando tiver dúvida sobre qual é o próximo passo a ser executado.
+
+2. **`/gsd:plan [N]` — Planejamento Atômico com AST e Specs:**
+   - **O que faz:** Dispara a varredura AST na base de código, calcula a centralidade (PageRank) e o índice BM25 em `.planning/intel/`, alinha decisões técnicas no `SPEC.md` e decompõe a fase em tarefas atômicas distribuídas em ondas paralelas no `PLAN.md`.
+   - **Quando usar:** Antes de iniciar o desenvolvimento de qualquer fase nova ou funcionalidade.
+
+3. **`/gsd:exec [N]` — Execução em Ondas com Injeção JIT:**
+   - **O que faz:** Executa as tarefas do plano onda por onda. Dispara verificações de pré-voo (*pre-flight guardrails*), injeta cirurgicamente apenas os tipos e dependências necessárias (JIT) e spawna subagentes com contexto limpo de 200k tokens que criam commits atômicos para cada tarefa.
+   - **Quando usar:** Logo após aprovar o plano gerado pelo `/gsd:plan`.
+
+4. **`/gsd:review [--fix]` — Auditoria Estática e Autocorreção:**
+   - **O que faz:** Analisa todos os arquivos modificados na fase buscando regressões de estilo, complexidade ciclomática excessiva e anti-patterns. Com a flag `--fix`, aplica reparos autônomos de código automaticamente.
+   - **Quando usar:** Ao término da execução das tarefas, antes de validar os critérios de aceitação.
+
+5. **`/gsd:verify [N]` — Validação Conversacional de UAT & Auto-Pass:**
+   - **O que faz:** Conduz um teste de aceitação conversacional (UAT) com o desenvolvedor, validando os requisitos da fase contra os critérios estabelecidos no `SPEC.md` e executando a suíte de testes automatizados com auto-pass de cobertura.
+   - **Quando usar:** Após a conclusão e revisão do código, para atestar que a funcionalidade cumpre todos os requisitos de negócio.
+
+6. **`/gsd:ship` — Entrega, Limpeza e Criação de PR:**
+   - **O que faz:** Sanitiza a árvore git, garante que os testes finais passam, filtra commits internos de `.planning/`, faz o push da branch de trabalho e abre o Pull Request pronto para revisão humana e merge.
+   - **Quando usar:** Ao finalizar e validar completamente uma fase ou marco do projeto.
+
+7. **`/gsd:auto` — Piloto Automático Ponta a Ponta:**
+   - **O que faz:** Modo autônomo que orquestra o ciclo completo sem intervenção manual intermediária: planeja a fase, executa as tarefas com guardrails de autocura, roda a revisão de código e prepara os entregáveis.
+   - **Quando usar:** Para tarefas bem especificadas que você deseja que o agente resolva do início ao fim com máxima autonomia.
+
+8. **`/gsd:tokens` — Painel Visual de Economia de Tokens:**
+   - **O que faz:** Renderiza um painel ASCII em 65 colunas mostrando métricas em tempo real: total de invocações, taxa de economia de contexto JIT (em média 80-90%), picos de consumo (*bursts*) e distribuição de uso por comando.
+   - **Quando usar:** Para monitorar a eficiência de custos e consumo de contexto em projetos de médio e grande porte.
+
+9. **`/gsd:migrate` — Modernização Não-Destrutiva de Projetos:**
+   - **O que faz:** Faz backup seguro de versões antigas do GSD, converte schemas e roadmaps legados para o formato moderno de ondas, roda o analisador Universal 360° AST e gera a pasta `.planning/intel/` com o grafo de dependências e documentação viva (`ARCHITECTURE.md` e `APIS.md`).
+   - **Quando usar:** Ao trazer para o GSD Nexus 2.7 um projeto que usava versões antigas do GSD ou que estava sem a estrutura `intel/`.
+
+10. **`/gsd:help` — Guia Interativo de Ajuda:**
+    - **O que faz:** Lista os 10 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
+    - **Quando usar:** Sempre que precisar consultar parâmetros ou atalhos de sintaxe.
 
 > **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd:plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 10 oficiais são rejeitados de forma segura e orientadora.
 
@@ -303,18 +363,19 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 
 | O que você deseja fazer? | Comando recomendado |
 |---|---|
-| Diagnóstico situacional / Próximo passo | `/gsd:status` |
-| Planejar próxima fase | `/gsd:plan` |
+| Verificar situação / Próxima ação | `/gsd:status` |
+| Planejar a próxima fase | `/gsd:plan` |
 | Executar tarefas planejadas | `/gsd:exec` |
-| Auditar e corrigir código | `/gsd:review --fix` |
-| Validar critérios de aceitação (UAT) | `/gsd:verify` |
-| Ver painel de telemetria de tokens | `/gsd:tokens` |
-| Reproduzir última sessão de IA | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
+| Auditar e reparar código | `/gsd:review --fix` |
+| Validar entregáveis (UAT) | `/gsd:verify` |
+| Ver painel de economia de tokens | `/gsd:tokens` |
+| Replay da última sessão de IA | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
 | Exportar post-mortem de sessão | `node gsd-core/bin/gsd-tools.cjs session export latest --md` |
-| Elevar versão do ecossistema | `npm run version:bump <versão>` |
-| Checar sincronismo do repositório | `npm run version:check` |
-| Enviar branch / Criar PR | `/gsd:ship` |
-| Piloto automático ponta a ponta | `/gsd:auto` |
+| Elevar versão do ecossistema | `npm run version:bump <version>` |
+| Verificar sincronização do repo | `npm run version:check` |
+| Desinstalar o GSD com segurança | `npx github:carlosatec/gsd-core --all --global --uninstall` |
+| Enviar branch / Abrir PR | `/gsd:ship` |
+| Autopilot autônomo | `/gsd:auto` |
 | Modernizar projeto legado | `/gsd:migrate` |
 | Ver ajuda e lista de comandos | `/gsd:help` |
 

@@ -58,7 +58,7 @@ Valid values: `opus`, `sonnet`, `haiku`, `inherit`, or any fully-qualified model
 **Important for Codex and OpenCode:** Those runtimes embed the model into each agent's static config at install time rather than choosing it per spawn, so after editing `model_overrides` you must re-run the installer for the change to take effect:
 
 ```bash
-npx @opengsd/gsd-core@latest --codex --global   # or --opencode, --kilo, etc.
+npx github:carlosatec/gsd-core --codex --global   # or --opencode, --kilo, etc.
 ```
 
 GSD will also warn you if you forget: workflow entry commands (`gsd init plan-phase`, `gsd init execute-phase`, etc.) detect when `.planning/config.json` or `~/.gsd/defaults.json` is newer than your installed agent files and print a one-line stderr reminder naming the changed file and the re-install command. The check is read-only and runs only on `codex` and `opencode`; Claude Code resolves models at spawn time and is unaffected. (#1688)

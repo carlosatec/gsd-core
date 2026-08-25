@@ -21,7 +21,7 @@ GSD will:
 3. Fetch the changelog and show you what changed between your installed version and the latest.
 4. Ask for confirmation before touching anything.
 5. Back up any user-added files found inside GSD-managed directories to `gsd-user-files-backup/`.
-6. Run the installer (`npx @opengsd/gsd-core@latest --<runtime> --<scope>`).
+6. Run the installer (`npx github:carlosatec/gsd-core --<runtime> --<scope>`).
 7. Clear the update-check cache so the statusline indicator resets.
 8. Offer to restore the user-added files it backed up in step 5.
 9. Report whether locally modified GSD files were backed up to `gsd-local-patches/`.

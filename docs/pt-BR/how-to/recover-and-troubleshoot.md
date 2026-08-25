@@ -248,7 +248,7 @@ Reinicie seu ambiente de execução. O GSD instala comandos slash no diretório 
 Se o problema persistir, verifique a instalação:
 
 ```bash
-npx @opengsd/gsd-core@latest --claude --local
+npx github:carlosatec/gsd-core --claude --local
 ```
 
 Para caminhos de instalação específicos do ambiente de execução e solução de problemas, consulte [Instalar no seu ambiente de execução](install-on-your-runtime.md).
@@ -263,7 +263,7 @@ Desde a v1.17, o instalador faz backup dos arquivos modificados localmente em `g
 
 ### Se você não consegue atualizar via npm
 
-Se `npx @opengsd/gsd-core` falhar devido a interrupções do npm ou restrições de rede, consulte `docs/manual-update.md` para um procedimento de atualização manual passo a passo que funciona sem acesso ao npm.
+Se `npx github:carlosatec/gsd-core` falhar devido a interrupções do npm ou restrições de rede, consulte `docs/manual-update.md` para um procedimento de atualização manual passo a passo que funciona sem acesso ao npm.
 
 Para atualizações de rotina, consulte [Atualizar o GSD](update-gsd.md).
 
