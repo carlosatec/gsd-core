@@ -842,7 +842,7 @@ if (hasMinimal && _profileArgRaw) {
 
 function selectRuntimesFromArgs(runtimeArgs) {
   if (runtimeArgs.includes('--all')) {
-    return ['claude', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'codex', 'copilot', 'antigravity', 'cursor', 'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'zcode'];
+    return ['claude', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'codex', 'copilot', 'antigravity', 'cursor', 'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'zcode', 'deepseek-harness'];
   }
   if (runtimeArgs.includes('--both')) {
     return ['claude', 'opencode'];
@@ -11268,7 +11268,7 @@ function install(isGlobal, runtime = DEFAULT_RUNTIME, options = {}) {
   // skipSharedHooksInstall:true) — the redundant `&& !isCopilot` was removed.
   // #2100: Windsurf's exclusion is likewise descriptor-driven (windsurf declares
   // skipSharedHooksInstall:true) — the redundant `&& !isWindsurf` was removed.
-  if (!isCodex && _hostBehaviors(runtime).skipSharedHooksInstall !== true) {
+  if (_hostBehaviors(runtime).skipSharedHooksInstall !== true) {
     if (!installSharedHooksBundle(targetDir)) {
       failures.push('hooks');
     }
@@ -12603,38 +12603,54 @@ const runtimeMap = {
   '15': 'qwen',
   '16': 'trae',
   '17': 'windsurf',
-  '18': 'zcode'
+  '18': 'zcode',
+  '19': 'deepseek-harness'
 };
-const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'hermes', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'qwen', 'trae', 'windsurf', 'zcode'];
-const ALL_RUNTIMES_OPTION = '19';
+const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'hermes', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'qwen', 'trae', 'windsurf', 'zcode', 'deepseek-harness'];
+const ALL_RUNTIMES_OPTION = '20';
+
+/**
+ * Helper to normalize language tag
+ */
+function normalizeLanguageTag(lang) {
+  if (!lang) return 'en';
+  return /pt[-_]?br|pt/i.test(String(lang)) ? 'pt-br' : 'en';
+}
 
 /**
  * Build the runtime-selection prompt text shown by the interactive installer.
  * Pure function — no I/O. Exported for tests so they can assert against the
  * rendered prompt instead of grepping bin/install.js source text.
  */
-function buildRuntimePromptText() {
-  return `  ${yellow}Which runtime(s) would you like to install for?${reset}\n\n  ${cyan}1${reset}) Claude Code  ${dim}(~/.claude)${reset}
-  ${cyan}2${reset}) Antigravity  ${dim}(~/.gemini/antigravity)${reset}
-  ${cyan}3${reset}) Augment      ${dim}(~/.augment)${reset}
-  ${cyan}4${reset}) Cline        ${dim}(.clinerules)${reset}
-  ${cyan}5${reset}) CodeBuddy    ${dim}(~/.codebuddy)${reset}
-  ${cyan}6${reset}) Codex        ${dim}(~/.codex)${reset}
-  ${cyan}7${reset}) Copilot      ${dim}(~/.copilot)${reset}
-  ${cyan}8${reset}) Cursor       ${dim}(~/.cursor)${reset}
-  ${cyan}9${reset}) Hermes Agent ${dim}(~/.hermes)${reset}
-  ${cyan}10${reset}) Kimi         ${dim}(~/.config/agents, then ~/.agents if existing)${reset}
-  ${cyan}11${reset}) Kimi Code    ${dim}(~/.kimi-code)${reset}
-  ${cyan}12${reset}) Kilo         ${dim}(~/.config/kilo)${reset}
-  ${cyan}13${reset}) OpenCode     ${dim}(~/.config/opencode)${reset}
-  ${cyan}14${reset}) pi           ${dim}(~/.pi/agent)${reset}
-  ${cyan}15${reset}) Qwen Code    ${dim}(~/.qwen)${reset}
-  ${cyan}16${reset}) Trae         ${dim}(~/.trae)${reset}
-  ${cyan}17${reset}) Windsurf     ${dim}(~/.codeium/windsurf)${reset}
-  ${cyan}18${reset}) ZCode        ${dim}(~/.zcode)${reset}
-  ${cyan}19${reset}) All
+function buildRuntimePromptText(lang) {
+  const currentLang = normalizeLanguageTag(lang || process.env.GSD_LANG);
+  const isPt = currentLang === 'pt-br';
+  const header = isPt ? 'Para qual(is) runtime(s) você deseja instalar?' : 'Which runtime(s) would you like to install for?';
+  const selectMulti = isPt ? 'Selecione múltiplos: 1,2,6 ou 1 2 6' : 'Select multiple: 1,2,6 or 1 2 6';
+  const allLabel = isPt ? 'Todos' : 'All';
 
-  ${dim}Select multiple: 1,2,6 or 1 2 6${reset}
+  return `  ${yellow}${header}${reset}\n\n  ${cyan}1${reset}) Claude Code       ${dim}(~/.claude)${reset}
+  ${cyan}2${reset}) Antigravity       ${dim}(~/.gemini/config)${reset}
+  ${cyan}3${reset}) Augment           ${dim}(~/.augment)${reset}
+  ${cyan}4${reset}) Cline             ${dim}(.clinerules)${reset}
+  ${cyan}5${reset}) CodeBuddy         ${dim}(~/.codebuddy)${reset}
+  ${cyan}6${reset}) Codex             ${dim}(~/.codex)${reset}
+  ${cyan}7${reset}) Copilot           ${dim}(~/.copilot)${reset}
+  ${cyan}8${reset}) Cursor            ${dim}(~/.cursor)${reset}
+  ${cyan}9${reset}) Hermes Agent      ${dim}(~/.hermes)${reset}
+  ${cyan}10${reset}) Kimi              ${dim}(~/.config/agents, then ~/.agents if existing)${reset}
+  ${cyan}11${reset}) Kimi Code         ${dim}(~/.kimi-code)${reset}
+  ${cyan}12${reset}) Kilo              ${dim}(~/.config/kilo)${reset}
+  ${cyan}13${reset}) OpenCode          ${dim}(~/.config/opencode)${reset}
+  ${cyan}14${reset}) pi                ${dim}(~/.pi/agent)${reset}
+  ${cyan}15${reset}) Qwen Code         ${dim}(~/.qwen)${reset}
+  ${cyan}16${reset}) Trae              ${dim}(~/.trae)${reset}
+  ${cyan}17${reset}) Windsurf          ${dim}(~/.codeium/windsurf)${reset}
+  ${cyan}18${reset}) ZCode             ${dim}(~/.zcode)${reset}
+  ${cyan}19${reset}) DeepSeek Harness  ${dim}(~/.dsh)${reset}
+  ${cyan}20${reset}) ${allLabel}
+
+  ${dim}${selectMulti}${reset}
 `;
 }
 
@@ -12643,14 +12659,14 @@ function buildRuntimePromptText() {
  * Pure function — exported so tests can verify split/dedupe/fallback behavior.
  *  - Accepts comma- and/or whitespace-separated choices
  *  - Deduplicates while preserving order
- *  - Maps option 19 ("All") to every runtime
+ *  - Maps option 20 ("All") to every runtime
  *  - Falls back to ['claude'] when nothing valid is selected
  */
 function parseRuntimeInput(answer) {
   const input = (answer == null ? '' : String(answer)).trim() || '1';
 
   // Tokenize first so the all-runtimes shortcut also fires for inputs the
-  // prompt encourages — "16,", "16 1", etc. — not just the bare "16".
+  // prompt encourages — "20,", "20 1", etc. — not just the bare "20".
   const choices = input.split(/[\s,]+/).filter(Boolean);
   if (choices.includes(ALL_RUNTIMES_OPTION)) {
     return allRuntimes.slice();
@@ -12667,7 +12683,20 @@ function parseRuntimeInput(answer) {
   return selected.length > 0 ? selected : [DEFAULT_RUNTIME];
 }
 
-function promptRuntime(callback) {
+function promptRuntime(langOrCallback, callbackMaybe) {
+  let lang;
+  let callback;
+  if (typeof langOrCallback === 'function') {
+    callback = langOrCallback;
+    lang = process.env.GSD_LANG || 'en';
+  } else {
+    lang = langOrCallback || process.env.GSD_LANG || 'en';
+    callback = callbackMaybe;
+  }
+  const isPt = normalizeLanguageTag(lang) === 'pt-br';
+  const cancelMsg = isPt ? 'Instalação cancelada' : 'Installation cancelled';
+  const choiceLabel = isPt ? 'Escolha' : 'Choice';
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -12678,14 +12707,14 @@ function promptRuntime(callback) {
   rl.on('close', () => {
     if (!answered) {
       answered = true;
-      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
+      console.log(`\n  ${yellow}${cancelMsg}${reset}\n`);
       process.exit(0);
     }
   });
 
-  console.log(buildRuntimePromptText());
+  console.log(buildRuntimePromptText(lang));
 
-  rl.question(`  Choice ${dim}[1]${reset}: `, (answer) => {
+  rl.question(`  ${choiceLabel} ${dim}[1]${reset}: `, (answer) => {
     answered = true;
     rl.close();
     callback(parseRuntimeInput(answer));
@@ -12699,7 +12728,20 @@ function promptRuntime(callback) {
  * Pure function — no I/O. Exported for tests so they can assert against the
  * rendered prompt structurally instead of grepping bin/install.js source.
  */
-function buildUpdateBannerPromptText() {
+function buildUpdateBannerPromptText(lang) {
+  const isPt = normalizeLanguageTag(lang || process.env.GSD_LANG) === 'pt-br';
+  if (isPt) {
+    return `
+  ${yellow}Opcional: Banner de atualização do GSD${reset}
+  Sem a statusline do GSD, notificações de update não ficarão visíveis. Você pode
+  instalar um banner de SessionStart que exibe uma mensagem de 1 linha quando uma nova
+  versão do GSD estiver disponível. O banner aparece apenas no início da sessão e
+  somente quando houver uma atualização.
+
+  ${cyan}1${reset}) ${dim}Sem banner (padrão)${reset}
+  ${cyan}2${reset}) Instalar banner de atualização
+`;
+  }
   return `
   ${yellow}Optional: GSD update banner${reset}
   Without GSD's statusline, update notifications won't be visible. You can
@@ -12718,11 +12760,11 @@ function buildUpdateBannerPromptText() {
  *
  *  - Empty input or "1" → false (default: no banner).
  *  - "2" → true.
- *  - "y" / "yes" (case-insensitive) → true. Affirmative shortcuts.
+ *  - "y" / "yes" / "s" / "sim" (case-insensitive) → true. Affirmative shortcuts.
  */
 function parseUpdateBannerInput(answer) {
   const input = (answer == null ? '' : String(answer)).trim().toLowerCase();
-  if (input === '2' || input === 'y' || input === 'yes') return true;
+  if (input === '2' || input === 'y' || input === 'yes' || input === 's' || input === 'sim') return true;
   return false;
 }
 
@@ -12763,14 +12805,18 @@ function handleUpdateBanner(isInteractive, callback) {
     return;
   }
 
+  const lang = process.env.GSD_LANG || 'en';
+  const isPt = normalizeLanguageTag(lang) === 'pt-br';
+  const choiceLabel = isPt ? 'Escolha' : 'Choice';
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  console.log(buildUpdateBannerPromptText());
+  console.log(buildUpdateBannerPromptText(lang));
 
-  rl.question(`  Choice ${dim}[1]${reset}: `, (answer) => {
+  rl.question(`  ${choiceLabel} ${dim}[1]${reset}: `, (answer) => {
     rl.close();
     callback(parseUpdateBannerInput(answer));
   });
@@ -12779,12 +12825,36 @@ function handleUpdateBanner(isInteractive, callback) {
 /**
  * Prompt for install location
  */
-function promptLocation(runtimes) {
+function promptLocation(runtimes, langOrCallback, callbackMaybe) {
+  let lang;
+  let callback;
+  if (typeof langOrCallback === 'function') {
+    callback = langOrCallback;
+    lang = process.env.GSD_LANG || 'en';
+  } else {
+    lang = langOrCallback || process.env.GSD_LANG || 'en';
+    callback = callbackMaybe;
+  }
+  const isPt = normalizeLanguageTag(lang) === 'pt-br';
+
   if (!process.stdin.isTTY) {
-    console.log(`  ${yellow}Non-interactive terminal detected, defaulting to global install${reset}\n`);
-    installAllRuntimes(runtimes, true, false);
+    const nonTtyMsg = isPt
+      ? 'Terminal não interativo detectado, instalando em modo global por padrão'
+      : 'Non-interactive terminal detected, defaulting to global install';
+    console.log(`  ${yellow}${nonTtyMsg}${reset}\n`);
+    if (callback) {
+      callback(true);
+    } else {
+      installAllRuntimes(runtimes, true, false);
+    }
     return;
   }
+
+  const cancelMsg = isPt ? 'Instalação cancelada' : 'Installation cancelled';
+  const choiceLabel = isPt ? 'Escolha' : 'Choice';
+  const header = isPt ? 'Onde você deseja instalar?' : 'Where would you like to install?';
+  const globalDesc = isPt ? 'disponível em todos os projetos' : 'available in all projects';
+  const localDesc = isPt ? 'apenas neste projeto' : 'this project only';
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -12796,7 +12866,7 @@ function promptLocation(runtimes) {
   rl.on('close', () => {
     if (!answered) {
       answered = true;
-      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
+      console.log(`\n  ${yellow}${cancelMsg}${reset}\n`);
       process.exit(0);
     }
   });
@@ -12808,18 +12878,20 @@ function promptLocation(runtimes) {
 
   const localExamples = runtimes.map(r => `./${getDirName(r)}`).join(', ');
 
-  console.log(`  ${yellow}Where would you like to install?${reset}\n\n  ${cyan}1${reset}) Global ${dim}(${pathExamples})${reset} - available in all projects
-  ${cyan}2${reset}) Local  ${dim}(${localExamples})${reset} - this project only
+  console.log(`  ${yellow}${header}${reset}\n\n  ${cyan}1${reset}) Global ${dim}(${pathExamples})${reset} - ${globalDesc}
+  ${cyan}2${reset}) Local  ${dim}(${localExamples})${reset} - ${localDesc}
 `);
 
-  rl.question(`  Choice ${dim}[1]${reset}: `, (answer) => {
+  rl.question(`  ${choiceLabel} ${dim}[1]${reset}: `, (answer) => {
     answered = true;
     rl.close();
     const choice = answer.trim() || '1';
     const isGlobal = choice !== '2';
-    promptLanguage(() => {
+    if (callback) {
+      callback(isGlobal);
+    } else {
       installAllRuntimes(runtimes, isGlobal, true);
-    });
+    }
   });
 }
 
@@ -12845,7 +12917,7 @@ function buildLanguagePromptText() {
   const recPt = isPtDefault ? ` ${dim}(Recomendado para seu sistema)${reset}` : '';
   const recEn = !isPtDefault ? ` ${dim}(System default)${reset}` : '';
 
-  return `  ${yellow}Select language for command descriptions / Idioma para descrições:${reset}\n\n  ${cyan}1${reset}) Português (Brasil)${recPt}
+  return `  ${yellow}Select your language / Selecione o idioma:${reset}\n\n  ${cyan}1${reset}) Português (Brasil)${recPt}
   ${cyan}2${reset}) English${recEn}
 `;
 }
@@ -12871,6 +12943,8 @@ function promptLanguage(callback) {
 
   const sysLang = detectSystemLanguage();
   const defaultChoice = sysLang === 'pt-br' ? '1' : '2';
+  const choiceLabel = sysLang === 'pt-br' ? 'Escolha' : 'Choice';
+  const cancelMsg = sysLang === 'pt-br' ? 'Instalação cancelada' : 'Installation cancelled';
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -12882,14 +12956,14 @@ function promptLanguage(callback) {
   rl.on('close', () => {
     if (!answered) {
       answered = true;
-      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
+      console.log(`\n  ${yellow}${cancelMsg}${reset}\n`);
       process.exit(0);
     }
   });
 
   console.log(buildLanguagePromptText());
 
-  rl.question(`  Choice ${dim}[${defaultChoice}]${reset}: `, (answer) => {
+  rl.question(`  ${choiceLabel} ${dim}[${defaultChoice}]${reset}: `, (answer) => {
     answered = true;
     rl.close();
     const lang = parseLanguageInput(answer);
@@ -13657,7 +13731,11 @@ if (require.main === module && !process.env.GSD_TEST_MODE) {
     }
   } else if (selectedRuntimes.length > 0) {
     if (!hasGlobal && !hasLocal) {
-      promptLocation(selectedRuntimes);
+      promptLanguage((lang) => {
+        promptLocation(selectedRuntimes, lang, (isGlobal) => {
+          installAllRuntimes(selectedRuntimes, isGlobal, true);
+        });
+      });
     } else {
       installAllRuntimes(selectedRuntimes, hasGlobal, false);
     }
@@ -13670,8 +13748,12 @@ if (require.main === module && !process.env.GSD_TEST_MODE) {
       console.log(`  ${yellow}Non-interactive terminal detected, defaulting to Claude Code global install${reset}\n`);
       installAllRuntimes([DEFAULT_RUNTIME], true, false);
     } else {
-      promptRuntime((runtimes) => {
-        promptLocation(runtimes);
+      promptLanguage((lang) => {
+        promptRuntime(lang, (runtimes) => {
+          promptLocation(runtimes, lang, (isGlobal) => {
+            installAllRuntimes(runtimes, isGlobal, true);
+          });
+        });
       });
     }
   }

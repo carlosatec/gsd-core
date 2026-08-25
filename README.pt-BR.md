@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.6.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.7.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD Core Nexus 2.6: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
+## GSD Core Nexus 2.7: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
 
-O GSD Core Nexus 2.6 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
+O GSD Core Nexus 2.7 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
 - **Suporte de 1ª Classe ao DeepSeek Harness (`@deepseek-ai/dsh` — D-53):** Adaptador declarativo completo com suporte ao micro-kernel Cordis, transporte MCP e resolução de aliases de CLI (`dsh`, `deepseek`, `deepseek-cli`).
 - **Log Estruturado de Sessão & Retenção Inteligente (D-54 / D-55):** Gravação append-only em JSON Lines (`.planning/intel/sessions/`) com smart trimming de 32 KB para stack traces e diffs, sanitização automática de segredos por regex, hook transparente no Hub e retenção generosa de 50 sessões / 30 dias delimitada em disco (~25-40 MB gitignored).
@@ -83,10 +83,10 @@ Após a instalação, verifique o status ou inicie o planejamento:
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.4** → [Tutorial Prático Completo](TUTORIAL.pt-BR.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.7** → [Tutorial Prático Completo](TUTORIAL.pt-BR.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 2.4](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.7](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 
@@ -115,6 +115,34 @@ Após a instalação, verifique o status ou inicie o planejamento:
 A maioria das configurações de codificação com IA falha em escala porque o inchaço de contexto degrada silenciosamente a qualidade da saída, não há memória compartilhada entre sessões e nada verifica se o código realmente funciona. O GSD Core Nexus resolve os três problemas: o trabalho pesado é executado em subagentes com contexto limpo, artefatos estruturados como `STATE.md` e `CONTEXT.md` sobrevivem às fronteiras de sessão, e a etapa de verificação percorre o que foi construído e gera planos de correção antes de uma fase ser declarada concluída. Consulte [docs/pt-BR/explanation/context-engineering.md](docs/pt-BR/explanation/context-engineering.md) para o raciocínio completo.
 
 Problemas? Consulte [docs/pt-BR/how-to/recover-and-troubleshoot.md](docs/pt-BR/how-to/recover-and-troubleshoot.md).
+
+---
+
+## Desinstalação
+
+Para desinstalar o GSD Core Nexus de forma limpa e segura, utilize a flag `--uninstall` acompanhada do escopo desejado (`--global` ou `--local`) e opcionalmente a runtime:
+
+```bash
+# Desinstalar do Claude Code globalmente (runtime padrão)
+npx github:carlosatec/gsd-core --global --uninstall
+
+# Desinstalar do Antigravity globalmente
+npx github:carlosatec/gsd-core --antigravity --global --uninstall
+
+# Desinstalar do Codex globalmente
+npx github:carlosatec/gsd-core --codex --global --uninstall
+
+# Desinstalar apenas do projeto local atual
+npx github:carlosatec/gsd-core --local --uninstall
+
+# Desinstalar de todas as runtimes globalmente
+npx github:carlosatec/gsd-core --all --global --uninstall
+```
+
+### O que é removido vs. o que é preservado:
+
+- **Removido:** Pasta de runtime `gsd-core/`, todos os comandos/skills/agentes prefixados com `gsd-*`, hooks gerenciados em `hooks/` e manifestos internos do GSD.
+- **Preservado com total segurança:** Seus perfis e preferências de usuário (`USER-PROFILE.md`, `dev-preferences.md`), skills/agentes customizados sem prefixo GSD, configurações customizadas em `settings.json`/`config.toml` e pastas `.planning/` dos seus projetos (seus planos e roadmap continuam intactos).
 
 ---
 

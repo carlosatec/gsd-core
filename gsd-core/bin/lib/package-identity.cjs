@@ -5,9 +5,9 @@
 
 const packageName = "@opengsd/gsd-core";
 const binName = "gsd-core";
-const repoSlug = "open-gsd/gsd-core";
-const repoUrl = "https://github.com/open-gsd/gsd-core";
-const changelogRawUrl = "https://raw.githubusercontent.com/open-gsd/gsd-core/main/CHANGELOG.md";
+const repoSlug = "carlosatec/gsd-core";
+const repoUrl = "https://github.com/carlosatec/gsd-core";
+const changelogRawUrl = "https://raw.githubusercontent.com/carlosatec/gsd-core/main/CHANGELOG.md";
 const cacheSlug = "opengsd-gsd-core";
 const updateCacheFileName = "gsd-update-check-opengsd-gsd-core.json";
 

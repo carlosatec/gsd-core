@@ -1,5 +1,5 @@
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.6.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.7.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -283,7 +283,7 @@ function runInternalUnifiedCommand(
         command: 'auto',
         action: 'AUTOPILOT_CYCLE',
         nextStep: 'executing phase plans sequentially with safety checkpoints',
-        message: 'GSD Core Nexus 2.6 Autopilot active. Running phase loop with guardrails.',
+        message: 'GSD Core Nexus 2.7 Autopilot active. Running phase loop with guardrails.',
       };
 
     case 'status': {
@@ -296,7 +296,7 @@ function runInternalUnifiedCommand(
         action: 'DISPLAY_STATUS',
         nextStep: 'execute next recommended action based on STATE.md',
         data: { telemetry },
-        message: `GSD Core Nexus 2.6 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+        message: `GSD Core Nexus 2.7 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
       };
     }
 
@@ -514,7 +514,7 @@ function runInternalUnifiedCommand(
         command: 'help',
         action: 'DISPLAY_HELP',
         nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-        message: 'GSD Core Nexus 2.6 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+        message: 'GSD Core Nexus 2.7 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
       };
   }
 }

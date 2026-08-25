@@ -1,8 +1,8 @@
-# 🚀 Practical Tutorial: Mastering GSD Core Nexus 2.6
+# 🚀 Practical Tutorial: Mastering GSD Core Nexus 2.7
 
 > 🌐 **Language / Idioma:** **English** | [Versão em Português (Brasil)](TUTORIAL.pt-BR.md)  
 > **Git. Ship. Done.**  
-> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 2.6**.
+> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 2.7**.
 
 ---
 
@@ -74,7 +74,7 @@ Generates the specification and task plans for the upcoming milestone phase base
 ```bash
 /gsd:migrate
 ```
-Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 2.6 non-destructively.
+Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 2.7 non-destructively.
 
 ---
 
@@ -84,7 +84,7 @@ In GSD 2.6, the user-facing command surface is strictly consolidated into **10 c
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 GSD 2.6 CANONICAL INTERFACE                 │
+│                 GSD 2.7 CANONICAL INTERFACE                 │
 ├────────────┬────────────────────────────────────────────────┤
 │ Command    │ Operational Purpose                            │
 ├────────────┼────────────────────────────────────────────────┤
@@ -242,7 +242,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Unified Version Management & Release System
 
-GSD Core Nexus 2.6 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
+GSD Core Nexus 2.7 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevate version across all 49 capability manifests, core modules, lockfiles, and badges
@@ -320,4 +320,4 @@ Follow a complete end-to-end GSD development flow:
 
 ---
 
-*GSD Core Nexus 2.6 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*
+*GSD Core Nexus 2.7 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*

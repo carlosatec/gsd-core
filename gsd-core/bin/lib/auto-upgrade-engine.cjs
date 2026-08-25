@@ -57,7 +57,7 @@ function runAutoUpgrade(planningDir, rootDir) {
     ];
     return {
         success: true,
-        version: '2.6.0',
+        version: '2.7.0',
         isNewMigration,
         indexedFiles: graph.stats.totalFiles,
         detectedLanguages: Array.from(languageSet),
@@ -66,8 +66,8 @@ function runAutoUpgrade(planningDir, rootDir) {
         docsUpdated: syncReport.generatedDocs.length,
         generatedArtifacts,
         message: isNewMigration
-            ? `Successfully upgraded legacy project to GSD Core Nexus 2.6. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
-            : `Refreshed GSD Core Nexus 2.6 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+            ? `Successfully upgraded legacy project to GSD Core Nexus 2.7. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
+            : `Refreshed GSD Core Nexus 2.7 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
     };
 }
 module.exports = {

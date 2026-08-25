@@ -1,6 +1,6 @@
 "use strict";
 /**
- * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 2.6.
+ * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 2.7.
  *
  * Maintains universal English command names while providing localized descriptions
  * in the IDE slash-command autocomplete palette.
@@ -48,13 +48,13 @@ const CANONICAL_COMMAND_DESCRIPTIONS = {
     },
     migrate: {
         name: 'migrate',
-        en: 'Upgrade legacy project to GSD Core Nexus 2.6 architecture',
-        'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.6',
+        en: 'Upgrade legacy project to GSD Core Nexus 2.7 architecture',
+        'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 2.7',
     },
     help: {
         name: 'help',
-        en: 'Display GSD Core Nexus 2.6 commands and quick reference guide',
-        'pt-br': 'Exibir comandos do GSD Core Nexus 2.6 e guia de referência rápida',
+        en: 'Display GSD Core Nexus 2.7 commands and quick reference guide',
+        'pt-br': 'Exibir comandos do GSD Core Nexus 2.7 e guia de referência rápida',
     },
 };
 /**

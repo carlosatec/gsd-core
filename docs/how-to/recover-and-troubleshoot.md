@@ -400,6 +400,52 @@ Also audit which MCP servers are enabled. Every enabled MCP server injects its t
 
 ---
 
+## Uninstallation & Clean Removal
+
+If you need to remove GSD Core Nexus from your system or clean up a specific runtime installation, use the dedicated `--uninstall` flag.
+
+### Command Syntax
+
+The `--uninstall` flag requires explicit scope specification (`--global` or `--local`):
+
+```bash
+# Claude Code global installation
+npx github:carlosatec/gsd-core --global --uninstall
+
+# Antigravity global installation
+npx github:carlosatec/gsd-core --antigravity --global --uninstall
+
+# Codex global installation
+npx github:carlosatec/gsd-core --codex --global --uninstall
+
+# Cursor / Windsurf / Kimi / Copilot / Trae / Qwen / etc.
+npx github:carlosatec/gsd-core --<runtime> --global --uninstall
+
+# Local project directory only
+npx github:carlosatec/gsd-core --local --uninstall
+
+# All runtimes globally
+npx github:carlosatec/gsd-core --all --global --uninstall
+```
+
+### Removal vs. Preservation Guarantees
+
+When uninstallation runs, it executes atomic cleanup with durable staging:
+
+| Artifact Type | What happens during `--uninstall` |
+|---|---|
+| **GSD Core Engine (`gsd-core/`)** | Fully removed. |
+| **GSD Commands / Skills (`skills/gsd-*`)** | Removed cleanly. |
+| **GSD Agents (`agents/gsd-*`)** | Removed cleanly. |
+| **GSD Managed Hooks (`hooks/gsd-*.js`, `hooks/lib/`)** | Removed; non-GSD hooks preserved. |
+| **GSD File Manifests & Markers** | `gsd-file-manifest.json`, `.gsd-profile` removed. Synthetic `package.json` with only `{"type":"commonjs"}` removed. |
+| **User Profile & Preferences** | **PRESERVED.** `USER-PROFILE.md`, `dev-preferences.md`, `.gsd-preferences.md` are staged and never deleted. |
+| **Custom Skills & Agents** | **PRESERVED.** Any skill or agent without `gsd-` prefix is preserved. |
+| **Custom Config & Settings** | **PRESERVED.** `settings.json`, `config.toml`, `mcp_config.json` retain user settings; only GSD-specific entries are unlinked. |
+| **Project `.planning/` directory** | **PRESERVED.** Project roadmaps, phase plans, and state are version-controlled assets and never touched. |
+
+---
+
 ## Recovery quick reference
 
 | Problem | Solution |

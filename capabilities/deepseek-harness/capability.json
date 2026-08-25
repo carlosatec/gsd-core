@@ -1,7 +1,7 @@
 {
   "id": "deepseek-harness",
   "role": "runtime",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "title": "DeepSeek Harness",
   "description": "DeepSeek Harness (dsh) — Cordis micro-kernel plugin architecture; commands, skills & agents artifact layout; settings-json hook surface; tier-2 support.",
   "tier": "core",

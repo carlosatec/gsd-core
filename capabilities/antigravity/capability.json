@@ -1,9 +1,9 @@
 {
   "id": "antigravity",
   "role": "runtime",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "title": "Antigravity",
-  "description": "Google Antigravity IDE — nested under ~/.gemini/antigravity; probed across 1.x and 2.x layouts; Gemini hook event dialect; flat skill layout; tier-1 support.",
+  "description": "Google Antigravity IDE — global customizations under ~/.gemini/config; Gemini hook event dialect; flat skill layout; tier-1 support.",
   "tier": "core",
   "requires": [],
   "engines": {
@@ -12,15 +12,14 @@
   "runtime": {
     "configHome": {
       "kind": "dot-home-nested",
-      "name": "antigravity",
+      "name": "config",
       "parent": ".gemini",
       "env": [
         "ANTIGRAVITY_CONFIG_DIR"
       ],
       "probe": [
-        "antigravity",
-        "antigravity-ide",
-        "antigravity-cli"
+        "config",
+        "antigravity"
       ],
       "probeExists": "gsd-core/VERSION"
     },

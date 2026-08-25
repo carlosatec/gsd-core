@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-2.6.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.7.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 2.6: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
+## GSD Core Nexus 2.7: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
 
-GSD Core Nexus 2.6 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
+GSD Core Nexus 2.7 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
 - **DeepSeek Harness 1st-Class Support (`@deepseek-ai/dsh` — D-53):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution (`dsh`, `deepseek`, `deepseek-cli`).
 - **Structured Session Logging & Intelligent Ring Buffer (D-54 / D-55):** Append-only JSONL execution event logging (`.planning/intel/sessions/`) with 32 KB smart trimming for stack traces and code patches, regex-based secret sanitization, transparent hub tracking across all 10 commands, and generous 50-session/30-day disk-bounded retention (~25-40 MB gitignored).
@@ -83,10 +83,10 @@ New here? Check the [Complete Practical GSD Tutorial](TUTORIAL.md) ([Português]
 
 ## Documentation
 
-**What's new in GSD Core Nexus 2.4** → [Complete Practical Tutorial](TUTORIAL.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 2.7** → [Complete Practical Tutorial](TUTORIAL.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 2.4](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 2.7](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 
@@ -115,6 +115,34 @@ Full index: [docs/README.md](docs/README.md) · [Português](README.pt-BR.md).
 Most AI-coding setups fail at scale because context bloat silently degrades output quality, there is no shared memory between sessions, and nothing verifies that code actually works. GSD Core Nexus solves all three: heavy work runs in fresh subagents, structured artifacts like `STATE.md` and `CONTEXT.md` survive session boundaries, and the verify step walks through what was built and generates fix plans before a phase is declared done. See [docs/explanation/context-engineering.md](docs/explanation/context-engineering.md) for the full reasoning.
 
 Troubleshooting? See [docs/how-to/recover-and-troubleshoot.md](docs/how-to/recover-and-troubleshoot.md).
+
+---
+
+## Uninstallation
+
+To uninstall GSD Core Nexus cleanly, pass the `--uninstall` flag along with the desired target scope (`--global` or `--local`) and optional runtime flag:
+
+```bash
+# Uninstall Claude Code global installation (default runtime)
+npx github:carlosatec/gsd-core --global --uninstall
+
+# Uninstall Antigravity global installation
+npx github:carlosatec/gsd-core --antigravity --global --uninstall
+
+# Uninstall Codex global installation
+npx github:carlosatec/gsd-core --codex --global --uninstall
+
+# Uninstall from local project directory only
+npx github:carlosatec/gsd-core --local --uninstall
+
+# Uninstall from all runtimes globally
+npx github:carlosatec/gsd-core --all --global --uninstall
+```
+
+### What is removed vs. what is preserved:
+
+- **Cleaned up:** `gsd-core/` runtime directory, all `gsd-*` commands/skills/agents, GSD-managed hooks in `hooks/`, and internal GSD manifests.
+- **Preserved:** Your custom files and preferences (`USER-PROFILE.md`, `dev-preferences.md`), custom non-GSD skills/agents, custom settings in `settings.json`/`config.toml`, and project `.planning/` directories.
 
 ---
 

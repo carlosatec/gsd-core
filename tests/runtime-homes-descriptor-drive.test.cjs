@@ -821,43 +821,40 @@ describe('detectAntigravityDirAmbiguity (migration/operator-guidance signal)', (
   const markerOf = (name) => path.join(dir(name), 'gsd-core', 'VERSION');
 
   test('single dir present → not ambiguous', () => {
-    const cli = dir('antigravity-cli');
+    const cfg = dir('config');
     const r = detectAntigravityDirAmbiguity({
       env: {},
       home: HOMEU,
-      existsSync: (p) => p === cli || p === markerOf('antigravity-cli'),
+      existsSync: (p) => p === cfg || p === markerOf('config'),
     });
     assert.strictEqual(r.ambiguous, false);
-    assert.strictEqual(r.resolved, cli);
-    assert.deepStrictEqual(r.presentDirs, [cli]);
-    assert.deepStrictEqual(r.gsdMarkedDirs, [cli]);
+    assert.strictEqual(r.resolved, cfg);
+    assert.deepStrictEqual(r.presentDirs, [cfg]);
+    assert.deepStrictEqual(r.gsdMarkedDirs, [cfg]);
     assert.strictEqual(r.envOverridden, false);
   });
 
-  test('legacy + cli both present, GSD marked in cli → ambiguous, resolves to cli', () => {
+  test('legacy + config both present, GSD marked in config → ambiguous, resolves to config', () => {
     const legacy = dir('antigravity');
-    const cli = dir('antigravity-cli');
+    const cfg = dir('config');
     const r = detectAntigravityDirAmbiguity({
       env: {},
       home: HOMEU,
-      existsSync: (p) => p === legacy || p === cli || p === markerOf('antigravity-cli'),
+      existsSync: (p) => p === legacy || p === cfg || p === markerOf('config'),
     });
     assert.strictEqual(r.ambiguous, true, 'two probe dirs present must flag ambiguity');
-    assert.strictEqual(r.resolved, cli, 'marker disambiguates resolution to cli');
-    assert.deepStrictEqual(r.presentDirs.sort(), [legacy, cli].sort());
-    assert.deepStrictEqual(r.gsdMarkedDirs, [cli]);
+    assert.strictEqual(r.resolved, cfg, 'marker disambiguates resolution to config');
+    assert.deepStrictEqual(r.presentDirs.sort(), [legacy, cfg].sort());
+    assert.deepStrictEqual(r.gsdMarkedDirs, [cfg]);
   });
 
-  test('misinstall surface: legacy + cli present but GSD marked ONLY in legacy → ambiguous, resolves to legacy', () => {
-    // This is exactly the #217 victim: GSD was written into the legacy/IDE dir,
-    // so the marker is in legacy and the resolver keeps it there. The detector
-    // flags ambiguity so the installer/update can prompt the operator.
+  test('misinstall surface: legacy + config present but GSD marked ONLY in legacy → ambiguous, resolves to legacy', () => {
     const legacy = dir('antigravity');
-    const cli = dir('antigravity-cli');
+    const cfg = dir('config');
     const r = detectAntigravityDirAmbiguity({
       env: {},
       home: HOMEU,
-      existsSync: (p) => p === legacy || p === cli || p === markerOf('antigravity'),
+      existsSync: (p) => p === legacy || p === cfg || p === markerOf('antigravity'),
     });
     assert.strictEqual(r.ambiguous, true);
     assert.strictEqual(r.resolved, legacy);
@@ -990,22 +987,22 @@ describe('descriptor-driven equivalence: generic-agents-root kimi probe hit/miss
   });
 
   // Verify resolveAntigravityGlobalDir wrapper delegates correctly
-  test('resolveAntigravityGlobalDir wrapper: probe-miss → ~/.gemini/antigravity', () => {
+  test('resolveAntigravityGlobalDir wrapper: probe-miss → ~/.gemini/config', () => {
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-equiv-ragd-miss-'));
     try {
       assert.strictEqual(
         resolveAntigravityGlobalDir({ env: {}, home: tmpHome, existsSync: () => false }),
-        path.join(tmpHome, '.gemini', 'antigravity'),
+        path.join(tmpHome, '.gemini', 'config'),
       );
     } finally {
       cleanup(tmpHome);
     }
   });
 
-  test('resolveAntigravityGlobalDir wrapper: probe-hit antigravity-ide', () => {
+  test('resolveAntigravityGlobalDir wrapper: probe-hit antigravity', () => {
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-equiv-ragd-hit-'));
     try {
-      const hitPath = path.join(tmpHome, '.gemini', 'antigravity-ide');
+      const hitPath = path.join(tmpHome, '.gemini', 'antigravity');
       assert.strictEqual(
         resolveAntigravityGlobalDir({
           env: {},
