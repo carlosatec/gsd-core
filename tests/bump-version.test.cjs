@@ -16,6 +16,7 @@ const {
   checkRepositoryVersionSync,
   bumpVersion,
 } = require('../scripts/bump-version.cjs');
+const { getPackageVersion } = require('../scripts/sync-manifest-versions.cjs');
 
 test('validateSemVer accepts valid SemVer strings and rejects invalid inputs', () => {
   assert.equal(validateSemVer('2.6.0'), '2.6.0');
@@ -41,9 +42,14 @@ test('checkRepositoryVersionSync passes on current codebase state', () => {
 });
 
 test('bumpVersion dry-run produces a complete report without touching files', () => {
-  const report = bumpVersion('2.7.0', { dryRun: true });
-  assert.equal(report.targetVersion, '2.7.0');
-  assert.equal(report.majorMinor, '2.7');
+  const currentVersion = getPackageVersion();
+  const [major, minor] = currentVersion.split('.').map(Number);
+  const nextTarget = `${major}.${minor + 1}.0`;
+  const expectedMajorMinor = `${major}.${minor + 1}`;
+
+  const report = bumpVersion(nextTarget, { dryRun: true });
+  assert.equal(report.targetVersion, nextTarget);
+  assert.equal(report.majorMinor, expectedMajorMinor);
   assert.ok(report.manifestsUpdated.length > 0);
   assert.ok(report.docsUpdated.length > 0);
   assert.ok(report.coreModulesUpdated.length > 0);

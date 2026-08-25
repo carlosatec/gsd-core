@@ -1,5 +1,5 @@
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.7.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 2.8.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -36,6 +36,10 @@ import coverageMod = require('./coverage.cjs');
 import scanPhasePlans = require('./plan-scan.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import sessionLoggerMod = require('./session-logger.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import visualGraphMod = require('./visual-graph-exporter.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import canvasGenMod = require('./canvas-roadmap-generator.cjs');
 const { SessionLogger } = sessionLoggerMod;
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
@@ -62,6 +66,7 @@ type UnifiedCommandName =
   | 'ship'
   | 'migrate'
   | 'tokens'
+  | 'graph'
   | 'help';
 
 interface UnifiedCommandOptions {
@@ -92,6 +97,7 @@ const CANONICAL_COMMAND_SET = new Set<UnifiedCommandName>([
   'ship',
   'migrate',
   'tokens',
+  'graph',
   'help',
 ]);
 
@@ -232,6 +238,39 @@ function resolveActivePhaseId(planningDir: string, explicitPhase?: string): stri
   return '1';
 }
 
+function extractTargetFilesFromPhase(planningDir: string, phaseId: string, cwd: string, singlePlanOnly: boolean = false): string[] {
+  const targetFiles: string[] = [];
+  if (!phaseId) return targetFiles;
+
+  const phaseDirPath = path.join(planningDir, 'phases');
+  try {
+    if (fs.existsSync(phaseDirPath)) {
+      const dirs = fs.readdirSync(phaseDirPath);
+      const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
+      if (matchingDir) {
+        const fullDir = path.join(phaseDirPath, matchingDir);
+        const { planFiles } = scanPhasePlans(fullDir);
+        const filesToScan = singlePlanOnly ? (planFiles[0] ? [planFiles[0]] : []) : planFiles;
+        for (const pf of filesToScan) {
+          const planContent = platformReadSync(path.join(fullDir, pf)) || '';
+          const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
+          if (fileMatches) {
+            for (const m of fileMatches) {
+              const clean = m.replace(/`/g, '');
+              if (!clean.endsWith('.md') && !clean.endsWith('.json') && fs.existsSync(path.join(cwd, clean))) {
+                targetFiles.push(clean);
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // non-blocking
+  }
+  return Array.from(new Set(targetFiles));
+}
+
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 
 /**
@@ -283,7 +322,7 @@ function runInternalUnifiedCommand(
         command: 'auto',
         action: 'AUTOPILOT_CYCLE',
         nextStep: 'executing phase plans sequentially with safety checkpoints',
-        message: 'GSD Core Nexus 2.7 Autopilot active. Running phase loop with guardrails.',
+        message: 'GSD Core Nexus 2.8 Autopilot active. Running phase loop with guardrails.',
       };
 
     case 'status': {
@@ -296,40 +335,13 @@ function runInternalUnifiedCommand(
         action: 'DISPLAY_STATUS',
         nextStep: 'execute next recommended action based on STATE.md',
         data: { telemetry },
-        message: `GSD Core Nexus 2.7 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+        message: `GSD Core Nexus 2.8 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
       };
     }
 
     case 'plan': {
       const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
-      let targetFiles: string[] = [];
-
-      // Discover target files from phase directory or graph
-      if (phaseId) {
-        const phaseDirPath = path.join(planningDir, 'phases');
-        try {
-          if (fs.existsSync(phaseDirPath)) {
-            const dirs = fs.readdirSync(phaseDirPath);
-            const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
-            if (matchingDir) {
-              const fullDir = path.join(phaseDirPath, matchingDir);
-              const { planFiles } = scanPhasePlans(fullDir);
-              const planFile = planFiles[0];
-              if (planFile) {
-                const planContent = platformReadSync(path.join(fullDir, planFile)) || '';
-                const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
-                if (fileMatches) {
-                  targetFiles = Array.from(new Set(fileMatches.map(m => m.replace(/`/g, '')))).filter(
-                    f => !f.endsWith('.md') && !f.endsWith('.json') && fs.existsSync(path.join(cwd, f))
-                  );
-                }
-              }
-            }
-          }
-        } catch {
-          // non-blocking
-        }
-      }
+      let targetFiles = extractTargetFilesFromPhase(planningDir, phaseId, cwd, true);
 
       if (targetFiles.length === 0) {
         const fallbackGraph = loadCodebaseGraph(planningDir) || buildCodebaseGraph(cwd);
@@ -374,37 +386,7 @@ function runInternalUnifiedCommand(
 
     case 'exec': {
       const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
-      let filesToModify: string[] = [];
-
-      if (phaseId) {
-        const phaseDirPath = path.join(planningDir, 'phases');
-        try {
-          if (fs.existsSync(phaseDirPath)) {
-            const dirs = fs.readdirSync(phaseDirPath);
-            const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
-            if (matchingDir) {
-              const fullDir = path.join(phaseDirPath, matchingDir);
-              const { planFiles } = scanPhasePlans(fullDir);
-              for (const pf of planFiles) {
-                const planContent = platformReadSync(path.join(fullDir, pf)) || '';
-                const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
-                if (fileMatches) {
-                  for (const m of fileMatches) {
-                    const clean = m.replace(/`/g, '');
-                    if (!clean.endsWith('.md') && !clean.endsWith('.json') && fs.existsSync(path.join(cwd, clean))) {
-                      filesToModify.push(clean);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } catch {
-          // non-blocking
-        }
-      }
-
-      filesToModify = Array.from(new Set(filesToModify));
+      const filesToModify = extractTargetFilesFromPhase(planningDir, phaseId, cwd, false);
 
       const preFlightReport = runPreFlightChecks({
         taskId: phaseId || 'active-phase',
@@ -509,12 +491,29 @@ function runInternalUnifiedCommand(
       };
     }
 
+    case 'graph': {
+      const { htmlPath, payload } = visualGraphMod.exportVisualGraph(planningDir, cwd);
+      const canvasResult = canvasGenMod.exportRoadmapCanvas(planningDir);
+      return {
+        command: 'graph',
+        action: 'EXPORT_VISUAL_GRAPH',
+        nextStep: 'open .planning/intel/graph-view.html or .planning/ROADMAP.canvas',
+        data: {
+          htmlPath,
+          canvasPath: canvasResult.canvasPath,
+          totalNodes: payload.stats.totalNodes,
+          totalLinks: payload.stats.totalLinks,
+        },
+        message: `Visual knowledge graph exported to ${htmlPath} (${payload.stats.totalNodes} nodes, ${payload.stats.totalLinks} links) and ${canvasResult.canvasPath}.`,
+      };
+    }
+
     case 'help':
       return {
         command: 'help',
         action: 'DISPLAY_HELP',
         nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-        message: 'GSD Core Nexus 2.7 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+        message: 'GSD Core Nexus 2.8 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
       };
   }
 }

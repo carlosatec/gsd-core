@@ -209,6 +209,42 @@ function updateCoreSourceModules(root, version, majorMinor, dryRun = false) {
     }
   }
 
+  // 5. src/visual-graph-exporter.cts
+  const visualGraphPath = path.join(root, 'src', 'visual-graph-exporter.cts');
+  if (fs.existsSync(visualGraphPath)) {
+    let content = fs.readFileSync(visualGraphPath, 'utf8');
+    const prev = content;
+    content = content.replace(/GSD Core Nexus \d+\.\d+(\+)?/g, `GSD Core Nexus ${majorMinor}`);
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(visualGraphPath, content, 'utf8');
+      changed.push('src/visual-graph-exporter.cts');
+    }
+  }
+
+  // 6. src/obsidian-interop.cts
+  const obsidianPath = path.join(root, 'src', 'obsidian-interop.cts');
+  if (fs.existsSync(obsidianPath)) {
+    let content = fs.readFileSync(obsidianPath, 'utf8');
+    const prev = content;
+    content = content.replace(/GSD Core Nexus \d+\.\d+(\+)?/g, `GSD Core Nexus ${majorMinor}`);
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(obsidianPath, content, 'utf8');
+      changed.push('src/obsidian-interop.cts');
+    }
+  }
+
+  // 7. src/canvas-roadmap-generator.cts
+  const canvasPath = path.join(root, 'src', 'canvas-roadmap-generator.cts');
+  if (fs.existsSync(canvasPath)) {
+    let content = fs.readFileSync(canvasPath, 'utf8');
+    const prev = content;
+    content = content.replace(/GSD Core Nexus \d+\.\d+(\+)?/g, `GSD Core Nexus ${majorMinor}`);
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(canvasPath, content, 'utf8');
+      changed.push('src/canvas-roadmap-generator.cts');
+    }
+  }
+
   return changed;
 }
 

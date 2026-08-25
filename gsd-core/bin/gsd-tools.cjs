@@ -3685,6 +3685,60 @@ function routeSession({ args, cwd, raw, error }) {
   }
 }
 
+function openBrowserUrl(targetPath) {
+  const url = targetPath.startsWith('http') ? targetPath : `file://${path.resolve(targetPath)}`;
+  const cmd = process.platform === 'win32'
+    ? `cmd.exe /c start "" "${url}"`
+    : process.platform === 'darwin'
+      ? `open "${url}"`
+      : `xdg-open "${url}"`;
+  try {
+    require('node:child_process').exec(cmd);
+  } catch {
+    // non-blocking
+  }
+}
+
+function routeGraph({ args, cwd, raw }) {
+  const visualGraph = require('./lib/visual-graph-exporter.cjs');
+  const canvasGen = require('./lib/canvas-roadmap-generator.cjs');
+  const planningDir = path.join(cwd, '.planning');
+
+  const isCanvasOnly = args.includes('--canvas');
+  const shouldOpen = args.includes('--open');
+
+  if (isCanvasOnly) {
+    const { canvasPath, payload } = canvasGen.exportRoadmapCanvas(planningDir);
+    if (raw) {
+      process.stdout.write(JSON.stringify(payload, null, 2) + '\n');
+      return;
+    }
+    process.stdout.write(`Exported Roadmap Canvas to: ${canvasPath} (${payload.nodes.length} nodes, ${payload.edges.length} edges)\n`);
+    if (shouldOpen) {
+      openBrowserUrl(canvasPath);
+    }
+    return;
+  }
+
+  const { htmlPath, payload } = visualGraph.exportVisualGraph(planningDir, cwd);
+  const canvasRes = canvasGen.exportRoadmapCanvas(planningDir);
+
+  if (raw) {
+    process.stdout.write(JSON.stringify({ htmlPath, canvasPath: canvasRes.canvasPath, stats: payload.stats }, null, 2) + '\n');
+    return;
+  }
+
+  process.stdout.write(`\n🌐 GSD Visual Knowledge Graph Exported:\n`);
+  process.stdout.write(`  • Interactive HTML Graph: ${htmlPath}\n`);
+  process.stdout.write(`  • Visual Roadmap Canvas:  ${canvasRes.canvasPath}\n`);
+  process.stdout.write(`  • Graph Stats: ${payload.stats.totalNodes} nodes, ${payload.stats.totalLinks} links, ${payload.stats.totalDecisions} decisions, ${payload.stats.totalPhases} phases\n\n`);
+
+  if (shouldOpen) {
+    process.stdout.write(`Opening interactive graph in your default browser...\n`);
+    openBrowserUrl(htmlPath);
+  }
+}
+
 
 /**
  * #3275: resolve a DECLARED command name to the file a spawn can actually start.
@@ -3834,6 +3888,7 @@ const HOST_COMMAND_ROUTERS = {
     'windows': routeWindows,
     'skills-root': routeSkillsRoot,
     'session': routeSession,
+    'graph': routeGraph,
 };
 
 // Returns true when consumed (suppress "Unknown command"), false to fall

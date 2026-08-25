@@ -13,6 +13,12 @@ const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs")
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const visualGraph = require("./visual-graph-exporter.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const obsidianInterop = require("./obsidian-interop.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const canvasGenerator = require("./canvas-roadmap-generator.cjs");
 // ─── Markdown Generators ──────────────────────────────────────────────────────
 /**
  * Generates an up-to-date Markdown document summarizing the project architecture from the AST graph.
@@ -21,7 +27,7 @@ function generateArchitectureDoc(graph) {
     const lines = [
         '# Codebase Architecture & Topology (Living Document)',
         '',
-        `> Auto-generated and verified by GSD Core Nexus 2.7 Living Docs on ${new Date().toISOString()}.`,
+        `> Auto-generated and verified by GSD Core Nexus 2.8 Living Docs on ${new Date().toISOString()}.`,
         '',
         '## System Metrics',
         '',
@@ -108,6 +114,30 @@ function syncLivingDocs(planningDir, rootDir) {
     const apiPath = node_path_1.default.join(codebaseDir, 'APIS.md');
     (0, shell_command_projection_cjs_1.platformWriteSync)(apiPath, apiDoc);
     generatedDocs.push(apiPath);
+    // 5. Generate Standalone Visual Knowledge Graph HTML
+    try {
+        const { htmlPath } = visualGraph.exportVisualGraph(planningDir, root);
+        generatedDocs.push(htmlPath);
+    }
+    catch {
+        // non-blocking
+    }
+    // 6. Generate Obsidian Backlink Index
+    try {
+        const { filePath } = obsidianInterop.saveBacklinkIndex(planningDir, root);
+        generatedDocs.push(filePath);
+    }
+    catch {
+        // non-blocking
+    }
+    // 7. Generate Visual Canvas Roadmap
+    try {
+        const { canvasPath } = canvasGenerator.exportRoadmapCanvas(planningDir);
+        generatedDocs.push(canvasPath);
+    }
+    catch {
+        // non-blocking
+    }
     return {
         timestamp: new Date().toISOString(),
         syncedFiles: Object.keys(graph.files),

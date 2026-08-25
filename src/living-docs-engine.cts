@@ -10,6 +10,12 @@ import { platformWriteSync, platformEnsureDir } from './shell-command-projection
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import visualGraph = require('./visual-graph-exporter.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import obsidianInterop = require('./obsidian-interop.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import canvasGenerator = require('./canvas-roadmap-generator.cjs');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +46,7 @@ function generateArchitectureDoc(graph: CodebaseGraph): string {
   const lines: string[] = [
     '# Codebase Architecture & Topology (Living Document)',
     '',
-    `> Auto-generated and verified by GSD Core Nexus 2.7 Living Docs on ${new Date().toISOString()}.`,
+    `> Auto-generated and verified by GSD Core Nexus 2.8 Living Docs on ${new Date().toISOString()}.`,
     '',
     '## System Metrics',
     '',
@@ -141,6 +147,30 @@ function syncLivingDocs(planningDir: string, rootDir?: string): LivingDocsSyncRe
   const apiPath = path.join(codebaseDir, 'APIS.md');
   platformWriteSync(apiPath, apiDoc);
   generatedDocs.push(apiPath);
+
+  // 5. Generate Standalone Visual Knowledge Graph HTML
+  try {
+    const { htmlPath } = visualGraph.exportVisualGraph(planningDir, root);
+    generatedDocs.push(htmlPath);
+  } catch {
+    // non-blocking
+  }
+
+  // 6. Generate Obsidian Backlink Index
+  try {
+    const { filePath } = obsidianInterop.saveBacklinkIndex(planningDir, root);
+    generatedDocs.push(filePath);
+  } catch {
+    // non-blocking
+  }
+
+  // 7. Generate Visual Canvas Roadmap
+  try {
+    const { canvasPath } = canvasGenerator.exportRoadmapCanvas(planningDir);
+    generatedDocs.push(canvasPath);
+  } catch {
+    // non-blocking
+  }
 
   return {
     timestamp: new Date().toISOString(),

@@ -25,6 +25,9 @@ const testFiles = [
   'tests/gsd-statusline.test.cjs',
   'tests/deepseek-harness-adapter.test.cjs',
   'tests/session-logger-replay.test.cjs',
+  'tests/visual-graph-exporter.test.cjs',
+  'tests/obsidian-interop.test.cjs',
+  'tests/canvas-roadmap-generator.test.cjs',
   'tests/bump-version.test.cjs'
 ];
 

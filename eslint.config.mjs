@@ -330,6 +330,9 @@ export default tseslint.config(
       'gsd-core/bin/lib/unified-workflow-hub.cjs',
       'gsd-core/bin/lib/session-logger.cjs',
       'gsd-core/bin/lib/session-replay.cjs',
+      'gsd-core/bin/lib/visual-graph-exporter.cjs',
+      'gsd-core/bin/lib/obsidian-interop.cjs',
+      'gsd-core/bin/lib/canvas-roadmap-generator.cjs',
       // #3477 follow-up: verbatim third-party artifact vendored so gsd-core/bin/**
       // carries zero external requires (installed trees have no node_modules).
       // See gsd-core/bin/lib/vendor/README.md; never lint/edit these by hand.
