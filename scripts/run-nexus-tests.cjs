@@ -1,4 +1,14 @@
 const { spawnSync } = require('child_process');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure hooks are pre-built so concurrent tests don't race on build-hooks
+const hooksDist = path.join(__dirname, '..', 'hooks', 'dist');
+if (!fs.existsSync(hooksDist)) {
+  console.log('\n📦 Pre-building hooks for test suite execution...');
+  spawnSync(process.execPath, [path.join(__dirname, 'build-hooks.js')], { stdio: 'inherit' });
+}
 
 const testFiles = [
   'tests/installer-language-prompt.test.cjs',
@@ -31,9 +41,10 @@ const testFiles = [
   'tests/bump-version.test.cjs'
 ];
 
-console.log(`\n🚀 Running GSD Core Nexus test suite (${testFiles.length} suites)...\n`);
+const concurrency = Math.max(1, Math.min(os.cpus()?.length || 2, 4));
+console.log(`\n🚀 Running GSD Core Nexus test suite (${testFiles.length} suites, concurrency: ${concurrency})...\n`);
 
-const args = ['--test', ...testFiles];
+const args = ['--test', `--test-concurrency=${concurrency}`, ...testFiles];
 const result = spawnSync(process.execPath, args, { stdio: 'inherit' });
 
 if (result.status !== 0) {
@@ -42,3 +53,4 @@ if (result.status !== 0) {
 } else {
   console.log(`\n✅ All GSD Core Nexus tests passed successfully!\n`);
 }
+

@@ -44,5 +44,9 @@ jobs:
       - name: Build runtime library
         run: npm run build:lib
 
+      - name: Build hooks
+        run: npm run build:hooks
+
       - name: Run GSD Core Nexus Test Suite
         run: node scripts/run-nexus-tests.cjs
+
