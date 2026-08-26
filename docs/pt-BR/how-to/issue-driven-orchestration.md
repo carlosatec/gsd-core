@@ -182,10 +182,10 @@ escopo deste guia.
 
 ## Relacionados
 
-- [O loop de fase](explanation/the-phase-loop.md) — como discuss → plan → execute → verify → ship se encaixam como um ciclo repetitivo.
-- [Como trabalhar com workspaces](how-to/work-in-parallel-with-workstreams.md) — guia passo a passo para criar e gerenciar worktrees paralelas.
-- [Índice de documentação](README.md) — sumário completo da documentação do GSD Core.
-- [docs/USER-GUIDE.md](./USER-GUIDE.md) — guias orientados a tarefas dos comandos individuais referenciados acima.
-- [docs/COMMANDS.md](COMMANDS.md) — referência completa dos comandos `/gsd-*`.
-- [docs/FEATURES.md](FEATURES.md) — matriz de capacidades por funcionalidade (workspaces, manager, autonomous, verify, review, ship).
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) — ciclo de vida dos artefatos de fase e mecânica do `STATE.md`.
+- [O loop de fase](../../explanation/the-phase-loop.md) — como discuss → plan → execute → verify → ship se encaixam como um ciclo repetitivo.
+- [Como trabalhar com workspaces](../../how-to/work-in-parallel-with-workstreams.md) — guia passo a passo para criar e gerenciar worktrees paralelas.
+- [Índice de documentação](../../README.md) — sumário completo da documentação do GSD Core.
+- [docs/USER-GUIDE.md](../../USER-GUIDE.md) — guias orientados a tarefas dos comandos individuais referenciados acima.
+- [docs/COMMANDS.md](../../COMMANDS.md) — referência completa dos comandos `/gsd-*`.
+- [docs/FEATURES.md](../../FEATURES.md) — matriz de capacidades por funcionalidade (workspaces, manager, autonomous, verify, review, ship).
+- [docs/ARCHITECTURE.md](../../ARCHITECTURE.md) — ciclo de vida dos artefatos de fase e mecânica do `STATE.md`.

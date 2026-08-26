@@ -1,6 +1,6 @@
 # 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.8
 
-> 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](TUTORIAL.md)  
+> 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](../../tutorials/practical-tutorial.md)  
 > **Git. Ship. Done.**  
 > O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 2.8**.
 
@@ -371,6 +371,8 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 | Ver painel de economia de tokens | `/gsd:tokens` |
 | Replay da última sessão de IA | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
 | Exportar post-mortem de sessão | `node gsd-core/bin/gsd-tools.cjs session export latest --md` |
+| Auditar documentação e links 404 | `npm run docs:check` |
+| Gerar orientações para a IA | `npm run docs:audit` |
 | Elevar versão do ecossistema | `npm run version:bump <version>` |
 | Verificar sincronização do repo | `npm run version:check` |
 | Desinstalar o GSD com segurança | `npx github:carlosatec/gsd-core --all --global --uninstall` |

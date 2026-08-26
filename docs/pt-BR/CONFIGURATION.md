@@ -287,7 +287,7 @@ O namespace `code_quality.*` controla ferramentas opcionais de análise estrutur
 
 `ship.pr_body_sections` adiciona seções adicionais ao corpo do PR para conteúdo de PRD/corpo do PR específico do projeto em `/gsd-ship` sem editar `gsd-core/workflows/ship.md`.
 
-Para um guia do usuário com exemplos de integração e solução de problemas, consulte [Seções Personalizadas do Corpo do PR](../ship-pr-body-sections.md).
+Para um guia do usuário com exemplos de integração e solução de problemas, consulte [Seções Personalizadas do Corpo do PR](../reference/ship-pr-body-sections.md).
 
 Esta lista é apenas para adição: as entradas configuradas são adicionadas após as seções principais de `Summary`, `Changes`, `Requirements Addressed`, `Verification` e `Key Decisions`. Elas não podem substituir, remover ou reordenar as seções obrigatórias.
 

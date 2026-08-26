@@ -26,7 +26,7 @@ the proposals that have asked for it.
 - **The ask as filed also carried a defect.** #3037 proposed canonicalizing
   `pi`, `oh-my-pi` and `pi-coding-agent` to `omp`. OMP is a *fork* of pi
   (pi.dev), and gsd-core already ships a distinct `pi` runtime
-  ([`capabilities/pi/capability.json`](../capabilities/pi/capability.json), home
+  ([`capabilities/pi/capability.json`](../../../capabilities/pi/capability.json), home
   `~/.pi/agent`, tier 2). That alias list would relocate an existing shipped
   runtime's config home rather than add a new one. This is recorded so a future
   revision does not repeat it — it is a correction, not an additional ground for
@@ -39,7 +39,7 @@ not deny, and should never be cited against:
 
 - **Shipping an out-of-tree host plugin for OMP, or for any other host.** This
   is welcome and supported. `gsd-omp` is already listed in
-  [`docs/registries/eos.json`](../docs/registries/eos.json) and remains listed;
+  [`docs/registries/eos.json`](../../registries/eos.json) and remains listed;
   registry inclusion is explicitly non-endorsement and is unaffected by this
   decision.
 - **Feature capabilities** (`role: "feature"`) published out-of-tree under

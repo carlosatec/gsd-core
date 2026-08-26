@@ -33,7 +33,7 @@ Para voltar ao modo anterior:
 node gsd-tools.cjs config-set workflow.discuss_mode discuss
 ```
 
-Veja [Modos de discussão explicados](../workflow-discuss-mode.md) para uma comparação completa, incluindo quando cada modo tende a economizar tempo.
+Veja [Modos de discussão explicados](../reference/workflow-discuss-mode.md) para uma comparação completa, incluindo quando cada modo tende a economizar tempo.
 
 ---
 
@@ -153,6 +153,6 @@ O planejador sintetiza o CONTEXT.md a partir do PRD e trata todos os requisitos 
 ## Relacionados
 
 - [Planejar uma fase](plan-a-phase.md)
-- [Modos de discussão](../workflow-discuss-mode.md)
+- [Modos de discussão](../reference/workflow-discuss-mode.md)
 - [Esquema do CONTEXT.md](../reference/context-md.md)
 - [Índice de documentação](../README.md)

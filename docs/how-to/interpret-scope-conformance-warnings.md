@@ -90,7 +90,7 @@ Absence of `scope_out_of_declared` / `scope_check_unavailable` warnings is not p
 
 ## Related
 
-- [CLI Tools reference — worktree commands](../CLI-TOOLS.md#worktree-commands) — the `worktree record-agent` / `worktree create` `--files` reference
+- [CLI Tools reference — worktree commands](../reference/CLI-TOOLS.md#worktree-commands) — the `worktree record-agent` / `worktree create` `--files` reference
 - [Execute a phase](execute-a-phase.md)
 - [Debug a failed execution](debug-a-failed-execution.md)
 - [docs index](../README.md)

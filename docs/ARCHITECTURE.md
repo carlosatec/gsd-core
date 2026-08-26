@@ -55,12 +55,15 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
        │                             │                             │                         └────┬───────────────────────┘
        │                             │                             │                              │
 ┌──────▼─────────────────────────────▼─────────────────────────────▼──────────────────────────────▼───────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33)                             │
+│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33, D-68..D-73)                 │
 │   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)                                  │
+│   src/visual-graph-exporter.cts ── Gerador HTML Canvas 2D 100% offline & snapshot PNG (/gsd-graph — Fase 16)            │
+│   src/canvas-roadmap-generator.cts ── Exportador JSON Open Canvas para Obsidian (ROADMAP.canvas — Fase 16)              │
+│   src/obsidian-interop.cts ── Suporte a [[wikilinks]] e índice bidirecional (.planning/intel/backlinks.json — Fase 16)  │
 │   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                                           │
 │   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                                               │
 │   src/anti-pattern-store.cts ◄── Memória durável de lições de auto-cura & replay de sessão (.planning/intel/)           │
-│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift)                      │
+│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift, Kotlin, Java)         │
 └──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
        │                                                           │
 ┌──────▼──────────────────────┐                           ┌────────▼───────────────────────────────┐
@@ -381,7 +384,7 @@ The `CONTEXT.md` predicate fact-store — every backtick-wrapped `CLASS.subkey=v
 
 `scripts/gen-context-index.cjs --check` is the CI drift-guard for the committed `docs/CONTEXT-INDEX.json` artifact: it fails on staleness between a fresh parse of `CONTEXT.md` and the committed file, and on any duplicate predicate ID. It is wired into `lint:generated-sync` (so `lint:ci`, so CI). `docs/CONTEXT-INDEX.json` is **generated — never hand-edit it**; regenerate with `gen-context-index.cjs --write` (also wired into `build`, after `build:lib`, and into `regen:derived`). The generator `require()`s the compiled `context-predicates.cjs`, so it must run after `build:lib` in any pipeline; `.github/workflows/test.yml` does this.
 
-The committed index intentionally carries **no `line` field** for any predicate (ADR-1671 open question 4, resolved by #2928) — committed-but-uncompared metadata goes silently stale, the same defect class the drift-guard exists to catch, with the alarm removed. The live `gsd-tools query context-predicates` parse still returns `line`/`section` for callers that want to cite a source location. See [ADR-1671](adr/1671-dynamic-context-management-platform.md) and [CLI Tools Reference](CLI-TOOLS.md#query-context-predicates).
+The committed index intentionally carries **no `line` field** for any predicate (ADR-1671 open question 4, resolved by #2928) — committed-but-uncompared metadata goes silently stale, the same defect class the drift-guard exists to catch, with the alarm removed. The live `gsd-tools query context-predicates` parse still returns `line`/`section` for callers that want to cite a source location. See [ADR-1671](adr/1671-dynamic-context-management-platform.md) and [CLI Tools Reference](reference/CLI-TOOLS.md#query-context-predicates).
 
 ### Workflow Fragmentization and Emission (`src/workflow-fragments.cts`, ADR-1671)
 
@@ -817,7 +820,7 @@ The installer (`bin/install.js`, ~10,700 lines) handles:
 5. **Path normalization** — Replaces `~/.claude/` paths with runtime-specific paths
 6. **Settings integration** — Registers hooks in runtime's `settings.json`
 7. **Patch backup** — Since v1.17, backs up locally modified files to `gsd-local-patches/` for `/gsd-update --reapply`
-8. **Manifest tracking** — Writes `gsd-file-manifest.json` for clean uninstall. The manifest also records which `runtime` and which `scope` (`global`/`local`) wrote it, under a `manifestVersion` schema field, so a reader can answer "which surfaces are installed, at which scopes" without inferring it from the directory the file sits in ([ADR 2866](adr/2866-install-surface-resolution.md), #2872). Manifests written before that carry no such fields and are read without error — no reinstall is required. See [Installer Migrations → File Manifest](installer-migrations.md#file-manifest)
+8. **Manifest tracking** — Writes `gsd-file-manifest.json` for clean uninstall. The manifest also records which `runtime` and which `scope` (`global`/`local`) wrote it, under a `manifestVersion` schema field, so a reader can answer "which surfaces are installed, at which scopes" without inferring it from the directory the file sits in ([ADR 2866](adr/2866-install-surface-resolution.md), #2872). Manifests written before that carry no such fields and are read without error — no reinstall is required. See [Installer Migrations → File Manifest](reference/installer-migrations.md#file-manifest)
 9. **Uninstall mode** — `--uninstall` removes all GSD files, hooks, and settings
 
 `installRuntimeArtifacts` (`install-engine.cjs`) returns the executed plan it ran — per kind, per
@@ -833,7 +836,7 @@ callers are unaffected. This completes [ADR 58](adr/58-runtime-install-policy-mo
 
 Install-time file moves, stale-artifact cleanup, config rewrites, and user-data
 preservation are governed by the Installer Migration Module. See
-[Installer Migrations](installer-migrations.md) and
+[Installer Migrations](reference/installer-migrations.md) and
 [ADR 0008](adr/0008-installer-migration-module.md).
 The migration module also owns the gated first-time baseline scan for legacy
 installs, classifying known runtime install surfaces before later migrations
@@ -956,7 +959,7 @@ GSD supports multiple AI coding runtimes through a unified command/workflow arch
 
 This matrix describes the runtime surfaces the installer materializes today.
 The migration-specific ownership and source snapshots live in
-[Installer Migrations](installer-migrations.md#runtime-configuration-contract-registry).
+[Installer Migrations](reference/installer-migrations.md#runtime-configuration-contract-registry).
 
 | Runtime | Global root | Local root | Invocation surface | Agent surface | Config and hooks |
 | --- | --- | --- | --- | --- | --- |
@@ -1014,5 +1017,5 @@ The installer handles all translation at install time. Workflows and agents are 
 
 - [Multi-agent orchestration](explanation/multi-agent-orchestration.md)
 - [Security model](explanation/security-model.md)
-- [CLI tools](CLI-TOOLS.md)
+- [CLI tools](reference/CLI-TOOLS.md)
 - [docs index](README.md)

@@ -60,7 +60,7 @@ O comando `/gsd-pause-work` do GSD salva o estado de execução. A mensagem de A
 
 ## Configuração
 
-Ambos os hooks são registrados automaticamente durante a instalação do `npx @opengsd/gsd-core` — nenhuma etapa manual é necessária em circunstâncias normais. Para detalhes de configuração de hooks, substituições de limiares e exemplos de registro manual, consulte [Configuração](CONFIGURATION.md).
+Ambos os hooks são registrados automaticamente durante a instalação do `npx @opengsd/gsd-core` — nenhuma etapa manual é necessária em circunstâncias normais. Para detalhes de configuração de hooks, substituições de limiares e exemplos de registro manual, consulte [Configuração](../../CONFIGURATION.md).
 
 Como referência rápida: o hook da barra de status se registra como `statusLine` em `settings.json`; o monitor de contexto (`gsd-context-monitor.js`) se registra como um hook `PostToolUse` (ou `AfterTool` para o Gemini CLI). Ambas as entradas utilizam o caminho absoluto do executável Node que executou o instalador. No Windows PowerShell, prefixe caminhos de executáveis entre aspas com `&`.
 
@@ -75,6 +75,6 @@ Como referência rápida: o hook da barra de status se registra como `statusLine
 
 ## Relacionados
 
-- [Arquitetura](ARCHITECTURE.md)
-- [Configuração](CONFIGURATION.md)
-- [Índice da documentação](README.md)
+- [Arquitetura](../../ARCHITECTURE.md)
+- [Configuração](../../CONFIGURATION.md)
+- [Índice da documentação](../../README.md)

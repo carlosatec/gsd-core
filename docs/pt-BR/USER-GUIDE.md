@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 2.5
+# Guia do Usuário — GSD Core Nexus 2.8
 
-Guia prático e narrativo do GSD Core Nexus 2.5 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 2.8 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -11,6 +11,9 @@ Guia prático e narrativo do GSD Core Nexus 2.5 — oriente-se aqui e siga os li
 
 - [A Superfície Unificada de 10 Comandos](#a-superfície-unificada-de-10-comandos)
 - [Visão Geral do Ciclo de Vida do Projeto](#visão-geral-do-ciclo-de-vida-do-projeto)
+- [Inteligência de Sessão & Replay Determinístico CLI](#inteligência-de-sessão--replay-determinístico-cli)
+- [Grafo de Conhecimento & Obsidian Canvas](#grafo-de-conhecimento--obsidian-canvas)
+- [DeepSeek Harness & Suporte Multi-Runtime](#deepseek-harness--suporte-multi-runtime)
 - [Diagramas de Fluxo de Trabalho](#diagramas-de-fluxo-de-trabalho)
 - [Arquitetura de Validação & Qualidade](#arquitetura-de-validação--qualidade)
 - [Contrato de Design e Auditoria de UI](#contrato-de-design-e-auditoria-de-ui)
@@ -26,7 +29,7 @@ Guia prático e narrativo do GSD Core Nexus 2.5 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 10 Comandos
 
-A partir do GSD Core Nexus 2.5, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 2.8, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -38,7 +41,7 @@ A partir do GSD Core Nexus 2.5, a interface pública é simplificada e consolida
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Dashboard de telemetria, economia e consumo de contexto | `--raw`, `--history` |
-| `/gsd-migrate` | Migração e upgrade de projetos legados para o formato v2.5 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Migração e upgrade de projetos legados para o formato v2.8 | `--dry-run`, `--force` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
 ---
@@ -47,7 +50,7 @@ A partir do GSD Core Nexus 2.5, a interface pública é simplificada e consolida
 
 O fluxo essencial do GSD é: **status → plan → exec → review → verify → ship**, repetido para cada fase.
 
-Consulte [Seu Primeiro Projeto](../tutorials/your-first-project.md) para um tutorial passo a passo.
+Consulte [Seu Primeiro Projeto](tutorials/your-first-project.md) para um tutorial passo a passo.
 
 **Flags principais:**
 
@@ -60,6 +63,40 @@ Consulte [Seu Primeiro Projeto](../tutorials/your-first-project.md) para um tuto
 | `--draft` | `/gsd-ship` | Criar Pull Request em modo rascunho (*Draft PR*) |
 
 Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.md`](COMMANDS.md).
+
+---
+
+## Inteligência de Sessão & Replay Determinístico CLI
+
+O GSD Core Nexus 2.8 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+
+```bash
+# Replay da última sessão no terminal
+gsd-tools session replay latest
+
+# Filtrar o replay apenas por falhas e mutações de código
+gsd-tools session replay latest --errors-only
+gsd-tools session replay latest --diffs
+
+# Exportar a linha do tempo da sessão em Markdown
+gsd-tools session export latest --md
+```
+
+---
+
+## Grafo de Conhecimento & Obsidian Canvas
+
+O GSD Core Nexus gera nativamente artefatos visuais de conhecimento a partir do AST do código (100% offline, zero dependências externas):
+
+- **Obsidian Open Canvas:** `.planning/ROADMAP.canvas` — layout de nós visuais coloridos por fases, decisões e módulos.
+- **Índice de Wikilinks & Backlinks:** `.planning/intel/backlinks.json` — índice de ligações bidirecionais para navegação no Obsidian Vault.
+- **Grafo Visual Interativo (HTML):** O comando `/gsd-graph` exporta um visualizador HTML/Canvas 2D autônomo e responsivo com física PageRank e exportação de imagem PNG.
+
+---
+
+## DeepSeek Harness & Suporte Multi-Runtime
+
+O GSD 2.8 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
 
 ---
 

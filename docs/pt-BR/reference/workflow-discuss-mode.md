@@ -2,7 +2,7 @@
 
 A fase de discuss do GSD Core oferece dois modos para coletar o contexto de implementação antes do início do planejamento. Entender quando usar cada um ajuda a passar da fase de perguntas para um `CONTEXT.md` confirmado com menos idas e vindas.
 
-Para instruções passo a passo sobre como executar cada modo, consulte o [Como realizar discuss de uma fase](how-to/discuss-a-phase.md).
+Para instruções passo a passo sobre como executar cada modo, consulte o [Como realizar discuss de uma fase](../../how-to/discuss-a-phase.md).
 
 ## Modos
 
@@ -32,7 +32,7 @@ node gsd-tools.cjs config-set workflow.discuss_mode assumptions
 node gsd-tools.cjs config-set workflow.discuss_mode discuss
 ```
 
-A configuração é por projeto (armazenada em `.planning/config.json`). Consulte o [esquema do CONTEXT.md](reference/context-md.md) para ver a estrutura completa do arquivo produzido por ambos os modos.
+A configuração é por projeto (armazenada em `.planning/config.json`). Consulte o [esquema do CONTEXT.md](../../reference/context-md.md) para ver a estrutura completa do arquivo produzido por ambos os modos.
 
 ## Como o Modo Assumptions Funciona
 
@@ -65,11 +65,11 @@ Ambos os modos produzem um `CONTEXT.md` idêntico com as mesmas seis seções:
 - `<specifics>` — Referências e preferências do usuário
 - `<deferred>` — Ideias registradas para fases futuras
 
-Os agentes downstream (researcher, planner, checker) consomem esse arquivo de forma idêntica, independentemente do modo que o produziu. Consulte o [esquema do CONTEXT.md](reference/context-md.md) para a referência completa dos campos.
+Os agentes downstream (researcher, planner, checker) consomem esse arquivo de forma idêntica, independentemente do modo que o produziu. Consulte o [esquema do CONTEXT.md](../../reference/context-md.md) para a referência completa dos campos.
 
 ## Relacionados
 
-- [Realizar discuss de uma fase](how-to/discuss-a-phase.md) — passo a passo para executar `/gsd-discuss-phase` em qualquer modo.
-- [Esquema do CONTEXT.md](reference/context-md.md) — referência completa dos campos do arquivo produzido por ambos os modos.
-- [O ciclo de fases](explanation/the-phase-loop.md) — como o discuss se encaixa no ciclo mais amplo de discuss → plan → execute → verify → ship.
-- [Índice de documentação](README.md) — sumário completo da documentação do GSD Core.
+- [Realizar discuss de uma fase](../../how-to/discuss-a-phase.md) — passo a passo para executar `/gsd-discuss-phase` em qualquer modo.
+- [Esquema do CONTEXT.md](../../reference/context-md.md) — referência completa dos campos do arquivo produzido por ambos os modos.
+- [O ciclo de fases](../../explanation/the-phase-loop.md) — como o discuss se encaixa no ciclo mais amplo de discuss → plan → execute → verify → ship.
+- [Índice de documentação](../../README.md) — sumário completo da documentação do GSD Core.

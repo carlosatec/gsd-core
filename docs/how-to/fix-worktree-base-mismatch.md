@@ -139,5 +139,5 @@ The `worktree-branch-check` guard (exit 42) remains active in all execution mode
 - [Recover and troubleshoot](recover-and-troubleshoot.md)
 - [Debug a failed execution](debug-a-failed-execution.md)
 - [Configuration reference — workflow toggles](../CONFIGURATION.md#workflow-toggles)
-- [CLI Tools reference — worktree commands](../CLI-TOOLS.md#worktree-commands)
+- [CLI Tools reference — worktree commands](../reference/CLI-TOOLS.md#worktree-commands)
 - [docs index](../README.md)

@@ -34,7 +34,7 @@ be deleted — and lists any stale update-cache files it would clear, then exits
 without making any modifications.
 
 Swap `--claude` for the flag matching your runtime if you use a different one
-(see the [runtime flags table](manual-update.md#runtime-flags)).
+(see the [runtime flags table](../how-to/manual-update.md#runtime-flags)).
 
 ### 2. Apply the cleanup
 

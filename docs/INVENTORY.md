@@ -632,7 +632,7 @@ Full listing: `gsd-core/bin/lib/*.cjs`.
 | `vendor/re2js.cjs` | **Vendored third-party artifact, not a GSD module.** Verbatim copy of `re2js`' CJS build — the RE2 linear-time regex engine used by `pattern.cjs` to evaluate untrusted `key_links` patterns without catastrophic backtracking (#3477). Vendored because `gsd-core/bin/**` is copied into installed trees that have no `node_modules`, so it may contain no external requires (enforced by `local/no-external-require-in-bin`). Never hand-edit; `scripts/lint-vendored-deps.cjs` byte-compares it against the pinned `re2js` devDependency in `lint:ci`. See `gsd-core/bin/lib/vendor/README.md` |
 | `write-set.cjs` | Shared fail-loud `Result<T>` (`{ok:true,value}\|{ok:false,reason}`) and per-surface write-set contracts (ADR-2143, epic #2143) — `WriteOutcome` (`{surface,applied}`), `WriteSet` (`WriteOutcome[]`), and `writeSetComplete(ws)` (true only when the set is non-empty AND every surface applied, never an OR-into-one-flag); `markdown-table.cjs` re-exports `Result` from here so existing importers are unaffected; consumed by `milestone.cts`'s `requirements mark-complete` handler to report a structured per-surface (`checkbox`/`traceability`) write-set alongside its existing fields (fixes the structural half of #2140) |
 
-[`docs/CLI-TOOLS.md`](CLI-TOOLS.md) may describe a subset of these modules; when it disagrees with the filesystem, this table and the directory listing are authoritative.
+[`docs/CLI-TOOLS.md`](reference/CLI-TOOLS.md) may describe a subset of these modules; when it disagrees with the filesystem, this table and the directory listing are authoritative.
 
 ---
 

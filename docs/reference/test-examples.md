@@ -1,6 +1,6 @@
 # Test Examples
 
-This document shows the kinds of tests GSD expects for high-risk changes. Use it with the testing standards in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+This document shows the kinds of tests GSD expects for high-risk changes. Use it with the testing standards in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 
 The examples are intentionally small. Copy the pattern, not the exact assertion text.
 

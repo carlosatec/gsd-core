@@ -33,7 +33,7 @@ To switch back:
 node gsd-tools.cjs config-set workflow.discuss_mode discuss
 ```
 
-See [Discuss modes explained](../workflow-discuss-mode.md) for a full comparison, including when each mode is likely to save time.
+See [Discuss modes explained](../reference/workflow-discuss-mode.md) for a full comparison, including when each mode is likely to save time.
 
 ---
 
@@ -153,6 +153,6 @@ The planner synthesises CONTEXT.md from the PRD and treats all requirements as l
 ## Related
 
 - [Plan a phase](plan-a-phase.md)
-- [Discuss modes](../workflow-discuss-mode.md)
+- [Discuss modes](../reference/workflow-discuss-mode.md)
 - [CONTEXT.md schema](../reference/context-md.md)
 - [docs index](../README.md)

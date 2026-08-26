@@ -454,7 +454,7 @@ Listagem completa: `gsd-core/bin/lib/*.cjs`.
 | `workstream.cjs` | CRUD de workstream, migração, ponteiro ativo com escopo de sessão |
 | `worktree-safety.cjs` | Resolução de raiz de worktree e decisões de política de poda não destrutiva; possui a lógica de verificação de integridade W017 |
 
-[`docs/CLI-TOOLS.md`](CLI-TOOLS.md) pode descrever um subconjunto desses módulos; quando discordar do sistema de arquivos, esta tabela e a listagem de diretório são autoritativas.
+[`docs/CLI-TOOLS.md`](reference/CLI-TOOLS.md) pode descrever um subconjunto desses módulos; quando discordar do sistema de arquivos, esta tabela e a listagem de diretório são autoritativas.
 
 ---
 

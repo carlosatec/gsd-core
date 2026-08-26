@@ -140,7 +140,7 @@ It is safe to run `--reapply` on its own without triggering a new download — i
 
 ## When npm is unavailable
 
-If `npx @opengsd/gsd-core@latest` fails due to an npm outage, network restrictions, or because you are working from the source repository, use the manual update procedure in [docs/manual-update.md](../manual-update.md). That document covers pulling the latest commit, building the hooks dist, and running `node bin/install.js` directly.
+If `npx @opengsd/gsd-core@latest` fails due to an npm outage, network restrictions, or because you are working from the source repository, use the manual update procedure in [docs/manual-update.md](manual-update.md). That document covers pulling the latest commit, building the hooks dist, and running `node bin/install.js` directly.
 
 ---
 
@@ -152,7 +152,7 @@ If `npx @opengsd/gsd-core@latest` fails due to an npm outage, network restrictio
 
 ## Installer migrations
 
-Each GSD release may include installer migrations that rename, move, or retire managed files. The migration layer runs automatically before the new package payload is written. Migrations that would affect files you have modified prompt for confirmation rather than acting silently. For the full design and runtime-configuration contract registry, see [docs/installer-migrations.md](../installer-migrations.md).
+Each GSD release may include installer migrations that rename, move, or retire managed files. The migration layer runs automatically before the new package payload is written. Migrations that would affect files you have modified prompt for confirmation rather than acting silently. For the full design and runtime-configuration contract registry, see [docs/installer-migrations.md](../reference/installer-migrations.md).
 
 ---
 
@@ -160,8 +160,8 @@ Each GSD release may include installer migrations that rename, move, or retire m
 
 - [Install on your runtime](install-on-your-runtime.md)
 - [Commands reference](../COMMANDS.md)
-- [Manual update](../manual-update.md)
-- [Installer migrations](../installer-migrations.md)
+- [Manual update](manual-update.md)
+- [Installer migrations](../reference/installer-migrations.md)
 - [Docs index](../README.md)
 
 ## CLI version-skew warning

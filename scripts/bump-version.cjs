@@ -116,8 +116,15 @@ function updateDocumentationFiles(root, version, majorMinor, dryRun = false) {
     }
   }
 
-  // 2. TUTORIALs
-  for (const rel of ['TUTORIAL.md', 'TUTORIAL.pt-BR.md']) {
+  // 2. TUTORIALs & User Guides
+  for (const rel of [
+    'docs/tutorials/practical-tutorial.md',
+    'docs/pt-BR/tutorials/tutorial-pratico.md',
+    'docs/USER-GUIDE.md',
+    'docs/pt-BR/USER-GUIDE.md',
+    'docs/ARCHITECTURE.md',
+    'docs/pt-BR/ARCHITECTURE.md',
+  ]) {
     const abs = path.join(root, rel);
     if (fs.existsSync(abs)) {
       let content = fs.readFileSync(abs, 'utf8');
@@ -301,8 +308,13 @@ function checkRepositoryVersionSync(opts = {}) {
     }
   }
 
-  // Check TUTORIALs
-  for (const rel of ['TUTORIAL.md', 'TUTORIAL.pt-BR.md']) {
+  // Check TUTORIALs & User Guides
+  for (const rel of [
+    'docs/tutorials/practical-tutorial.md',
+    'docs/pt-BR/tutorials/tutorial-pratico.md',
+    'docs/USER-GUIDE.md',
+    'docs/pt-BR/USER-GUIDE.md',
+  ]) {
     const abs = path.join(root, rel);
     if (fs.existsSync(abs)) {
       const content = fs.readFileSync(abs, 'utf8');

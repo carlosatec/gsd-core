@@ -8,6 +8,7 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 
 ## Tutorials
 
+- [Practical Tutorial: Mastering GSD Core Nexus 2.8](tutorials/practical-tutorial.md) ([Português](pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](tutorials/your-first-project.md) — install to first shipped phase, one guaranteed path
 - [Onboarding an existing codebase](tutorials/onboarding-an-existing-codebase.md) — bring GSD Core to a brownfield repo
 - [Build your first capability](tutorials/build-your-first-capability.md) — author a tiny declarative capability and watch it act in the loop
@@ -64,8 +65,8 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 
 - [Commands](COMMANDS.md) — every command with flags and examples
 - [Configuration](CONFIGURATION.md) — full config schema, model profiles, git branching strategies
-- [CLI tools](CLI-TOOLS.md) — `gsd-tools.cjs` programmatic API for workflows and agents
-- [JSON error mode](json-errors.md) — `gsd-tools` failure channels: faults (stderr, exit 1) vs degraded results (stdout, exit 0), and the reason-code taxonomy
+- [CLI tools](reference/CLI-TOOLS.md) — `gsd-tools.cjs` programmatic API for workflows and agents
+- [JSON error mode](reference/json-errors.md) — `gsd-tools` failure channels: faults (stderr, exit 1) vs degraded results (stdout, exit 0), and the reason-code taxonomy
 - [Features](FEATURES.md) — complete feature index
 - [Inventory](INVENTORY.md) — installed skills and surface map
 - [STATE.md schema](reference/state-md.md) — field-by-field reference for `.planning/STATE.md`
@@ -92,14 +93,14 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 - [How overlay capabilities compose](explanation/capability-overlay-model.md) — why first-party always wins and how the loader resolves precedence, conflicts, and fail-open load-failure warnings
 - [Architecture](ARCHITECTURE.md) — system architecture, agent model, and data flow
 - [The Embeddable Orchestration System](explanation/embeddable-orchestration-system.md) — one public, versioned contract for embedding GSD across many hosts
-- [Discuss modes](workflow-discuss-mode.md) — assumptions mode vs interview mode for `/gsd-discuss-phase`
-- [Context monitoring](context-monitor.md) — context window monitoring hook architecture
-- [Issue-driven orchestration](issue-driven-orchestration.md) — recipe for driving GSD from a tracker issue using existing primitives
+- [Discuss modes](reference/workflow-discuss-mode.md) — assumptions mode vs interview mode for `/gsd-discuss-phase`
+- [Context monitoring](how-to/monitor-context.md) — context window monitoring hook architecture
+- [Issue-driven orchestration](how-to/issue-driven-orchestration.md) — recipe for driving GSD from a tracker issue using existing primitives
 
 ---
 
 ## Related
 
-- [Complete Practical GSD Tutorial (English)](../TUTORIAL.md) · [(Português)](../TUTORIAL.pt-BR.md) — comprehensive end-to-end tutorial
+- [Complete Practical GSD Tutorial (English)](tutorials/practical-tutorial.md) · [(Português)](pt-BR/tutorials/tutorial-pratico.md) — comprehensive end-to-end tutorial
 - [Root README](../README.md) — landing page, quickstart, and documentation overview
 - [Changelog](../CHANGELOG.md) — release history

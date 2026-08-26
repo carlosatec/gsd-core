@@ -144,5 +144,5 @@ Every CONTEXT.md ends with an identity footer:
 
 - [PLAN.md schema](plan-md.md)
 - [Planning artifacts](planning-artifacts.md)
-- [Discuss modes](../workflow-discuss-mode.md)
+- [Discuss modes](workflow-discuss-mode.md)
 - [docs index](../README.md)

@@ -23,12 +23,12 @@ new entry in the in-tree runtime registry GSD maintains itself.
   capability matrices — carried indefinitely for a host GSD does not control. This is the same
   ground recorded for OMP (see [`omp-runtime-in-core.md`](./omp-runtime-in-core.md)).
 - **The supported direction is the Embeddable Orchestration System (EoS), and it is already
-  available.** [ADR-1239](../docs/adr/1239-gsd-embeddable-orchestration-engine.md) exists
+  available.** [ADR-1239](../../adr/1239-gsd-embeddable-orchestration-engine.md) exists
   precisely so a host embeds GSD through a stable negotiated interface and a thin **host-plugin**
   authored against the published Host-Integration SDK
-  ([`docs/how-to/author-a-host-plugin.md`](../docs/how-to/author-a-host-plugin.md)) — **without
+  ([`docs/how-to/author-a-host-plugin.md`](../../how-to/author-a-host-plugin.md)) — **without
   modifying gsd-core source.** New hosts are listed in the
-  [EoS Registry](../docs/registries/eos-registry.md) (`docs/registries/eos.json`, `type: "eos"`),
+  [EoS Registry](../../registries/eos-registry.md) (`docs/registries/eos.json`, `type: "eos"`),
   the non-endorsing discoverability catalog, via a docs PR (`npm run gen:registry`). Existing
   entries (`gsd-cursor`, `gsd-omp`) already follow this path.
 - **The directly-analogous precedent is one month old and on point.** The Devin CLI request
@@ -79,11 +79,11 @@ and must never be cited against:
 
 - [`omp-runtime-in-core.md`](./omp-runtime-in-core.md) — sibling decision; same ground (new host
   as in-tree runtime), same redirect to EoS
-- [ADR-1239](../docs/adr/1239-gsd-embeddable-orchestration-engine.md) — GSD as an Embeddable
+- [ADR-1239](../../adr/1239-gsd-embeddable-orchestration-engine.md) — GSD as an Embeddable
   Orchestration Engine (EoS)
-- [`docs/how-to/author-a-host-plugin.md`](../docs/how-to/author-a-host-plugin.md) — the supported
+- [`docs/how-to/author-a-host-plugin.md`](../../how-to/author-a-host-plugin.md) — the supported
   out-of-tree authoring path
-- [`docs/registries/README.md`](../docs/registries/README.md) — EoS Registry entry schema +
+- [`docs/registries/README.md`](../../registries/README.md) — EoS Registry entry schema +
   submission process
 - [#2170](https://github.com/open-gsd/gsd-core/issues/2170) — Devin CLI runtime, the one-month-old
   on-point precedent

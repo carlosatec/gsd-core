@@ -144,5 +144,5 @@ Todo CONTEXT.md termina com um rodapé de identidade:
 
 - [Esquema PLAN.md](plan-md.md)
 - [Artefatos de planejamento](planning-artifacts.md)
-- [Modos de discussão](../workflow-discuss-mode.md)
+- [Modos de discussão](workflow-discuss-mode.md)
 - [Índice de documentação](../README.md)

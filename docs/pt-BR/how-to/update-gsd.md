@@ -95,7 +95,7 @@ Se você pulou o `--reapply` após uma atualização anterior e deseja aplicar o
 
 ## Quando o npm está indisponível
 
-Se `npx @opengsd/gsd-core@latest` falhar devido a uma falha no npm, restrições de rede ou porque você está trabalhando a partir do repositório de código-fonte, use o procedimento de atualização manual em [docs/manual-update.md](../../manual-update.md). Esse documento aborda como fazer pull do commit mais recente, compilar o dist dos hooks e executar `node bin/install.js` diretamente.
+Se `npx @opengsd/gsd-core@latest` falhar devido a uma falha no npm, restrições de rede ou porque você está trabalhando a partir do repositório de código-fonte, use o procedimento de atualização manual em [docs/manual-update.md](../../how-to/manual-update.md). Esse documento aborda como fazer pull do commit mais recente, compilar o dist dos hooks e executar `node bin/install.js` diretamente.
 
 ---
 
@@ -107,7 +107,7 @@ Se `npx @opengsd/gsd-core@latest` falhar devido a uma falha no npm, restrições
 
 ## Migrações do instalador
 
-Cada versão do GSD pode incluir migrações do instalador que renomeiam, movem ou removem arquivos gerenciados. A camada de migração é executada automaticamente antes que o novo payload do pacote seja gravado. Migrações que afetariam arquivos que você modificou solicitam confirmação em vez de agir silenciosamente. Para o design completo e o registro do contrato de configuração de tempo de execução, consulte [docs/installer-migrations.md](../../installer-migrations.md).
+Cada versão do GSD pode incluir migrações do instalador que renomeiam, movem ou removem arquivos gerenciados. A camada de migração é executada automaticamente antes que o novo payload do pacote seja gravado. Migrações que afetariam arquivos que você modificou solicitam confirmação em vez de agir silenciosamente. Para o design completo e o registro do contrato de configuração de tempo de execução, consulte [docs/installer-migrations.md](../../reference/installer-migrations.md).
 
 ---
 
@@ -115,6 +115,6 @@ Cada versão do GSD pode incluir migrações do instalador que renomeiam, movem 
 
 - [Instalar no seu ambiente de execução](install-on-your-runtime.md)
 - [Referência de comandos](../COMMANDS.md)
-- [Atualização manual](../../manual-update.md)
-- [Migrações do instalador](../../installer-migrations.md)
+- [Atualização manual](../../how-to/manual-update.md)
+- [Migrações do instalador](../../reference/installer-migrations.md)
 - [Índice da documentação](../README.md)

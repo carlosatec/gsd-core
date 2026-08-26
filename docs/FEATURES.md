@@ -427,7 +427,7 @@
 
 **Produces:** GitHub PR with rich body, optional configured PRD-style sections, STATE.md updated
 
-**User documentation:** [Custom PR Body Sections](ship-pr-body-sections.md)
+**User documentation:** [Custom PR Body Sections](reference/ship-pr-body-sections.md)
 
 ---
 
@@ -2854,7 +2854,7 @@ Users who run a memory / knowledge-base MCP server (for example, ExoCortex-style
 
 **Purpose:** Document a recipe for driving the full GSD workflow from a GitHub / Linear / Jira issue, mapping tracker-centric concepts onto existing GSD primitives.
 
-**Document:** [`docs/issue-driven-orchestration.md`](issue-driven-orchestration.md)
+**Document:** [`docs/issue-driven-orchestration.md`](how-to/issue-driven-orchestration.md)
 
 **Covered workflow:**
 1. Create an isolated workspace per issue (`/gsd-workspace --new`)
@@ -2915,7 +2915,7 @@ Source commit: abc1234 (3 commits behind HEAD)
 - REQ-PKG-GATE-02: Planner MUST gate unverified or suspicious package installs before execution.
 - REQ-PKG-GATE-03: Executor MUST NOT auto-substitute package names after failed package-manager installs.
 
-**Reference:** [v1.42.1 Release Notes](RELEASE-NOTES-LEGACY.md)
+**Reference:** [v1.42.1 Release Notes](archive/RELEASE-NOTES-LEGACY.md)
 
 ---
 
@@ -2957,7 +2957,7 @@ Source commit: abc1234 (3 commits behind HEAD)
 - REQ-INSTALL-MIGRATION-02: Destructive actions MUST fail closed when ownership is ambiguous.
 - REQ-INSTALL-MIGRATION-03: Install failures MUST restore the pre-install state when rollback data exists.
 
-**Reference:** [Installer Migrations](installer-migrations.md)
+**Reference:** [Installer Migrations](reference/installer-migrations.md)
 
 ---
 
@@ -2976,7 +2976,7 @@ Source commit: abc1234 (3 commits behind HEAD)
 - REQ-SHIP-SECTIONS-02: Unknown template tokens MUST be rejected by config validation.
 - REQ-SHIP-SECTIONS-03: Disabled sections MUST stay in config without appearing in PR output.
 
-**Reference:** [Custom PR Body Sections](ship-pr-body-sections.md)
+**Reference:** [Custom PR Body Sections](reference/ship-pr-body-sections.md)
 
 ---
 
@@ -3147,7 +3147,7 @@ explicit reviewer flags -> --all -> review.default_reviewers -> all detected rev
 - [Configuration](CONFIGURATION.md)
 - [docs index](README.md)
 
-**Reference:** [JSON Error Mode](json-errors.md)
+**Reference:** [JSON Error Mode](reference/json-errors.md)
 
 ---
 
@@ -3288,7 +3288,7 @@ The load-bearing wire is the `plan-phase` lift into `must_haves.prohibitions`, s
 
 ## v1.7.0 Features
 
-> These are features new to **@opengsd/gsd-core 1.7.0** (the current release line: 1.0.0 → 1.2.0 → … → 1.6.1 → 1.7.0). The preceding `v1.27`–`v1.43.0` sections use the retired get-shit-done-cc / get-shit-done-redux feature numbering and are not gsd-core releases — see [Legacy Release Notes](RELEASE-NOTES-LEGACY.md).
+> These are features new to **@opengsd/gsd-core 1.7.0** (the current release line: 1.0.0 → 1.2.0 → … → 1.6.1 → 1.7.0). The preceding `v1.27`–`v1.43.0` sections use the retired get-shit-done-cc / get-shit-done-redux feature numbering and are not gsd-core releases — see [Legacy Release Notes](archive/RELEASE-NOTES-LEGACY.md).
 
 ### 149. Embeddable Orchestration System (Host-Integration Interface)
 

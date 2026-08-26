@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-2.8.1-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.8.2-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -77,16 +77,16 @@ Once installed, check status or start planning:
 /gsd-exec         # execute phase plan
 ```
 
-New here? Check the [Complete Practical GSD Tutorial](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
+New here? Check the [Complete Practical GSD Tutorial](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) or follow [Your first project](docs/tutorials/your-first-project.md) for a guided walkthrough from install to first shipped phase, or [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md) for brownfield setup.
 
 ---
 
 ## Documentation
 
-**What's new in GSD Core Nexus 2.8** → [Complete Practical Tutorial](TUTORIAL.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 2.8** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 2.8](TUTORIAL.md) ([Português](TUTORIAL.pt-BR.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 2.8](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 
@@ -99,7 +99,7 @@ New here? Check the [Complete Practical GSD Tutorial](TUTORIAL.md) ([Português]
 **Reference** — authoritative facts:
 - [Commands](docs/COMMANDS.md)
 - [Configuration](docs/CONFIGURATION.md)
-- [CLI tools](docs/CLI-TOOLS.md)
+- [CLI tools](docs/reference/CLI-TOOLS.md)
 
 **Explanation** — concepts and design decisions:
 - [Context engineering](docs/explanation/context-engineering.md)

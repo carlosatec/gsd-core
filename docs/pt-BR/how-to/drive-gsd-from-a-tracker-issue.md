@@ -4,7 +4,7 @@
 
 **Pré-requisitos:** GSD Core está instalado. A issue tem escopo delimitado, critérios de aceitação observáveis e nenhum bloqueador upstream.
 
-Para os conceitos e a justificativa de design por trás desse padrão, consulte [Orquestração orientada a issues explicada](../issue-driven-orchestration.md).
+Para os conceitos e a justificativa de design por trás desse padrão, consulte [Orquestração orientada a issues explicada](issue-driven-orchestration.md).
 
 ---
 
@@ -170,7 +170,7 @@ O GSD não publica no seu rastreador automaticamente. Criar uma issue no rastrea
 
 ## Relacionados
 
-- [Orquestração orientada a issues explicada](../issue-driven-orchestration.md)
+- [Orquestração orientada a issues explicada](issue-driven-orchestration.md)
 - [Isolar trabalho com workspaces](isolate-work-with-workspaces.md)
 - [Verificar e publicar](verify-and-ship.md)
 - [índice de documentação](../README.md)

@@ -6,16 +6,17 @@ Versões por idioma: [English](../README.md) · [Português (pt-BR)](README.md)
 
 ---
 
-## Tutorials
+## Tutoriais
 
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.8](tutorials/tutorial-pratico.md) ([English](../tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](tutorials/your-first-project.md) — da instalação à primeira fase entregue, um caminho garantido
 - [Integrando uma base de código existente](tutorials/onboarding-an-existing-codebase.md) — leve o GSD Core a um repositório já existente
 
 ---
 
-## How-to guides
+## Guias Como Fazer
 
-- [Instalar no seu ambiente de execução](how-to/install-on-your-runtime.md) — passos de instalação específicos para cada um dos 15 ambientes de execução suportados
+- [Instalar no seu ambiente de execução](how-to/install-on-your-runtime.md) — passos de instalação específicos para cada um dos 16 ambientes de execução suportados
 - [Discutir uma fase](how-to/discuss-a-phase.md) — registrar decisões de implementação antes do início do planejamento
 - [Planejar uma fase](how-to/plan-a-phase.md) — executar pesquisa, decompor o trabalho e verificar a qualidade do plano
 - [Executar uma fase](how-to/execute-a-phase.md) — rodar planos em ondas paralelas com subagentes com contexto renovado
@@ -29,7 +30,8 @@ Versões por idioma: [English](../README.md) · [Português (pt-BR)](README.md)
 - [Depurar uma execução com falha](how-to/debug-a-failed-execution.md) — diagnosticar e recuperar de execuções de fase quebradas ou incompletas
 - [Explorar e esboçar](how-to/spike-and-sketch.md) — usar `/gsd-spike` e `/gsd-sketch` para trabalho exploratório antes de comprometer com um plano
 - [Projetar uma fase de UI](how-to/design-a-ui-phase.md) — usar o ciclo de fase de UI para trabalho de frontend e visual
-- [Conduzir o GSD a partir de uma issue do rastreador](how-to/drive-gsd-from-a-tracker-issue.md) — iniciar uma fase a partir de uma issue do GitHub, Linear ou Jira
+- [Conduzir o GSD a partir de uma issue do rastreador](how-to/issue-driven-orchestration.md) — iniciar uma fase a partir de uma issue do GitHub, Linear ou Jira
+- [Monitoramento de contexto](how-to/monitor-context.md) — arquitetura do hook de monitoramento da janela de contexto
 - [Migrar do GSD 2](how-to/migrate-from-gsd-2.md) — atualizar um projeto GSD 2 existente para o GSD Core
 - [Atualizar o GSD](how-to/update-gsd.md) — executar novamente o instalador para obter a versão mais recente
 - [Recuperar e solucionar problemas](how-to/recover-and-troubleshoot.md) — corrigir problemas comuns, reconstruir contexto e desinstalar
@@ -40,13 +42,14 @@ Versões por idioma: [English](../README.md) · [Português (pt-BR)](README.md)
 
 - [Comandos](COMMANDS.md) — todos os comandos com flags e exemplos
 - [Configuração](CONFIGURATION.md) — schema completo de configuração, perfis de modelo, estratégias de branching git
-- [Ferramentas CLI](CLI-TOOLS.md) — API programática `gsd-tools.cjs` para workflows e agentes
+- [Ferramentas CLI](reference/CLI-TOOLS.md) — API programática `gsd-tools.cjs` para workflows e agentes
 - [Funcionalidades](FEATURES.md) — índice completo de funcionalidades
 - [Inventário](INVENTORY.md) — skills instaladas e mapa de superfície
 - [Schema do STATE.md](reference/state-md.md) — referência campo a campo para `.planning/STATE.md`
 - [Schema do CONTEXT.md](reference/context-md.md) — referência campo a campo para `.planning/phases/<N>/CONTEXT.md`
 - [Schema do PLAN.md](reference/plan-md.md) — referência campo a campo para `.planning/phases/<N>/PLAN.md`
 - [Artefatos de planejamento](reference/planning-artifacts.md) — todos os arquivos `.planning/` e seus papéis
+- [Modos de discussão](reference/workflow-discuss-mode.md) — modo de suposições vs. modo de entrevista para `/gsd-discuss-phase`
 
 ---
 
@@ -57,13 +60,11 @@ Versões por idioma: [English](../README.md) · [Português (pt-BR)](README.md)
 - [Orquestração multi-agente](explanation/multi-agent-orchestration.md) — como os subagentes são criados, delimitados e coordenados
 - [Modelo de segurança](explanation/security-model.md) — limites de confiança, permissões e automação segura
 - [Arquitetura](ARCHITECTURE.md) — arquitetura do sistema, modelo de agentes e fluxo de dados
-- [Modos de discussão](workflow-discuss-mode.md) — modo de suposições vs. modo de entrevista para `/gsd-discuss-phase`
-- [Monitoramento de contexto](context-monitor.md) — arquitetura do hook de monitoramento da janela de contexto
-- [Orquestração orientada por issues](issue-driven-orchestration.md) — receita para conduzir o GSD a partir de uma issue do rastreador usando primitivos existentes
 
 ---
 
 ## Relacionados
 
-- [README raiz](../README.md) — página inicial, início rápido e visão geral da documentação
+- [Tutorial Prático Completo do GSD](tutorials/tutorial-pratico.md) · [English (Tutorial)](../tutorials/practical-tutorial.md)
+- [README raiz](../../README.pt-BR.md) — página inicial, início rápido e visão geral da documentação
 - [Changelog](../../CHANGELOG.md) — histórico de versões

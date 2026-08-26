@@ -60,7 +60,7 @@ GSD's `/gsd-pause-work` command saves execution state. The WARNING message sugge
 
 ## Setup
 
-Both hooks are registered automatically during `npx @opengsd/gsd-core` installation — no manual steps are needed under normal circumstances. For hook configuration details, threshold overrides, and manual registration examples, see [Configuration](CONFIGURATION.md).
+Both hooks are registered automatically during `npx @opengsd/gsd-core` installation — no manual steps are needed under normal circumstances. For hook configuration details, threshold overrides, and manual registration examples, see [Configuration](../CONFIGURATION.md).
 
 As a brief reference: the statusline hook registers as `statusLine` in `settings.json`; the context monitor (`gsd-context-monitor.js`) registers as a `PostToolUse` hook (or `AfterTool` for Antigravity CLI). Both entries use the absolute Node executable path that ran the installer. On Windows PowerShell, prefix quoted executable paths with `&`.
 
@@ -75,6 +75,6 @@ As a brief reference: the statusline hook registers as `statusLine` in `settings
 
 ## Related
 
-- [Architecture](ARCHITECTURE.md)
-- [Configuration](CONFIGURATION.md)
-- [docs index](README.md)
+- [Architecture](../ARCHITECTURE.md)
+- [Configuration](../CONFIGURATION.md)
+- [docs index](../README.md)

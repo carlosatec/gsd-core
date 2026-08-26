@@ -1,6 +1,6 @@
 # Legacy Release Notes
 
-> **Archived history — frozen.** These notes cover the project's first lifecycle under its earlier package names, **`get-shit-done-cc`** and later **`@opengsd/get-shit-done-redux`** (versions `1.0.0` → `1.42.x`, plus pre-release and canary builds up to `1.50.0-canary.1`). The project now ships as **`@opengsd/gsd-core`**, whose version numbering restarts at `1.0.0`. Current release notes live in [`CHANGELOG.md`](../CHANGELOG.md).
+> **Archived history — frozen.** These notes cover the project's first lifecycle under its earlier package names, **`get-shit-done-cc`** and later **`@opengsd/get-shit-done-redux`** (versions `1.0.0` → `1.42.x`, plus pre-release and canary builds up to `1.50.0-canary.1`). The project now ships as **`@opengsd/gsd-core`**, whose version numbering restarts at `1.0.0`. Current release notes live in [`CHANGELOG.md`](../../CHANGELOG.md).
 >
 > Because the `@opengsd/gsd-core` line reuses low version numbers (`1.0.0`, `1.1.0`, `1.2.0`, …), the legacy `1.x` numbers below **will collide** with current ones. Always read a legacy version number as belonging to the retired `get-shit-done-cc` / `get-shit-done-redux` lineage.
 >

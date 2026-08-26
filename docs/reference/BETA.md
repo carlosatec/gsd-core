@@ -1,6 +1,6 @@
 # GSD Beta Features
 
-> **Beta features are opt-in and may change or be removed without notice.** They are not covered by the stable API guarantees that apply to the rest of GSD. If a beta feature ships to stable, it will be documented in [COMMANDS.md](COMMANDS.md) and [FEATURES.md](FEATURES.md) with a changelog entry.
+> **Beta features are opt-in and may change or be removed without notice.** They are not covered by the stable API guarantees that apply to the rest of GSD. If a beta feature ships to stable, it will be documented in [COMMANDS.md](../COMMANDS.md) and [FEATURES.md](../FEATURES.md) with a changelog entry.
 
 ---
 
@@ -94,5 +94,5 @@ The imported plan has structural issues. Review the checker output, edit the sav
 
 ### Related commands
 
-- [`/gsd-plan-phase`](COMMANDS.md#gsd-plan-phase) — standard local planning (stable, all runtimes)
-- [`/gsd-import`](COMMANDS.md#gsd-import) — import any external plan file into GSD
+- [`/gsd-plan-phase`](../COMMANDS.md#gsd-plan-phase) — standard local planning (stable, all runtimes)
+- [`/gsd-import`](../COMMANDS.md#gsd-import) — import any external plan file into GSD

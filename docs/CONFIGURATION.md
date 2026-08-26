@@ -443,7 +443,7 @@ The `code_quality.*` namespace gates optional structural-analysis tooling that a
 
 `ship.pr_body_sections` adds additional PR body sections for project-specific PRD/PR body content in `/gsd-ship` without editing `gsd-core/workflows/ship.md`.
 
-For a user guide with onboarding examples and troubleshooting, see [Custom PR Body Sections](ship-pr-body-sections.md).
+For a user guide with onboarding examples and troubleshooting, see [Custom PR Body Sections](reference/ship-pr-body-sections.md).
 
 This list is append-only: configured entries are added after the core `Summary`, `Changes`, `Requirements Addressed`, `Verification`, and `Key Decisions` sections. They cannot replace, remove, or reorder required sections.
 

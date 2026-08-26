@@ -7,7 +7,7 @@ usage windows, plan quotas).
 ## Why this is out of scope
 
 The statusline draws its data boundary at **local, read-only** sources — see
-[`docs/adr/2164-statusline-scope-boundary.md`](../docs/adr/2164-statusline-scope-boundary.md).
+[`docs/adr/2164-statusline-scope-boundary.md`](../../adr/2164-statusline-scope-boundary.md).
 It refines the stdin payload Claude Code already sends (model, context meter,
 GSD-state) and may add a new *local* source (e.g. `git`), but it does not:
 

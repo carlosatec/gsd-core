@@ -1,6 +1,6 @@
 # GSD CLI Tools Reference
 
-> Reference for the `gsd-tools` CLI (`gsd-core/bin/gsd-tools.cjs`). For slash commands and user flows, see [Command Reference](COMMANDS.md). Return to [docs index](README.md).
+> Reference for the `gsd-tools` CLI (`gsd-core/bin/gsd-tools.cjs`). For slash commands and user flows, see [Command Reference](../COMMANDS.md). Return to [docs index](../README.md).
 
 ---
 
@@ -502,7 +502,7 @@ hatch for a flag-shaped value the space-separated form cannot express — e.g.
 | `matched` | number | Count of predicates satisfying all given selectors |
 | `predicates` | array | Each entry is a live `Predicate` — `id`, `klass`, `value`, `line` (1-based source line), `section` (nearest enclosing heading) |
 
-This command is strictly read-only — no config writes, no disk mutation. See [ADR-1671](adr/1671-dynamic-context-management-platform.md) and [Architecture — CLI Tools](ARCHITECTURE.md#cli-tools-gsd-corebin).
+This command is strictly read-only — no config writes, no disk mutation. See [ADR-1671](../adr/1671-dynamic-context-management-platform.md) and [Architecture — CLI Tools](../ARCHITECTURE.md#cli-tools-gsd-corebin).
 
 ---
 
@@ -893,7 +893,7 @@ reported and the remaining entries still restore.
 
 ## Worktree Commands
 
-Diagnose and configure the worktree fork base used by Claude Code's `isolation="worktree"` executor dispatch. These commands address the branch-divergence condition described in [Fix the worktree base-mismatch (exit 42) error](how-to/fix-worktree-base-mismatch.md).
+Diagnose and configure the worktree fork base used by Claude Code's `isolation="worktree"` executor dispatch. These commands address the branch-divergence condition described in [Fix the worktree base-mismatch (exit 42) error](../how-to/fix-worktree-base-mismatch.md).
 
 ```bash
 # Check whether the current HEAD has diverged from the worktree fork base.
@@ -960,7 +960,7 @@ Two deliberate limits keep it from crying wolf. `.planning/**/*SUMMARY.md` paths
 
 ## Graphify
 
-Build, query, and inspect the project knowledge graph in `.planning/graphs/`. Requires `graphify.enabled: true` in `config.json` (see [Configuration Reference](CONFIGURATION.md#graphify-settings)).
+Build, query, and inspect the project knowledge graph in `.planning/graphs/`. Requires `graphify.enabled: true` in `config.json` (see [Configuration Reference](../CONFIGURATION.md#graphify-settings)).
 
 ```bash
 # Build or rebuild the knowledge graph
@@ -979,7 +979,7 @@ node gsd-tools.cjs graphify diff
 node gsd-tools.cjs graphify snapshot [name]
 ```
 
-User-facing entry point: `/gsd-graphify` (see [Command Reference](COMMANDS.md#gsd-graphify)).
+User-facing entry point: `/gsd-graphify` (see [Command Reference](../COMMANDS.md#gsd-graphify)).
 
 ---
 
@@ -1048,7 +1048,7 @@ node gsd-tools.cjs session clean [--max 50] [--days 30] [--raw]
 
 ## Reviewer CLI Routing
 
-`review.models.<cli>` maps a reviewer flavor to a bare model id injected into the CLI's `--model` (or `-m`) flag by the code-review workflow. Set via [`/gsd-config --integrations`](COMMANDS.md#gsd-config) or directly:
+`review.models.<cli>` maps a reviewer flavor to a bare model id injected into the CLI's `--model` (or `-m`) flag by the code-review workflow. Set via [`/gsd-config --integrations`](../COMMANDS.md#gsd-config) or directly:
 
 ```bash
 node gsd-tools.cjs config-set review.models.codex    "gpt-5"
@@ -1057,7 +1057,7 @@ node gsd-tools.cjs config-set review.models.opencode "claude-sonnet-4"
 node gsd-tools.cjs config-set review.models.claude   ""   # clear — fall back to session model
 ```
 
-Slugs are validated against `[a-zA-Z0-9_-]+`; empty or path-containing slugs are rejected. See [`docs/CONFIGURATION.md`](CONFIGURATION.md#code-review-cli-routing) for the full field reference.
+Slugs are validated against `[a-zA-Z0-9_-]+`; empty or path-containing slugs are rejected. See [`docs/CONFIGURATION.md`](../CONFIGURATION.md#code-review-cli-routing) for the full field reference.
 
 ## Secret Handling
 
@@ -1065,10 +1065,22 @@ API keys configured via `/gsd-settings` (`brave_search`, `firecrawl`, `exa_searc
 
 ---
 
+## Documentation Integrity & AI Guidance Utilities
+
+GSD Core Nexus includes built-in scripts to audit documentation health and guide AI agents:
+
+| Script / Command | Description |
+|---|---|
+| `npm run docs:check` | Audits all Markdown files for broken relative links (zero 404), i18n translation parity (`docs/` vs `docs/pt-BR/`), and SemVer consistency. |
+| `npm run docs:audit` | Generates a structured checklist and actionable instructions to guide AI coding assistants when updating documentation. |
+| `node scripts/check-docs.cjs --fix` | Automatically rewrites broken or moved documentation links to canonical Diátaxis paths. |
+
+---
+
 ## Related
 
-- [Commands](COMMANDS.md)
-- [Configuration](CONFIGURATION.md)
-- [Architecture](ARCHITECTURE.md)
-- [Fix the worktree base-mismatch (exit 42) error](how-to/fix-worktree-base-mismatch.md)
-- [docs index](README.md)
+- [Commands](../COMMANDS.md)
+- [Configuration](../CONFIGURATION.md)
+- [Architecture](../ARCHITECTURE.md)
+- [Fix the worktree base-mismatch (exit 42) error](../how-to/fix-worktree-base-mismatch.md)
+- [docs index](../README.md)

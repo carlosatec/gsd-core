@@ -1,6 +1,6 @@
 # Referência de Ferramentas CLI do GSD
 
-> Referência para o CLI `gsd-tools` (`gsd-core/bin/gsd-tools.cjs`). Para comandos slash e fluxos de usuário, consulte a [Referência de Comandos](COMMANDS.md). Voltar ao [índice de documentação](README.md).
+> Referência para o CLI `gsd-tools` (`gsd-core/bin/gsd-tools.cjs`). Para comandos slash e fluxos de usuário, consulte a [Referência de Comandos](../../COMMANDS.md). Voltar ao [índice de documentação](../../README.md).
 
 ---
 
@@ -425,7 +425,7 @@ node gsd-tools.cjs websearch <query> [--limit N] [--freshness day|week|month]
 
 ## Graphify
 
-Constrói, consulta e inspeciona o grafo de conhecimento do projeto em `.planning/graphs/`. Requer `graphify.enabled: true` em `config.json` (consulte a [Referência de Configuração](CONFIGURATION.md#graphify-settings)).
+Constrói, consulta e inspeciona o grafo de conhecimento do projeto em `.planning/graphs/`. Requer `graphify.enabled: true` em `config.json` (consulte a [Referência de Configuração](../../CONFIGURATION.md#graphify-settings)).
 
 ```bash
 # Constrói ou reconstrói o grafo de conhecimento
@@ -444,7 +444,7 @@ node gsd-tools.cjs graphify diff
 node gsd-tools.cjs graphify snapshot [name]
 ```
 
-Ponto de entrada para o usuário: `/gsd-graphify` (consulte a [Referência de Comandos](COMMANDS.md#gsd-graphify)).
+Ponto de entrada para o usuário: `/gsd-graphify` (consulte a [Referência de Comandos](../../COMMANDS.md#gsd-graphify)).
 
 ---
 
@@ -478,7 +478,7 @@ Ponto de entrada para o usuário: `/gsd-graphify` (consulte a [Referência de Co
 
 ## Roteamento CLI do Revisor
 
-`review.models.<cli>` mapeia um sabor de revisor para um comando shell invocado pelo fluxo de trabalho de revisão de código. Defina via [`/gsd-config --integrations`](COMMANDS.md#gsd-config) ou diretamente:
+`review.models.<cli>` mapeia um sabor de revisor para um comando shell invocado pelo fluxo de trabalho de revisão de código. Defina via [`/gsd-config --integrations`](../../COMMANDS.md#gsd-config) ou diretamente:
 
 ```bash
 node gsd-tools.cjs config-set review.models.codex    "codex exec --model gpt-5"
@@ -487,7 +487,7 @@ node gsd-tools.cjs config-set review.models.opencode "opencode run --model claud
 node gsd-tools.cjs config-set review.models.claude   ""   # limpa — retorna ao modelo da sessão
 ```
 
-Os slugs são validados contra `[a-zA-Z0-9_-]+`; slugs vazios ou contendo caminhos são rejeitados. Consulte [`docs/CONFIGURATION.md`](CONFIGURATION.md#code-review-cli-routing) para a referência completa do campo.
+Os slugs são validados contra `[a-zA-Z0-9_-]+`; slugs vazios ou contendo caminhos são rejeitados. Consulte [`docs/CONFIGURATION.md`](../../CONFIGURATION.md#code-review-cli-routing) para a referência completa do campo.
 
 ## Tratamento de Segredos
 
@@ -495,9 +495,21 @@ As chaves de API configuradas via `/gsd-settings` (`brave_search`, `firecrawl`, 
 
 ---
 
+## Utilitários de Integridade de Documentação & Orientação para IA
+
+O GSD Core Nexus inclui scripts integrados para auditoria de documentação e orientação de agentes de IA:
+
+| Script / Comando | Descrição |
+|---|---|
+| `npm run docs:check` | Audita todos os arquivos Markdown em busca de links relativos quebrados (zero 404), paridade de tradução i18n (`docs/` vs `docs/pt-BR/`) e consistência SemVer. |
+| `npm run docs:audit` | Gera um checklist estruturado e instruções acionáveis para orientar assistentes de codificação com IA na atualização da documentação. |
+| `node scripts/check-docs.cjs --fix` | Reescreve automaticamente links de documentação quebrados ou movidos para os caminhos canônicos Diátaxis. |
+
+---
+
 ## Relacionados
 
-- [Comandos](COMMANDS.md)
-- [Configuração](CONFIGURATION.md)
-- [Arquitetura](ARCHITECTURE.md)
-- [índice de documentação](README.md)
+- [Comandos](../../COMMANDS.md)
+- [Configuração](../../CONFIGURATION.md)
+- [Arquitetura](../../ARCHITECTURE.md)
+- [índice de documentação](../../README.md)

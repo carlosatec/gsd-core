@@ -100,7 +100,7 @@ $ echo $?
 ```
 
 This is a **ratified contract**, not an accident — see
-[ADR-2980](adr/2980-payload-carried-error-is-a-degraded-result.md) for the decision and the blast
+[ADR-2980](../adr/2980-payload-carried-error-is-a-degraded-result.md) for the decision and the blast
 radius that drove it. It applies to **60 call sites across nine modules** — `state`, `verify`,
 `workstream`, `frontmatter`, `commands`, `template`, `phase`, `roadmap`, and `gsd2-import`.
 (Issues #2966 and #2980 record this as "42 sites"; that figure counts only the sites where `error`

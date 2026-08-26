@@ -85,7 +85,7 @@ result + structured warning rather than throw" — and it is the same instinct
 **The payload-carried `error` key is a ratified contract, not an accident. It stays.** All 60 call
 sites are unchanged; no code moves.
 
-Precisely, the contract now documented in [`docs/json-errors.md`](../json-errors.md):
+Precisely, the contract now documented in [`docs/json-errors.md`](../reference/json-errors.md):
 
 > A JSON result on **stdout** carrying an `error` key, with **exit 0**, means the command **ran to
 > completion and is reporting a condition through its result**. It is not a process failure. A

@@ -4,7 +4,7 @@
 
 **Prerequisites:** GSD Core is installed. The issue has bounded scope, observable acceptance criteria, and no upstream blockers.
 
-For the concepts and design rationale behind this pattern, see [Issue-driven orchestration explained](../issue-driven-orchestration.md).
+For the concepts and design rationale behind this pattern, see [Issue-driven orchestration explained](issue-driven-orchestration.md).
 
 ---
 
@@ -170,7 +170,7 @@ GSD does not post to your tracker automatically. Creating a tracker issue from c
 
 ## Related
 
-- [Issue-driven orchestration explained](../issue-driven-orchestration.md)
+- [Issue-driven orchestration explained](issue-driven-orchestration.md)
 - [Isolate work with workspaces](isolate-work-with-workspaces.md)
 - [Verify and ship](verify-and-ship.md)
 - [docs index](../README.md)

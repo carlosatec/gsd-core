@@ -80,7 +80,7 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
 
   return {
     success: true,
-    version: '2.8.1',
+    version: '2.8.2',
     isNewMigration,
     indexedFiles: graph.stats.totalFiles,
     detectedLanguages: Array.from(languageSet),

@@ -2,7 +2,7 @@
 
 GSD Core's discuss-phase offers two modes for gathering implementation context before planning begins. Understanding when to use each helps you move from question-answering to a confirmed `CONTEXT.md` with less back-and-forth.
 
-For step-by-step instructions on running either mode, see the [Discuss a phase how-to](how-to/discuss-a-phase.md).
+For step-by-step instructions on running either mode, see the [Discuss a phase how-to](../how-to/discuss-a-phase.md).
 
 ## Modes
 
@@ -32,7 +32,7 @@ node gsd-tools.cjs config-set workflow.discuss_mode assumptions
 node gsd-tools.cjs config-set workflow.discuss_mode discuss
 ```
 
-The setting is per-project (stored in `.planning/config.json`). See the [CONTEXT.md schema](reference/context-md.md) for the full structure of the file both modes produce.
+The setting is per-project (stored in `.planning/config.json`). See the [CONTEXT.md schema](context-md.md) for the full structure of the file both modes produce.
 
 ## How Assumptions Mode Works
 
@@ -65,11 +65,11 @@ Both modes produce an identical `CONTEXT.md` with the same six sections:
 - `<specifics>` — User references and preferences
 - `<deferred>` — Ideas noted for future phases
 
-Downstream agents (researcher, planner, checker) consume this file identically regardless of which mode produced it. See the [CONTEXT.md schema](reference/context-md.md) for the full field reference.
+Downstream agents (researcher, planner, checker) consume this file identically regardless of which mode produced it. See the [CONTEXT.md schema](context-md.md) for the full field reference.
 
 ## Related
 
-- [Discuss a phase](how-to/discuss-a-phase.md) — step-by-step how-to for running `/gsd-discuss-phase` in either mode.
-- [CONTEXT.md schema](reference/context-md.md) — full field reference for the file both modes produce.
-- [The phase loop](explanation/the-phase-loop.md) — how discuss fits into the broader discuss → plan → execute → verify → ship cycle.
-- [docs index](README.md) — full table of contents for GSD Core documentation.
+- [Discuss a phase](../how-to/discuss-a-phase.md) — step-by-step how-to for running `/gsd-discuss-phase` in either mode.
+- [CONTEXT.md schema](context-md.md) — full field reference for the file both modes produce.
+- [The phase loop](../explanation/the-phase-loop.md) — how discuss fits into the broader discuss → plan → execute → verify → ship cycle.
+- [docs index](../README.md) — full table of contents for GSD Core documentation.

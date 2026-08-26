@@ -1,6 +1,6 @@
 # What's new in GSD Core 1.7.0
 
-1.7.0 is the largest surface-expansion release to date since 1.6.1: 32 new features, 44 changes, 100 fixes, and 4 security hardenings. The per-command and per-agent reference (`COMMANDS.md`, `AGENTS.md`, `INVENTORY.md`) is kept current continuously; this page is the thematic tour of what changed and why. For the full per-fragment record, see [`CHANGELOG.md`](../CHANGELOG.md).
+1.7.0 is the largest surface-expansion release to date since 1.6.1: 32 new features, 44 changes, 100 fixes, and 4 security hardenings. The per-command and per-agent reference (`COMMANDS.md`, `AGENTS.md`, `INVENTORY.md`) is kept current continuously; this page is the thematic tour of what changed and why. For the full per-fragment record, see [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ---
 
@@ -16,7 +16,7 @@
 
 `/gsd-surface` and `--materialize` now produce byte-identical agent output to a fresh install for descriptor-driven runtimes (#1575).
 
-Read more: [Embeddable Orchestration System](explanation/embeddable-orchestration-system.md) · [Host-Integration Interface reference](reference/host-integration-interface.md) · [Interface versioning policy](explanation/interface-versioning-policy.md) · [Install on your runtime](how-to/install-on-your-runtime.md).
+Read more: [Embeddable Orchestration System](../explanation/embeddable-orchestration-system.md) · [Host-Integration Interface reference](../reference/host-integration-interface.md) · [Interface versioning policy](../explanation/interface-versioning-policy.md) · [Install on your runtime](../how-to/install-on-your-runtime.md).
 
 ---
 
@@ -24,7 +24,7 @@ Read more: [Embeddable Orchestration System](explanation/embeddable-orchestratio
 
 Two new **non-endorsing** discoverability catalogs (#2182): the **Community Capability Registry** (#2188) for third-party Feature Capabilities installed with `gsd capability install`, and the **EoS Registry** (#2193) for third-party host integrations built on the ADR-1239 interface. Each entry embeds a live release badge and links to a GitHub Discussion. Submitting an entry is a documentation PR (`npm run gen:registry`).
 
-See [GSD Registries](registries/README.md).
+See [GSD Registries](../registries/README.md).
 
 ---
 
@@ -40,7 +40,7 @@ New **`gsd-mcp-server`** companion MCP server — a stdio JSON-RPC 2.0 server co
 - The verbose `(1M context)` model suffix is collapsed to a compact `(1M)` badge (#2160).
 - GSD now warns when model config changed without re-running the installer on static-frontmatter runtimes such as Codex and OpenCode (#1688).
 
-See [Configuration — model profiles](CONFIGURATION.md) and [Configure model profiles](how-to/configure-model-profiles.md).
+See [Configuration — model profiles](../CONFIGURATION.md) and [Configure model profiles](../how-to/configure-model-profiles.md).
 
 ---
 
@@ -54,7 +54,7 @@ See [Configuration — model profiles](CONFIGURATION.md) and [Configure model pr
 
 ## Capabilities framework
 
-- A default-off, BETA, Claude-only **Claude orchestration capability** that adopts Claude Code's Workflow tool (#1143) — see the [explanation](explanation/claude-orchestration-capability.md).
+- A default-off, BETA, Claude-only **Claude orchestration capability** that adopts Claude Code's Workflow tool (#1143) — see the [explanation](../explanation/claude-orchestration-capability.md).
 - A default-off **external-job capability** to externalize long-running compute as async jobs (SLURM submission) (#1165), configured via `external_job.submit_timeout_ms` / `poll_timeout_ms` / `artifact_dir` (#1164).
 - Third-party capability gates now fire through a generic **`command-exit-zero`** predicate (#2008); a capability that fails to load now fails **open** with a loud warning instead of blocking the whole project (#2009).
 
@@ -93,10 +93,10 @@ See [Configuration — model profiles](CONFIGURATION.md) and [Configure model pr
 - **Config & state** — `config-set <key> null` now clears the key (#2058), custom STATE.md frontmatter keys are preserved across mutations (#2202).
 - **Ship, verify & milestone lifecycle** — `/gsd-ship` now pushes its STATE note (#2138), verify-work preserves state across gap-closure (#1921), `milestone complete` no longer closes out of order (#2111) and honors `--dry-run` (#2118).
 
-See [`CHANGELOG.md`](../CHANGELOG.md) for the complete, itemized list.
+See [`CHANGELOG.md`](../../CHANGELOG.md) for the complete, itemized list.
 
 ---
 
 ## See also
 
-- [Feature reference](FEATURES.md) · [Embeddable Orchestration System](explanation/embeddable-orchestration-system.md) · [GSD Registries](registries/README.md) · [Full changelog](../CHANGELOG.md) · [docs index](README.md)
+- [Feature reference](../FEATURES.md) · [Embeddable Orchestration System](../explanation/embeddable-orchestration-system.md) · [GSD Registries](../registries/README.md) · [Full changelog](../../CHANGELOG.md) · [docs index](../README.md)

@@ -18,6 +18,9 @@ npm ci
 
 # Run tests
 npm test
+
+# Audit documentation integrity & link health (zero 404)
+npm run docs:check
 ```
 
 `npm ci` is required over `npm install`. It installs exactly what `package-lock.json`
@@ -26,6 +29,18 @@ specifies and fails fast if the lockfile is out of sync — this is intentional.
 **[docs/contributing/bootstrap.md](docs/contributing/bootstrap.md)** is the source of truth
 for setup. See it for Node version managers other than nvm (fnm, asdf, mise), the
 environment validator, daily commands, and troubleshooting.
+
+---
+
+## Documentation Quality & AI Guidance Commands
+
+GSD Core Nexus provides automated tools to ensure documentation integrity and guide AI agents:
+
+| Command | Purpose |
+|---|---|
+| `npm run docs:check` | Recursively audits all Markdown files for broken relative links (zero 404), i18n parity (`docs/` vs `docs/pt-BR/`), and SemVer consistency. |
+| `npm run docs:audit` | Runs the auditor and prints structured, actionable instructions/checklists to guide AI agents in updating docs. |
+| `node scripts/check-docs.cjs --fix` | Smart auto-repair mode that rewrites broken links to canonical Diátaxis paths. |
 
 ---
 
@@ -120,7 +135,7 @@ PRs that arrive without a properly-labeled linked issue are closed automatically
 
 GSD uses two long-lived branches: `main` (production, what's on npm `@latest`)
 and `next` (integration for the upcoming release). **Almost every PR targets
-`next`.** Full guide: [`docs/branching.md`](docs/branching.md).
+`next`.** Full guide: [`docs/branching.md`](docs/how-to/git-branching.md).
 
 | Your branch | PR target | Notes |
 |---|---|---|
@@ -174,7 +189,7 @@ The following files are maintainer-owned coding standards and must be treated as
 - `CONTEXT.md` — domain language and module naming standards
 - `docs/adr/` — Architecture Decision Records (ADRs) for accepted architectural decisions
 
-Full contributor requirements — including CONTEXT.md format, ADR governance, and AI-agent-assisted work standards — are in **[`docs/contributor-standards.md`](docs/contributor-standards.md)**.
+Full contributor requirements — including CONTEXT.md format, ADR governance, and AI-agent-assisted work standards — are in **[`docs/contributor-standards.md`](docs/contributing/contributor-standards.md)**.
 
 Contributor requirements (summary):
 - Read `CONTEXT.md` before naming or refactoring modules/interfaces/seams.
@@ -307,7 +322,7 @@ When unsure whether a change is user-facing, **update the docs**.
 
 All tests use Node.js built-in test runner (`node:test`) and assertion library (`node:assert`). **Do not use Jest, Mocha, Chai, or any external test framework.**
 
-> **Suite grouping.** Tests live in named suites (`unit`, `integration`, `install`, `security`, `slow`) selected by **filename suffix**: a file named `foo.security.test.cjs` belongs to the `security` suite; a file with no suffix (`foo.test.cjs`) belongs to `unit`. See [docs/TESTING-SUITES.md](docs/TESTING-SUITES.md) for the full policy, CI matrix, and per-suite scripts (`npm run test:unit`, `npm run test:security`, `npm run test:coverage:unit`, …). Default `npm test` still runs every test — backwards compatible.
+> **Suite grouping.** Tests live in named suites (`unit`, `integration`, `install`, `security`, `slow`) selected by **filename suffix**: a file named `foo.security.test.cjs` belongs to the `security` suite; a file with no suffix (`foo.test.cjs`) belongs to `unit`. See [docs/TESTING-SUITES.md](docs/reference/TESTING-SUITES.md) for the full policy, CI matrix, and per-suite scripts (`npm run test:unit`, `npm run test:security`, `npm run test:coverage:unit`, …). Default `npm test` still runs every test — backwards compatible.
 
 ### Required Imports
 
@@ -610,9 +625,9 @@ const content = `
 
 Happy-path tests are not enough for code that accepts user input, reads project files, writes to disk, shells out, generates artifacts, or builds prompts. New tests for those areas must include adversarial inputs and negative proof that unsafe behavior did not happen.
 
-See [`TEST-EXAMPLES.md`](TEST-EXAMPLES.md) for concrete demo tests that show these requirements in practice.
+See [`TEST-EXAMPLES.md`](docs/reference/test-examples.md) for concrete demo tests that show these requirements in practice.
 
-**Standing rule for error/fallback branches:** feeding an adversarial input is not sufficient on its own — if the code degrades permissively instead of throwing, the test must assert the *specific* degraded verdict, not just that the call survived. See [`TESTING-STANDARDS.md` — "Standing rule: assert the degraded verdict"](TESTING-STANDARDS.md#standing-rule-assert-the-degraded-verdict-not-just-did-not-throw).
+**Standing rule for error/fallback branches:** feeding an adversarial input is not sufficient on its own — if the code degrades permissively instead of throwing, the test must assert the *specific* degraded verdict, not just that the call survived. See [`TESTING-STANDARDS.md` — "Standing rule: assert the degraded verdict"](docs/contributing/testing-standards.md#standing-rule-assert-the-degraded-verdict-not-just-did-not-throw).
 
 Use this matrix when it applies to the changed surface:
 
@@ -948,7 +963,7 @@ node --test tests/core.test.cjs
 npm run test:coverage
 ```
 
-For examples of required negative matrices, parser fixtures, filesystem fault injection, security abuse tests, generated-file checks, and runtime/SDK parity tests, see [`TEST-EXAMPLES.md`](./TEST-EXAMPLES.md).
+For examples of required negative matrices, parser fixtures, filesystem fault injection, security abuse tests, generated-file checks, and runtime/SDK parity tests, see [`TEST-EXAMPLES.md`](docs/reference/test-examples.md).
 
 ### Preferred local benchmark runner (before PR)
 
@@ -1264,7 +1279,7 @@ gsd-core/
                           hard caps remain in tests/workflow-size-budget.test.cjs.
                           The same applies to agent files (agents/gsd-*.md,
                           tests/agent-size-budget.test.cjs). Full how-to +
-                          reference in docs/TESTING-SUITES.md (Workflow &
+                          reference in docs/reference/TESTING-SUITES.md (Workflow &
                           agent size budget); see issue #1074.
   references/           — Reference documentation (.md)
   templates/            — File templates

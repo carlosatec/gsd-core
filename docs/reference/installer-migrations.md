@@ -117,7 +117,7 @@ hashes for distribution-owned files.
 | `scope` | `global` or `local`. Added in schema 2. |
 | `files` | Relative path → SHA-256, for distribution-owned files only. |
 
-`runtime` and `scope` (#2872, [ADR-2866](adr/2866-install-surface-resolution.md))
+`runtime` and `scope` (#2872, [ADR-2866](../adr/2866-install-surface-resolution.md))
 exist so a reader can answer *"which surfaces are installed, at which scopes,
 for which runtimes"* without inferring it from the directory the file happened
 to be found in. Before schema 2, a global and a local install wrote two
@@ -163,7 +163,7 @@ install live in the file manifest above, not here.
 > `{ schemaVersion, appliedMigrations }`, in camelCase. The stale schema was
 > load-bearing in the wrong direction — a reader trusting it would have
 > concluded that install scope and runtime were already recorded on disk, which
-> is the exact premise [ADR-2866](adr/2866-install-surface-resolution.md) was
+> is the exact premise [ADR-2866](../adr/2866-install-surface-resolution.md) was
 > written to fix.
 
 The checksum is calculated from the migration definition.

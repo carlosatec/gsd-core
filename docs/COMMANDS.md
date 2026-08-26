@@ -451,7 +451,7 @@ Create PR from completed phase work with auto-generated body.
 - **Security** (`security` capability): blocks while `SECURITY.md` reports `threats_open > 0`. Resolve via `/gsd-secure-phase {n}`.
 - **Broken-windows ledger** (`broken-windows` capability, issue #1950): when `workflow.windows_enforce=true` is set, blocks while `.planning/WINDOWS.md` reports any `open` entry. The ledger accumulates stubs, TODOs, skipped tests, unrun verifies, and unmet truths across phases. Resolve an entry with `gsd-tools windows fixed <id>` (defect resolved) or `gsd-tools windows waive <id> "<reason>"` (justified deferral — reason is required and recorded). Inspect via `gsd-tools windows status`. Enforcement is **opt-in** (default `workflow.windows_enforce=false`): enable with `gsd config-set workflow.windows_enforce true`; tracking continues regardless.
 
-See [Custom PR Body Sections](ship-pr-body-sections.md) for onboarding, examples, and validation rules.
+See [Custom PR Body Sections](reference/ship-pr-body-sections.md) for onboarding, examples, and validation rules.
 
 ---
 
@@ -700,7 +700,7 @@ Runtime-neutral predicate that evaluates HUMAN-UAT results for a phase and repor
 | `no_uat_artifacts` | `boolean` | `true` when no real UAT test items were parsed (no `*-UAT.md` files, unreadable dir, or files with no test blocks); when `true`, `passed` is always `false` |
 | `policy.require_verification` | `boolean` | Whether `--require-verification` was active |
 
-**Programmatic access:** `node gsd-tools.cjs phase uat-passed <N> [--require-verification] [--raw]` — see [CLI Tools Reference](CLI-TOOLS.md)
+**Programmatic access:** `node gsd-tools.cjs phase uat-passed <N> [--require-verification] [--raw]` — see [CLI Tools Reference](reference/CLI-TOOLS.md)
 
 ```bash
 node gsd-tools.cjs phase uat-passed 3                        # Evaluate UAT for phase 3
@@ -744,7 +744,7 @@ Show status, next steps, and automatically advance to the next logical workflow 
 > keeps its full name), a `### Phase N:` heading that mentions a version is never
 > mistaken for the milestone heading, and a milestone that cannot be identified is
 > shown as absent rather than as a plausible-looking `v1.0`/`milestone`. See
-> [CLI-TOOLS.md → Milestone identity](CLI-TOOLS.md#milestone-identity-which-milestone-and-what-it-is-called).
+> [CLI-TOOLS.md → Milestone identity](reference/CLI-TOOLS.md#milestone-identity-which-milestone-and-what-it-is-called).
 
 **Auto-routing behavior (`--next`):**
 - No project → suggests `/gsd-new-project`
@@ -756,7 +756,7 @@ Show status, next steps, and automatically advance to the next logical workflow 
 
 Status reporting is scoped to the current milestone's `ROADMAP.md` window and sentinel-filtered: `999.*` backlog directories and `0-*` pre-milestone directories are not counted as current-milestone phases, so the reported progress percentage no longer holds at `100` while phases in the active window are still outstanding.
 
-> **Nullable percentage.** The reported completion percentage is `null` — never a fabricated `0`, `100`, or stale value — when the current milestone's phase set is not fully readable/scoped. See [CLI-TOOLS.md → A non-COMPLETE scope withholds the percentage entirely](CLI-TOOLS.md#a-non-complete-scope-withholds-the-percentage-entirely-3217).
+> **Nullable percentage.** The reported completion percentage is `null` — never a fabricated `0`, `100`, or stale value — when the current milestone's phase set is not fully readable/scoped. See [CLI-TOOLS.md → A non-COMPLETE scope withholds the percentage entirely](reference/CLI-TOOLS.md#a-non-complete-scope-withholds-the-percentage-entirely-3217).
 
 ```bash
 /gsd-progress                       # "Where am I? What's next?" with auto-routing
@@ -1044,7 +1044,7 @@ Display project statistics.
 
 Scoped to the current milestone's `ROADMAP.md` window and sentinel-filtered: `999.*` backlog directories and `0-*` pre-milestone directories are not counted as current-milestone phases.
 
-> **Nullable percentage.** The reported completion percentage is `null` — never a fabricated `0`, `100`, or stale value — when the current milestone's phase set is not fully readable/scoped (e.g. a truncated or unresolvable milestone window, or an unreadable `.planning/phases` directory). See [CLI-TOOLS.md → A non-COMPLETE scope withholds the percentage entirely](CLI-TOOLS.md#a-non-complete-scope-withholds-the-percentage-entirely-3217).
+> **Nullable percentage.** The reported completion percentage is `null` — never a fabricated `0`, `100`, or stale value — when the current milestone's phase set is not fully readable/scoped (e.g. a truncated or unresolvable milestone window, or an unreadable `.planning/phases` directory). See [CLI-TOOLS.md → A non-COMPLETE scope withholds the percentage entirely](reference/CLI-TOOLS.md#a-non-complete-scope-withholds-the-percentage-entirely-3217).
 
 ### `/gsd-profile-user`
 
@@ -1360,7 +1360,7 @@ gsd capability disable ui                             # Turn a FIRST-PARTY capab
 gsd capability remove my-cap --scope project          # Turn the installed overlay off — remove it from the scope it was installed in
 ```
 
-**Programmatic access:** `node gsd-tools.cjs capability <subcommand>` — see [CLI Tools Reference](CLI-TOOLS.md).
+**Programmatic access:** `node gsd-tools.cjs capability <subcommand>` — see [CLI Tools Reference](reference/CLI-TOOLS.md).
 
 ---
 
@@ -1410,7 +1410,7 @@ Build, query, and inspect the project knowledge graph stored in `.planning/graph
 /gsd-graphify diff                  # Show changes since last build
 ```
 
-**Programmatic access:** `node gsd-tools.cjs graphify <build|query|status|diff|snapshot>` — see [CLI Tools Reference](CLI-TOOLS.md).
+**Programmatic access:** `node gsd-tools.cjs graphify <build|query|status|diff|snapshot>` — see [CLI Tools Reference](reference/CLI-TOOLS.md).
 
 ### `/gsd-mempalace-recall`
 
@@ -2081,6 +2081,6 @@ Command dispatch is then gated **twice**. Beyond that primary activation gate, t
 ## Related
 
 - [Configuration Reference](CONFIGURATION.md)
-- [CLI Tools Reference](CLI-TOOLS.md)
+- [CLI Tools Reference](reference/CLI-TOOLS.md)
 - [Feature Reference](FEATURES.md)
 - [Docs index](README.md)

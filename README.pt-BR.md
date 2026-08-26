@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.8.1-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.8.2-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -77,16 +77,16 @@ Após a instalação, verifique o status ou inicie o planejamento:
 /gsd-exec         # executar plano da fase
 ```
 
-É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
+É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
 
 ---
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.8** → [Tutorial Prático Completo](TUTORIAL.pt-BR.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.8** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 2.8](TUTORIAL.pt-BR.md) ([English](TUTORIAL.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.8](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 
@@ -99,7 +99,7 @@ Após a instalação, verifique o status ou inicie o planejamento:
 **Referência** — informações autoritativas:
 - [Comandos](docs/pt-BR/COMMANDS.md)
 - [Configuração](docs/pt-BR/CONFIGURATION.md)
-- [Ferramentas CLI](docs/pt-BR/CLI-TOOLS.md)
+- [Ferramentas CLI](docs/pt-BR/reference/CLI-TOOLS.md)
 
 **Explicação** — conceitos e decisões de design:
 - [Engenharia de contexto](docs/pt-BR/explanation/context-engineering.md)

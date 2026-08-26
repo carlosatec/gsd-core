@@ -66,13 +66,14 @@ test('updatePackageManifests and updateDocumentationFiles update mock directory 
     fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify(mockPkg, null, 2));
     fs.writeFileSync(path.join(tmp, 'package-lock.json'), JSON.stringify(mockLock, null, 2));
     fs.writeFileSync(path.join(tmp, 'README.md'), '[![version](https://img.shields.io/badge/version-2.5.0-CB3837)](ROADMAP.md)\n# GSD Core Nexus 2.5');
-    fs.writeFileSync(path.join(tmp, 'TUTORIAL.md'), '# Practical Tutorial: Mastering GSD Core Nexus 2.5\nGSD 2.5 CANONICAL INTERFACE');
+    fs.mkdirSync(path.join(tmp, 'docs', 'tutorials'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'docs', 'tutorials', 'practical-tutorial.md'), '# Practical Tutorial: Mastering GSD Core Nexus 2.5\nGSD 2.5 CANONICAL INTERFACE');
 
     const changedPkg = updatePackageManifests(tmp, '2.7.0', false);
     assert.deepEqual(changedPkg.sort(), ['package-lock.json', 'package.json']);
 
     const changedDocs = updateDocumentationFiles(tmp, '2.7.0', '2.7', false);
-    assert.deepEqual(changedDocs.sort(), ['README.md', 'TUTORIAL.md']);
+    assert.deepEqual(changedDocs.sort(), ['README.md', 'docs/tutorials/practical-tutorial.md']);
 
     const updatedPkg = JSON.parse(fs.readFileSync(path.join(tmp, 'package.json'), 'utf8'));
     assert.equal(updatedPkg.version, '2.7.0');
@@ -81,7 +82,7 @@ test('updatePackageManifests and updateDocumentationFiles update mock directory 
     assert.ok(updatedReadme.includes('version-2.7.0-'));
     assert.ok(updatedReadme.includes('GSD Core Nexus 2.7'));
 
-    const updatedTutorial = fs.readFileSync(path.join(tmp, 'TUTORIAL.md'), 'utf8');
+    const updatedTutorial = fs.readFileSync(path.join(tmp, 'docs', 'tutorials', 'practical-tutorial.md'), 'utf8');
     assert.ok(updatedTutorial.includes('GSD Core Nexus 2.7'));
     assert.ok(updatedTutorial.includes('GSD 2.7 CANONICAL INTERFACE'));
   } finally {

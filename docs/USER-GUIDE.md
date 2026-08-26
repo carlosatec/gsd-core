@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 2.5 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 2.8 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -11,6 +11,9 @@ A narrative companion guide to GSD Core Nexus 2.5 — orient yourself here, then
 
 - [The Unified 10-Command Surface](#the-unified-10-command-surface)
 - [Project Lifecycle Overview](#project-lifecycle-overview)
+- [Session Intelligence & Deterministic Replay CLI](#session-intelligence--deterministic-replay-cli)
+- [Knowledge Graph & Obsidian Canvas](#knowledge-graph--obsidian-canvas)
+- [DeepSeek Harness & Multi-Runtime Support](#deepseek-harness--multi-runtime-support)
 - [Workflow Diagrams](#workflow-diagrams)
 - [Validation & Quality Architecture](#validation--quality-architecture)
 - [UI Design & Review Contract](#ui-design--review-contract)
@@ -26,7 +29,7 @@ A narrative companion guide to GSD Core Nexus 2.5 — orient yourself here, then
 
 ## The Unified 10-Command Surface
 
-Starting with GSD Core Nexus 2.5, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 2.8, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -38,7 +41,7 @@ Starting with GSD Core Nexus 2.5, the public command surface is streamlined into
 | `/gsd-ship` | Complete milestone, open PR, tag release, and archive state | `--draft`, `--tag <version>` |
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Telemetry dashboard, token savings breakdown, and context metrics | `--raw`, `--history` |
-| `/gsd-migrate` | Upgrade legacy projects to the unified GSD Nexus 2.5 schema | `--dry-run`, `--force` |
+| `/gsd-migrate` | Upgrade legacy projects to the unified GSD Nexus 2.8 schema | `--dry-run`, `--force` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
 ---
@@ -60,6 +63,40 @@ See [Your first project](tutorials/your-first-project.md) for a step-by-step tut
 | `--draft` | `/gsd-ship` | Open a draft pull request instead of ready-for-review |
 
 For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS.md). For configuration options (model profiles, workflow agents, git branching), see [`docs/CONFIGURATION.md`](CONFIGURATION.md).
+
+---
+
+## Session Intelligence & Deterministic Replay CLI
+
+GSD Core Nexus 2.8 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+
+```bash
+# Replay the latest session in the terminal
+gsd-tools session replay latest
+
+# Filter replay by failures and code mutations
+gsd-tools session replay latest --errors-only
+gsd-tools session replay latest --diffs
+
+# Export session timeline to Markdown
+gsd-tools session export latest --md
+```
+
+---
+
+## Knowledge Graph & Obsidian Canvas
+
+GSD Core Nexus natively generates visual knowledge artifacts directly from the codebase AST (100% offline, zero external dependencies):
+
+- **Obsidian Open Canvas:** `.planning/ROADMAP.canvas` — visual node layout with color-coded phases, decisions, and modules.
+- **Wikilinks & Backlinks Index:** `.planning/intel/backlinks.json` — bidirectional linkage index for Obsidian Vault navigation.
+- **Interactive Visual Graph (HTML):** `/gsd-graph` command exports a standalone, responsive HTML/Canvas 2D visualization with PageRank physics and PNG snapshot capability.
+
+---
+
+## DeepSeek Harness & Multi-Runtime Support
+
+GSD 2.8 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
 
 ---
 

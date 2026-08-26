@@ -24,8 +24,8 @@ This entry denies **the `commit_gates` config as filed.** It does not deny the u
   `gates` entry with `check.predicate.kind: "command-exit-zero"` — "run your command, block the
   loop on non-zero" — at a chosen loop point, with `blocking` and `onError` semantics and a `when`
   config-key gate. See
-  [`docs/how-to/command-exit-zero-gate.md`](../docs/how-to/command-exit-zero-gate.md) and
-  [`docs/reference/gate-predicates.md`](../docs/reference/gate-predicates.md). The proposed
+  [`docs/how-to/command-exit-zero-gate.md`](../../how-to/command-exit-zero-gate.md) and
+  [`docs/reference/gate-predicates.md`](../../reference/gate-predicates.md). The proposed
   `commit_gates` shape (`command` + `block_on: "nonzero"` + match + override) is the same
   mechanism in a different config.
 - **A second config would fragment the architecture.** `commit_gates` in `.planning/config.json`,
@@ -38,7 +38,7 @@ This entry denies **the `commit_gates` config as filed.** It does not deny the u
   `verify`, and `ship`, plus the four `execute` points — `execute:pre`, `execute:wave:pre`,
   `execute:wave:post`, `execute:post`) do not include commit. The loop-point vocabulary is **closed but
   additive-only**
-  ([`docs/reference/capability-manifest.md`](../docs/reference/capability-manifest.md)), so adding
+  ([`docs/reference/capability-manifest.md`](../../reference/capability-manifest.md)), so adding
   a `commit:pre` point — and wiring `cmdCommit` to invoke the loop-resolver there — lets any
   capability declare the existing `command-exit-zero` gate at commit time. That extends the system
   you have rather than building a second one beside it.
@@ -79,10 +79,10 @@ not deny, and must never be cited against:
   ungrounded `REVIEWS.md` is never verified then deleted
 - [#2008](https://github.com/open-gsd/gsd-core/issues/2008) / ADR-2008 — the `command-exit-zero`
   capability gate this decision points to
-- [`docs/how-to/command-exit-zero-gate.md`](../docs/how-to/command-exit-zero-gate.md) — authoring
+- [`docs/how-to/command-exit-zero-gate.md`](../../how-to/command-exit-zero-gate.md) — authoring
   recipe
-- [`docs/reference/gate-predicates.md`](../docs/reference/gate-predicates.md) — gate predicate
+- [`docs/reference/gate-predicates.md`](../../reference/gate-predicates.md) — gate predicate
   reference
-- [`docs/reference/capability-manifest.md`](../docs/reference/capability-manifest.md) — the 12
+- [`docs/reference/capability-manifest.md`](../../reference/capability-manifest.md) — the 12
   closed/additive-only loop points
-- [ADR-1239](../docs/adr/1239-gsd-embeddable-orchestration-engine.md) — EoS (unaffected)
+- [ADR-1239](../../adr/1239-gsd-embeddable-orchestration-engine.md) — EoS (unaffected)

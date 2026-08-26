@@ -55,12 +55,15 @@ O GSD Core é um **framework de meta-prompting** que fica entre o usuário e os 
        │                             │                             │                         └────┬───────────────────────┘
        │                             │                             │                              │
 ┌──────▼─────────────────────────────▼─────────────────────────────▼──────────────────────────────▼───────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33)                             │
+│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33, D-68..D-73)                 │
 │   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)                                  │
+│   src/visual-graph-exporter.cts ── Gerador HTML Canvas 2D 100% offline & snapshot PNG (/gsd-graph — Fase 16)            │
+│   src/canvas-roadmap-generator.cts ── Exportador JSON Open Canvas para Obsidian (ROADMAP.canvas — Fase 16)              │
+│   src/obsidian-interop.cts ── Suporte a [[wikilinks]] e índice bidirecional (.planning/intel/backlinks.json — Fase 16)  │
 │   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                                           │
 │   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                                               │
 │   src/anti-pattern-store.cts ◄── Memória durável de lições de auto-cura & replay de sessão (.planning/intel/)           │
-│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift)                      │
+│   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift, Kotlin, Java)         │
 └──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
        │                                                           │
 ┌──────▼──────────────────────┐                           ┌────────▼───────────────────────────────┐
@@ -647,7 +650,7 @@ O instalador (`bin/install.js`, ~10.700 linhas) trata de:
 
 Movimentações de arquivos no momento da instalação, limpeza de artefatos obsoletos, reescritas de configuração e
 preservação de dados do usuário são governadas pelo Módulo de Migração do Instalador. Consulte
-[Migrações do Instalador](../installer-migrations.md) e
+[Migrações do Instalador](../reference/installer-migrations.md) e
 [ADR 0008](../adr/0008-installer-migration-module.md).
 O módulo de migração também controla o escaneamento de linha de base inicial condicionado para
 instalações legadas, classificando as superfícies de instalação de runtime conhecidas antes que migrações posteriores
@@ -755,7 +758,7 @@ O GSD suporta múltiplos runtimes de codificação com IA por meio de uma arquit
 
 Esta matriz descreve as superfícies de runtime que o instalador materializa hoje.
 A propriedade específica de migração e os snapshots de fonte vivem em
-[Migrações do Instalador](../installer-migrations.md#runtime-configuration-contract-registry).
+[Migrações do Instalador](../reference/installer-migrations.md#runtime-configuration-contract-registry).
 
 | Runtime | Raiz global | Raiz local | Superfície de invocação | Superfície de agente | Configuração e hooks |
 | --- | --- | --- | --- | --- | --- |
@@ -803,5 +806,5 @@ O instalador trata de toda a tradução no momento da instalação. Workflows e 
 
 - [Orquestração multi-agente](explanation/multi-agent-orchestration.md)
 - [Modelo de segurança](explanation/security-model.md)
-- [Ferramentas CLI](CLI-TOOLS.md)
+- [Ferramentas CLI](reference/CLI-TOOLS.md)
 - [Índice de documentação](README.md)

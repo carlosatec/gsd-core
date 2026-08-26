@@ -373,7 +373,7 @@ Cria PR a partir do trabalho concluído em uma fase com body gerado automaticame
 - Decisões principais
 - Seções opcionais configuradas no estilo PRD a partir de `ship.pr_body_sections`
 
-Consulte [Seções Personalizadas do Body do PR](../ship-pr-body-sections.md) para integração, exemplos e regras de validação.
+Consulte [Seções Personalizadas do Body do PR](../reference/ship-pr-body-sections.md) para integração, exemplos e regras de validação.
 
 ---
 
@@ -1146,7 +1146,7 @@ Constrói, consulta e inspeciona o grafo de conhecimento do projeto armazenado e
 /gsd-graphify diff                  # Exibe mudanças desde a última construção
 ```
 
-**Acesso programático:** `node gsd-tools.cjs graphify <build|query|status|diff|snapshot>` — consulte a [Referência de Ferramentas CLI](CLI-TOOLS.md).
+**Acesso programático:** `node gsd-tools.cjs graphify <build|query|status|diff|snapshot>` — consulte a [Referência de Ferramentas CLI](reference/CLI-TOOLS.md).
 
 ### `gsd-tools intel api-surface`
 
@@ -1594,6 +1594,6 @@ A verificação também é executada como parte de `npm test` via `tests/skill-f
 ## Relacionados
 
 - [Referência de Configuração](CONFIGURATION.md)
-- [Referência de Ferramentas CLI](CLI-TOOLS.md)
+- [Referência de Ferramentas CLI](reference/CLI-TOOLS.md)
 - [Referência de Funcionalidades](FEATURES.md)
 - [Índice de documentação](README.md)

@@ -4,10 +4,10 @@ This document is the authoritative reference for test correctness contracts, enf
 
 It orients you to the existing docs without duplicating them:
 
-- **Suite naming, CI matrix, per-suite scripts** → [`docs/TESTING-SUITES.md`](docs/TESTING-SUITES.md)
-- **Test runner imports, setup/teardown patterns, fixture formatting, QA matrix** → [`CONTRIBUTING.md` — "Testing Standards"](CONTRIBUTING.md#testing-standards)
-- **Concrete demo tests for each requirement** → [`TEST-EXAMPLES.md`](TEST-EXAMPLES.md)
-- **Machine-greppable predicates (`RULESET.TESTS.*`)** → [`CONTEXT.md` — "Test rules and lint"](CONTEXT.md)
+- **Suite naming, CI matrix, per-suite scripts** → [`docs/TESTING-SUITES.md`](../reference/TESTING-SUITES.md)
+- **Test runner imports, setup/teardown patterns, fixture formatting, QA matrix** → [`CONTRIBUTING.md` — "Testing Standards"](../../CONTRIBUTING.md#testing-standards)
+- **Concrete demo tests for each requirement** → [`TEST-EXAMPLES.md`](../reference/test-examples.md)
+- **Machine-greppable predicates (`RULESET.TESTS.*`)** → [`CONTEXT.md` — "Test rules and lint"](../../CONTEXT.md)
 
 ---
 
@@ -79,7 +79,7 @@ External I/O (filesystem, network, clock) is the appropriate scope for mocking. 
 
 For every behavioral contract, at least one test must exercise an input that the SUT should reject or handle differently from the happy path. Examples: missing required argument, value at boundary + 1, hostile input.
 
-See [`CONTRIBUTING.md` — "QA Matrix Requirements"](CONTRIBUTING.md#qa-matrix-requirements) for the twelve-case matrix. Apply the cases relevant to the changed surface.
+See [`CONTRIBUTING.md` — "QA Matrix Requirements"](../../CONTRIBUTING.md#qa-matrix-requirements) for the twelve-case matrix. Apply the cases relevant to the changed surface.
 
 **Enforcement:** Code review, `no-only-tests/no-only-tests` ESLint rule (prevents happy-path-only merges via `test.only`).
 
@@ -119,7 +119,7 @@ This is not the same requirement as the input-rejection rule above it. A test ca
 
 **Why this isn't a lint rule.** A pattern scan for fail-open shapes was measured directly against this repo's `src/*.cts` during epic #3051: it scored 1 true positive against 3 false positives (a documented three-state policy, a dispatch convention, and a structured `isError` return each looked like a fail-open guard and were not). The permissive-verdict shape is module-specific, not mechanically enumerable, so a lint rule here would be both incomplete and noisy. This is a code-review expectation, not a CI gate — it will not fail a build on its own; it fails when a reviewer (human or `/code-review`) lets a "did not throw" test stand in for a correctness test.
 
-**Enforcement:** Code review only — deliberately not lint-enforced (see above). Cross-linked from [`CONTRIBUTING.md` — "QA Matrix Requirements"](CONTRIBUTING.md#qa-matrix-requirements) so reviewers see it at the point they already apply the negative-space matrix.
+**Enforcement:** Code review only — deliberately not lint-enforced (see above). Cross-linked from [`CONTRIBUTING.md` — "QA Matrix Requirements"](../../CONTRIBUTING.md#qa-matrix-requirements) so reviewers see it at the point they already apply the negative-space matrix.
 
 ---
 
@@ -216,7 +216,7 @@ Real multi-process race tests are deleted once the corresponding deterministic c
 
 `local/no-source-grep` and `local/no-magic-sleep-in-tests` ship at `error` (promoted by [#3313](https://github.com/open-gsd/gsd-core/issues/3313), absorbing the cleanup sweep originally tracked at #453). `local/no-elapsed-assertion` now also ships at `error` (promoted by [#3331](https://github.com/open-gsd/gsd-core/issues/3331)) — [#3314](https://github.com/open-gsd/gsd-core/issues/3314) delivered its precondition first (ADR-456 §(a) amended with a reachability-based 3-mechanism rule; `commands.cts`/`init.cts`/`io.cts` backfilled with deterministic coverage), mirroring the same handover boundary the epic draws for its other items. New violations added after the acceptance of ADR 456 are out of policy regardless of ESLint severity.
 
-ESLint harness details: [`docs/adr/452-eslint-lint-harness.md`](docs/adr/452-eslint-lint-harness.md).
+ESLint harness details: [`docs/adr/452-eslint-lint-harness.md`](../adr/452-eslint-lint-harness.md).
 
 ---
 

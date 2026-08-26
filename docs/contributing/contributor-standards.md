@@ -100,9 +100,9 @@ Example: `docs/adr/2264-golden-parity-redesign.md`.
 
 **Why:** GitHub issue numbers are server-assigned and atomic — the reservation mechanism already exists because the issue-first rule requires it. Promoting the issue# to the artifact ID eliminates the entire collision class that the `NNNN-*` local-compute scheme created (see the `0010-*` × 2 and `0011-*` × 3 duplicates on disk).
 
-**Migration policy:** Legacy ADRs keep their numbers as immutable historical record — see the **[authoritative legacy-range statement in `docs/adr/README.md`](./adr/README.md#legacy-naming-is-not-legacy-status)** for exactly which zero-padded files that covers (and which zero-padded files are actually modern, mis-padded). Do not renumber legacy files. The new convention applies to all ADRs and PRDs created on or after the merge of the implementing PR (#3485 — a pre-rename number from `get-shit-done-redux`; it does not resolve in `open-gsd/gsd-core`, whose issue numbering restarted at the rename).
+**Migration policy:** Legacy ADRs keep their numbers as immutable historical record — see the **[authoritative legacy-range statement in `docs/adr/README.md`](../adr/README.md#legacy-naming-is-not-legacy-status)** for exactly which zero-padded files that covers (and which zero-padded files are actually modern, mis-padded). Do not renumber legacy files. The new convention applies to all ADRs and PRDs created on or after the merge of the implementing PR (#3485 — a pre-rename number from `get-shit-done-redux`; it does not resolve in `open-gsd/gsd-core`, whose issue numbering restarted at the rename).
 
-For the end-to-end workflow — opening the issue, waiting for approval, creating the file, and submitting the PR — see **[CONTRIBUTING.md — "Proposing an ADR or PRD"](../CONTRIBUTING.md#proposing-an-adr-or-prd)**.
+For the end-to-end workflow — opening the issue, waiting for approval, creating the file, and submitting the PR — see **[CONTRIBUTING.md — "Proposing an ADR or PRD"](../../CONTRIBUTING.md#proposing-an-adr-or-prd)**.
 
 The legacy four-digit scheme (`0003-model-catalog-module.md`) applies only to pre-existing files.
 
@@ -172,7 +172,7 @@ brief needs, pull it with the selector, which parses the live file on every call
 node gsd-tools.cjs query context-predicates --class <CLASS> | --prefix <dotted.prefix> | --contains <text>
 ```
 
-See [`query context-predicates`](CLI-TOOLS.md#query-context-predicates) for the full flag and
+See [`query context-predicates`](../reference/CLI-TOOLS.md#query-context-predicates) for the full flag and
 output reference.
 
 **In the PR body**, state which ADR or standards section was followed. If using an AI assistant, this statement is your responsibility as the author — not the agent's.
