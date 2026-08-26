@@ -12492,8 +12492,8 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   writeNonClaudeDefaults(runtime);
 
   // program + command are now single-source lookups (ADR-1239 Phase B / #1679):
-  // program is the runtime display label; command is the per-host /gsd-new-project
-  // invocation syntax.
+  // program is the runtime display label; command is the per-host post-install
+  // onboarding invocation syntax (e.g. /gsd-status).
   const program = getRuntimeLabel(runtime);
   const command = getRuntimeNewProjectCommand(runtime);
 
@@ -12503,7 +12503,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   // cover both invocation paths to avoid #2957-style "no commands appear".
   if (_hostBehaviors(runtime).skillsGlobalOnboarding && isGlobal) {
     console.log(`
-  ${green}Done!${reset} Restart ${program}, then in any directory either type ${cyan}${command}${reset} or ask Claude to run the ${cyan}gsd-new-project${reset} skill.
+  ${green}Done!${reset} Restart ${program}, then in any directory either type ${cyan}${command}${reset} or ask Claude to run the ${cyan}gsd-status${reset} skill.
 
   ${cyan}Join the community:${reset} https://discord.gg/mYgfVNfA2r
 `);
@@ -12521,7 +12521,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   }
 
   console.log(`
-  ${green}Done!${reset} Open a blank directory in ${program} and run ${cyan}${command}${reset}.
+  ${green}Done!${reset} Open a project directory in ${program} and run ${cyan}${command}${reset}.
 
   ${cyan}Join the community:${reset} https://discord.gg/mYgfVNfA2r
 `);

@@ -5439,26 +5439,27 @@ describe('Bug #2957: claude+global post-install message', () => {
     const output = captureFinishInstallOutput('claude', true);
 
     assert.match(output, /restart claude code/i, 'should mention restart');
-    assert.match(output, /\/gsd-new-project/, 'should still mention /gsd-new-project');
-    assert.match(output, /gsd-new-project skill/i, 'should mention the skill name fallback');
+    assert.match(output, /\/gsd-status/, 'should mention /gsd-status');
+    assert.match(output, /gsd-status skill/i, 'should mention the skill name fallback');
     assert.doesNotMatch(
       output,
-      /open a blank directory/i,
-      'global claude install should replace, not extend, the legacy generic instruction',
+      /open a (blank|project) directory/i,
+      'global claude install should replace, not extend, the generic instruction',
     );
   });
 
-  test('claude+local message keeps the original /gsd-new-project instruction', () => {
+  test('claude+local message keeps the original /gsd-status instruction', () => {
     const output = captureFinishInstallOutput('claude', false);
 
-    assert.match(output, /\/gsd-new-project/, 'should still mention /gsd-new-project');
+    assert.match(output, /\/gsd-status/, 'should mention /gsd-status');
     assert.doesNotMatch(output, /restart claude code/i, 'local install does not require the skills restart note');
   });
 
-  test('non-claude runtimes keep their original message format', () => {
+  test('non-claude runtimes keep their message format with /gsd-status', () => {
     const output = captureFinishInstallOutput('opencode', true);
 
-    assert.match(output, /Open a blank directory/, 'opencode message should be unchanged');
+    assert.match(output, /Open a project directory/, 'opencode message should mention project directory');
+    assert.match(output, /\/gsd-status/, 'opencode message should mention /gsd-status');
     assert.doesNotMatch(output, /restart/i, 'opencode message should not have the claude-specific restart note');
   });
 });

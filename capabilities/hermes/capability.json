@@ -1,7 +1,7 @@
 {
   "id": "hermes",
   "role": "runtime",
-  "version": "2.8.2",
+  "version": "2.8.3",
   "title": "Hermes Agent",
   "description": "Hermes Agent (NousResearch) — skills nest under skills/gsd/ category bucket; nested skill layout; settings-json hook surface; Claude hook event dialect; tier-2 support.",
   "tier": "core",

@@ -365,17 +365,17 @@ export function runtimeFlags(runtime: string): Readonly<Record<string, boolean>>
 }
 
 /**
- * The `/gsd-new-project` invocation syntax per runtime — the post-install
- * "next step" command string. Most runtimes use the default `/gsd-new-project`;
- * a few hosts need a different surface syntax. Collapses the 14-line
+ * The post-install onboarding invocation syntax per runtime (the "next step"
+ * command string). Most runtimes use the default `/gsd-status`; a few hosts
+ * need a different surface syntax. Collapses the 14-line
  * `if (runtime === 'x') command = ...` chain in bin/install.js's next-step
  * message (ADR-1239 Phase B / #1679 AC2). Pure: no I/O.
  */
-const DEFAULT_NEW_PROJECT_COMMAND = '/gsd-new-project';
+const DEFAULT_NEW_PROJECT_COMMAND = '/gsd-status';
 const RUNTIME_NEW_PROJECT_COMMANDS: Readonly<Record<string, string>> = {
-  codex: '$gsd-new-project',
-  cursor: 'gsd-new-project (mention the skill name)',
-  kimi: '/skill:gsd-new-project',
+  codex: '$gsd-status',
+  cursor: 'gsd-status (mention the skill name)',
+  kimi: '/skill:gsd-status',
 };
 
 export function getRuntimeNewProjectCommand(runtime: string): string {
@@ -383,3 +383,4 @@ export function getRuntimeNewProjectCommand(runtime: string): string {
   const c = RUNTIME_NEW_PROJECT_COMMANDS[runtime];
   return typeof c === 'string' && c.length > 0 ? c : DEFAULT_NEW_PROJECT_COMMAND;
 }
+

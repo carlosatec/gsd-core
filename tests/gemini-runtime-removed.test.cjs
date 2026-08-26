@@ -166,7 +166,7 @@ describe('#1928 gemini removed from every runtime-name-policy surface', () => {
   test('gemini falls back on label / config-fragment / new-project surfaces', () => {
     assert.strictEqual(getRuntimeLabel('gemini'), 'Claude Code', 'label table entry removed → fail-closed default');
     assert.strictEqual(getGlobalConfigHomeFragment('gemini'), "'.claude'", 'config-home fragment removed → default');
-    assert.strictEqual(getRuntimeNewProjectCommand('gemini'), '/gsd-new-project', 'new-project override removed → default');
+    assert.strictEqual(getRuntimeNewProjectCommand('gemini'), '/gsd-status', 'new-project override removed → default');
   });
 
   test('runtimeFlags has no isGemini and covers exactly the non-claude, CLI-installable registry runtimes (count-agnostic)', () => {

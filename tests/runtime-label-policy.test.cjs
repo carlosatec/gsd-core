@@ -68,17 +68,17 @@ test('getRuntimeLabel fallback: unknown / empty / alias inputs return "Claude Co
 
 // ---------------------------------------------------------------------------
 // getRuntimeNewProjectCommand (ADR-1239 Phase B / #1679 AC2) — the per-runtime
-// /gsd-new-project invocation syntax for the post-install next-step message.
+// post-install onboarding invocation syntax (/gsd-status).
 // ---------------------------------------------------------------------------
 
-// CURATED override table — runtimes whose /gsd-new-project invocation differs
+// CURATED override table — runtimes whose onboarding invocation differs
 // from the default. All other registry runtimes resolve to the default.
 const NEW_PROJECT_OVERRIDES = {
-  codex: '$gsd-new-project',
-  cursor: 'gsd-new-project (mention the skill name)',
-  kimi: '/skill:gsd-new-project',
+  codex: '$gsd-status',
+  cursor: 'gsd-status (mention the skill name)',
+  kimi: '/skill:gsd-status',
 };
-const DEFAULT_CMD = '/gsd-new-project';
+const DEFAULT_CMD = '/gsd-status';
 
 test('getRuntimeNewProjectCommand: each override runtime resolves to its curated command', () => {
   for (const [id, expected] of Object.entries(NEW_PROJECT_OVERRIDES)) {
