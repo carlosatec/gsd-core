@@ -87,6 +87,24 @@ process.stdin.on('end', () => {
     if (metrics.timestamp && (now - metrics.timestamp) > STALE_SECONDS) {
       process.exit(0);
     }
+    // Non-blocking telemetry background snapshot
+    try {
+      const planningDir = path.join(cwd, '.planning');
+      if (fs.existsSync(planningDir) && metrics.input_tokens) {
+        const telemetryPath = path.join(planningDir, 'intel', 'telemetry.json');
+        if (fs.existsSync(telemetryPath)) {
+          const tRaw = JSON.parse(fs.readFileSync(telemetryPath, 'utf8'));
+          if (tRaw && tRaw.records) {
+            if (metrics.input_tokens > (tRaw.peakInvocationTokens || 0)) {
+              tRaw.peakInvocationTokens = metrics.input_tokens;
+              fs.writeFileSync(telemetryPath, JSON.stringify(tRaw, null, 2), 'utf8');
+            }
+          }
+        }
+      }
+    } catch {
+      // safe non-blocking
+    }
 
     const remaining = metrics.remaining_percentage;
     const usedPct = metrics.used_pct;

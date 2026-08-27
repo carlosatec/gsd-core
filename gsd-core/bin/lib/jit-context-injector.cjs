@@ -29,6 +29,9 @@ const { parseDecisions } = decisionsMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const canonicalMod = require("./canonical-examples-finder.cjs");
 const { findCanonicalExample } = canonicalMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const modelCatalogMod = require("./model-catalog.cjs");
+const { getContextWindowLimit } = modelCatalogMod;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const LANGUAGE_CHAR_WEIGHTS = {
     typescript: 45,
@@ -59,6 +62,21 @@ function queryNeighboringSymbols(graph, targetFile) {
     const deps = queryFileDependencies(graph, normalized);
     const results = [];
     const scores = graph.pageRankScores || {};
+    const extractExportInfo = (fileData) => {
+        const symbolMap = new Map();
+        if (Array.isArray(fileData.symbols)) {
+            for (const s of fileData.symbols) {
+                if (s.name)
+                    symbolMap.set(s.name, s);
+            }
+        }
+        const exportsList = fileData.exports || [];
+        return exportsList.map((e) => {
+            const sym = symbolMap.get(e.name);
+            const signature = e.meta?.signature || sym?.meta?.signature;
+            return { name: e.name, kind: e.kind, signature };
+        });
+    };
     // Outgoing dependencies (files that targetFile imports)
     for (const imp of deps.imports) {
         const matchingKey = Object.keys(graph.files).find(k => k === imp || k.endsWith(imp) ||
@@ -72,7 +90,7 @@ function queryNeighboringSymbols(graph, targetFile) {
             results.push({
                 file: matchingKey,
                 relation: 'import',
-                exports: fileData.exports.map((e) => ({ name: e.name, kind: e.kind })),
+                exports: extractExportInfo(fileData),
                 pageRank: scores[matchingKey] || 0,
             });
         }
@@ -84,7 +102,7 @@ function queryNeighboringSymbols(graph, targetFile) {
             results.push({
                 file: caller,
                 relation: 'imported_by',
-                exports: fileData.exports.map((e) => ({ name: e.name, kind: e.kind })),
+                exports: extractExportInfo(fileData),
                 pageRank: scores[caller] || 0,
             });
         }
@@ -101,8 +119,8 @@ function assembleJitContext(options) {
     const root = options.rootDir ? node_path_1.default.resolve(options.rootDir) : node_path_1.default.dirname(resolvedPlanningDir);
     // Calibrate token budget based on explicit windowTier, model profile, or detected runtime environment
     let effectiveProfile = options.modelProfile;
+    const detected = detectHostRuntime();
     if (!effectiveProfile && !options.windowTier) {
-        const detected = detectHostRuntime();
         if (detected.runtime === 'codex') {
             effectiveProfile = 'pro';
         }
@@ -110,14 +128,17 @@ function assembleJitContext(options) {
             effectiveProfile = 'balanced';
         }
     }
+    // Model-Aware Dynamic Context Sizing
     let defaultTokenBudget = 8000; // Standard 128k-200k baseline (Claude, GPT-4o)
-    if (options.windowTier === 'small') {
+    const activeRuntimeOrModel = options.modelName || options.modelProfile || detected.runtime || process.env['GSD_RUNTIME'];
+    const windowLimit = getContextWindowLimit(activeRuntimeOrModel);
+    if (options.windowTier === 'small' || windowLimit <= 32768) {
         defaultTokenBudget = 2500; // 32k window (Mistral Small, Qwen, local Ollama)
     }
-    else if (options.windowTier === 'large') {
-        defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash)
+    else if (options.windowTier === 'large' || windowLimit >= 1000000) {
+        defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash, Antigravity)
     }
-    else if (options.windowTier === 'standard') {
+    else if (options.windowTier === 'standard' || windowLimit >= 128000) {
         defaultTokenBudget = 8000;
     }
     else if (effectiveProfile) {
@@ -226,7 +247,7 @@ function assembleJitContext(options) {
     if (allNeighbors.length > 0) {
         lines.push('#### Neighboring Modules & Exported Signatures:');
         for (const n of allNeighbors) {
-            const exportList = n.exports.map(e => `${e.name} (${e.kind})`).join(', ');
+            const exportList = n.exports.map(e => e.signature ? `${e.name}: ${e.signature}` : `${e.name} (${e.kind})`).join(', ');
             lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
         }
         lines.push('');

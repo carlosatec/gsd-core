@@ -47,6 +47,8 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
 
         assert.strictEqual(summary.phaseBreakdown['01'].tokensUsed, 800);
         assert.strictEqual(summary.phaseBreakdown['02'].tokensUsed, 1500);
+        assert.strictEqual(r1.compressionRatio, 10.0);
+        assert.ok(summary.averageCompressionRatio >= 1.0);
       } finally {
         cleanup(tmpDir);
       }
@@ -64,6 +66,7 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
         assert.strictEqual(rec.phaseId, undefined);
         assert.strictEqual(rec.tokensSaved, 2000);
         assert.strictEqual(rec.efficiencyPct, 80.0);
+        assert.strictEqual(rec.compressionRatio, 5.0);
 
         const summary = telemetry.getTelemetrySummary(planningDir);
         assert.strictEqual(summary.totalInvocations, 1);
@@ -94,6 +97,7 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
         assert.ok(rendered.includes('Total Invocations:'));
         assert.ok(rendered.includes('Tokens Used (JIT):'));
         assert.ok(rendered.includes('Average Efficiency:'));
+        assert.ok(rendered.includes('Graph Compression:'));
         assert.ok(rendered.includes('Distribution by Command:'));
         assert.ok(rendered.includes('exec'));
         assert.ok(rendered.includes('plan'));
@@ -159,6 +163,31 @@ describe('Phase 7: Pure Token Telemetry & Observability', () => {
         assert.strictEqual(summary.totalInvocations, 1);
         assert.strictEqual(summary.commandBreakdown['exec'].invocations, 1);
         assert.strictEqual(summary.phaseBreakdown['07'].invocations, 1);
+      } finally {
+        cleanup(tmpDir);
+      }
+    });
+  });
+
+  describe('Auto-Upgrade Greenfield Bootstrap & Frameworks', () => {
+    test('bootstraps STATE.md, ROADMAP.md, config.json and detects Next.js framework', () => {
+      const autoUpgrade = require('../gsd-core/bin/lib/auto-upgrade-engine.cjs');
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-greenfield-'));
+      try {
+        const planningDir = path.join(tmpDir, '.planning');
+        fs.writeFileSync(
+          path.join(tmpDir, 'package.json'),
+          JSON.stringify({ dependencies: { next: '14.0.0', react: '18.0.0' } }, null, 2)
+        );
+        fs.writeFileSync(path.join(tmpDir, 'index.ts'), 'export const hello = "world";\n');
+
+        const rep = autoUpgrade.runAutoUpgrade(planningDir, tmpDir);
+        assert.strictEqual(rep.success, true);
+        assert.ok(rep.detectedFrameworks.includes('Next.js'));
+        assert.ok(rep.detectedFrameworks.includes('React'));
+        assert.ok(fs.existsSync(path.join(planningDir, 'STATE.md')));
+        assert.ok(fs.existsSync(path.join(planningDir, 'ROADMAP.md')));
+        assert.ok(fs.existsSync(path.join(planningDir, 'config.json')));
       } finally {
         cleanup(tmpDir);
       }

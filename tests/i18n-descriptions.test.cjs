@@ -36,7 +36,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('tokens', 'en'),
-      'Real-time token telemetry dashboard, cost metrics, and JIT savings breakdown'
+      'Real-time token telemetry dashboard, compression ratio, and JIT savings breakdown'
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'en'),
@@ -55,7 +55,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('tokens', 'pt-br'),
-      'Dashboard de telemetria de tokens em tempo real, métricas de custo e economia JIT'
+      'Dashboard de telemetria de tokens em tempo real, taxa de compressão e economia JIT'
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'pt-br'),

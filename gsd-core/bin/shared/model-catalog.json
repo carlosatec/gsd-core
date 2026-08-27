@@ -166,5 +166,17 @@
     "gsd-mempalace-curator":      { "golden": "sonnet", "balanced": "sonnet", "budget": "haiku",  "phaseType": "research",     "routingTier": "light" },
     "gsd-security-auditor":       { "golden": "opus",   "balanced": "sonnet", "budget": "sonnet", "phaseType": "verification", "routingTier": "heavy" },
     "gsd-user-profiler":          { "golden": "opus",   "balanced": "sonnet", "budget": "sonnet", "phaseType": "research",     "routingTier": "heavy" }
+  },
+  "contextWindowLimits": {
+    "gemini": 1048576,
+    "antigravity": 1048576,
+    "claude": 200000,
+    "codex": 128000,
+    "openai": 128000,
+    "deepseek": 128000,
+    "qwen": 32768,
+    "opencode": 128000,
+    "local": 32768,
+    "default": 128000
   }
 }

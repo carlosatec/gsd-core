@@ -255,6 +255,7 @@ Inspect token savings and context utilization in real time:
 │ • Monolithic Avoided:    820,000    tokens                  │
 │ • Tokens Saved:          735,500    tokens                  │
 │ • Average Efficiency:    89.7 % context saved               │
+│ • Graph Compression:     9.7x reduction factor              │
 │ • Peak Invocation:       3,200  tokens                      │
 ├─────────────────────────────────────────────────────────────┤
 │ 🔀 Distribution by Command:                                  │

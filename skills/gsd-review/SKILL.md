@@ -47,5 +47,7 @@ independent reviewer identity backed by its configured adapter+model (see
 </context>
 
 <process>
-Execute end-to-end.
+1. Execute comprehensive review over target files.
+2. If issues/findings are detected and `--fix` was NOT provided, present full actionable findings and explicitly advise the user: `💡 Dica: Para aplicar essas correções automaticamente, execute /gsd-review --fix`.
+3. If `--fix` was provided, automatically apply atomic repairs and run test verification.
 </process>

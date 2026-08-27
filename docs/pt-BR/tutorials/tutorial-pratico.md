@@ -255,6 +255,7 @@ Acompanhe a economia de tokens e uso de contexto em tempo real:
 │ • Monolítico Evitado:    820.000    tokens                  │
 │ • Tokens Economizados:   735.500    tokens                  │
 │ • Eficiência Média:      89.7 % contexto economizado        │
+│ • Compressão do Grafo:   9.7x fator de redução              │
 │ • Pico por Invocação:    3.200  tokens                      │
 ├─────────────────────────────────────────────────────────────┤
 │ 🔀 Distribuição por Comando:                                │

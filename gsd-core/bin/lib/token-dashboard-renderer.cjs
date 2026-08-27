@@ -44,6 +44,8 @@ function renderTokenDashboard(planningDir) {
     lines.push(`│ • Monolithic Avoided:    ${formatNumber(summary.totalMonolithicTokensAvoided).padEnd(10)} tokens                 │`);
     lines.push(`│ • Tokens Saved:          ${formatNumber(summary.totalTokensSaved).padEnd(10)} tokens                 │`);
     lines.push(`│ • Average Efficiency:    ${summary.averageEfficiencyPct.toFixed(1).padEnd(5)}% context saved           │`);
+    const compRatio = (summary.averageCompressionRatio || 1.0).toFixed(1) + 'x';
+    lines.push(`│ • Graph Compression:     ${compRatio.padEnd(6)} reduction factor       │`);
     lines.push(`│ • Peak Invocation:       ${formatNumber(summary.peakInvocationTokens).padEnd(6)} tokens                     │`);
     lines.push('├─────────────────────────────────────────────────────────────┤');
     lines.push('│ 🔀 Distribution by Command:                                │');

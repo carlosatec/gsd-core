@@ -88,6 +88,14 @@ describe('jit-context-injector', () => {
         windowTier: 'large',
       });
       assert.ok(largeTier.estimatedTokens > 0);
+
+      const geminiModel = assembleJitContext({
+        targetFiles: ['src/user-repo.ts'],
+        planningDir,
+        rootDir: tmpProject,
+        modelName: 'gemini-1.5-pro',
+      });
+      assert.ok(geminiModel.estimatedTokens > 0);
     } finally {
       cleanup(tmpProject);
     }

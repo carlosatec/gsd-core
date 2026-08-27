@@ -471,14 +471,20 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
     const ctx = canvas.getContext('2d');
     let width, height;
 
-    let nodes = DATA.nodes.map(n => ({
-      ...n,
-      x: (Math.random() - 0.5) * 600,
-      y: (Math.random() - 0.5) * 600,
-      vx: 0,
-      vy: 0,
-      visible: true
-    }));
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    let nodes = DATA.nodes.map((n, i) => {
+      const isHub = n.type === 'phase' || n.type === 'decision';
+      const r = isHub ? 50 + Math.sqrt(i + 1) * 35 : 140 + Math.sqrt(i + 1) * 28;
+      const theta = i * goldenAngle;
+      return {
+        ...n,
+        x: Math.cos(theta) * r,
+        y: Math.sin(theta) * r,
+        vx: 0,
+        vy: 0,
+        visible: true
+      };
+    });
 
     const nodeIndex = new Map(nodes.map(n => [n.id, n]));
     const links = DATA.links
@@ -496,6 +502,9 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
     let isDragging = false;
     let dragStartX = 0, dragStartY = 0;
     let physicsActive = true;
+    let alpha = 1.0;
+    const alphaDecay = 0.988;
+    const alphaMin = 0.003;
     let selectedNode = null;
     let hoveredNode = null;
     let activeFilters = { decision: true, phase: true, code: true, test: true, route: true, alert: true };
@@ -511,15 +520,15 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
     window.addEventListener('resize', resize);
     resize();
 
-    // Physics Simulation Loop (Force-Directed Graph)
+    // Physics Simulation Loop (Thermal Alpha Force-Directed Graph)
     function simulate() {
-      if (!physicsActive) return;
+      if (!physicsActive || alpha < alphaMin) return;
 
-      const kRepulsion = 450;
-      const kSpring = 0.04;
-      const centerGravity = 0.015;
+      const kRepulsion = 380 * alpha;
+      const kSpring = 0.035 * alpha;
+      const centerGravity = 0.008 * alpha;
 
-      // 1. Node Repulsion
+      // 1. Node Repulsion & Elastic Anti-Collision
       for (let i = 0; i < nodes.length; i++) {
         const n1 = nodes[i];
         if (!n1.visible) continue;
@@ -537,7 +546,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
           const distSq = dx * dx + dy * dy + 1;
           const dist = Math.sqrt(distSq);
 
-          if (dist < 320) {
+          if (dist < 280) {
             const force = kRepulsion / distSq;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
@@ -548,11 +557,11 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
           }
 
           // Elastic anti-collision
-          const minSeparation = n1.radius + n2.radius + 16;
+          const minSeparation = n1.radius + n2.radius + 14;
           if (dist < minSeparation) {
             const overlap = (minSeparation - dist) * 0.5;
-            const pushX = (dx / dist) * overlap * 0.7;
-            const pushY = (dy / dist) * overlap * 0.7;
+            const pushX = (dx / dist) * overlap * 0.6 * alpha;
+            const pushY = (dy / dist) * overlap * 0.6 * alpha;
             n1.vx -= pushX;
             n1.vy -= pushY;
             n2.vx += pushX;
@@ -567,7 +576,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
         const dx = link.target.x - link.source.x;
         const dy = link.target.y - link.source.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const targetDist = 65 + (link.source.radius + link.target.radius);
+        const targetDist = 70 + (link.source.radius + link.target.radius);
         const delta = dist - targetDist;
         const force = delta * kSpring;
 
@@ -579,14 +588,18 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
         link.target.vy -= fy;
       }
 
-      // 3. Position Update & Damping
+      // 3. Position Update, High Damping & Micro-Velocity Thresholding
       for (const n of nodes) {
         if (n === selectedNode && isDragging) continue;
-        n.vx *= 0.88;
-        n.vy *= 0.88;
+        n.vx *= 0.78;
+        n.vy *= 0.78;
+        if (Math.abs(n.vx) < 0.02) n.vx = 0;
+        if (Math.abs(n.vy) < 0.02) n.vy = 0;
         n.x += n.vx;
         n.y += n.vy;
       }
+
+      alpha *= alphaDecay;
     }
 
     // Render Loop
@@ -697,6 +710,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
       } else if (selectedNode && e.buttons === 1) {
         selectedNode.x = mx;
         selectedNode.y = my;
+        alpha = Math.max(alpha, 0.25);
       } else {
         hoveredNode = nodes.find(n => n.visible && Math.hypot(n.x - mx, n.y - my) <= n.radius + 4) || null;
       }
@@ -709,6 +723,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
     // Control Functions
     function togglePhysics() {
       physicsActive = !physicsActive;
+      if (physicsActive) alpha = 0.35;
       document.getElementById('btn-physics').innerText = physicsActive ? '⏸ Pause Physics' : '▶ Resume Physics';
     }
 

@@ -1,5 +1,5 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 17 (Reorganização, Consolidação da Documentação Diátaxis, Script de Orientação e Auditoria para IA & Sincronização 2.8.1) | Status: Complete (Fase 17 concluída com sucesso: raiz limpa, tutoriais reorganizados em Diátaxis, scripts/check-docs.cjs com zero 404 e integração em package.json e bump-version.cjs)
+> **GSD Active State**: Phase: Phase 19 (Telemetria Autônoma de Tokens, JIT Model-Aware & Otimização de Janelas de Contexto) | Status: Complete (Fase 19 concluída com 100% dos testes e guardrails verificados)
 > **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->

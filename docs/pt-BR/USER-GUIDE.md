@@ -40,8 +40,8 @@ A partir do GSD Core Nexus 2.9, a interface pública é simplificada e consolida
 | `/gsd-verify` | UAT conversacional e validação dos critérios de aceitação | `[fase]`, `--strict` |
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
-| `/gsd-tokens` | Dashboard de telemetria, economia e consumo de contexto | `--raw`, `--history` |
-| `/gsd-migrate` | Migração e upgrade de projetos legados para o formato v2.8 | `--dry-run`, `--force` |
+| `/gsd-tokens` | Dashboard de telemetria em tempo real, taxa de compressão e economia JIT | `--raw`, `--history` |
+| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Nexus 2.9 | `--dry-run`, `--force` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
 ---
@@ -89,14 +89,14 @@ gsd-tools session export latest --md
 O GSD Core Nexus gera nativamente artefatos visuais de conhecimento a partir do AST do código (100% offline, zero dependências externas):
 
 - **Obsidian Open Canvas:** `.planning/ROADMAP.canvas` — layout de nós visuais coloridos por fases, decisões e módulos.
-- **Índice de Wikilinks & Backlinks:** `.planning/intel/backlinks.json` — índice de ligações bidirecionais para navegação no Obsidian Vault.
-- **Grafo Visual Interativo (HTML):** O comando `/gsd-graph` exporta um visualizador HTML/Canvas 2D autônomo e responsivo com física PageRank e exportação de imagem PNG.
+- **Índice de Wikilinks & Backlinks:** `.planning/intel/backlinks.json` — índice de ligações bidirecionais com filtro de inline code (`stripInlineCode`) para navegação no Obsidian Vault.
+- **Grafo Visual Interativo (HTML):** O comando `/gsd-graph` exporta um visualizador HTML/Canvas 2D autônomo com distribuição em espiral de Fermat, estabilização de física por decaimento térmico $\alpha$ e exportação de snapshot PNG.
 
 ---
 
 ## DeepSeek Harness & Suporte Multi-Runtime
 
-O GSD 2.8 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
+O GSD 2.9 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
 
 ---
 
@@ -201,16 +201,18 @@ Aplicações front-end mantêm consistência visual através de contratos de des
 
 ## Telemetria de Tokens e Economia de Contexto
 
-O GSD Nexus inclui observabilidade nativa sobre o uso de tokens e eficiência de cache:
+O GSD Nexus inclui observabilidade técnica pura sobre a injeção cirúrgica de contexto JIT, economia de tokens e compressão de grafo (sem métricas financeiras ou suposições de custo):
 
 ```bash
 /gsd-tokens
 ```
 
-Exibe painel ASCII com:
-- Total de tokens de prompt e completion consumidos.
-- Taxa de economia de cache e reutilização de contexto.
-- Picos de consumo por comando e fase.
+Exibe um painel responsivo em ASCII de 65 colunas contendo:
+- **Tokens JIT Utilizados vs Evitados:** Compara o contexto cirúrgico do grafo AST contra o peso monolítico total do repositório.
+- **Fator de Redução / Compressão de Grafo:** Taxa em tempo real ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrando o ganho de densidade (ex: `10895.2x`).
+- **Dimensionamento Dinâmico Model-Aware:** Calibração automática de orçamento de acordo com a janela do modelo ativo (Gemini 24K, Claude/GPT-4o 8K, Locais 2.5K).
+- **Distribuição por Comando e Fase:** Barras visuais de progresso por comando e divisão por fase.
+- **Subcomandos CLI:** `gsd-tools telemetry get`, `gsd-tools telemetry record` e `gsd-tools telemetry dashboard`.
 
 ---
 

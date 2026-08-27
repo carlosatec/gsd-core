@@ -413,15 +413,21 @@ function runInternalUnifiedCommand(
 
     case 'review': {
       const reviewResult = executeReview(planningDir, cwd, hasFixFlag);
+      const totalIssues = reviewResult.criticalIssues.length + reviewResult.warnings.length;
+      const fixHint = (!hasFixFlag && totalIssues > 0)
+        ? ' 💡 Dica: Para aplicar essas correções automaticamente, execute /gsd:review --fix'
+        : '';
       return {
         command: 'review',
         action: hasFixFlag ? 'REVIEW_AND_AUTO_FIX' : 'REVIEW_ONLY',
-        nextStep: 'run /gsd:verify to validate user acceptance criteria',
+        nextStep: hasFixFlag || totalIssues === 0
+          ? 'run /gsd:verify to validate user acceptance criteria'
+          : 'run /gsd:review --fix to auto-repair issues, or /gsd:verify',
         data: reviewResult,
         fixedIssues: reviewResult.fixed,
         message: hasFixFlag
           ? `Review complete. Automatically repaired ${reviewResult.fixed.length} issue(s).`
-          : `Review complete. Found ${reviewResult.criticalIssues.length} critical issues, ${reviewResult.warnings.length} warnings.`,
+          : `Review complete. Found ${reviewResult.criticalIssues.length} critical issues, ${reviewResult.warnings.length} warnings.${fixHint}`,
       };
     }
 

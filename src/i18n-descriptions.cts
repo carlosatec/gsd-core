@@ -51,8 +51,8 @@ const CANONICAL_COMMAND_DESCRIPTIONS: Record<string, CommandDescriptionEntry> = 
   },
   tokens: {
     name: 'tokens',
-    en: 'Real-time token telemetry dashboard, cost metrics, and JIT savings breakdown',
-    'pt-br': 'Dashboard de telemetria de tokens em tempo real, métricas de custo e economia JIT',
+    en: 'Real-time token telemetry dashboard, compression ratio, and JIT savings breakdown',
+    'pt-br': 'Dashboard de telemetria de tokens em tempo real, taxa de compressão e economia JIT',
   },
   migrate: {
     name: 'migrate',

@@ -3889,7 +3889,57 @@ const HOST_COMMAND_ROUTERS = {
     'skills-root': routeSkillsRoot,
     'session': routeSession,
     'graph': routeGraph,
+    'telemetry': routeTelemetry,
 };
+
+function routeTelemetry({ args, cwd, raw, error }) {
+  const sub = (args[0] === 'telemetry' ? args[1] : args[0]) || 'summary';
+  const planningDir = path.join(cwd || process.cwd(), '.planning');
+  const telemetryMod = require('./lib/jit-telemetry.cjs');
+
+  if (sub === 'record') {
+    let jitTokens = 0;
+    let fullRepoTokens = 0;
+    let command = 'other';
+    let phaseId = undefined;
+    let targetFiles = [];
+
+    const offset = args[0] === 'telemetry' ? 2 : 1;
+    for (let i = offset; i < args.length; i++) {
+      if (args[i] === '--tokens' && args[i + 1]) jitTokens = parseInt(args[++i], 10) || 0;
+      else if (args[i] === '--avoided' && args[i + 1]) fullRepoTokens = parseInt(args[++i], 10) || 0;
+      else if (args[i] === '--command' && args[i + 1]) command = args[++i];
+      else if (args[i] === '--phase' && args[i + 1]) phaseId = args[++i];
+      else if (args[i] === '--files' && args[i + 1]) targetFiles = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    const rec = telemetryMod.recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command, phaseId);
+    if (raw) {
+      process.stdout.write(JSON.stringify(rec));
+    } else {
+      console.log(JSON.stringify(rec, null, 2));
+    }
+    return;
+  }
+
+  if (sub === 'summary' || sub === 'get') {
+    const summary = telemetryMod.getTelemetrySummary(planningDir);
+    if (raw) {
+      process.stdout.write(JSON.stringify(summary));
+    } else {
+      console.log(JSON.stringify(summary, null, 2));
+    }
+    return;
+  }
+
+  if (sub === 'dashboard') {
+    const dashboardMod = require('./lib/token-dashboard-renderer.cjs');
+    console.log(dashboardMod.renderTokenDashboard(planningDir));
+    return;
+  }
+
+  error(`Unknown telemetry subcommand: ${sub}`);
+}
 
 // Returns true when consumed (suppress "Unknown command"), false to fall
 // through. Prototype-pollution-safe: own-property lookup rejects

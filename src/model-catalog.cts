@@ -55,6 +55,7 @@ export interface ModelCatalog {
   runtimeTierDefaults: Record<string, Record<string, TierEntry | null>>;
   providerPresets: Record<string, Record<string, Record<string, TierEntry | null>>>;
   agents: Record<string, AgentMeta>;
+  contextWindowLimits?: Record<string, number>;
 }
 
 let catalog: ModelCatalog | null = null;
@@ -376,3 +377,20 @@ export function mergeEffortTierDefaults(
 
 // ─── Fast mode propagation ───────────────────────────────────────────────────
 export const RUNTIMES_WITH_FAST_MODE: Set<string> = new Set(['api']);
+
+/**
+ * Resolves context window limits (in tokens) for a given runtime or model name.
+ */
+export function getContextWindowLimit(runtimeOrModel?: string): number {
+  const cat = catalog;
+  const limits = (cat && cat.contextWindowLimits) || {};
+  if (!runtimeOrModel) return Number(limits['default'] || 128000);
+  const lower = runtimeOrModel.toLowerCase();
+  for (const [key, val] of Object.entries(limits)) {
+    if (key !== 'default' && lower.includes(key.toLowerCase())) {
+      return Number(val);
+    }
+  }
+  return Number(limits['default'] || 128000);
+}
+

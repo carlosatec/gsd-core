@@ -26,15 +26,32 @@ const { parseDecisions } = decisionsMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import canonicalMod = require('./canonical-examples-finder.cjs');
 const { findCanonicalExample } = canonicalMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import modelCatalogMod = require('./model-catalog.cjs');
+const { getContextWindowLimit } = modelCatalogMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface GraphSymbol {
+  name: string;
+  kind: string;
+  line?: number;
+  meta?: { signature?: string };
+}
+
+interface GraphFileNode {
+  symbols?: GraphSymbol[];
+  exports?: GraphSymbol[];
+  language?: string;
+  linesCount?: number;
+}
 
 type CodebaseGraph = ReturnType<typeof buildCodebaseGraph>;
 
 interface NeighborSymbolInfo {
   file: string;
   relation: 'import' | 'imported_by';
-  exports: Array<{ name: string; kind: string }>;
+  exports: Array<{ name: string; kind: string; signature?: string }>;
   pageRank?: number;
 }
 
@@ -56,6 +73,7 @@ interface AssembleJitContextOptions {
   maxDecisions?: number;
   modelProfile?: string;
   windowTier?: 'small' | 'standard' | 'large';
+  modelName?: string;
   query?: string;
   command?: string;
   phaseId?: string;
@@ -96,6 +114,21 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   const results: NeighborSymbolInfo[] = [];
   const scores = graph.pageRankScores || {};
 
+  const extractExportInfo = (fileData: GraphFileNode) => {
+    const symbolMap = new Map<string, GraphSymbol>();
+    if (Array.isArray(fileData.symbols)) {
+      for (const s of fileData.symbols) {
+        if (s.name) symbolMap.set(s.name, s);
+      }
+    }
+    const exportsList = fileData.exports || [];
+    return exportsList.map((e) => {
+      const sym = symbolMap.get(e.name);
+      const signature = e.meta?.signature || sym?.meta?.signature;
+      return { name: e.name, kind: e.kind, signature };
+    });
+  };
+
   // Outgoing dependencies (files that targetFile imports)
   for (const imp of deps.imports) {
     const matchingKey = Object.keys(graph.files).find(
@@ -107,11 +140,11 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
         k.endsWith(imp + '/index.ts') || k.endsWith(imp + '/index.js')
     );
     if (matchingKey && graph.files[matchingKey]) {
-      const fileData = graph.files[matchingKey];
+      const fileData = graph.files[matchingKey] as GraphFileNode;
       results.push({
         file: matchingKey,
         relation: 'import',
-        exports: fileData.exports.map((e: { name: string; kind: string }) => ({ name: e.name, kind: e.kind })),
+        exports: extractExportInfo(fileData),
         pageRank: scores[matchingKey] || 0,
       });
     }
@@ -120,11 +153,11 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   // Incoming dependencies (files that import targetFile)
   for (const caller of deps.importedBy) {
     if (graph.files[caller]) {
-      const fileData = graph.files[caller];
+      const fileData = graph.files[caller] as GraphFileNode;
       results.push({
         file: caller,
         relation: 'imported_by',
-        exports: fileData.exports.map((e: { name: string; kind: string }) => ({ name: e.name, kind: e.kind })),
+        exports: extractExportInfo(fileData),
         pageRank: scores[caller] || 0,
       });
     }
@@ -145,8 +178,8 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
 
   // Calibrate token budget based on explicit windowTier, model profile, or detected runtime environment
   let effectiveProfile = options.modelProfile;
+  const detected = detectHostRuntime();
   if (!effectiveProfile && !options.windowTier) {
-    const detected = detectHostRuntime();
     if (detected.runtime === 'codex') {
       effectiveProfile = 'pro';
     } else {
@@ -154,13 +187,17 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
+  // Model-Aware Dynamic Context Sizing
   let defaultTokenBudget = 8000; // Standard 128k-200k baseline (Claude, GPT-4o)
 
-  if (options.windowTier === 'small') {
+  const activeRuntimeOrModel = options.modelName || options.modelProfile || detected.runtime || process.env['GSD_RUNTIME'];
+  const windowLimit = getContextWindowLimit(activeRuntimeOrModel);
+
+  if (options.windowTier === 'small' || windowLimit <= 32768) {
     defaultTokenBudget = 2500; // 32k window (Mistral Small, Qwen, local Ollama)
-  } else if (options.windowTier === 'large') {
-    defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash)
-  } else if (options.windowTier === 'standard') {
+  } else if (options.windowTier === 'large' || windowLimit >= 1000000) {
+    defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash, Antigravity)
+  } else if (options.windowTier === 'standard' || windowLimit >= 128000) {
     defaultTokenBudget = 8000;
   } else if (effectiveProfile) {
     const prof = effectiveProfile.toLowerCase();
@@ -275,7 +312,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   if (allNeighbors.length > 0) {
     lines.push('#### Neighboring Modules & Exported Signatures:');
     for (const n of allNeighbors) {
-      const exportList = n.exports.map(e => `${e.name} (${e.kind})`).join(', ');
+      const exportList = n.exports.map(e => e.signature ? `${e.name}: ${e.signature}` : `${e.name} (${e.kind})`).join(', ');
       lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
     }
     lines.push('');

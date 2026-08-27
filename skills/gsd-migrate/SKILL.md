@@ -12,7 +12,7 @@ allowed-tools:
 ---
 
 <objective>
-Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.8+ format, generating living documentation, AST dependency graphs, and token telemetry schema v2.0 without destroying existing plans or history.
+Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.9+ format, generating living documentation, AST dependency graphs, and token telemetry schema v2.0 without destroying existing plans or history.
 </objective>
 
 <execution_context>

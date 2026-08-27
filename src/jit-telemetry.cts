@@ -19,6 +19,7 @@ interface JitTelemetryRecord {
   fullRepoTokens: number;
   tokensSaved: number;
   efficiencyPct: number;
+  compressionRatio?: number;
 }
 
 interface CommandUsageStat {
@@ -40,6 +41,7 @@ interface JitTelemetryData {
   totalJitTokensUsed: number;
   totalMonolithicTokensAvoided: number;
   averageEfficiencyPct: number;
+  averageCompressionRatio?: number;
   peakInvocationTokens: number;
   commandBreakdown: Record<string, CommandUsageStat>;
   phaseBreakdown: Record<string, PhaseUsageStat>;
@@ -52,6 +54,7 @@ interface JitTelemetrySummary {
   totalJitTokensUsed: number;
   totalMonolithicTokensAvoided: number;
   averageEfficiencyPct: number;
+  averageCompressionRatio?: number;
   peakInvocationTokens: number;
   commandBreakdown: Record<string, CommandUsageStat>;
   phaseBreakdown: Record<string, PhaseUsageStat>;
@@ -81,6 +84,11 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       efficiencyPct: r.efficiencyPct || 0,
     }));
 
+    const compressionRatio = parsed.averageCompressionRatio ||
+      (parsed.totalJitTokensUsed && parsed.totalJitTokensUsed > 0 && parsed.totalMonolithicTokensAvoided
+        ? Number(Math.max(1.0, parsed.totalMonolithicTokensAvoided / parsed.totalJitTokensUsed).toFixed(1))
+        : 1.0);
+
     return {
       version: '2.0.0',
       totalInvocations: parsed.totalInvocations || records.length || 0,
@@ -88,6 +96,7 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       totalJitTokensUsed: parsed.totalJitTokensUsed || 0,
       totalMonolithicTokensAvoided: parsed.totalMonolithicTokensAvoided || 0,
       averageEfficiencyPct: parsed.averageEfficiencyPct || 0,
+      averageCompressionRatio: compressionRatio,
       peakInvocationTokens: parsed.peakInvocationTokens || 0,
       commandBreakdown: parsed.commandBreakdown || {},
       phaseBreakdown: parsed.phaseBreakdown || {},
@@ -101,6 +110,7 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       totalJitTokensUsed: 0,
       totalMonolithicTokensAvoided: 0,
       averageEfficiencyPct: 0,
+      averageCompressionRatio: 1.0,
       peakInvocationTokens: 0,
       commandBreakdown: {},
       phaseBreakdown: {},
@@ -136,6 +146,7 @@ function recordJitInvocation(
   const effectiveFull = Math.max(fullRepoTokens, jitTokens);
   const tokensSaved = Math.max(0, effectiveFull - jitTokens);
   const efficiencyPct = effectiveFull > 0 ? Number(((tokensSaved / effectiveFull) * 100).toFixed(1)) : 0;
+  const compressionRatio = Number(Math.max(1.0, effectiveFull / Math.max(1, jitTokens)).toFixed(1));
 
   const record: JitTelemetryRecord = {
     timestamp: new Date().toISOString(),
@@ -146,6 +157,7 @@ function recordJitInvocation(
     fullRepoTokens: effectiveFull,
     tokensSaved,
     efficiencyPct,
+    compressionRatio,
   };
 
   data.records.push(record);
@@ -166,6 +178,12 @@ function recordJitInvocation(
   if (data.totalMonolithicTokensAvoided > 0) {
     data.averageEfficiencyPct = Number(
       ((data.totalTokensSaved / data.totalMonolithicTokensAvoided) * 100).toFixed(1)
+    );
+  }
+
+  if (data.totalJitTokensUsed > 0) {
+    data.averageCompressionRatio = Number(
+      Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)
     );
   }
 
@@ -225,6 +243,7 @@ function getTelemetrySummary(planningDir: string): JitTelemetrySummary {
     totalJitTokensUsed: data.totalJitTokensUsed,
     totalMonolithicTokensAvoided: data.totalMonolithicTokensAvoided,
     averageEfficiencyPct: data.averageEfficiencyPct,
+    averageCompressionRatio: data.averageCompressionRatio || (data.totalJitTokensUsed > 0 ? Number(Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)) : 1.0),
     peakInvocationTokens: data.peakInvocationTokens,
     commandBreakdown: data.commandBreakdown,
     phaseBreakdown: data.phaseBreakdown,
