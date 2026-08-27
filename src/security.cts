@@ -369,8 +369,15 @@ export function scanForInjection(text: unknown, opts: { strict?: boolean; file?:
  * Sanitize text that will be embedded in agent prompts or planning documents.
  * Strips known injection markers while preserving legitimate content.
  */
-export function sanitizeForPrompt(text: unknown): string {
-  if (!text || typeof text !== 'string') return text as string;
+export function sanitizeForPrompt(text: string): string;
+export function sanitizeForPrompt(text: null): null;
+export function sanitizeForPrompt(text: undefined): undefined;
+export function sanitizeForPrompt(text: string | undefined): string | undefined;
+export function sanitizeForPrompt(text: string | null): string | null;
+export function sanitizeForPrompt(text: string | null | undefined): string | null | undefined;
+export function sanitizeForPrompt(text: unknown): string;
+export function sanitizeForPrompt(text: unknown): unknown {
+  if (!text || typeof text !== 'string') return text;
 
   let sanitized = text;
 
@@ -395,8 +402,15 @@ export function sanitizeForPrompt(text: unknown): string {
  * Sanitize text that will be displayed back to the user.
  * Removes protocol-like leak markers that should never surface in checkpoints.
  */
-export function sanitizeForDisplay(text: unknown): string {
-  if (!text || typeof text !== 'string') return text as string;
+export function sanitizeForDisplay(text: string): string;
+export function sanitizeForDisplay(text: null): null;
+export function sanitizeForDisplay(text: undefined): undefined;
+export function sanitizeForDisplay(text: string | undefined): string | undefined;
+export function sanitizeForDisplay(text: string | null): string | null;
+export function sanitizeForDisplay(text: string | null | undefined): string | null | undefined;
+export function sanitizeForDisplay(text: unknown): string;
+export function sanitizeForDisplay(text: unknown): unknown {
+  if (!text || typeof text !== 'string') return text;
 
   let sanitized = sanitizeForPrompt(text);
 

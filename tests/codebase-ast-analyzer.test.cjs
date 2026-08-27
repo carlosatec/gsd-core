@@ -174,4 +174,125 @@ describe('codebase-ast-analyzer — buildCodebaseGraph & Queries', () => {
       cleanup(tmpDir);
     }
   });
+
+  test('extracts Python multi-line from-imports', () => {
+    const pyCode = `
+from os.path import (
+    join,
+    dirname as dir_n,
+    exists
+)
+import (
+    math,
+    json
+)
+class PythonService:
+    def execute(self):
+        pass
+`;
+    const res = analyzeSourceFile('service.py', pyCode);
+    assert.strictEqual(res.language, 'python');
+    const fromImp = res.imports.find(i => i.source === 'os.path');
+    assert.ok(fromImp, 'must extract os.path import');
+    assert.ok(fromImp.specifiers.includes('join'));
+    assert.ok(fromImp.specifiers.includes('dirname'));
+    assert.ok(fromImp.specifiers.includes('exists'));
+  });
+
+  test('extracts Rust multi-line and nested use statements', () => {
+    const rsCode = `
+use crate::models::{
+    User,
+    Order as UserOrder,
+    Invoice,
+};
+use std::sync::{Arc, Mutex};
+pub struct RustModel;
+`;
+    const res = analyzeSourceFile('model.rs', rsCode);
+    assert.strictEqual(res.language, 'rust');
+    const crateImp = res.imports.find(i => i.source === 'crate::models');
+    assert.ok(crateImp, 'must extract crate::models import');
+    assert.strictEqual(crateImp.isRelative, true);
+    assert.ok(crateImp.specifiers.includes('User'));
+    assert.ok(crateImp.specifiers.includes('Order'));
+  });
+
+  test('extracts Go multi-line type blocks', () => {
+    const goCode = `
+package main
+
+type (
+    User struct {
+        ID string
+        Name string
+    }
+    Order interface {
+        Execute()
+    }
+    Status string
+)
+`;
+    const res = analyzeSourceFile('main.go', goCode);
+    assert.strictEqual(res.language, 'go');
+    assert.ok(res.symbols.some(s => s.name === 'User' && s.kind === 'struct'));
+    assert.ok(res.symbols.some(s => s.name === 'Order' && s.kind === 'interface'));
+    assert.ok(res.symbols.some(s => s.name === 'Status' && s.kind === 'type'));
+  });
+
+  test('extracts internal script blocks from Vue SFCs', () => {
+    const vueCode = `
+<template>
+  <div id="vue-app">
+    <button id="save-btn">Save</button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useAuth } from './composables/useAuth';
+
+export const count = ref(0);
+export function increment() {
+  count.value++;
+}
+</script>
+`;
+    const res = analyzeSourceFile('App.vue', vueCode);
+    assert.strictEqual(res.language, 'vue');
+    assert.ok(res.symbols.some(s => s.name === '#vue-app' && s.kind === 'component'));
+    assert.ok(res.symbols.some(s => s.name === 'increment' && s.kind === 'function'));
+    assert.ok(res.imports.some(i => i.source === './composables/useAuth'));
+    assert.ok(res.externalDeps.includes('vue'));
+  });
+
+  test('extracts dependencies from Cargo.toml, go.mod, and pubspec.yaml', () => {
+    const cargo = `
+[package]
+name = "my_crate"
+version = "0.1.0"
+
+[dependencies]
+serde = "1.0"
+tokio = { version = "1.0" }
+`;
+    const cargoRes = analyzeSourceFile('Cargo.toml', cargo);
+    assert.ok(cargoRes.symbols.some(s => s.name === 'crate:my_crate'));
+    assert.ok(cargoRes.externalDeps.includes('serde'));
+    assert.ok(cargoRes.externalDeps.includes('tokio'));
+
+    const goMod = `
+module github.com/example/mymod
+
+go 1.21
+
+require (
+    github.com/gin-gonic/gin v1.9.1
+    github.com/google/uuid v1.3.0
+)
+`;
+    const goRes = analyzeSourceFile('go.mod', goMod);
+    assert.ok(goRes.symbols.some(s => s.name === 'module:github.com/example/mymod'));
+    assert.ok(goRes.externalDeps.includes('github.com/gin-gonic/gin'));
+  });
 });

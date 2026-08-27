@@ -1,5 +1,5 @@
 /**
- * Visual Knowledge Graph Exporter — GSD Core Nexus 2.8
+ * Visual Knowledge Graph Exporter — GSD Core Nexus 2.9
  *
  * Generates an interactive, standalone, zero-dependency HTML/Canvas 2D visualization
  * of the repository knowledge graph stored in `.planning/intel/codebase-graph.json`.
@@ -16,8 +16,13 @@ import path from 'node:path';
 import { platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
-
 const { loadCodebaseGraph, buildCodebaseGraph } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import planScanMod = require('./plan-scan.cjs');
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import phaseLocatorMod = require('./phase-locator.cjs');
+const { listMilestonePhaseDirs } = phaseLocatorMod;
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -95,7 +100,10 @@ function buildVisualGraphPayload(planningDir: string, rootDir?: string): VisualG
   // 1. Process Code Files & Tests from CodebaseGraph
   const pageRankScores = graph.pageRankScores || {};
   for (const [fileRel, fileData] of Object.entries(graph.files)) {
-    const isTest = fileRel.includes('test') || fileRel.includes('spec') || fileRel.endsWith('.test.cjs') || fileRel.endsWith('.test.js') || fileRel.endsWith('.test.ts');
+    const isTest = fileRel.includes('test') || fileRel.includes('spec') ||
+      fileRel.endsWith('.test.cjs') || fileRel.endsWith('.test.js') || fileRel.endsWith('.test.ts') || fileRel.endsWith('.test.cts') ||
+      fileRel.endsWith('_test.go') || fileRel.endsWith('_test.py') || fileRel.endsWith('_test.dart') ||
+      fileRel.includes('Test.kt') || fileRel.includes('Spec.kt');
     const type: VisualNodeType = isTest ? 'test' : 'code';
     const prScore = pageRankScores[fileRel] || 0.01;
     const radius = Math.min(22, Math.max(5, Math.round(prScore * 45 + 5)));
@@ -132,41 +140,38 @@ function buildVisualGraphPayload(planningDir: string, rootDir?: string): VisualG
   const phasesDir = path.join(planningDir, 'phases');
   if (fs.existsSync(phasesDir)) {
     try {
-      const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-      for (const ent of entries) {
-        if (ent.isDirectory()) {
-          totalPhases++;
-          const phaseId = ent.name;
-          addNode({
-            id: `phase:${phaseId}`,
-            label: phaseId,
-            type: 'phase',
-            pageRank: 0.15,
-            radius: 14,
-            color: PALETTE.phase,
-            phaseId,
-            details: { isPhase: true },
-          });
+      const phaseDirs = listMilestonePhaseDirs(phasesDir, { cwd: root }).value;
+      for (const phaseId of phaseDirs) {
+        totalPhases++;
+        addNode({
+          id: `phase:${phaseId}`,
+          label: phaseId,
+          type: 'phase',
+          pageRank: 0.15,
+          radius: 14,
+          color: PALETTE.phase,
+          phaseId,
+          details: { isPhase: true },
+        });
 
-          // Check if phase directory has plan files targeting code files
-          const planDir = path.join(phasesDir, phaseId);
-          try {
-            const planFiles = fs.readdirSync(planDir).filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
-            for (const pf of planFiles) {
-              const content = fs.readFileSync(path.join(planDir, pf), 'utf-8');
-              for (const codeFile of Object.keys(graph.files)) {
-                if (content.includes(codeFile) || content.includes(path.basename(codeFile))) {
-                  links.push({
-                    source: `phase:${phaseId}`,
-                    target: codeFile,
-                    type: 'implements',
-                  });
-                }
+        // Check if phase directory has plan files targeting code files
+        const planDir = path.join(phasesDir, phaseId);
+        try {
+          const { planFiles } = scanPhasePlans(planDir);
+          for (const pf of planFiles) {
+            const content = fs.readFileSync(path.join(planDir, pf), 'utf-8');
+            for (const codeFile of Object.keys(graph.files)) {
+              if (content.includes(codeFile) || content.includes(path.basename(codeFile))) {
+                links.push({
+                  source: `phase:${phaseId}`,
+                  target: codeFile,
+                  type: 'implements',
+                });
               }
             }
-          } catch {
-            // non-blocking
           }
+        } catch {
+          // non-blocking
         }
       }
     } catch {
@@ -532,7 +537,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
           const distSq = dx * dx + dy * dy + 1;
           const dist = Math.sqrt(distSq);
 
-          if (dist < 300) {
+          if (dist < 320) {
             const force = kRepulsion / distSq;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
@@ -540,6 +545,18 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
             n1.vy -= fy;
             n2.vx += fx;
             n2.vy += fy;
+          }
+
+          // Elastic anti-collision
+          const minSeparation = n1.radius + n2.radius + 16;
+          if (dist < minSeparation) {
+            const overlap = (minSeparation - dist) * 0.5;
+            const pushX = (dx / dist) * overlap * 0.7;
+            const pushY = (dy / dist) * overlap * 0.7;
+            n1.vx -= pushX;
+            n1.vy -= pushY;
+            n2.vx += pushX;
+            n2.vy += pushY;
           }
         }
       }
@@ -550,7 +567,7 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
         const dx = link.target.x - link.source.x;
         const dy = link.target.y - link.source.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const targetDist = 60 + (link.source.radius + link.target.radius);
+        const targetDist = 65 + (link.source.radius + link.target.radius);
         const delta = dist - targetDist;
         const force = delta * kSpring;
 
@@ -581,13 +598,17 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
+      const activeFocus = hoveredNode || selectedNode;
+      const connectedIds = activeFocus ? new Set([activeFocus.id, ...links.filter(l => l.source === activeFocus || l.target === activeFocus).map(l => l.source === activeFocus ? l.target.id : l.source.id)]) : null;
+
       // Render Links
-      ctx.lineWidth = 1;
       for (const link of links) {
         if (!link.source.visible || !link.target.visible) continue;
-        ctx.strokeStyle = (link.source === selectedNode || link.target === selectedNode)
-          ? 'rgba(56, 189, 248, 0.8)'
-          : 'rgba(255, 255, 255, 0.12)';
+        const isLinkActive = activeFocus && (link.source === activeFocus || link.target === activeFocus);
+        ctx.strokeStyle = isLinkActive
+          ? 'rgba(56, 189, 248, 0.95)'
+          : (activeFocus ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.12)');
+        ctx.lineWidth = isLinkActive ? 2.2 : 1;
         ctx.beginPath();
         ctx.moveTo(link.source.x, link.source.y);
         ctx.lineTo(link.target.x, link.target.y);
@@ -598,13 +619,17 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
       for (const node of nodes) {
         if (!node.visible) continue;
 
+        const isDimmed = activeFocus && !connectedIds.has(node.id);
+        ctx.globalAlpha = isDimmed ? 0.2 : 1.0;
+
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
         ctx.fillStyle = node.color;
         ctx.fill();
 
         // Highlight selected or hovered
-        if (node === selectedNode || node === hoveredNode) {
+        const isHoveredOrSelected = node === selectedNode || node === hoveredNode;
+        if (isHoveredOrSelected) {
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = 2.5;
           ctx.stroke();
@@ -613,15 +638,24 @@ function generateVisualGraphHtml(payload: VisualGraphPayload): string {
           ctx.beginPath();
           ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
           ctx.strokeStyle = node.color;
-          ctx.lineWidth = 1;
+          ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
-        // Label
-        ctx.font = '10px -apple-system, sans-serif';
-        ctx.fillStyle = (node === selectedNode || node === hoveredNode) ? '#fff' : '#cbd5e1';
-        ctx.textAlign = 'center';
-        ctx.fillText(node.label, node.x, node.y + node.radius + 12);
+        // Smart Level-of-Detail (LOD) and truncated label rendering
+        const isImportantHub = node.type === 'phase' || node.type === 'decision';
+        const shouldDrawLabel = isHoveredOrSelected || isImportantHub || scale > 1.25;
+
+        if (shouldDrawLabel) {
+          ctx.font = isHoveredOrSelected ? 'bold 11px -apple-system, sans-serif' : '10px -apple-system, sans-serif';
+          ctx.fillStyle = isHoveredOrSelected ? '#ffffff' : (isImportantHub ? '#e2e8f0' : '#94a3b8');
+          ctx.textAlign = 'center';
+          const maxLen = isHoveredOrSelected ? 34 : (isImportantHub ? 18 : 14);
+          const displayLabel = node.label.length > maxLen ? node.label.substring(0, maxLen - 2) + '…' : node.label;
+          ctx.fillText(displayLabel, node.x, node.y + node.radius + 12);
+        }
+
+        ctx.globalAlpha = 1.0;
       }
 
       ctx.restore();

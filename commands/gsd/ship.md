@@ -27,4 +27,8 @@ Closes the plan → execute → verify → ship loop.
 @~/.claude/gsd-core/workflows/graduation.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 Execute the ship workflow from @~/.claude/gsd-core/workflows/ship.md end-to-end.

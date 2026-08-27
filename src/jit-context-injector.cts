@@ -99,7 +99,12 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   // Outgoing dependencies (files that targetFile imports)
   for (const imp of deps.imports) {
     const matchingKey = Object.keys(graph.files).find(
-      k => k === imp || k.endsWith(imp) || k.endsWith(imp + '.ts') || k.endsWith(imp + '.cts') || k.endsWith(imp + '.js')
+      k => k === imp || k.endsWith(imp) ||
+        k.endsWith(imp + '.ts') || k.endsWith(imp + '.tsx') || k.endsWith(imp + '.cts') ||
+        k.endsWith(imp + '.js') || k.endsWith(imp + '.jsx') || k.endsWith(imp + '.cjs') ||
+        k.endsWith(imp + '.py') || k.endsWith(imp + '.go') || k.endsWith(imp + '.rs') ||
+        k.endsWith(imp + '.dart') || k.endsWith(imp + '.cs') || k.endsWith(imp + '.kt') ||
+        k.endsWith(imp + '/index.ts') || k.endsWith(imp + '/index.js')
     );
     if (matchingKey && graph.files[matchingKey]) {
       const fileData = graph.files[matchingKey];

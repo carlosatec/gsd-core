@@ -22,6 +22,10 @@ Validate built features against phase acceptance criteria, run end-to-end test s
 @~/.claude/gsd-core/workflows/add-tests.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 <process>
 1. Read verification criteria from PLAN.md and SUMMARY.md.
 2. Run test suites and verify functional behavior.

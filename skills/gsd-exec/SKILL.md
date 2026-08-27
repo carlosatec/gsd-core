@@ -28,6 +28,10 @@ Execute all tasks in the phase plan sequentially or in parallel waves, running P
 @~/.claude/gsd-core/workflows/reapply-patches.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 <process>
 1. Run pre-flight static verification against AST contracts and export signatures.
 2. Execute tasks per wave, running test suites after each task.

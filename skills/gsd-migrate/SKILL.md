@@ -8,10 +8,11 @@ allowed-tools:
   - Bash
   - Grep
   - Glob
+  - AskUserQuestion
 ---
 
 <objective>
-Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.3 format, generating living documentation, AST dependency graphs, and token telemetry schema v2.0 without destroying existing plans or history.
+Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.8+ format, generating living documentation, AST dependency graphs, and token telemetry schema v2.0 without destroying existing plans or history.
 </objective>
 
 <execution_context>
@@ -27,6 +28,10 @@ Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.3 f
 @~/.claude/gsd-core/workflows/docs-update.md
 @~/.claude/gsd-core/workflows/profile-user.md
 </execution_context>
+
+<context>
+Arguments: $ARGUMENTS
+</context>
 
 <process>
 1. Inspect .planning/ directory structure.

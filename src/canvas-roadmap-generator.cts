@@ -1,5 +1,5 @@
 /**
- * Visual Canvas Roadmap Exporter — GSD Core Nexus 2.8
+ * Visual Canvas Roadmap Exporter — GSD Core Nexus 2.9
  *
  * Converts `.planning/ROADMAP.md` into the open `.canvas` JSON specification
  * supported by Obsidian Canvas, VS Code Canvas extensions, and visual board viewers.
@@ -14,6 +14,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import planScanMod = require('./plan-scan.cjs');
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import phaseLocatorMod = require('./phase-locator.cjs');
+const { listMilestonePhaseDirs } = phaseLocatorMod;
 
 // ─── Obsidian Canvas JSON Schema Interfaces ───────────────────────────────────
 
@@ -95,25 +101,22 @@ function parseRoadmapPhases(planningDir: string): ParsedPhase[] {
   const phasesDir = path.join(planningDir, 'phases');
   if (fs.existsSync(phasesDir)) {
     try {
-      const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-      for (const ent of entries) {
-        if (ent.isDirectory()) {
-          const match = ent.name.match(/^(\d+)[-_](.+)$/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            const id = `phase-${String(num).padStart(2, '0')}`;
-            if (!phases.some(p => p.id === id)) {
-              const phaseFolderPath = path.join(phasesDir, ent.name);
-              const summaryExists = fs.existsSync(path.join(phaseFolderPath, 'SUMMARY.md')) ||
-                (fs.existsSync(phaseFolderPath) && fs.readdirSync(phaseFolderPath).some(f => f.endsWith('-SUMMARY.md')));
-              phases.push({
-                id,
-                number: num,
-                title: match[2].replace(/[-_]/g, ' '),
-                status: summaryExists ? 'complete' : 'in_progress',
-                description: `Directory: .planning/phases/${ent.name}`,
-              });
-            }
+      const phaseDirs = listMilestonePhaseDirs(phasesDir, { cwd: path.dirname(planningDir) }).value;
+      for (const entName of phaseDirs) {
+        const match = entName.match(/^(\d+)[-_](.+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          const id = `phase-${String(num).padStart(2, '0')}`;
+          if (!phases.some(p => p.id === id)) {
+            const phaseFolderPath = path.join(phasesDir, entName);
+            const summaryExists = scanPhasePlans(phaseFolderPath).summaryFiles.length > 0;
+            phases.push({
+              id,
+              number: num,
+              title: match[2].replace(/[-_]/g, ' '),
+              status: summaryExists ? 'complete' : 'in_progress',
+              description: `Directory: .planning/phases/${entName}`,
+            });
           }
         }
       }

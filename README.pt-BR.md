@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.8.3-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-2.9.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD Core Nexus 2.8: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
+## GSD Core Nexus 2.9: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
 
-O GSD Core Nexus 2.8 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
+O GSD Core Nexus 2.9 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
 - **Suporte de 1ª Classe ao DeepSeek Harness (`@deepseek-ai/dsh` — D-53):** Adaptador declarativo completo com suporte ao micro-kernel Cordis, transporte MCP e resolução de aliases de CLI (`dsh`, `deepseek`, `deepseek-cli`).
 - **Log Estruturado de Sessão & Retenção Inteligente (D-54 / D-55):** Gravação append-only em JSON Lines (`.planning/intel/sessions/`) com smart trimming de 32 KB para stack traces e diffs, sanitização automática de segredos por regex, hook transparente no Hub e retenção generosa de 50 sessões / 30 dias delimitada em disco (~25-40 MB gitignored).
@@ -83,10 +83,10 @@ Após a instalação, verifique o status ou inicie o planejamento:
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.8** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 2.9** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 2.8](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 2.9](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 

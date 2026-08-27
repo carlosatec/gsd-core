@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 2.8
+ * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 2.9
  *
  * Implements native parsing, resolution, and bidirectional backlink indexing
  * for Obsidian-style `[[wikilinks]]` in `.planning/` Markdown documents.
@@ -17,6 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const markdown_sectionizer_cjs_1 = require("./markdown-sectionizer.cjs");
 // ─── Wikilink Parser Engine ───────────────────────────────────────────────────
 // Global regex for [[target|alias]] patterns. Safe for concurrent matchAll iterators.
 const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -35,7 +36,8 @@ function extractWikilinks(content, sourceFile) {
         }
         if (inCodeBlock)
             continue;
-        const matches = lineText.matchAll(WIKILINK_REGEX);
+        const sanitizedLine = (0, markdown_sectionizer_cjs_1.stripInlineCode)(lineText);
+        const matches = sanitizedLine.matchAll(WIKILINK_REGEX);
         for (const match of matches) {
             const target = match[1].trim();
             const alias = match[2] ? match[2].trim() : undefined;

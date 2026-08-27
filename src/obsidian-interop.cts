@@ -1,5 +1,5 @@
 /**
- * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 2.8
+ * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 2.9
  *
  * Implements native parsing, resolution, and bidirectional backlink indexing
  * for Obsidian-style `[[wikilinks]]` in `.planning/` Markdown documents.
@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { stripInlineCode } from './markdown-sectionizer.cjs';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -66,7 +67,8 @@ function extractWikilinks(content: string, sourceFile: string): WikilinkReferenc
     }
     if (inCodeBlock) continue;
 
-    const matches = lineText.matchAll(WIKILINK_REGEX);
+    const sanitizedLine = stripInlineCode(lineText);
+    const matches = sanitizedLine.matchAll(WIKILINK_REGEX);
     for (const match of matches) {
       const target = match[1].trim();
       const alias = match[2] ? match[2].trim() : undefined;

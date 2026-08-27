@@ -1,8 +1,8 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.8
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.9
 
 > 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](../../tutorials/practical-tutorial.md)  
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 2.8**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 2.9**.
 
 ---
 
@@ -16,7 +16,7 @@
 6. [Inteligência de Código: AST Universal 360°, Mobile & Living Docs](#6-inteligência-de-código-ast-universal-360-mobile--living-docs)
 7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico-okapi-bm25)
 8. [Segurança Pré-Voo: Guardrails, Anti-Patterns & Self-Healing](#8-segurança-pré-voo-guardrails-anti-patterns--self-healing)
-9. [Telemetria e Observabilidade de Tokens (`/gsd:tokens`)](#9-telemetria-e-observabilidade-de-tokens-gsdtokens)
+9. [Telemetria e Observabilidade de Tokens (`/gsd-tokens`)](#9-telemetria-e-observabilidade-de-tokens-gsdtokens)
 10. [Inteligência de Sessão & CLI de Replay Determinístico (`gsd-tools session`)](#10-inteligência-de-sessão--cli-de-replay-determinístico)
 11. [Sistema Unificado de Versionamento & Release (`npm run version:bump`)](#11-sistema-unificado-de-versionamento--release)
 12. [Exemplo Passo a Passo: Construindo uma Feature do Zero](#12-exemplo-passo-a-passo-construindo-uma-feature-do-zero)
@@ -78,21 +78,21 @@ npx github:carlosatec/gsd-core --claude --local --uninstall
 
 ### Cenário A: Novo Projeto ou Projeto Existente
 ```bash
-/gsd:status
+/gsd-status
 ```
 O GSD analisa a árvore git, detecta o estado do repositório e guia a criação do `PROJECT.md`, `ROADMAP.md` e a primeira fase.
 
 ### Cenário B: Planejar Imediatamente
 ```bash
-/gsd:plan
+/gsd-plan
 ```
 Gera a especificação e o plano da primeira fase com base no objetivo informado.
 
 ### Cenário C: Modernizar Projeto Legado
 ```bash
-/gsd:migrate
+/gsd-migrate
 ```
-Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.8 de forma 100% não-destrutiva.
+Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.9 de forma 100% não-destrutiva.
 
 ---
 
@@ -102,66 +102,66 @@ No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comand
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE CANÔNICA GSD 2.8                  │
+│                 INTERFACE CANÔNICA GSD 2.9                  │
 ├────────────┬────────────────────────────────────────────────┤
 │ Comando    │ Ação Operacional                               │
 ├────────────┼────────────────────────────────────────────────┤
-│ /gsd:status│ Diagnóstico situacional, progresso e roadmap   │
-│ /gsd:plan  │ Criação de plano detalhado com ondas e specs   │
-│ /gsd:exec  │ Execução paralela em ondas com subagentes      │
-│ /gsd:review│ Revisão estática de código com flag --fix      │
-│ /gsd:verify│ Validação conversacional de UAT e Auto-Pass    │
-│ /gsd:ship  │ Preparação de branch, PR e merge               │
-│ /gsd:auto  │ Piloto automático (discuss → plan → exec loop) │
-│ /gsd:tokens│ Painel visual de economia e uso de tokens      │
-│ /gsd:migrate│ Modernização de projetos legados e grafo AST   │
-│ /gsd:help  │ Guia completo de uso e consulta de comandos    │
+│ /gsd-status│ Diagnóstico situacional, progresso e roadmap   │
+│ /gsd-plan  │ Criação de plano detalhado com ondas e specs   │
+│ /gsd-exec  │ Execução paralela em ondas com subagentes      │
+│ /gsd-review│ Revisão estática de código com flag --fix      │
+│ /gsd-verify│ Validação conversacional de UAT e Auto-Pass    │
+│ /gsd-ship  │ Preparação de branch, PR e merge               │
+│ /gsd-auto  │ Piloto automático (discuss → plan → exec loop) │
+│ /gsd-tokens│ Painel visual de economia e uso de tokens      │
+│ /gsd-migrate│ Modernização de projetos legados e grafo AST   │
+│ /gsd-help  │ Guia completo de uso e consulta de comandos    │
 └────────────┴────────────────────────────────────────────────┘
 ```
 
 ### 📋 O que cada comando faz em detalhes:
 
-1. **`/gsd:status` — Diagnóstico Situacional e Roadmap:**
+1. **`/gsd-status` — Diagnóstico Situacional e Roadmap:**
    - **O que faz:** Analisa o estado do repositório, verifica a fase ativa no `.planning/STATE.md`, detecta possíveis desvios de contexto (*context drift*) e exibe um resumo da telemetria de tokens.
    - **Quando usar:** No início de qualquer sessão ou quando tiver dúvida sobre qual é o próximo passo a ser executado.
 
-2. **`/gsd:plan [N]` — Planejamento Atômico com AST e Specs:**
+2. **`/gsd-plan [N]` — Planejamento Atômico com AST e Specs:**
    - **O que faz:** Dispara a varredura AST na base de código, calcula a centralidade (PageRank) e o índice BM25 em `.planning/intel/`, alinha decisões técnicas no `SPEC.md` e decompõe a fase em tarefas atômicas distribuídas em ondas paralelas no `PLAN.md`.
    - **Quando usar:** Antes de iniciar o desenvolvimento de qualquer fase nova ou funcionalidade.
 
-3. **`/gsd:exec [N]` — Execução em Ondas com Injeção JIT:**
+3. **`/gsd-exec [N]` — Execução em Ondas com Injeção JIT:**
    - **O que faz:** Executa as tarefas do plano onda por onda. Dispara verificações de pré-voo (*pre-flight guardrails*), injeta cirurgicamente apenas os tipos e dependências necessárias (JIT) e spawna subagentes com contexto limpo de 200k tokens que criam commits atômicos para cada tarefa.
-   - **Quando usar:** Logo após aprovar o plano gerado pelo `/gsd:plan`.
+   - **Quando usar:** Logo após aprovar o plano gerado pelo `/gsd-plan`.
 
-4. **`/gsd:review [--fix]` — Auditoria Estática e Autocorreção:**
+4. **`/gsd-review [--fix]` — Auditoria Estática e Autocorreção:**
    - **O que faz:** Analisa todos os arquivos modificados na fase buscando regressões de estilo, complexidade ciclomática excessiva e anti-patterns. Com a flag `--fix`, aplica reparos autônomos de código automaticamente.
    - **Quando usar:** Ao término da execução das tarefas, antes de validar os critérios de aceitação.
 
-5. **`/gsd:verify [N]` — Validação Conversacional de UAT & Auto-Pass:**
+5. **`/gsd-verify [N]` — Validação Conversacional de UAT & Auto-Pass:**
    - **O que faz:** Conduz um teste de aceitação conversacional (UAT) com o desenvolvedor, validando os requisitos da fase contra os critérios estabelecidos no `SPEC.md` e executando a suíte de testes automatizados com auto-pass de cobertura.
    - **Quando usar:** Após a conclusão e revisão do código, para atestar que a funcionalidade cumpre todos os requisitos de negócio.
 
-6. **`/gsd:ship` — Entrega, Limpeza e Criação de PR:**
+6. **`/gsd-ship` — Entrega, Limpeza e Criação de PR:**
    - **O que faz:** Sanitiza a árvore git, garante que os testes finais passam, filtra commits internos de `.planning/`, faz o push da branch de trabalho e abre o Pull Request pronto para revisão humana e merge.
    - **Quando usar:** Ao finalizar e validar completamente uma fase ou marco do projeto.
 
-7. **`/gsd:auto` — Piloto Automático Ponta a Ponta:**
+7. **`/gsd-auto` — Piloto Automático Ponta a Ponta:**
    - **O que faz:** Modo autônomo que orquestra o ciclo completo sem intervenção manual intermediária: planeja a fase, executa as tarefas com guardrails de autocura, roda a revisão de código e prepara os entregáveis.
    - **Quando usar:** Para tarefas bem especificadas que você deseja que o agente resolva do início ao fim com máxima autonomia.
 
-8. **`/gsd:tokens` — Painel Visual de Economia de Tokens:**
+8. **`/gsd-tokens` — Painel Visual de Economia de Tokens:**
    - **O que faz:** Renderiza um painel ASCII em 65 colunas mostrando métricas em tempo real: total de invocações, taxa de economia de contexto JIT (em média 80-90%), picos de consumo (*bursts*) e distribuição de uso por comando.
    - **Quando usar:** Para monitorar a eficiência de custos e consumo de contexto em projetos de médio e grande porte.
 
-9. **`/gsd:migrate` — Modernização Não-Destrutiva de Projetos:**
+9. **`/gsd-migrate` — Modernização Não-Destrutiva de Projetos:**
    - **O que faz:** Faz backup seguro de versões antigas do GSD, converte schemas e roadmaps legados para o formato moderno de ondas, roda o analisador Universal 360° AST e gera a pasta `.planning/intel/` com o grafo de dependências e documentação viva (`ARCHITECTURE.md` e `APIS.md`).
    - **Quando usar:** Ao trazer para o GSD Nexus 2.7 um projeto que usava versões antigas do GSD ou que estava sem a estrutura `intel/`.
 
-10. **`/gsd:help` — Guia Interativo de Ajuda:**
+10. **`/gsd-help` — Guia Interativo de Ajuda:**
     - **O que faz:** Lista os 10 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
     - **Quando usar:** Sempre que precisar consultar parâmetros ou atalhos de sintaxe.
 
-> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd:plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 10 oficiais são rejeitados de forma segura e orientadora.
+> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd-plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 10 oficiais são rejeitados de forma segura e orientadora.
 
 ---
 
@@ -174,11 +174,11 @@ Cada fase do roadmap passa rigorosamente por este ciclo:
   (Alinhar o quê)   (Como fazer)     (Escrever código)   (Validar UAT)   (Entregar PR)
 ```
 
-1. **Discuss / Spec (`/gsd:plan` / `discuss`):** Alinha decisões arquiteturais antes de planejar e grava no `STATE.md`. Se você pular esta etapa, o GSD emite um *Soft Warning* não-bloqueante e sintetiza automaticamente o `SPEC.md` a partir do `ROADMAP.md` e decisões ativas.
-2. **Plan (`/gsd:plan`):** Decompõe a fase em tarefas atômicas divididas em ondas paralelas (*waves*) no `PLAN.md`.
-3. **Execute (`/gsd:exec`):** Executa as tarefas onda por onda com subagentes de contexto limpo.
-4. **Verify (`/gsd:verify`):** Testa funcionalidades construídas através de validação conversacional (UAT).
-5. **Ship (`/gsd:ship`):** Limpa o git, filtra commits internos de `.planning/` e abre o Pull Request.
+1. **Discuss / Spec (`/gsd-plan` / `discuss`):** Alinha decisões arquiteturais antes de planejar e grava no `STATE.md`. Se você pular esta etapa, o GSD emite um *Soft Warning* não-bloqueante e sintetiza automaticamente o `SPEC.md` a partir do `ROADMAP.md` e decisões ativas.
+2. **Plan (`/gsd-plan`):** Decompõe a fase em tarefas atômicas divididas em ondas paralelas (*waves*) no `PLAN.md`.
+3. **Execute (`/gsd-exec`):** Executa as tarefas onda por onda com subagentes de contexto limpo.
+4. **Verify (`/gsd-verify`):** Testa funcionalidades construídas através de validação conversacional (UAT).
+5. **Ship (`/gsd-ship`):** Limpa o git, filtra commits internos de `.planning/` e abre o Pull Request.
 
 ---
 
@@ -228,21 +228,21 @@ Para garantir que as edições da IA jamais quebrem o repositório:
 * **DFS com Limite de Profundidade (1.000 Nós):** Previne loops infinitos ou estouro de pilha em grafos com dependências circulares.
 * **Proteção contra Arquivos Vazios (`EMPTY_FILE_GUARD`):** Intercepta alucinações ou quedas de stream da IA que poderiam zerar arquivos (`UNINTENDED_TRUNCATION`).
 * **Guardrails de Qualidade e UI/UX (D-34):**
-  - **No `/gsd:plan`:** Executa análise de lacunas (gap analysis) alertando sobre requisitos não mapeados.
-  - **No `/gsd:review`:** Alerta sobre complexidade ciclomática (> 15) e varre interfaces procurando cores fixadas sem tokens ou botões sem rótulos de acessibilidade (`aria-label`).
-  - **No `/gsd:verify`:** Dispara `autoPassed: true` automaticamente quando a cobertura e asserções dos testes atingem 100%.
+  - **No `/gsd-plan`:** Executa análise de lacunas (gap analysis) alertando sobre requisitos não mapeados.
+  - **No `/gsd-review`:** Alerta sobre complexidade ciclomática (> 15) e varre interfaces procurando cores fixadas sem tokens ou botões sem rótulos de acessibilidade (`aria-label`).
+  - **No `/gsd-verify`:** Dispara `autoPassed: true` automaticamente quando a cobertura e asserções dos testes atingem 100%.
 * **Autorização de Co-Evolução:** Quando uma função e seus chamadores são modificados no mesmo commit atômico, o pré-voo aprova a mudança sem falsos positivos.
 * **Laço de Auto-Cura (Self-Healing):** Se um teste falhar durante a execução, o subagente entra em um laço autônomo de reparo (até 3 tentativas) para diagnosticar e corrigir a falha.
 * **Armazenamento de Anti-Patterns entre Sessões:** Toda correção bem-sucedida é gravada em `.planning/intel/anti-patterns.json` com busca indexada (`errorQuery`), impedindo reincidência de erros.
 
 ---
 
-## 9. Telemetria e Observabilidade de Tokens (`/gsd:tokens`)
+## 9. Telemetria e Observabilidade de Tokens (`/gsd-tokens`)
 
 Acompanhe a economia de tokens e uso de contexto em tempo real:
 
 ```bash
-/gsd:tokens
+/gsd-tokens
 ```
 
 **Saída no Terminal (65 Colunas):**
@@ -302,7 +302,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Sistema Unificado de Versionamento & Release
 
-O GSD Core Nexus 2.8 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
+O GSD Core Nexus 2.9 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevar a versão em todos os 49 manifestos, módulos core, lockfiles e badges
@@ -323,37 +323,37 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 
 ### Passo 1: Verificar o Estado Atual
 ```bash
-/gsd:status
+/gsd-status
 ```
 > O GSD lê o status do git e o `STATE.md`, exibindo a fase ativa e o próximo passo recomendado.
 
 ### Passo 2: Planejar a Fase
 ```bash
-/gsd:plan
+/gsd-plan
 ```
 > O planejador analisa o grafo AST, cria as ondas de tarefas no `PLAN.md` e estabelece os critérios de aceitação.
 
 ### Passo 3: Executar as Tarefas
 ```bash
-/gsd:exec
+/gsd-exec
 ```
 > Subagentes executam as ondas em paralelo com contexto JIT. Se um teste falhar, a auto-cura age automaticamente.
 
 ### Passo 4: Rodar Revisão de Código com Auto-Fix
 ```bash
-/gsd:review --fix
+/gsd-review --fix
 ```
 > O GSD revisa os arquivos alterados, detecta problemas de tipagem/estilo e aplica correções automáticas.
 
 ### Passo 5: Validar a Entrega (UAT)
 ```bash
-/gsd:verify
+/gsd-verify
 ```
 > O agente percorre os pontos de verificação conversacional e confirma a aprovação da fase.
 
 ### Passo 6: Finalizar e Abrir PR
 ```bash
-/gsd:ship
+/gsd-ship
 ```
 > Valida a árvore de trabalho, executa verificações finais, faz push da branch e abre o Pull Request!
 
@@ -363,12 +363,12 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 
 | O que você deseja fazer? | Comando recomendado |
 |---|---|
-| Verificar situação / Próxima ação | `/gsd:status` |
-| Planejar a próxima fase | `/gsd:plan` |
-| Executar tarefas planejadas | `/gsd:exec` |
-| Auditar e reparar código | `/gsd:review --fix` |
-| Validar entregáveis (UAT) | `/gsd:verify` |
-| Ver painel de economia de tokens | `/gsd:tokens` |
+| Verificar situação / Próxima ação | `/gsd-status` |
+| Planejar a próxima fase | `/gsd-plan` |
+| Executar tarefas planejadas | `/gsd-exec` |
+| Auditar e reparar código | `/gsd-review --fix` |
+| Validar entregáveis (UAT) | `/gsd-verify` |
+| Ver painel de economia de tokens | `/gsd-tokens` |
 | Replay da última sessão de IA | `node gsd-core/bin/gsd-tools.cjs session replay latest` |
 | Exportar post-mortem de sessão | `node gsd-core/bin/gsd-tools.cjs session export latest --md` |
 | Auditar documentação e links 404 | `npm run docs:check` |
@@ -376,11 +376,11 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 | Elevar versão do ecossistema | `npm run version:bump <version>` |
 | Verificar sincronização do repo | `npm run version:check` |
 | Desinstalar o GSD com segurança | `npx github:carlosatec/gsd-core --all --global --uninstall` |
-| Enviar branch / Abrir PR | `/gsd:ship` |
-| Autopilot autônomo | `/gsd:auto` |
-| Modernizar projeto legado | `/gsd:migrate` |
-| Ver ajuda e lista de comandos | `/gsd:help` |
+| Enviar branch / Abrir PR | `/gsd-ship` |
+| Autopilot autônomo | `/gsd-auto` |
+| Modernizar projeto legado | `/gsd-migrate` |
+| Ver ajuda e lista de comandos | `/gsd-help` |
 
 ---
 
-*GSD Core Nexus 2.8 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*
+*GSD Core Nexus 2.9 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*

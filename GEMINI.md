@@ -1,7 +1,7 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 17 (Reorganização da Documentação Diátaxis, Limpeza da Raiz, Script de Orientação para IA & Sincronização 2.8.1) | Status: Complete (Fase 17 concluída com sucesso: raiz 100% despoluída, tutoriais reorganizados em docs/tutorials, scripts/check-docs.cjs com zero 404 e integração em package.json e bump-version.cjs)
-> **Decisions**: **D-74 [Diataxis Root Cleanup & Tutorial Relocation]:** Mover tutoriais da raiz para docs/tutorials/ e docs/pt-BR/tutorials/ com destaque no README.; **D-75 [Documentation AI Guidance & Link Auditor]:** scripts/check-docs.cjs para validação de integridade de links (zero 404), paridade i18n e roteiros para IA.; **D-76 [Harmonic Release & Documentation Integration]:** scripts/bump-version.cjs atualizado para os caminhos canônicos dos tutoriais sem conflito.; **D-77 [Universal 2.8.1 Docs Synchronization]:** USER-GUIDE.md, ARCHITECTURE.md e READMEs 100% sincronizados com as 16 fases anteriores.
-> **Unified Commands**: /gsd-status, /gsd-plan, /gsd-exec, /gsd-review, /gsd-verify, /gsd-ship, /gsd-auto, /gsd-tokens, /gsd-migrate, /gsd-help
+> **GSD Active State**: Phase: Phase 17 (Reorganização, Consolidação da Documentação Diátaxis, Script de Orientação e Auditoria para IA & Sincronização 2.8.1) | Status: Complete (Fase 17 concluída com sucesso: raiz limpa, tutoriais reorganizados em Diátaxis, scripts/check-docs.cjs com zero 404 e integração em package.json e bump-version.cjs)
+> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 
 # GSD Core Nexus — Antigravity CLI context

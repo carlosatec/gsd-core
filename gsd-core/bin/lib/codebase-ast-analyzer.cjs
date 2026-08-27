@@ -20,6 +20,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const text_lines_cjs_1 = require("./text-lines.cjs");
 // ─── Constants ───────────────────────────────────────────────────────────────
 const DEFAULT_EXTENSIONS = new Set([
     // TypeScript & JavaScript
@@ -49,7 +50,12 @@ const SPECIAL_FILENAMES = new Set([
     'info.plist',
     'build.gradle.kts',
     'settings.gradle.kts',
-    'androidmanifest.xml'
+    'androidmanifest.xml',
+    'cargo.toml',
+    'go.mod',
+    'pyproject.toml',
+    'requirements.txt',
+    'pubspec.yaml'
 ]);
 const DEFAULT_EXCLUDES = [
     'node_modules',
@@ -93,6 +99,37 @@ function analyzePythonFile(filePath, content) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#'))
             continue;
+        // Multi-line from import: from foo import ( ... )
+        const multiFromMatch = trimmed.match(/^from\s+([a-zA-Z0-9_.]+)\s+import\s*\(/);
+        if (multiFromMatch) {
+            const source = multiFromMatch[1];
+            let collected = '';
+            if (trimmed.includes(')')) {
+                collected = trimmed.substring(trimmed.indexOf('(') + 1, trimmed.indexOf(')'));
+            }
+            else {
+                collected = trimmed.substring(trimmed.indexOf('(') + 1);
+                while (i + 1 < lines.length) {
+                    i++;
+                    const nextLine = lines[i].split('#')[0].trim();
+                    collected += ' ' + nextLine;
+                    if (nextLine.includes(')'))
+                        break;
+                }
+                if (collected.includes(')')) {
+                    collected = collected.substring(0, collected.indexOf(')'));
+                }
+            }
+            collected = collected.replace(/\)/g, '');
+            const specifiers = collected.split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
+            const isRelative = source.startsWith('.');
+            if (isRelative)
+                localDepsSet.add(source);
+            else
+                externalDepsSet.add(source.split('.')[0]);
+            imports.push({ source, specifiers, isTypeOnly: false, isRelative });
+            continue;
+        }
         // Imports: import foo, from foo import bar
         const importMatch = trimmed.match(/^import\s+([a-zA-Z0-9_.,\s]+)/);
         if (importMatch) {
@@ -112,7 +149,7 @@ function analyzePythonFile(filePath, content) {
         const fromImportMatch = trimmed.match(/^from\s+([a-zA-Z0-9_.]+)\s+import\s+([a-zA-Z0-9_.,\s*]+)/);
         if (fromImportMatch) {
             const source = fromImportMatch[1];
-            const specifiers = fromImportMatch[2].split(',').map(s => s.trim().split(' ')[0]);
+            const specifiers = fromImportMatch[2].split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
             const isRelative = source.startsWith('.');
             if (isRelative)
                 localDepsSet.add(source);
@@ -165,6 +202,8 @@ function analyzeGoFile(filePath, content) {
     const externalDepsSet = new Set();
     const localDepsSet = new Set();
     let inImportBlock = false;
+    let inTypeBlock = false;
+    let typeBlockStructDepth = 0;
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const lineNum = i + 1;
@@ -193,6 +232,36 @@ function analyzeGoFile(filePath, content) {
                     imports.push({ source, specifiers: [], isTypeOnly: false, isRelative: false });
                 }
             }
+            continue;
+        }
+        // Multi-line type block: type ( ... )
+        if (trimmed === 'type (') {
+            inTypeBlock = true;
+            typeBlockStructDepth = 0;
+            continue;
+        }
+        if (inTypeBlock) {
+            if (trimmed === ')' && typeBlockStructDepth === 0) {
+                inTypeBlock = false;
+                continue;
+            }
+            if (typeBlockStructDepth === 0) {
+                const typeInBlock = trimmed.match(/^([A-Za-z0-9_]+)\s+(struct|interface|[A-Za-z0-9_]+)/);
+                if (typeInBlock) {
+                    const name = typeInBlock[1];
+                    const kindRaw = typeInBlock[2];
+                    const kind = kindRaw === 'struct' ? 'struct' : kindRaw === 'interface' ? 'interface' : 'type';
+                    const isExported = /^[A-Z]/.test(name);
+                    symbols.push({ name, kind, line: lineNum, exported: isExported });
+                    if (isExported) {
+                        exports.push({ name, kind, isTypeOnly: true });
+                    }
+                }
+            }
+            if (trimmed.includes('{'))
+                typeBlockStructDepth += (trimmed.match(/\{/g) || []).length;
+            if (trimmed.includes('}'))
+                typeBlockStructDepth = Math.max(0, typeBlockStructDepth - (trimmed.match(/\}/g) || []).length);
             continue;
         }
         // Single import: import "fmt"
@@ -257,6 +326,37 @@ function analyzeRustFile(filePath, content) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('//'))
             continue;
+        // Multi-line or nested use statements: use crate::foo::{bar, baz};
+        const nestedUseMatch = trimmed.match(/^use\s+([a-zA-Z0-9_:]+)::\{/);
+        if (nestedUseMatch) {
+            const baseSource = nestedUseMatch[1];
+            let collected = '';
+            if (trimmed.includes('}')) {
+                collected = trimmed.substring(trimmed.indexOf('{') + 1, trimmed.indexOf('}'));
+            }
+            else {
+                collected = trimmed.substring(trimmed.indexOf('{') + 1);
+                while (i + 1 < lines.length) {
+                    i++;
+                    const nextLine = lines[i].split('//')[0].trim();
+                    collected += ' ' + nextLine;
+                    if (nextLine.includes('}'))
+                        break;
+                }
+                if (collected.includes('}')) {
+                    collected = collected.substring(0, collected.indexOf('}'));
+                }
+            }
+            collected = collected.replace(/[};]/g, '');
+            const specifiers = collected.split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
+            const isRelative = baseSource.startsWith('crate') || baseSource.startsWith('super') || baseSource.startsWith('self');
+            if (isRelative)
+                localDepsSet.add(baseSource);
+            else
+                externalDepsSet.add(baseSource.split('::')[0]);
+            imports.push({ source: baseSource, specifiers, isTypeOnly: false, isRelative });
+            continue;
+        }
         // Use statements: use crate::foo::bar; use std::collections::HashMap;
         const useMatch = trimmed.match(/^use\s+([a-zA-Z0-9_:]+)/);
         if (useMatch) {
@@ -907,6 +1007,27 @@ function analyzeHtmlAndSfcFile(filePath, content) {
     const symbols = [];
     const routes = [];
     const localDepsSet = new Set();
+    const externalDepsSet = new Set();
+    const isSfc = filePath.endsWith('.vue') || filePath.endsWith('.svelte');
+    if (isSfc) {
+        // Extract internal script blocks: <script ...> ... </script>
+        const scriptBlockRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptBlockRegex.exec(content)) !== null) {
+            const scriptCode = match[1];
+            if (scriptCode.trim()) {
+                const subResult = analyzeSourceFile(filePath.replace(/\.(vue|svelte)$/, '.ts'), scriptCode);
+                imports.push(...subResult.imports);
+                exports.push(...subResult.exports);
+                symbols.push(...subResult.symbols);
+                routes.push(...subResult.routes);
+                for (const ed of subResult.externalDeps)
+                    externalDepsSet.add(ed);
+                for (const ld of subResult.localDeps)
+                    localDepsSet.add(ld);
+            }
+        }
+    }
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const lineNum = i + 1;
@@ -940,7 +1061,7 @@ function analyzeHtmlAndSfcFile(filePath, content) {
         exports,
         symbols,
         routes,
-        externalDeps: [],
+        externalDeps: Array.from(externalDepsSet),
         localDeps: Array.from(localDepsSet),
         linesCount: lines.length,
         language: filePath.endsWith('.vue') ? 'vue' : filePath.endsWith('.svelte') ? 'svelte' : 'html'
@@ -989,6 +1110,49 @@ function analyzeDevOpsAndShellFile(filePath, content) {
                 symbols.push({ name: `port:${portMatch[1]}->${portMatch[2]}`, kind: 'token', line: lineNum, exported: true });
             }
         }
+        // Cargo.toml: [dependencies], [dev-dependencies], [build-dependencies]
+        if (baseName === 'cargo.toml') {
+            const pkgMatch = trimmed.match(/^name\s*=\s*["']([^"']+)["']/);
+            if (pkgMatch) {
+                symbols.push({ name: `crate:${pkgMatch[1]}`, kind: 'service', line: lineNum, exported: true });
+                exports.push({ name: `crate:${pkgMatch[1]}`, kind: 'service', isTypeOnly: false });
+            }
+            const depMatch = trimmed.match(/^([a-zA-Z0-9_-]+)\s*=/);
+            if (depMatch && !['name', 'version', 'edition', 'authors', 'description', 'license', 'workspace', 'default-run'].includes(depMatch[1])) {
+                externalDepsSet.add(depMatch[1]);
+            }
+        }
+        // go.mod: module name, require (...)
+        if (baseName === 'go.mod') {
+            const modMatch = trimmed.match(/^module\s+([^\s]+)/);
+            if (modMatch) {
+                symbols.push({ name: `module:${modMatch[1]}`, kind: 'service', line: lineNum, exported: true });
+                exports.push({ name: `module:${modMatch[1]}`, kind: 'service', isTypeOnly: false });
+            }
+            const reqMatch = trimmed.match(/^(?:require\s+)?([a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)\s+v[0-9]/);
+            if (reqMatch) {
+                externalDepsSet.add(reqMatch[1]);
+            }
+        }
+        // pyproject.toml & requirements.txt
+        if (baseName === 'requirements.txt' || baseName === 'pyproject.toml') {
+            const reqPkgMatch = trimmed.match(/^([a-zA-Z0-9_-]+)(?:\[.*\])?(?:[=><~!]|\s|$)/);
+            if (reqPkgMatch && !reqPkgMatch[1].startsWith('-') && !['version', 'name', 'description', 'dependencies', 'requires-python', 'readme'].includes(reqPkgMatch[1])) {
+                externalDepsSet.add(reqPkgMatch[1]);
+            }
+        }
+        // pubspec.yaml: name:, dependencies:, dev_dependencies:
+        if (baseName === 'pubspec.yaml') {
+            const pubName = trimmed.match(/^name:\s*([a-zA-Z0-9_]+)/);
+            if (pubName) {
+                symbols.push({ name: `package:${pubName[1]}`, kind: 'service', line: lineNum, exported: true });
+                exports.push({ name: `package:${pubName[1]}`, kind: 'service', isTypeOnly: false });
+            }
+            const pubDep = line.match(/^\s{2}([a-zA-Z0-9_]+):/);
+            if (pubDep && !['sdk', 'flutter', 'flutter_test', 'version', 'description', 'environment'].includes(pubDep[1])) {
+                externalDepsSet.add(pubDep[1]);
+            }
+        }
         // Shell Scripts: function deploy() or build_app() { ... }, export VAR=...
         if (filePath.endsWith('.sh') || filePath.endsWith('.bash') || filePath.endsWith('.zsh')) {
             const fnMatch = trimmed.match(/^(?:function\s+)?([a-zA-Z0-9_]+)\s*\(\)\s*\{/);
@@ -1022,7 +1186,73 @@ function analyzeDevOpsAndShellFile(filePath, content) {
         language: baseName.includes('docker') ? 'docker' : 'shell'
     };
 }
-// ─── AST Analysis Core ────────────────────────────────────────────────────────
+const tsConfigCache = new Map();
+function loadTsConfigAliases(root) {
+    if (tsConfigCache.has(root))
+        return tsConfigCache.get(root) ?? null;
+    const tsConfigPath = node_path_1.default.join(root, 'tsconfig.json');
+    const jsConfigPath = node_path_1.default.join(root, 'jsconfig.json');
+    const candidatePath = node_fs_1.default.existsSync(tsConfigPath) ? tsConfigPath : node_fs_1.default.existsSync(jsConfigPath) ? jsConfigPath : null;
+    if (!candidatePath) {
+        tsConfigCache.set(root, null);
+        return null;
+    }
+    try {
+        const raw = node_fs_1.default.readFileSync(candidatePath, 'utf-8');
+        const lines = (0, text_lines_cjs_1.splitLines)(raw);
+        const cleanLines = [];
+        let inBlockComment = false;
+        for (const line of lines) {
+            let l = line.trim();
+            if (inBlockComment) {
+                if (l.includes('*/')) {
+                    inBlockComment = false;
+                    l = l.substring(l.indexOf('*/') + 2).trim();
+                }
+                else {
+                    continue;
+                }
+            }
+            if (l.startsWith('/*')) {
+                if (l.includes('*/')) {
+                    l = l.substring(l.indexOf('*/') + 2).trim();
+                }
+                else {
+                    inBlockComment = true;
+                    continue;
+                }
+            }
+            if (l.startsWith('//'))
+                continue;
+            cleanLines.push(line.replace(/\/\/[^"']*$/, ''));
+        }
+        const stripped = cleanLines.join('\n');
+        const parsed = JSON.parse(stripped);
+        const paths = parsed.compilerOptions?.paths || {};
+        const baseUrl = parsed.compilerOptions?.baseUrl || '.';
+        const result = { paths, baseUrl };
+        tsConfigCache.set(root, result);
+        return result;
+    }
+    catch {
+        tsConfigCache.set(root, null);
+        return null;
+    }
+}
+function resolvePathAlias(source, root, aliases) {
+    if (!aliases || !aliases.paths)
+        return null;
+    for (const [aliasPattern, targetList] of Object.entries(aliases.paths)) {
+        const aliasPrefix = aliasPattern.replace(/\*$/, '');
+        if (source.startsWith(aliasPrefix) && targetList.length > 0) {
+            const targetPrefix = targetList[0].replace(/\*$/, '');
+            const remainder = source.slice(aliasPrefix.length);
+            const relativeTarget = node_path_1.default.join(aliases.baseUrl, targetPrefix, remainder).replace(/\\/g, '/');
+            return relativeTarget.startsWith('.') ? relativeTarget : `./${relativeTarget}`;
+        }
+    }
+    return null;
+}
 /**
  * Analyzes a source file across any supported ecosystem (TS/JS, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, Flutter, SQL, CSS, Docker, Shell).
  */
@@ -1101,24 +1331,31 @@ function analyzeSourceFile(filePath, sourceText) {
     const routes = [];
     const externalDepsSet = new Set();
     const localDepsSet = new Set();
+    const rootDir = process.cwd();
+    const tsConfigAliases = loadTsConfigAliases(rootDir);
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const lineNum = i + 1;
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*'))
             continue;
-        // 1. ES Imports: import ... from '...'
-        const importMatch = trimmed.match(/^import\s+(?:type\s+)?(?:([a-zA-Z0-9_$]+)|\{([^}]+)\}|\*\s+as\s+([a-zA-Z0-9_$]+))\s+from\s+['"]([^'"]+)['"]/);
+        // 1. ES Imports (including combined: import Default, { Named } from '...' / import Default, * as Ns from '...')
+        const importMatch = trimmed.match(/^import\s+(?:type\s+)?(?:([a-zA-Z0-9_$]+)\s*,\s*)?(?:\{([^}]+)\}|\*\s+as\s+([a-zA-Z0-9_$]+)|([a-zA-Z0-9_$]+))?\s+from\s+['"]([^'"]+)['"]/);
         if (importMatch) {
-            const defaultSpec = importMatch[1];
+            const defaultPrefix = importMatch[1];
             const namedSpecs = importMatch[2];
             const nsSpec = importMatch[3];
-            const source = importMatch[4];
+            const standaloneDefault = importMatch[4];
+            const rawSource = importMatch[5];
+            const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
+            const source = resolvedAlias || rawSource;
             const isRelative = source.startsWith('.') || source.startsWith('/');
             const isTypeOnly = trimmed.startsWith('import type');
             const specifiers = [];
-            if (defaultSpec)
-                specifiers.push(defaultSpec.trim());
+            if (defaultPrefix)
+                specifiers.push(defaultPrefix.trim());
+            if (standaloneDefault)
+                specifiers.push(standaloneDefault.trim());
             if (nsSpec)
                 specifiers.push(nsSpec.trim());
             if (namedSpecs) {
@@ -1142,7 +1379,9 @@ function analyzeSourceFile(filePath, sourceText) {
         if (requireMatch) {
             const namedSpecs = requireMatch[1];
             const defaultSpec = requireMatch[2];
-            const source = requireMatch[3];
+            const rawSource = requireMatch[3];
+            const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
+            const source = resolvedAlias || rawSource;
             const isRelative = source.startsWith('.') || source.startsWith('/');
             const specifiers = [];
             if (defaultSpec)
@@ -1164,11 +1403,12 @@ function analyzeSourceFile(filePath, sourceText) {
             }
         }
         // 3. Functions
-        const funcMatch = trimmed.match(/^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)/);
+        const funcMatch = trimmed.match(/^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*(\([^)]*\))?/);
         if (funcMatch) {
             const name = funcMatch[1];
+            const sig = funcMatch[2] ? funcMatch[2].trim() : undefined;
             const isExported = trimmed.startsWith('export');
-            symbols.push({ name, kind: 'function', line: lineNum, exported: isExported });
+            symbols.push({ name, kind: 'function', line: lineNum, exported: isExported, meta: sig ? { signature: sig } : undefined });
             if (isExported)
                 exports.push({ name, kind: 'function', isTypeOnly: false });
         }
@@ -1218,14 +1458,45 @@ function analyzeSourceFile(filePath, sourceText) {
             if (isExported)
                 exports.push({ name, kind, isTypeOnly: false });
         }
-        // 9. Named exports: export { a, b as c }
-        const namedExportMatch = trimmed.match(/^export\s+(?:type\s+)?\{([^}]+)\}/);
+        // 9. Re-exports: export * from '...' / export * as ns from '...' / export { ... } from '...'
+        const starExportMatch = trimmed.match(/^export\s+(?:\*\s+as\s+([a-zA-Z0-9_$]+)|\*)\s+from\s+['"]([^'"]+)['"]/);
+        if (starExportMatch) {
+            const nsName = starExportMatch[1];
+            const rawSource = starExportMatch[2];
+            const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
+            const source = resolvedAlias || rawSource;
+            const isRelative = source.startsWith('.') || source.startsWith('/');
+            if (nsName) {
+                exports.push({ name: nsName, kind: 'variable', isTypeOnly: false });
+            }
+            if (isRelative)
+                localDepsSet.add(source);
+            else {
+                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+                if (!pkgName.startsWith('node:'))
+                    externalDepsSet.add(pkgName);
+            }
+        }
+        const namedExportMatch = trimmed.match(/^export\s+(?:type\s+)?\{([^}]+)\}(?:\s+from\s+['"]([^'"]+)['"])?/);
         if (namedExportMatch) {
             const isTypeOnly = trimmed.startsWith('export type');
+            const rawSource = namedExportMatch[2];
             for (const part of namedExportMatch[1].split(',')) {
                 const spec = part.trim().split(/\s+as\s+/)[0].trim();
                 if (spec)
                     exports.push({ name: spec, kind: 'variable', isTypeOnly });
+            }
+            if (rawSource) {
+                const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
+                const source = resolvedAlias || rawSource;
+                const isRelative = source.startsWith('.') || source.startsWith('/');
+                if (isRelative)
+                    localDepsSet.add(source);
+                else {
+                    const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+                    if (!pkgName.startsWith('node:'))
+                        externalDepsSet.add(pkgName);
+                }
             }
         }
         // 10. Default export: export default ...

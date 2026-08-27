@@ -96,7 +96,10 @@ function runPreFlightChecks(ctx) {
             node_fs_1.default.existsSync(p + '.dart') ||
             node_fs_1.default.existsSync(p + '.css') ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.ts')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.tsx')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.cts')) ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.js')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.cjs')) ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, '__init__.py')) ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, 'mod.rs')) ||
             node_fs_1.default.existsSync(node_path_1.default.join(p, 'lib.rs'));

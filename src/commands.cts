@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeEol } from './text-lines.cjs';
 import { execGit, platformWriteSync, platformReadSync, platformEnsureDir, isSpawnTimeout, retryRenameSync } from './shell-command-projection.cjs';
-import { requireSafePath, sanitizeForDisplay } from './security.cjs';
+import { requireSafePath, sanitizeForDisplay, sanitizeForPrompt, validatePath } from './security.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import ioMod = require('./io.cjs');
 const { output, error, ERROR_REASON } = ioMod;
@@ -708,8 +708,7 @@ function cmdResolveExecution(cwd: string, agentType: string | undefined, raw: bo
  * `undocumented` sentinel all degrade to the safe floor rather than being trusted.
  * Never throws — a lookup failure yields `'none'`, which renders no argument.
  */
-function effortSurfaceForHost(cwd: string, host: string): string {
-  void cwd;
+function effortSurfaceForHost(_cwd: string, host: string): string {
   try {
     // Mirrors the lazy-require pattern from runtime-slash.cts §runtimeSlash —
     // capability-registry.cjs is generated and carries no type declarations.
@@ -1146,8 +1145,6 @@ function cmdCommit(cwd: string, message: string | undefined, files: string[] | u
   // that could hijack agent context when commit messages are read back
   let sanitizedMessage = message;
   if (sanitizedMessage) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/unbound-method
-    const { sanitizeForPrompt } = require('./security.cjs') as { sanitizeForPrompt(text: unknown): string };
     sanitizedMessage = sanitizeForPrompt(sanitizedMessage);
   }
 
@@ -1590,11 +1587,7 @@ function cmdPrSubrepo(
   // 0. Security: validate repo path is contained within the workspace root.
   //    Uses security.cjs validatePath (symlink-safe realpathSync + startsWith guard)
   //    to reject ../escape, absolute paths, and symlink traversal.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/unbound-method
-  const { validatePath } = require('./security.cjs') as {
-    validatePath(filePath: string, baseDir: string): { safe: boolean; resolved: string; error?: string };
-  };
-  const pathCheck = validatePath(repo as string, cwd);
+  const pathCheck = validatePath(repo, cwd);
   if (!pathCheck.safe) {
     error(`Sub-repo path is unsafe: ${pathCheck.error}`);
   }
@@ -2125,9 +2118,9 @@ function cmdTodoMatchPhase(cwd: string, phase: string | undefined, raw: boolean)
 
     if (score > 0) {
       matches.push({
-        file: todo.file,
-        title: todo.title,
-        area: todo.area,
+        file: sanitizeForDisplay(todo.file),
+        title: sanitizeForDisplay(todo.title),
+        area: sanitizeForDisplay(todo.area),
         score: Math.round(score * 100) / 100,
         reasons,
       });
@@ -2353,8 +2346,7 @@ function cmdStats(cwd: string, format: string | undefined, raw: boolean): void {
   if (stateContent !== null) {
     const activityMatch = stateContent.match(/^last_activity:\s*(.+)$/im)
       || stateContent.match(/\*\*Last Activity:\*\*\s*(.+)/i)
-      || stateContent.match(/^Last Activity:\s*(.+)$/im)
-      || stateContent.match(/^Last activity:\s*(.+)$/im);
+      || stateContent.match(/^Last Activity:\s*(.+)$/im);
     if (activityMatch) lastActivity = activityMatch[1].trim();
   }
 

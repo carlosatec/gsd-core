@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 2.8 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 2.9 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -29,7 +29,7 @@ A narrative companion guide to GSD Core Nexus 2.8 — orient yourself here, then
 
 ## The Unified 10-Command Surface
 
-Starting with GSD Core Nexus 2.8, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 2.9, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -68,7 +68,7 @@ For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS
 
 ## Session Intelligence & Deterministic Replay CLI
 
-GSD Core Nexus 2.8 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+GSD Core Nexus 2.9 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
 
 ```bash
 # Replay the latest session in the terminal

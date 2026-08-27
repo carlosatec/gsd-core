@@ -372,7 +372,7 @@ function parseFirstPendingTest(content: string): CurrentTest | null {
       complete: false,
       number: testNumber,
       name: sanitizeForDisplay(testName),
-      expected: sanitizeForDisplay(expected),
+      expected: sanitizeForDisplay(expected || ''),
     };
   }
 

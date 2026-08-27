@@ -131,7 +131,10 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
       fs.existsSync(p + '.dart') ||
       fs.existsSync(p + '.css') ||
       fs.existsSync(path.join(p, 'index.ts')) ||
+      fs.existsSync(path.join(p, 'index.tsx')) ||
+      fs.existsSync(path.join(p, 'index.cts')) ||
       fs.existsSync(path.join(p, 'index.js')) ||
+      fs.existsSync(path.join(p, 'index.cjs')) ||
       fs.existsSync(path.join(p, '__init__.py')) ||
       fs.existsSync(path.join(p, 'mod.rs')) ||
       fs.existsSync(path.join(p, 'lib.rs'));
@@ -354,5 +357,3 @@ export = {
   runPreFlightChecks,
   executeWithSelfHealing,
 };
-
-

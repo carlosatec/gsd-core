@@ -61,6 +61,7 @@ const REPO_ROOT = process.env.GSD_LINT_DOCS_COMMAND_FORM_REPO_ROOT
 
 const DOCS_PREFIX = 'docs/';
 const ADR_PREFIX = 'docs/adr/';
+const ARCHIVE_PREFIX = 'docs/archive/';
 const RELEASE_NOTES_LEGACY = 'docs/RELEASE-NOTES-LEGACY.md';
 const COMMANDS_DIR = path.join(REPO_ROOT, 'commands/gsd');
 
@@ -91,6 +92,7 @@ function loadRoster() {
 function isCheckedDocsFile(relPath) {
   if (!relPath.startsWith(DOCS_PREFIX)) return false;
   if (relPath.startsWith(ADR_PREFIX)) return false;
+  if (relPath.startsWith(ARCHIVE_PREFIX)) return false;
   if (relPath === RELEASE_NOTES_LEGACY) return false;
   return relPath.endsWith('.md');
 }

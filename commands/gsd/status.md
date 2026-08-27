@@ -28,6 +28,10 @@ Check project progress, inspect active phase in .planning/STATE.md and .planning
 @~/.claude/gsd-core/workflows/debug.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 <process>
 1. Inspect .planning/STATE.md and .planning/ROADMAP.md.
 2. Check token telemetry efficiency via JIT Telemetry.

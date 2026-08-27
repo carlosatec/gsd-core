@@ -39,6 +39,10 @@ Create a detailed, executable phase plan in .planning/phases/<phase_dir>/<phase>
 @~/.claude/gsd-core/workflows/list-phase-assumptions.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 <process>
 1. Load active phase requirements and architectural context.
 2. Inject surgical JIT context for affected files.

@@ -25,7 +25,8 @@ Run comprehensive static and heuristic code review over modified files, checking
 </execution_context>
 
 <context>
-Phase number: extracted from $ARGUMENTS (required)
+Arguments: $ARGUMENTS
+Phase number: extracted from $ARGUMENTS (optional — defaults to active phase in STATE.md or modified working tree files)
 
 **Flags:**
 - `--gemini` — Include Gemini CLI review

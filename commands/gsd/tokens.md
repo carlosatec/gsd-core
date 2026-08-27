@@ -15,6 +15,10 @@ Display real-time token telemetry metrics, including token savings percentage, p
 @~/.claude/gsd-core/workflows/analyze-dependencies.md
 </execution_context>
 
+<context>
+Arguments: $ARGUMENTS
+</context>
+
 <process>
 1. Read .planning/telemetry/ data.
 2. Render responsive 65-column ASCII dashboard with usage and savings breakdowns.

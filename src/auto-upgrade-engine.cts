@@ -1,5 +1,5 @@
 /**
- * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 2.8.
+ * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 2.9.
  *
  * Scans the repository, creates the multi-language AST topology, materializes
  * living architecture & API contracts, and initializes telemetry.
@@ -80,7 +80,7 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
 
   return {
     success: true,
-    version: '2.8.3',
+    version: '2.9.0',
     isNewMigration,
     indexedFiles: graph.stats.totalFiles,
     detectedLanguages: Array.from(languageSet),
@@ -89,8 +89,8 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
     docsUpdated: syncReport.generatedDocs.length,
     generatedArtifacts,
     message: isNewMigration
-      ? `Successfully upgraded legacy project to GSD Core Nexus 2.8. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
-      : `Refreshed GSD Core Nexus 2.8 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+      ? `Successfully upgraded legacy project to GSD Core Nexus 2.9. Indexed ${graph.stats.totalFiles} files across [${Array.from(languageSet).join(', ')}]. Generated ${syncReport.generatedDocs.length} living doc(s).`
+      : `Refreshed GSD Core Nexus 2.9 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
   };
 }
 

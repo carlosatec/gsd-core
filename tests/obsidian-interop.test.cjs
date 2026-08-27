@@ -24,17 +24,18 @@ test('Obsidian Interop — Wikilinks and Backlinks Index', async (t) => {
   );
 
   try {
-    await t.test('extractWikilinks extracts simple and aliased links', () => {
+    await t.test('extractWikilinks extracts simple and aliased links and ignores inline code', () => {
       const sampleMd = `
 # Sample Document
 Referencing [[D-59]] and [[15-01-PLAN|Phase 15 Plan]].
 Also see [[src/runtime-homes.cts]] for config roots.
+Here is an example in inline code: \`[[ignored-inline]]\` and \`[[D-99|Alias]]\`.
 \`\`\`ts
 // [[ignored in code block]]
 \`\`\`
 `;
       const links = obsidianInterop.extractWikilinks(sampleMd, 'test.md');
-      assert.strictEqual(links.length, 3, 'Must find exactly 3 wikilinks');
+      assert.strictEqual(links.length, 3, 'Must find exactly 3 wikilinks (ignoring code blocks and inline code spans)');
       assert.strictEqual(links[0].target, 'D-59');
       assert.strictEqual(links[1].target, '15-01-PLAN');
       assert.strictEqual(links[1].alias, 'Phase 15 Plan');
