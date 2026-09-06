@@ -92,7 +92,7 @@ function runPreFlightChecks(ctx) {
         if (pathExistsCache.has(p))
             return pathExistsCache.get(p);
         // Fast O(1) in-memory check
-        const relPosix = node_path_1.default.isAbsolute(p) ? node_path_1.default.relative(root, p).replace(/\\/g, '/') : p.replace(/\\/g, '/');
+        const relPosix = (node_path_1.default.isAbsolute(p) ? node_path_1.default.relative(root, p) : p).replace(/\\/g, '/').replace(/^\.\//, '');
         const absPosix = node_path_1.default.isAbsolute(p) ? p.replace(/\\/g, '/') : node_path_1.default.resolve(root, p).replace(/\\/g, '/');
         const inMemCandidates = [
             relPosix,
@@ -153,19 +153,21 @@ function runPreFlightChecks(ctx) {
     }
     const proposedKeys = ctx.proposedCodeMap ? Object.keys(ctx.proposedCodeMap) : [];
     const allTargetFiles = Array.from(new Set([...ctx.filesToModify, ...proposedKeys]));
-    const normalizedModifying = new Set(allTargetFiles.map(f => node_path_1.default.normalize(f).replace(/\\/g, '/').replace(/\.[^/.]+$/, '')));
+    const normalizedModifying = new Set(allTargetFiles.map(f => node_path_1.default.normalize(f).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\.[^/.]+$/, '')));
     // Pre-analyze all proposed files in memory to support mutual contract validation
     const proposedAnalyses = new Map();
     if (ctx.proposedCodeMap) {
         for (const [fName, content] of Object.entries(ctx.proposedCodeMap)) {
-            const norm = fName.replace(/\\/g, '/');
+            const norm = fName.replace(/\\/g, '/').replace(/^\.\//, '');
             proposedAnalyses.set(norm, analyzeSourceFile(node_path_1.default.join(root, fName), content));
         }
     }
     for (const relFile of allTargetFiles) {
-        const normalized = relFile.replace(/\\/g, '/');
+        const normalized = relFile.replace(/\\/g, '/').replace(/^\.\//, '');
         const existingFile = activeGraph.files[normalized];
-        const proposedContent = ctx.proposedCodeMap ? ctx.proposedCodeMap[relFile] || ctx.proposedCodeMap[normalized] : undefined;
+        const proposedContent = ctx.proposedCodeMap
+            ? ctx.proposedCodeMap[relFile] ?? ctx.proposedCodeMap[normalized] ?? ctx.proposedCodeMap[`./${normalized}`]
+            : undefined;
         // Check proposed edits if content was provided
         if (proposedContent !== undefined) {
             // Guard against unintended file truncation (0 bytes)

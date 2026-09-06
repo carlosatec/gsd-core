@@ -8,11 +8,9 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
-const clock_cjs_1 = require("./clock.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const learningsMod = require("./learnings.cjs");
 const { learningsList } = learningsMod;
@@ -30,7 +28,11 @@ function sanitizeStackTrace(text) {
     return text
         .replace(/0x[a-fA-F0-9]{4,16}/g, '<HEX>')
         .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+(?::\d+){1,2}/g, '<PATH>:<LINE>')
-        .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+/g, '<PATH>');
+        .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+\.[a-zA-Z0-9]{2,4}/g, '<PATH>')
+        .replace(/\bline \d+\b/gi, 'line <LINE>')
+        .replace(/:\d+:\d+/g, ':<LINE>')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 // ─── Functions ────────────────────────────────────────────────────────────────
 /**
@@ -59,54 +61,35 @@ function saveAntiPatterns(planningDir, data) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
     const storePath = node_path_1.default.join(intelDir, 'anti-patterns.json');
-    const tmpPath = `${storePath}.${process.pid}.tmp`;
-    (0, shell_command_projection_cjs_1.platformWriteSync)(tmpPath, JSON.stringify(data, null, 2));
-    let renamed = false;
-    for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-            node_fs_1.default.renameSync(tmpPath, storePath);
-            renamed = true;
-            break;
-        }
-        catch (err) {
-            const code = err?.code;
-            if ((code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') && attempt < 4) {
-                clock_cjs_1.realClock.sleep(25 * (attempt + 1));
-                continue;
-            }
-            break;
-        }
-    }
-    if (!renamed) {
-        (0, shell_command_projection_cjs_1.platformWriteSync)(storePath, JSON.stringify(data, null, 2));
-        try {
-            node_fs_1.default.unlinkSync(tmpPath);
-        }
-        catch { /* ignore */ }
-    }
+    (0, shell_command_projection_cjs_1.platformWriteSync)(storePath, JSON.stringify(data, null, 2));
 }
 /**
  * Records an anti-pattern or repair lesson into durable storage.
  */
 function recordAntiPattern(planningDir, entry) {
-    const data = loadAntiPatterns(planningDir);
-    const record = {
-        id: `ap-${Date.now()}-${node_crypto_1.default.randomBytes(4).toString('hex')}`,
-        timestamp: new Date().toISOString(),
-        rule: entry.rule,
-        file: entry.file,
-        error: sanitizeStackTrace(entry.error),
-        repairedAction: entry.repairedAction ? sanitizeStackTrace(entry.repairedAction) : undefined,
-        lesson: entry.lesson,
-    };
-    data.patterns.push(record);
-    // Cap at 200 durable patterns to prevent unbounded growth
-    if (data.patterns.length > 200) {
-        data.patterns = data.patterns.slice(-200);
-    }
-    data.totalRecorded += 1;
-    saveAntiPatterns(planningDir, data);
-    return record;
+    const intelDir = node_path_1.default.join(planningDir, 'intel');
+    (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
+    const storePath = node_path_1.default.join(intelDir, 'anti-patterns.json');
+    return (0, shell_command_projection_cjs_1.withFileLockSync)(storePath, () => {
+        const data = loadAntiPatterns(planningDir);
+        const record = {
+            id: `ap-${Date.now()}-${node_crypto_1.default.randomBytes(4).toString('hex')}`,
+            timestamp: new Date().toISOString(),
+            rule: entry.rule,
+            file: entry.file,
+            error: sanitizeStackTrace(entry.error),
+            repairedAction: entry.repairedAction ? sanitizeStackTrace(entry.repairedAction) : undefined,
+            lesson: entry.lesson,
+        };
+        data.patterns.push(record);
+        // Cap at 200 durable patterns to prevent unbounded growth
+        if (data.patterns.length > 200) {
+            data.patterns = data.patterns.slice(-200);
+        }
+        data.totalRecorded += 1;
+        saveAntiPatterns(planningDir, data);
+        return record;
+    });
 }
 /**
  * Queries stored anti-patterns matching given criteria.
@@ -165,6 +148,8 @@ function queryAntiPatterns(planningDir, opts = {}) {
         }
     }
     const limit = opts.limit ?? 10;
+    // If errorQuery is supplied, results are pre-sorted by similarity score descending (most relevant first: slice(0, limit)).
+    // If unqueried, results remain in chronological order of recording (most recent first: slice(-limit)).
     return opts.errorQuery ? results.slice(0, limit) : results.slice(-limit);
 }
 module.exports = {

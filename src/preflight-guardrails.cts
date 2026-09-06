@@ -139,7 +139,7 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
     if (pathExistsCache.has(p)) return pathExistsCache.get(p)!;
 
     // Fast O(1) in-memory check
-    const relPosix = path.isAbsolute(p) ? path.relative(root, p).replace(/\\/g, '/') : p.replace(/\\/g, '/');
+    const relPosix = (path.isAbsolute(p) ? path.relative(root, p) : p).replace(/\\/g, '/').replace(/^\.\//, '');
     const absPosix = path.isAbsolute(p) ? p.replace(/\\/g, '/') : path.resolve(root, p).replace(/\\/g, '/');
 
     const inMemCandidates = [
@@ -207,22 +207,24 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
   const allTargetFiles = Array.from(new Set([...ctx.filesToModify, ...proposedKeys]));
 
   const normalizedModifying = new Set(
-    allTargetFiles.map(f => path.normalize(f).replace(/\\/g, '/').replace(/\.[^/.]+$/, ''))
+    allTargetFiles.map(f => path.normalize(f).replace(/\\/g, '/').replace(/^\.\//, '').replace(/\.[^/.]+$/, ''))
   );
 
   // Pre-analyze all proposed files in memory to support mutual contract validation
   const proposedAnalyses = new Map<string, ReturnType<typeof analyzeSourceFile>>();
   if (ctx.proposedCodeMap) {
     for (const [fName, content] of Object.entries(ctx.proposedCodeMap)) {
-      const norm = fName.replace(/\\/g, '/');
+      const norm = fName.replace(/\\/g, '/').replace(/^\.\//, '');
       proposedAnalyses.set(norm, analyzeSourceFile(path.join(root, fName), content));
     }
   }
 
   for (const relFile of allTargetFiles) {
-    const normalized = relFile.replace(/\\/g, '/');
+    const normalized = relFile.replace(/\\/g, '/').replace(/^\.\//, '');
     const existingFile = activeGraph.files[normalized];
-    const proposedContent = ctx.proposedCodeMap ? ctx.proposedCodeMap[relFile] || ctx.proposedCodeMap[normalized] : undefined;
+    const proposedContent = ctx.proposedCodeMap
+      ? ctx.proposedCodeMap[relFile] ?? ctx.proposedCodeMap[normalized] ?? ctx.proposedCodeMap[`./${normalized}`]
+      : undefined;
 
     // Check proposed edits if content was provided
     if (proposedContent !== undefined) {

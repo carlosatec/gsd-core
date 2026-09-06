@@ -133,15 +133,37 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   };
 
   // Outgoing dependencies (files that targetFile imports)
+  const fileDir = path.dirname(targetFile);
   for (const imp of deps.imports) {
-    const matchingKey = Object.keys(graph.files).find(
-      k => k === imp || k.endsWith(imp) ||
-        k.endsWith(imp + '.ts') || k.endsWith(imp + '.tsx') || k.endsWith(imp + '.cts') ||
-        k.endsWith(imp + '.js') || k.endsWith(imp + '.jsx') || k.endsWith(imp + '.cjs') ||
-        k.endsWith(imp + '.py') || k.endsWith(imp + '.go') || k.endsWith(imp + '.rs') ||
-        k.endsWith(imp + '.dart') || k.endsWith(imp + '.cs') || k.endsWith(imp + '.kt') ||
-        k.endsWith(imp + '/index.ts') || k.endsWith(imp + '/index.js')
-    );
+    const resolved = path.normalize(path.join(fileDir, imp)).replace(/\\/g, '/');
+    const candidates = [
+      imp,
+      resolved,
+      resolved + '.ts',
+      resolved + '.tsx',
+      resolved + '.cts',
+      resolved + '.mts',
+      resolved + '.js',
+      resolved + '.jsx',
+      resolved + '.cjs',
+      resolved + '.mjs',
+      resolved + '.py',
+      resolved + '.go',
+      resolved + '.rs',
+      resolved + '.dart',
+      resolved + '.cs',
+      resolved + '.kt',
+      resolved + '/index.ts',
+      resolved + '/index.js',
+      resolved + '/index.cjs',
+    ];
+    let matchingKey: string | undefined;
+    for (const cand of candidates) {
+      if (graph.files[cand]) {
+        matchingKey = cand;
+        break;
+      }
+    }
     if (matchingKey && graph.files[matchingKey]) {
       const fileData = graph.files[matchingKey] as GraphFileNode;
       results.push({
@@ -312,11 +334,17 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
           resolved + '.ts',
           resolved + '.tsx',
           resolved + '.cts',
+          resolved + '.mts',
           resolved + '.js',
+          resolved + '.cjs',
+          resolved + '.mjs',
           resolved + '.py',
           resolved + '.go',
           resolved + '.rs',
+          resolved + '.dart',
           resolved + '/index.ts',
+          resolved + '/index.js',
+          resolved + '/index.cjs',
         ];
         for (const cand of candidates) {
           if (graph.files[cand] && !visitedFiles.has(cand)) {
@@ -423,7 +451,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
 
   if (canonicalExample) {
     lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
-    lines.push('```' + canonicalExample.language);
+    lines.push('```' + (canonicalExample.language || ''));
     lines.push(canonicalExample.content);
     lines.push('```');
     lines.push('');

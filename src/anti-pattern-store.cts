@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { platformReadSync, platformWriteSync, platformEnsureDir, withFileLockSync } from './shell-command-projection.cjs';
 import { realClock } from './clock.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import learningsMod = require('./learnings.cjs');
@@ -28,7 +28,11 @@ function sanitizeStackTrace(text: string): string {
   return text
     .replace(/0x[a-fA-F0-9]{4,16}/g, '<HEX>')
     .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+(?::\d+){1,2}/g, '<PATH>:<LINE>')
-    .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+/g, '<PATH>');
+    .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+\.[a-zA-Z0-9]{2,4}/g, '<PATH>')
+    .replace(/\bline \d+\b/gi, 'line <LINE>')
+    .replace(/:\d+:\d+/g, ':<LINE>')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -84,27 +88,7 @@ function saveAntiPatterns(planningDir: string, data: AntiPatternStoreData): void
   const intelDir = path.join(planningDir, 'intel');
   platformEnsureDir(intelDir);
   const storePath = path.join(intelDir, 'anti-patterns.json');
-  const tmpPath = `${storePath}.${process.pid}.tmp`;
-  platformWriteSync(tmpPath, JSON.stringify(data, null, 2));
-  let renamed = false;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      fs.renameSync(tmpPath, storePath);
-      renamed = true;
-      break;
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code;
-      if ((code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') && attempt < 4) {
-        realClock.sleep(25 * (attempt + 1));
-        continue;
-      }
-      break;
-    }
-  }
-  if (!renamed) {
-    platformWriteSync(storePath, JSON.stringify(data, null, 2));
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-  }
+  platformWriteSync(storePath, JSON.stringify(data, null, 2));
 }
 
 /**
@@ -114,26 +98,32 @@ function recordAntiPattern(
   planningDir: string,
   entry: Omit<AntiPatternRecord, 'id' | 'timestamp'>
 ): AntiPatternRecord {
-  const data = loadAntiPatterns(planningDir);
-  const record: AntiPatternRecord = {
-    id: `ap-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-    timestamp: new Date().toISOString(),
-    rule: entry.rule,
-    file: entry.file,
-    error: sanitizeStackTrace(entry.error),
-    repairedAction: entry.repairedAction ? sanitizeStackTrace(entry.repairedAction) : undefined,
-    lesson: entry.lesson,
-  };
+  const intelDir = path.join(planningDir, 'intel');
+  platformEnsureDir(intelDir);
+  const storePath = path.join(intelDir, 'anti-patterns.json');
 
-  data.patterns.push(record);
-  // Cap at 200 durable patterns to prevent unbounded growth
-  if (data.patterns.length > 200) {
-    data.patterns = data.patterns.slice(-200);
-  }
-  data.totalRecorded += 1;
+  return withFileLockSync(storePath, () => {
+    const data = loadAntiPatterns(planningDir);
+    const record: AntiPatternRecord = {
+      id: `ap-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+      timestamp: new Date().toISOString(),
+      rule: entry.rule,
+      file: entry.file,
+      error: sanitizeStackTrace(entry.error),
+      repairedAction: entry.repairedAction ? sanitizeStackTrace(entry.repairedAction) : undefined,
+      lesson: entry.lesson,
+    };
 
-  saveAntiPatterns(planningDir, data);
-  return record;
+    data.patterns.push(record);
+    // Cap at 200 durable patterns to prevent unbounded growth
+    if (data.patterns.length > 200) {
+      data.patterns = data.patterns.slice(-200);
+    }
+    data.totalRecorded += 1;
+
+    saveAntiPatterns(planningDir, data);
+    return record;
+  });
 }
 
 /**
@@ -198,6 +188,8 @@ function queryAntiPatterns(planningDir: string, opts: QueryAntiPatternOptions = 
   }
 
   const limit = opts.limit ?? 10;
+  // If errorQuery is supplied, results are pre-sorted by similarity score descending (most relevant first: slice(0, limit)).
+  // If unqueried, results remain in chronological order of recording (most recent first: slice(-limit)).
   return opts.errorQuery ? results.slice(0, limit) : results.slice(-limit);
 }
 

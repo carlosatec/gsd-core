@@ -1237,3 +1237,98 @@ export function platformReadSync(filePath: string, opts: { encoding?: BufferEnco
 export function platformEnsureDir(dirPath: string): void {
   fs.mkdirSync(dirPath, { recursive: true });
 }
+
+export interface FileLockOptions {
+  timeoutMs?: number;
+  staleMs?: number;
+}
+
+/**
+ * Execute a critical section wrapped with an atomic cooperative file lock.
+ * Automatically evicts stale locks (TTL expired or dead PID) to prevent deadlocks.
+ */
+export function withFileLockSync<T>(
+  filePath: string,
+  fn: () => T,
+  options: FileLockOptions = {}
+): T {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const staleMs = options.staleMs ?? 5000;
+  const lockPath = filePath + '.lock';
+  const startTime = Date.now();
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  let acquired = false;
+
+  while (!acquired) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx');
+      const payload = JSON.stringify({ pid: process.pid, createdAt: Date.now() });
+      fs.writeSync(fd, payload, undefined, 'utf-8');
+      fs.closeSync(fd);
+      acquired = true;
+      break;
+    } catch (err: unknown) {
+      const e = err as NodeJS.ErrnoException;
+      if (e.code === 'EEXIST') {
+        // Inspect lock file for staleness
+        let isStale = false;
+        try {
+          const raw = fs.readFileSync(lockPath, 'utf-8');
+          const data = JSON.parse(raw) as { pid?: number; createdAt?: number };
+          const age = Date.now() - (data.createdAt || 0);
+          if (age > staleMs) {
+            isStale = true;
+          } else if (data.pid && typeof data.pid === 'number') {
+            try {
+              process.kill(data.pid, 0);
+            } catch (kErr: unknown) {
+              const ke = kErr as NodeJS.ErrnoException;
+              if (ke.code === 'ESRCH') {
+                isStale = true;
+              }
+            }
+          }
+        } catch {
+          // If lock file is unreadable or empty, check file modification time
+          try {
+            const stat = fs.statSync(lockPath);
+            if (Date.now() - stat.mtimeMs > staleMs) {
+              isStale = true;
+            }
+          } catch {
+            // Already gone
+          }
+        }
+
+        if (isStale) {
+          try {
+            fs.unlinkSync(lockPath);
+          } catch {
+            // Ignore race on unlink
+          }
+          continue;
+        }
+
+        if (Date.now() - startTime >= timeoutMs) {
+          throw new Error(`[gsd-core] Lock acquisition timed out for ${filePath} after ${timeoutMs}ms`);
+        }
+
+        renameBackoff();
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  try {
+    return fn();
+  } finally {
+    try {
+      fs.unlinkSync(lockPath);
+    } catch {
+      // Ignore cleanup error
+    }
+  }
+}

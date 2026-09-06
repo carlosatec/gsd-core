@@ -18,6 +18,7 @@ interface DocTermStats {
   file: string;
   terms: Record<string, number>;
   totalTerms: number;
+  termCount?: number;
   preview: string;
 }
 
@@ -139,6 +140,7 @@ function buildSemanticIndex(rootDir: string, planningDir?: string): SemanticInde
               file: rel,
               terms: termCounts,
               totalTerms: tokens.length,
+              termCount: Object.keys(termCounts).length,
               preview,
             };
           } catch {
@@ -218,8 +220,6 @@ function querySemanticSimilarFiles(
   const avgdl = index.avgdl || 50;
   const k1 = 1.5;
   const b = 0.75;
-  const scoredFiles: SemanticQueryResult[] = [];
-
   // Load codebase graph for topological ranking enhancement
   let graph: ReturnType<typeof loadCodebaseGraph> = null;
   try {
@@ -228,6 +228,14 @@ function querySemanticSimilarFiles(
     // Non-blocking
   }
   const pageRankScores = graph?.pageRankScores || {};
+
+  interface CandidateMatch {
+    file: string;
+    preview: string;
+    lexicalScore: number;
+    prScore: number;
+  }
+  const candidates: CandidateMatch[] = [];
 
   for (const doc of Object.values(index.docs)) {
     let bm25Score = 0;
@@ -246,23 +254,54 @@ function querySemanticSimilarFiles(
       }
     }
 
-    // Blend in Jaccard token overlap boost + topological PageRank bonus
     if (matchingTokens > 0) {
-      const jaccard = matchingTokens / (queryTokens.length + Object.keys(doc.terms).length - matchingTokens);
-      const prBonus = (pageRankScores[doc.file] || 0) * 5;
+      const uniqueCount = doc.termCount || Object.keys(doc.terms).length;
+      const jaccard = matchingTokens / (queryTokens.length + uniqueCount - matchingTokens);
+      const prScore = pageRankScores[doc.file] || 0;
       const fileData = graph?.files[doc.file];
       const exportBonus = fileData && fileData.exports.length > 0 ? Math.min(2, fileData.exports.length * 0.2) : 0;
+      const lexicalScore = bm25Score * 10 + jaccard * 10 + exportBonus;
 
-      const finalScore = Number((bm25Score * 10 + jaccard * 10 + prBonus + exportBonus).toFixed(4));
-      if (finalScore > 0) {
-        scoredFiles.push({
-          file: doc.file,
-          score: finalScore,
-          preview: doc.preview,
-        });
-      }
+      candidates.push({
+        file: doc.file,
+        preview: doc.preview,
+        lexicalScore,
+        prScore,
+      });
     }
   }
+
+  if (candidates.length === 0) return [];
+
+  // 1) Rank candidates by lexical BM25 + Jaccard score (descending)
+  candidates.sort((a, b) => b.lexicalScore - a.lexicalScore);
+  const bm25Ranks = new Map<string, number>();
+  candidates.forEach((c, idx) => bm25Ranks.set(c.file, idx + 1));
+
+  // 2) Rank candidates by topological PageRank score (descending)
+  const topoRanks = new Map<string, number>();
+  const hasTopologicalGraph = Boolean(graph && Object.keys(pageRankScores).length > 0 && candidates.some(c => c.prScore > 0));
+  if (hasTopologicalGraph) {
+    const topoCandidates = [...candidates].sort((a, b) => b.prScore - a.prScore);
+    topoCandidates.forEach((c, idx) => topoRanks.set(c.file, idx + 1));
+  } else {
+    // Salvaguarda de compatibilidade: neutralidade topológica quando grafo ausente
+    candidates.forEach((c) => topoRanks.set(c.file, bm25Ranks.get(c.file) || 1));
+  }
+
+  // 3) Reciprocal Rank Fusion (k = 60, w_topo = 0.5)
+  const k = 60;
+  const wTopo = 0.5;
+  const scoredFiles: SemanticQueryResult[] = candidates.map((c) => {
+    const rBm25 = bm25Ranks.get(c.file) || 1;
+    const rTopo = topoRanks.get(c.file) || 1;
+    const rrfScore = Number(((1 / (k + rBm25)) + (wTopo / (k + rTopo))).toFixed(4));
+    return {
+      file: c.file,
+      score: rrfScore,
+      preview: c.preview,
+    };
+  });
 
   return scoredFiles.sort((a, b) => b.score - a.score).slice(0, limit);
 }

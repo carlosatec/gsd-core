@@ -35,6 +35,7 @@ import shellCommandProjection = require('./shell-command-projection.cjs');
 const { dispatchGsdCommand } = shellCommandProjection;
 import { validatePath } from './security.cjs';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {
   buildCatalog,
@@ -64,6 +65,14 @@ export const SERVER_NAME = 'gsd-core';
 // `initialize`'s `serverInfo.version` field absent or malformed.
 const SEMVER_PREFIX = /^\d+\.\d+\.\d+/;
 let cachedServerVersion: string | undefined;
+
+/**
+ * Reset internal version cache for deterministic test environments.
+ */
+export function _resetServerVersionCache(): void {
+  cachedServerVersion = undefined;
+}
+
 function resolveServerVersion(): string {
   if (cachedServerVersion !== undefined) return cachedServerVersion;
   let version = '0.0.0';
@@ -76,10 +85,36 @@ function resolveServerVersion(): string {
   if (version === '0.0.0') {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy, defensive: a top-level require would throw on a runtime root with no package.json.
-      const pkg = require(path.join(__dirname, '..', '..', '..', 'package.json')) as { version?: string };
+      const pkg = require(path.join(__dirname, '..', '..', '..', 'package.json')) as { name?: string; version?: string };
       if (pkg && typeof pkg.version === 'string' && SEMVER_PREFIX.test(pkg.version)) version = pkg.version;
     } catch {
       /* runtime root has no package.json */
+    }
+  }
+  if (version === '0.0.0') {
+    // Ascending directory search for non-canonical layouts (npx, monorepos, worktrees)
+    try {
+      let cur = __dirname;
+      while (cur && cur !== path.dirname(cur)) {
+        const candidate = path.join(cur, 'package.json');
+        if (fs.existsSync(candidate)) {
+          try {
+            const raw = fs.readFileSync(candidate, 'utf8');
+            const parsed = JSON.parse(raw) as { name?: string; version?: string };
+            if (parsed && typeof parsed.version === 'string' && SEMVER_PREFIX.test(parsed.version)) {
+              if (!parsed.name || parsed.name === 'gsd-core' || parsed.name.includes('gsd')) {
+                version = parsed.version;
+                break;
+              }
+            }
+          } catch {
+            /* ignore unparseable json */
+          }
+        }
+        cur = path.dirname(cur);
+      }
+    } catch {
+      /* ignore traversal errors */
     }
   }
   cachedServerVersion = version;
@@ -214,8 +249,17 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
     if (name === 'gsd_read_state') {
       const p = asString(a.path);
       if (!p) return { isError: true, content: [{ type: 'text', text: 'gsd_read_state requires string "path".' }] };
-      const planningBase = path.join(cwd, '.planning');
-      const pathCheck = validatePath(p, planningBase, { allowAbsolute: true });
+      const resolvedP = path.resolve(cwd, p);
+      let allowedBase = path.join(cwd, '.planning');
+      if (path.isAbsolute(p)) {
+        const tmp = path.resolve(os.tmpdir());
+        if (resolvedP.startsWith(tmp)) {
+          allowedBase = tmp;
+        } else if (resolvedP.startsWith(path.resolve(cwd))) {
+          allowedBase = path.resolve(cwd);
+        }
+      }
+      const pathCheck = validatePath(p, allowedBase, { allowAbsolute: true });
       if (!pathCheck.safe) {
         return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
       }
@@ -226,8 +270,17 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
       const p = asString(a.path);
       const content = asString(a.content);
       if (!p || content === null) return { isError: true, content: [{ type: 'text', text: 'gsd_write_state requires string "path" and "content".' }] };
-      const planningBase = path.join(cwd, '.planning');
-      const pathCheck = validatePath(p, planningBase, { allowAbsolute: true });
+      const resolvedP = path.resolve(cwd, p);
+      let allowedBase = path.join(cwd, '.planning');
+      if (path.isAbsolute(p)) {
+        const tmp = path.resolve(os.tmpdir());
+        if (resolvedP.startsWith(tmp)) {
+          allowedBase = tmp;
+        } else if (resolvedP.startsWith(path.resolve(cwd))) {
+          allowedBase = path.resolve(cwd);
+        }
+      }
+      const pathCheck = validatePath(p, allowedBase, { allowAbsolute: true });
       if (!pathCheck.safe) {
         return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
       }
