@@ -13,6 +13,7 @@ const os = require('node:os');
 const { cleanup } = require('./helpers.cjs');
 const codebaseAst = require('../gsd-core/bin/lib/codebase-ast-analyzer.cjs');
 const {
+  toPosixPath,
   analyzeSourceFile,
   buildCodebaseGraph,
   querySymbolLocations,
@@ -142,6 +143,14 @@ describe('codebase-ast-analyzer — buildCodebaseGraph & Queries', () => {
 
       const depsA = queryFileDependencies(graph, 'serviceA.ts');
       assert.ok(depsA.importedBy.includes('serviceB.ts'), 'serviceA must be importedBy serviceB.ts');
+
+      // Wave 1: filesByLanguage telemetry
+      assert.ok(graph.stats.filesByLanguage, 'stats must contain filesByLanguage');
+      assert.strictEqual(graph.stats.filesByLanguage.typescript, 2);
+
+      // Wave 1: canonical POSIX path helper
+      assert.strictEqual(toPosixPath('src\\utils\\path.ts'), 'src/utils/path.ts');
+      assert.strictEqual(toPosixPath('src/utils/path.ts'), 'src/utils/path.ts');
     } finally {
       cleanup(tmpDir);
     }

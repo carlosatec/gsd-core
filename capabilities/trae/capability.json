@@ -1,7 +1,7 @@
 {
   "id": "trae",
   "role": "runtime",
-  "version": "2.9.3",
+  "version": "3.0.0",
   "title": "Trae IDE",
   "description": "Trae IDE — nested-skill artifact layout; no hook surface (profile-marker-only config); tier-2 support.",
   "tier": "core",

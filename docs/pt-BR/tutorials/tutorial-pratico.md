@@ -1,8 +1,8 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 2.9
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 3.0
 
 > 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](../../tutorials/practical-tutorial.md)  
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 2.9**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 3.0**.
 
 ---
 
@@ -92,7 +92,7 @@ Gera a especificação e o plano da primeira fase com base no objetivo informado
 ```bash
 /gsd-migrate
 ```
-Atualiza a estrutura e schemas para o padrão GSD Core Nexus 2.9 de forma 100% não-destrutiva.
+Atualiza a estrutura e schemas para o padrão GSD Core Nexus 3.0 de forma 100% não-destrutiva.
 
 ---
 
@@ -102,7 +102,7 @@ No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comand
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE CANÔNICA GSD 2.9                  │
+│                 INTERFACE CANÔNICA GSD 3.0                  │
 ├────────────┬────────────────────────────────────────────────┤
 │ Comando    │ Ação Operacional                               │
 ├────────────┼────────────────────────────────────────────────┤
@@ -303,7 +303,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Sistema Unificado de Versionamento & Release
 
-O GSD Core Nexus 2.9 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
+O GSD Core Nexus 3.0 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevar a versão em todos os 49 manifestos, módulos core, lockfiles e badges
@@ -384,4 +384,4 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 
 ---
 
-*GSD Core Nexus 2.9 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*
+*GSD Core Nexus 3.0 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*

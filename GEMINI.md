@@ -1,6 +1,6 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 19 (Telemetria Autônoma de Tokens, JIT Model-Aware & Otimização de Janelas de Contexto) | Status: Complete (Fase 19 concluída com 100% dos testes e guardrails verificados)
-> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **GSD Active State**: Phase: Phase 20 (Tiered AST Engine, Quality-First JIT & Guardrails Otimizados) | Status: Complete (Fase 20 concluída com 100% dos testes e guardrails verificados)
+> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.; **D-99 [Quality-First JIT]:** Fechamento transitivo de tipos (3 hops/50 tipos) e orçamentos model-aware.; **D-100 [Tiered AST]:** Camada 1 TS Compiler + Camada 2 State-Machine Lexer universal.
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 

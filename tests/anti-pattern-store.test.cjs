@@ -34,6 +34,13 @@ describe('Wave 1: Anti-Pattern Store & Self-Healing Feedback Loop', () => {
 
       const storePath = path.join(planningDir, 'intel', 'anti-patterns.json');
       assert.ok(fs.existsSync(storePath), 'anti-patterns.json should be created');
+
+      // Wave 5: sanitizeStackTrace
+      assert.strictEqual(typeof antiPatternStore.sanitizeStackTrace, 'function');
+      const rawErr = 'Error at C:\\Users\\Carlos\\src\\index.ts:42:10 with address 0x7ffd5a2b1c40';
+      const sanitized = antiPatternStore.sanitizeStackTrace(rawErr);
+      assert.ok(sanitized.includes('<PATH>:<LINE>'), 'Paths and line numbers must be sanitized');
+      assert.ok(sanitized.includes('<HEX>'), 'Hex addresses must be sanitized');
     } finally {
       cleanup(tmpDir);
     }
@@ -103,6 +110,50 @@ describe('Wave 1: Anti-Pattern Store & Self-Healing Feedback Loop', () => {
 
       const noneResults = antiPatternStore.queryAntiPatterns(planningDir, { errorQuery: 'nonexistent error' });
       assert.strictEqual(noneResults.length, 0);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
+
+  test('ranks errorQuery results by relevance and respects limit returning top matches', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-ap-ranking-'));
+    try {
+      const planningDir = path.join(tmpDir, '.planning');
+      fs.mkdirSync(planningDir, { recursive: true });
+
+      // Low relevance match (1 token)
+      antiPatternStore.recordAntiPattern(planningDir, {
+        file: 'src/low.ts',
+        rule: 'LOW_RELEVANCE',
+        error: 'database connection error',
+        lesson: 'check host',
+      });
+
+      // Medium relevance match (2 tokens)
+      antiPatternStore.recordAntiPattern(planningDir, {
+        file: 'src/medium.ts',
+        rule: 'MED_RELEVANCE',
+        error: 'database connection pool timeout error',
+        lesson: 'check pool settings',
+      });
+
+      // High relevance match (all tokens + extra)
+      antiPatternStore.recordAntiPattern(planningDir, {
+        file: 'src/high.ts',
+        rule: 'HIGH_RELEVANCE',
+        error: 'fatal database connection pool exhaustion timeout error',
+        lesson: 'fatal database connection pool configuration must be scaled',
+      });
+
+      // Query with limit 2: should return high first, then medium (not low or worst)
+      const top2 = antiPatternStore.queryAntiPatterns(planningDir, {
+        errorQuery: 'fatal database connection pool exhaustion timeout',
+        limit: 2,
+      });
+
+      assert.strictEqual(top2.length, 2);
+      assert.strictEqual(top2[0].file, 'src/high.ts', 'Top match must be the most relevant');
+      assert.strictEqual(top2[1].file, 'src/medium.ts', 'Second match must be next most relevant');
     } finally {
       cleanup(tmpDir);
     }

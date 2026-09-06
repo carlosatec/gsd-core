@@ -80,6 +80,7 @@ interface FileAnalysisResult {
   language?: string;
   hasErrors?: boolean;
   mtime?: number;
+  size?: number;
 }
 
 interface CodebaseGraph {
@@ -93,6 +94,7 @@ interface CodebaseGraph {
     totalExports: number;
     totalRoutes: number;
     scanDurationMs: number;
+    filesByLanguage?: Record<string, number>;
   };
   files: Record<string, FileAnalysisResult>;
   symbolIndex: Record<string, string[]>;
@@ -172,6 +174,12 @@ const DEFAULT_EXCLUDES = [
   'xcuserdata',
   '.swiftpm'
 ];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function toPosixPath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
 
 // ─── Specialized Language Analyzers ───────────────────────────────────────────
 
@@ -1427,12 +1435,372 @@ function resolvePathAlias(source: string, root: string, aliases: TsConfigAliases
     if (source.startsWith(aliasPrefix) && targetList.length > 0) {
       const targetPrefix = targetList[0].replace(/\*$/, '');
       const remainder = source.slice(aliasPrefix.length);
-      const relativeTarget = path.join(aliases.baseUrl, targetPrefix, remainder).replace(/\\/g, '/');
+      const relativeTarget = toPosixPath(path.join(aliases.baseUrl, targetPrefix, remainder));
       return relativeTarget.startsWith('.') ? relativeTarget : `./${relativeTarget}`;
     }
   }
   return null;
 }
+
+// ─── Tiered AST Engine (Camada 1: TS Compiler, Camada 2: State-Machine Lexer) ──
+
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
+let cachedTsModule: any = undefined;
+function getTsModule(): any {
+  if (cachedTsModule !== undefined) return cachedTsModule;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, local/no-external-require-in-bin
+    cachedTsModule = require('typescript');
+  } catch {
+    cachedTsModule = null;
+  }
+  return cachedTsModule;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
+
+/**
+ * Camada 2: State-Machine Lexer Universal (Passe 1).
+ * Sanitizes block comments, line comments, docstrings, and strings
+ * while preserving exact newline positions (\n) for line-accurate symbol indexing.
+ */
+function sanitizeCodePreservingLines(content: string, lang: string): string {
+  let inBlockComment = false;
+  let inLineComment = false;
+  let inDocstring: string | null = null;
+  const chars = content.split('');
+  const len = chars.length;
+
+  for (let i = 0; i < len; i++) {
+    const ch = chars[i];
+    const next = i + 1 < len ? chars[i + 1] : '';
+
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        i++;
+        inBlockComment = false;
+      } else if (ch !== '\n') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inLineComment) {
+      if (ch === '\n') {
+        inLineComment = false;
+      } else {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inDocstring) {
+      if (ch === inDocstring[0] && next === inDocstring[0] && i + 2 < len && chars[i + 2] === inDocstring[0]) {
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        chars[i + 2] = ' ';
+        i += 2;
+        inDocstring = null;
+      } else if (ch !== '\n') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    // Block comment /* ... */
+    if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i++;
+      continue;
+    }
+
+    // Line comments // or #
+    if (
+      (ch === '/' && next === '/') ||
+      (ch === '#' && ['python', 'ruby', 'shell', 'yaml', 'toml'].includes(lang))
+    ) {
+      inLineComment = true;
+      chars[i] = ' ';
+      if (next === '/') {
+        chars[i + 1] = ' ';
+        i++;
+      }
+      continue;
+    }
+
+    // Python docstrings: """ or '''
+    if (lang === 'python' && (ch === '"' || ch === "'")) {
+      if (next === ch && i + 2 < len && chars[i + 2] === ch) {
+        inDocstring = ch + ch + ch;
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        chars[i + 2] = ' ';
+        i += 2;
+        continue;
+      }
+    }
+  }
+
+  return chars.join('');
+}
+
+/**
+ * Camada 1: Compilador TypeScript Oficial.
+ * Strictly self-contained to guarantee zero memory retention by the V8 garbage collector (Fix L-02).
+ */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion */
+function analyzeWithTypeScriptCompiler(
+  filePath: string,
+  content: string,
+  ts: any,
+  aliases: TsConfigAliases | null
+): FileAnalysisResult | null {
+  try {
+    const rootDir = process.cwd();
+    const sourceFile = ts.createSourceFile(
+      filePath,
+      content,
+      ts.ScriptTarget.Latest,
+      false
+    );
+
+    const imports: ExtractedImport[] = [];
+    const exports: ExtractedExport[] = [];
+    const symbols: ExtractedSymbol[] = [];
+    const routes: ExtractedRoute[] = [];
+    const externalDepsSet = new Set<string>();
+    const localDepsSet = new Set<string>();
+
+    function addImport(rawSource: string, specifiers: string[], isTypeOnly: boolean) {
+      const resolvedAlias = resolvePathAlias(rawSource, rootDir, aliases);
+      const source = resolvedAlias || rawSource;
+      const isRelative = source.startsWith('.') || source.startsWith('/');
+      imports.push({ source, specifiers, isTypeOnly, isRelative });
+      if (isRelative) localDepsSet.add(source);
+      else {
+        const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+        if (!pkgName.startsWith('node:')) externalDepsSet.add(pkgName);
+      }
+    }
+
+    function getLine(pos: number): number {
+      return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+    }
+
+    function hasExportModifier(node: any): boolean {
+      if (!node.modifiers) return false;
+      return node.modifiers.some((m: any) => m.kind === ts.SyntaxKind.ExportKeyword);
+    }
+
+    // Walk statements
+    for (const statement of sourceFile.statements) {
+      const isExported = hasExportModifier(statement);
+      const lineNum = getLine(statement.getStart(sourceFile));
+
+      // 1. ImportDeclaration: import ... from '...'
+      if (ts.isImportDeclaration(statement)) {
+        const rawSource = (statement.moduleSpecifier as any).text || '';
+        const isTypeOnly = !!(statement.importClause && (statement.importClause as any).isTypeOnly);
+        const specifiers: string[] = [];
+
+        if (statement.importClause) {
+          if (statement.importClause.name) {
+            specifiers.push(statement.importClause.name.text);
+          }
+          if (statement.importClause.namedBindings) {
+            if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
+              specifiers.push(statement.importClause.namedBindings.name.text);
+            } else if (ts.isNamedImports(statement.importClause.namedBindings)) {
+              for (const el of statement.importClause.namedBindings.elements) {
+                specifiers.push(el.name.text);
+              }
+            }
+          }
+        }
+        addImport(rawSource, specifiers, isTypeOnly);
+      }
+      // 2. FunctionDeclaration
+      else if (ts.isFunctionDeclaration(statement) && statement.name) {
+        const name = statement.name.text;
+        const params = statement.parameters.map((p: any) => p.getText(sourceFile)).join(', ');
+        const sig = `(${params})`;
+        symbols.push({ name, kind: 'function', line: lineNum, exported: isExported, meta: { signature: sig } });
+        if (isExported) exports.push({ name, kind: 'function', isTypeOnly: false });
+      }
+      // 3. ClassDeclaration
+      else if (ts.isClassDeclaration(statement) && statement.name) {
+        const name = statement.name.text;
+        symbols.push({ name, kind: 'class', line: lineNum, exported: isExported });
+        if (isExported) exports.push({ name, kind: 'class', isTypeOnly: false });
+
+        for (const member of statement.members) {
+          if (ts.isMethodDeclaration(member) && member.name) {
+            const mName = member.name.getText(sourceFile);
+            const mLine = getLine(member.getStart(sourceFile));
+            const mParams = member.parameters.map((p: any) => p.getText(sourceFile)).join(', ');
+            symbols.push({
+              name: mName,
+              kind: 'method',
+              line: mLine,
+              exported: false,
+              meta: { signature: `(${mParams})`, parent: name },
+            });
+          }
+        }
+      }
+      // 4. InterfaceDeclaration (supports extends / inheritance)
+      else if (ts.isInterfaceDeclaration(statement)) {
+        const name = statement.name.text;
+        const meta: Record<string, string> = {};
+        if (statement.heritageClauses) {
+          const extendsList: string[] = [];
+          for (const clause of statement.heritageClauses) {
+            for (const type of clause.types) {
+              extendsList.push(type.expression.getText(sourceFile));
+            }
+          }
+          if (extendsList.length > 0) meta.extends = extendsList.join(', ');
+        }
+        symbols.push({
+          name,
+          kind: 'interface',
+          line: lineNum,
+          exported: isExported,
+          isTypeOnly: true,
+          meta: Object.keys(meta).length > 0 ? meta : undefined,
+        });
+        if (isExported) exports.push({ name, kind: 'interface', isTypeOnly: true });
+      }
+      // 5. TypeAliasDeclaration
+      else if (ts.isTypeAliasDeclaration(statement)) {
+        const name = statement.name.text;
+        symbols.push({ name, kind: 'type', line: lineNum, exported: isExported, isTypeOnly: true });
+        if (isExported) exports.push({ name, kind: 'type', isTypeOnly: true });
+      }
+      // 6. EnumDeclaration
+      else if (ts.isEnumDeclaration(statement)) {
+        const name = statement.name.text;
+        symbols.push({ name, kind: 'enum', line: lineNum, exported: isExported });
+        if (isExported) exports.push({ name, kind: 'enum', isTypeOnly: false });
+      }
+      // 7. VariableStatement (const, let, var, arrow functions, CommonJS require)
+      else if (ts.isVariableStatement(statement)) {
+        for (const decl of statement.declarationList.declarations) {
+          // Check CommonJS require: const ... = require('...')
+          if (
+            decl.initializer &&
+            ts.isCallExpression(decl.initializer) &&
+            decl.initializer.expression.getText(sourceFile) === 'require' &&
+            decl.initializer.arguments.length > 0
+          ) {
+            const rawSource = (decl.initializer.arguments[0] as any).text || '';
+            const reqSpecs: string[] = [];
+            if (ts.isIdentifier(decl.name)) {
+              reqSpecs.push(decl.name.text);
+            } else if (ts.isObjectBindingPattern(decl.name)) {
+              for (const elem of decl.name.elements) {
+                reqSpecs.push(elem.name.getText(sourceFile));
+              }
+            }
+            addImport(rawSource, reqSpecs, false);
+          }
+
+          if (ts.isIdentifier(decl.name)) {
+            const name = decl.name.text;
+            let kind: SymbolKind = 'const';
+            let sig: string | undefined;
+            if (
+              decl.initializer &&
+              (ts.isArrowFunction(decl.initializer) || ts.isFunctionExpression(decl.initializer))
+            ) {
+              kind = 'function';
+              const pNames = decl.initializer.parameters.map((p: any) => p.getText(sourceFile)).join(', ');
+              sig = `(${pNames})`;
+            }
+            symbols.push({
+              name,
+              kind,
+              line: lineNum,
+              exported: isExported,
+              meta: sig ? { signature: sig } : undefined,
+            });
+            if (isExported) exports.push({ name, kind, isTypeOnly: false });
+          }
+        }
+      }
+      // 8. ExportDeclaration: export { ... } from '...' / export * from '...'
+      else if (ts.isExportDeclaration(statement)) {
+        const rawSource = statement.moduleSpecifier ? (statement.moduleSpecifier as any).text : undefined;
+        if (rawSource) {
+          addImport(rawSource, [], !!statement.isTypeOnly);
+        }
+        if (statement.exportClause) {
+          if (ts.isNamedExports(statement.exportClause)) {
+            for (const el of statement.exportClause.elements) {
+              exports.push({
+                name: el.name.text,
+                kind: 'variable',
+                isTypeOnly: !!statement.isTypeOnly || !!(el as any).isTypeOnly,
+              });
+            }
+          } else if (ts.isNamespaceExport(statement.exportClause)) {
+            exports.push({
+              name: statement.exportClause.name.text,
+              kind: 'variable',
+              isTypeOnly: false,
+            });
+          }
+        }
+      }
+      // 9. ExportAssignment: export default ...
+      else if (ts.isExportAssignment(statement)) {
+        exports.push({ name: 'default', kind: 'default', isTypeOnly: false });
+      }
+      // 10. ExpressionStatement: module.exports.foo = ... / exports.foo = ...
+      else if (ts.isExpressionStatement(statement) && ts.isBinaryExpression(statement.expression)) {
+        const leftText = statement.expression.left.getText(sourceFile);
+        if (leftText.startsWith('module.exports.') || leftText.startsWith('exports.')) {
+          const expName = leftText.split('.')[leftText.startsWith('module.') ? 2 : 1];
+          if (expName) {
+            exports.push({ name: expName, kind: 'variable', isTypeOnly: false });
+          }
+        }
+      }
+    }
+
+    // Extract HTTP Routes
+    const routeRegex = /(?:app|router|server|api)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/gi;
+    let rMatch: RegExpExecArray | null;
+    while ((rMatch = routeRegex.exec(content)) !== null) {
+      if (rMatch[2].startsWith('/')) {
+        const lineNum = content.slice(0, rMatch.index).split('\n').length;
+        routes.push({
+          method: rMatch[1].toUpperCase() as any,
+          path: rMatch[2],
+          line: lineNum,
+        });
+      }
+    }
+
+    return {
+      filePath,
+      imports,
+      exports,
+      symbols,
+      routes,
+      externalDeps: Array.from(externalDepsSet),
+      localDeps: Array.from(localDepsSet),
+      linesCount: content.split('\n').length,
+      language: 'typescript',
+    };
+  } catch {
+    return null;
+  }
+}
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion */
 
 /**
  * Analyzes a source file across any supported ecosystem (TS/JS, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, Flutter, SQL, CSS, Docker, Shell).
@@ -1456,34 +1824,34 @@ function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisR
   }
 
   // 1. Python
-  if (ext === '.py') return analyzePythonFile(filePath, content);
+  if (ext === '.py') return analyzePythonFile(filePath, sanitizeCodePreservingLines(content, 'python'));
 
   // 2. Go
-  if (ext === '.go') return analyzeGoFile(filePath, content);
+  if (ext === '.go') return analyzeGoFile(filePath, sanitizeCodePreservingLines(content, 'go'));
 
   // 3. Rust
-  if (ext === '.rs') return analyzeRustFile(filePath, content);
+  if (ext === '.rs') return analyzeRustFile(filePath, sanitizeCodePreservingLines(content, 'rust'));
 
   // 4. Flutter / Dart
-  if (ext === '.dart') return analyzeDartFile(filePath, content);
+  if (ext === '.dart') return analyzeDartFile(filePath, sanitizeCodePreservingLines(content, 'dart'));
 
   // 4b. Swift / iOS
-  if (ext === '.swift' || ext === '.m' || ext === '.mm') return analyzeSwiftFile(filePath, content);
+  if (ext === '.swift' || ext === '.m' || ext === '.mm') return analyzeSwiftFile(filePath, sanitizeCodePreservingLines(content, 'swift'));
 
   // 5. C# / .NET
-  if (ext === '.cs') return analyzeCSharpFile(filePath, content);
+  if (ext === '.cs') return analyzeCSharpFile(filePath, sanitizeCodePreservingLines(content, 'csharp'));
 
   // 6. Java & Kotlin
-  if (ext === '.java' || ext === '.kt') return analyzeJvmFile(filePath, content);
+  if (ext === '.java' || ext === '.kt') return analyzeJvmFile(filePath, sanitizeCodePreservingLines(content, 'java'));
 
   // 7. PHP
-  if (ext === '.php') return analyzePhpFile(filePath, content);
+  if (ext === '.php') return analyzePhpFile(filePath, sanitizeCodePreservingLines(content, 'php'));
 
   // 8. Ruby
-  if (ext === '.rb') return analyzeRubyFile(filePath, content);
+  if (ext === '.rb') return analyzeRubyFile(filePath, sanitizeCodePreservingLines(content, 'ruby'));
 
   // 9. C / C++
-  if (['.c', '.cpp', '.h', '.hpp', '.cc', '.cxx'].includes(ext)) return analyzeCppFile(filePath, content);
+  if (['.c', '.cpp', '.h', '.hpp', '.cc', '.cxx'].includes(ext)) return analyzeCppFile(filePath, sanitizeCodePreservingLines(content, 'cpp'));
 
   // 10. SQL DDL
   if (ext === '.sql') return analyzeSqlFile(filePath, content);
@@ -1509,7 +1877,19 @@ function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisR
     return analyzeDevOpsAndShellFile(filePath, content);
   }
 
-  // 15. TypeScript / JavaScript AST Lexer (Native TypeScript - Zero External Dependencies D-01)
+  // 15. TypeScript / JavaScript — Tiered AST Engine
+  const rootDir = process.cwd();
+  const tsConfigAliases = loadTsConfigAliases(rootDir);
+
+  // Camada 1: Compilador TypeScript Oficial
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const tsModule = getTsModule();
+  if (tsModule) {
+    const compiled = analyzeWithTypeScriptCompiler(filePath, content, tsModule, tsConfigAliases);
+    if (compiled) return compiled;
+  }
+
+  // Camada 2: State-Machine Lexer Universal (Fallback)
   const lines = content.split('\n');
   const imports: ExtractedImport[] = [];
   const exports: ExtractedExport[] = [];
@@ -1517,9 +1897,6 @@ function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisR
   const routes: ExtractedRoute[] = [];
   const externalDepsSet = new Set<string>();
   const localDepsSet = new Set<string>();
-
-  const rootDir = process.cwd();
-  const tsConfigAliases = loadTsConfigAliases(rootDir);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -1727,13 +2104,14 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
   const filesMap: Record<string, FileAnalysisResult> = Object.create(null) as Record<string, FileAnalysisResult>;
   const symbolIndex: Record<string, string[]> = Object.create(null) as Record<string, string[]>;
   const reverseDependencies: Record<string, string[]> = Object.create(null) as Record<string, string[]>;
+  const filesByLanguage: Record<string, number> = Object.create(null) as Record<string, number>;
   const allRoutes: ExtractedRoute[] = [];
 
   let scannedCount = 0;
   const visitedDirs = new Set<string>();
 
   function shouldExclude(relPath: string): boolean {
-    const normalized = relPath.replace(/\\/g, '/');
+    const normalized = toPosixPath(relPath);
     for (const pattern of excludePatterns) {
       if (typeof pattern === 'string') {
         if (normalized === pattern || normalized.startsWith(pattern + '/') || normalized.includes('/' + pattern + '/')) {
@@ -1781,26 +2159,32 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
 
         if (allowedExtensions.has(ext) || SPECIAL_FILENAMES.has(baseName) || baseName.includes('dockerfile')) {
           scannedCount++;
-          const relKey = relPath.replace(/\\/g, '/');
+          const relKey = toPosixPath(relPath);
 
           let mtime = 0;
+          let size = 0;
           try {
             const stat = fs.statSync(fullPath);
-            mtime = stat.mtimeMs;
+            mtime = Math.floor(stat.mtimeMs);
+            size = stat.size;
           } catch {
             // Non-blocking
           }
 
           let result: FileAnalysisResult;
           const prevFile = options.previousGraph?.files?.[relKey];
-          if (prevFile && prevFile.mtime && prevFile.mtime === mtime) {
-            // Incremental AST cache hit via mtime
+          if (prevFile && prevFile.mtime && prevFile.mtime === mtime && prevFile.size === size) {
+            // Incremental AST cache hit via mtime + size
             result = prevFile;
           } else {
             result = analyzeSourceFile(fullPath);
             result.filePath = relKey;
             result.mtime = mtime;
+            result.size = size;
           }
+
+          const lang = result.language || 'unknown';
+          filesByLanguage[lang] = (filesByLanguage[lang] || 0) + 1;
 
           filesMap[relKey] = result;
 
@@ -1829,22 +2213,35 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
   for (const [filePath, fileData] of Object.entries(filesMap)) {
     const fileDir = path.dirname(filePath);
     for (const localDep of fileData.localDeps) {
-      const resolved = path.normalize(path.join(fileDir, localDep)).replace(/\\/g, '/');
-      const candidates = [
-        resolved,
-        resolved + '.ts',
-        resolved + '.tsx',
-        resolved + '.cts',
-        resolved + '.js',
-        resolved + '.cjs',
-        resolved + '.py',
-        resolved + '.go',
-        resolved + '.rs',
-        resolved + '.dart',
-        resolved + '.css',
-        resolved + '/index.ts',
-        resolved + '/index.js',
-      ];
+      const resolved = toPosixPath(path.normalize(path.join(fileDir, localDep)));
+      let candidates: string[];
+      if (resolved.endsWith('.js')) {
+        const withoutExt = resolved.slice(0, -3);
+        candidates = [
+          withoutExt + '.ts',
+          withoutExt + '.tsx',
+          withoutExt + '.cts',
+          withoutExt + '.mts',
+          resolved,
+        ];
+      } else {
+        candidates = [
+          resolved,
+          resolved + '.ts',
+          resolved + '.tsx',
+          resolved + '.cts',
+          resolved + '.mts',
+          resolved + '.js',
+          resolved + '.cjs',
+          resolved + '.py',
+          resolved + '.go',
+          resolved + '.rs',
+          resolved + '.dart',
+          resolved + '.css',
+          resolved + '/index.ts',
+          resolved + '/index.js',
+        ];
+      }
 
       for (const cand of candidates) {
         if (filesMap[cand]) {
@@ -1923,6 +2320,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
       totalExports,
       totalRoutes: allRoutes.length,
       scanDurationMs: duration,
+      filesByLanguage,
     },
     files: filesMap,
     symbolIndex,
@@ -1959,7 +2357,7 @@ function queryFileDependencies(
   graph: CodebaseGraph,
   targetFile: string
 ): { imports: string[]; importedBy: string[]; external: string[] } {
-  const normalized = targetFile.replace(/\\/g, '/');
+  const normalized = toPosixPath(targetFile);
   const fileData = graph.files[normalized];
 
   return {
@@ -2000,6 +2398,7 @@ function queryTopCentralFiles(
 }
 
 export = {
+  toPosixPath,
   analyzeSourceFile,
   buildCodebaseGraph,
   querySymbolLocations,

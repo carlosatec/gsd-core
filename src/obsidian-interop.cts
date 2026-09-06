@@ -1,5 +1,5 @@
 /**
- * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 2.9
+ * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 3.0
  *
  * Implements native parsing, resolution, and bidirectional backlink indexing
  * for Obsidian-style `[[wikilinks]]` in `.planning/` Markdown documents.

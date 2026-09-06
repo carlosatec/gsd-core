@@ -16,6 +16,22 @@ const clock_cjs_1 = require("./clock.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const learningsMod = require("./learnings.cjs");
 const { learningsList } = learningsMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const semanticRag = require("./hybrid-semantic-rag.cjs");
+const { tokenize } = semanticRag;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+/**
+ * Sanitizes stack traces by replacing local paths with <PATH>, line numbers with <LINE>,
+ * and hex memory addresses with <HEX> to canonicalize recurring errors.
+ */
+function sanitizeStackTrace(text) {
+    if (!text)
+        return '';
+    return text
+        .replace(/0x[a-fA-F0-9]{4,16}/g, '<HEX>')
+        .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+(?::\d+){1,2}/g, '<PATH>:<LINE>')
+        .replace(/(?:[a-zA-Z]:[/\\]|[/~])[^\s:()]+/g, '<PATH>');
+}
 // ─── Functions ────────────────────────────────────────────────────────────────
 /**
  * Loads anti-patterns from `.planning/intel/anti-patterns.json`.
@@ -79,8 +95,8 @@ function recordAntiPattern(planningDir, entry) {
         timestamp: new Date().toISOString(),
         rule: entry.rule,
         file: entry.file,
-        error: entry.error,
-        repairedAction: entry.repairedAction,
+        error: sanitizeStackTrace(entry.error),
+        repairedAction: entry.repairedAction ? sanitizeStackTrace(entry.repairedAction) : undefined,
         lesson: entry.lesson,
     };
     data.patterns.push(record);
@@ -123,12 +139,36 @@ function queryAntiPatterns(planningDir, opts = {}) {
     }
     if (opts.errorQuery) {
         const q = opts.errorQuery.toLowerCase();
-        results = results.filter(p => p.error.toLowerCase().includes(q) || p.lesson.toLowerCase().includes(q));
+        const qTokens = typeof tokenize === 'function' ? tokenize(opts.errorQuery) : [];
+        results = results.filter(p => {
+            const errLower = p.error.toLowerCase();
+            const lessonLower = p.lesson.toLowerCase();
+            if (errLower.includes(q) || lessonLower.includes(q))
+                return true;
+            if (qTokens.length > 0) {
+                const docTokens = new Set(tokenize(`${errLower} ${lessonLower}`));
+                const matched = qTokens.filter(t => docTokens.has(t));
+                const minMatch = Math.max(1, Math.ceil(qTokens.length * 0.4));
+                return matched.length >= minMatch;
+            }
+            return false;
+        });
+        if (qTokens.length > 0) {
+            const qTokenSet = new Set(qTokens);
+            results.sort((a, b) => {
+                const aTokens = tokenize(`${a.error} ${a.lesson}`);
+                const bTokens = tokenize(`${b.error} ${b.lesson}`);
+                const aMatches = aTokens.filter(t => qTokenSet.has(t)).length;
+                const bMatches = bTokens.filter(t => qTokenSet.has(t)).length;
+                return bMatches - aMatches;
+            });
+        }
     }
     const limit = opts.limit ?? 10;
-    return results.slice(-limit);
+    return opts.errorQuery ? results.slice(0, limit) : results.slice(-limit);
 }
 module.exports = {
+    sanitizeStackTrace,
     loadAntiPatterns,
     saveAntiPatterns,
     recordAntiPattern,

@@ -50,7 +50,17 @@ function runPreFlightChecks(ctx) {
     }
     const activeGraph = graph;
     const violations = [];
+    const coEvolutionWarnings = [];
     const pathExistsCache = new Map();
+    // Build in-memory path set from activeGraph for O(1) existence checks (sub-15ms)
+    const inMemoryPathSet = new Set();
+    if (activeGraph && activeGraph.files) {
+        for (const f of Object.keys(activeGraph.files)) {
+            const norm = f.replace(/\\/g, '/');
+            inMemoryPathSet.add(norm);
+            inMemoryPathSet.add(node_path_1.default.resolve(root, norm).replace(/\\/g, '/'));
+        }
+    }
     // Detect project root modules for Go and Rust
     let goRootModule;
     let rustRootCrate;
@@ -81,6 +91,41 @@ function runPreFlightChecks(ctx) {
     function checkPathExists(p) {
         if (pathExistsCache.has(p))
             return pathExistsCache.get(p);
+        // Fast O(1) in-memory check
+        const relPosix = node_path_1.default.isAbsolute(p) ? node_path_1.default.relative(root, p).replace(/\\/g, '/') : p.replace(/\\/g, '/');
+        const absPosix = node_path_1.default.isAbsolute(p) ? p.replace(/\\/g, '/') : node_path_1.default.resolve(root, p).replace(/\\/g, '/');
+        const inMemCandidates = [
+            relPosix,
+            relPosix + '.ts',
+            relPosix + '.tsx',
+            relPosix + '.cts',
+            relPosix + '.mts',
+            relPosix + '.js',
+            relPosix + '.jsx',
+            relPosix + '.cjs',
+            relPosix + '.mjs',
+            relPosix + '.py',
+            relPosix + '.go',
+            relPosix + '.rs',
+            relPosix + '.dart',
+            relPosix + '.css',
+            relPosix + '/index.ts',
+            relPosix + '/index.tsx',
+            relPosix + '/index.cts',
+            relPosix + '/index.js',
+            relPosix + '/index.cjs',
+            relPosix + '/__init__.py',
+            relPosix + '/mod.rs',
+            relPosix + '/lib.rs',
+            absPosix,
+        ];
+        for (const cand of inMemCandidates) {
+            if (inMemoryPathSet.has(cand)) {
+                pathExistsCache.set(p, true);
+                return true;
+            }
+        }
+        // Fallback to filesystem for external / un-indexed paths
         const exists = node_fs_1.default.existsSync(p) ||
             node_fs_1.default.existsSync(p + '.ts') ||
             node_fs_1.default.existsSync(p + '.tsx') ||
@@ -176,6 +221,38 @@ function runPreFlightChecks(ctx) {
                     }
                 }
             }
+            // Check 1b: Signature Drift & Co-Evolution Warnings
+            if (existingFile && existingFile.symbols) {
+                const currentDeps = activeGraph.reverseDependencies[normalized] || [];
+                if (currentDeps.length > 0) {
+                    const oldSymbolMap = new Map(existingFile.symbols.map(s => [s.name, s]));
+                    for (const newSym of newAnalysis.symbols) {
+                        const oldSym = oldSymbolMap.get(newSym.name);
+                        if (oldSym && oldSym.exported && newSym.exported) {
+                            const oldSig = typeof oldSym.meta?.signature === 'string' ? oldSym.meta.signature : '';
+                            const newSig = typeof newSym.meta?.signature === 'string' ? newSym.meta.signature : '';
+                            if (oldSig && newSig && oldSig !== newSig) {
+                                const warningMsg = `Signature drift detected for '${newSym.name}': '${oldSig}' -> '${newSig}'. Callers (${currentDeps.join(', ')}) should be co-evolved.`;
+                                violations.push({
+                                    rule: 'SIGNATURE_DRIFT',
+                                    severity: 'warning',
+                                    file: normalized,
+                                    message: warningMsg,
+                                });
+                                coEvolutionWarnings.push({
+                                    targetFile: normalized,
+                                    symbolName: newSym.name,
+                                    callers: currentDeps,
+                                    action: 'CO_EVOLVE_CALLERS',
+                                    previousSignature: oldSig,
+                                    proposedSignature: newSig,
+                                    message: warningMsg,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
             // Check 2: Phantom Local Imports (importing local files that don't exist)
             for (const localDep of newAnalysis.localDeps) {
                 const fileDir = node_path_1.default.dirname(node_path_1.default.join(root, relFile));
@@ -230,6 +307,7 @@ function runPreFlightChecks(ctx) {
         valid: !hasErrors,
         violations,
         targetFiles: ctx.filesToModify,
+        coEvolutionWarnings,
     };
 }
 // ─── Self-Healing Loop ────────────────────────────────────────────────────────

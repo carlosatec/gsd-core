@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-2.9.3-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.0.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 2.9: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
+## GSD Core Nexus 3.0: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
 
-GSD Core Nexus 2.9 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
+GSD Core Nexus 3.0 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
 - **DeepSeek Harness 1st-Class Support (`@deepseek-ai/dsh` — D-53):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution (`dsh`, `deepseek`, `deepseek-cli`).
 - **Structured Session Logging & Intelligent Ring Buffer (D-54 / D-55):** Append-only JSONL execution event logging (`.planning/intel/sessions/`) with 32 KB smart trimming for stack traces and code patches, regex-based secret sanitization, transparent hub tracking across all 10 commands, and generous 50-session/30-day disk-bounded retention (~25-40 MB gitignored).
@@ -50,9 +50,10 @@ GSD Core Nexus 2.9 elevates AI coding agents with deep execution observability, 
 - **Okapi BM25 RAG & Code-Aware Tokenizer (D-33):** High-precision semantic retrieval with term saturation ($k_1=1.5, b=0.75$), identifier splitting (`camelCase`, `PascalCase`, `kebab-case`, `snake_case`), and mobile build cache exclusions.
 - **Living, Incremental Documentation:** Post-commit sync auto-generates and verifies `.planning/codebase/ARCHITECTURE.md` and `.planning/codebase/APIS.md` directly from active code topology without $O(n^2)$ overhead.
 - **Deep Call-Graph & Canonical Anchors:** Modules are ranked by PageRank architectural importance, allowing agents to anchor on canonical reference implementations.
-- **Surgical Context Injection (JIT):** Replaces monolithic prompts by injecting only 1st-degree neighbors, active type contracts, and architectural decisions (yielding 80%–90% token savings).
-- **Pre-Flight Guardrails & Quality Checks (D-34):** Intercepts breaking export changes, circular dependencies (1000-node DFS limit), phantom imports, and accidental 0-byte truncations (`EMPTY_FILE_GUARD`), with automated cyclomatic complexity and UI anti-pattern scans in `/gsd:review`.
-- **Persistent Anti-Pattern Store:** Durably remembers lessons from autonomous self-healing loops with cross-file query support (`errorQuery`) to prevent recurring mistakes across sessions.
+- **Tiered AST Engine (Tiers 1, 2 & 3 — D-100):** On-demand official TypeScript compiler (interface inheritance `extends`, type aliases, discriminated unions, exact method signatures, zero V8 memory retention) with universal fallback to a 2-pass state-machine lexer immune to comments and docstrings across 9 polyglot languages.
+- **Quality-First JIT & Transitive Type Closure (D-99):** Deep recursive type discovery up to 3 degrees of dependency (BFS 3 hops / 50 unique types cap) ordered by PageRank with model-aware dynamic budgets (2.5K to 24K tokens).
+- **Sub-15ms Pre-Flight Guardrails & Active Co-Evolution (D-101 / D-102):** In-memory path caching ($O(1)$) cutting preflight latency from ~60ms to **1–3ms**, combined with `SIGNATURE_DRIFT` warnings and structured `CO_EVOLVE_CALLERS` payloads.
+- **Persistent Anti-Pattern Store with Okapi BM25:** Durably remembers lessons from autonomous self-healing loops with BM25 relevance ranking and canonical stack trace sanitization (`<PATH>`, `<LINE>`, `<HEX>`).
 - **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (Swift XCTest, Kotlin/Java JUnit 5, inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, isolated test suites for Python/Node).
 - **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
 - **Concurrency & Security Hardening (D-35 to D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), secure MCP confinement within `.planning/`, chunk-resilient JSON-RPC streaming, and lockstep versioning across all 49 manifests.
@@ -83,10 +84,10 @@ New here? Check the [Complete Practical GSD Tutorial](docs/tutorials/practical-t
 
 ## Documentation
 
-**What's new in GSD Core Nexus 2.9** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 3.0** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 2.9](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 3.0](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 

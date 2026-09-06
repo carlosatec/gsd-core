@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 2.9 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 3.0 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -29,7 +29,7 @@ A narrative companion guide to GSD Core Nexus 2.9 — orient yourself here, then
 
 ## The Unified 10-Command Surface
 
-Starting with GSD Core Nexus 2.9, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 3.0, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -41,7 +41,7 @@ Starting with GSD Core Nexus 2.9, the public command surface is streamlined into
 | `/gsd-ship` | Complete milestone, open PR, tag release, and archive state | `--draft`, `--tag <version>` |
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Real-time token telemetry dashboard, graph compression ratio, and savings breakdown | `--raw`, `--history` |
-| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Nexus 2.9 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Nexus 3.0 | `--dry-run`, `--force` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
 ---
@@ -68,7 +68,7 @@ For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS
 
 ## Session Intelligence & Deterministic Replay CLI
 
-GSD Core Nexus 2.9 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+GSD Core Nexus 3.0 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
 
 ```bash
 # Replay the latest session in the terminal

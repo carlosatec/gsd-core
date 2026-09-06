@@ -19,7 +19,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const {
@@ -393,15 +393,13 @@ function bumpVersion(targetVersion, opts = {}) {
 
   // 6. Run Derived Regeneration Pipeline
   if (!skipRegen) {
-    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    execFileSync(npmCmd, ['run', 'regen:derived'], { cwd: root, stdio: 'inherit', shell: true });
+    execSync('npm run regen:derived', { cwd: root, stdio: 'inherit' });
   }
 
   // 7. Run Quality Verification Gates
   if (!skipLint) {
-    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    execFileSync(npmCmd, ['run', 'lint:generated-sync'], { cwd: root, stdio: 'inherit', shell: true });
-    execFileSync(npmCmd, ['run', 'lint'], { cwd: root, stdio: 'inherit', shell: true });
+    execSync('npm run lint:generated-sync', { cwd: root, stdio: 'inherit' });
+    execSync('npm run lint', { cwd: root, stdio: 'inherit' });
   }
 
   return report;

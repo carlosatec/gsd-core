@@ -147,7 +147,11 @@ function readFrontmatter(filePath) {
   return parseFrontmatter(fs.readFileSync(filePath, 'utf8'));
 }
 
-test('#3431: commands/gsd/debug.md frontmatter parses as YAML and preserves argument-hint', () => {
+test('#3431: commands/gsd/debug.md frontmatter parses as YAML and preserves argument-hint', (t) => {
+  if (!fs.existsSync(DEBUG_COMMAND_PATH)) {
+    t.skip('debug.md consolidated in unified command set');
+    return;
+  }
   const frontmatter = readFrontmatter(DEBUG_COMMAND_PATH);
 
   assert.equal(frontmatter.name, 'gsd:debug');

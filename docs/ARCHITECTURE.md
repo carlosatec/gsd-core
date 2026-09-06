@@ -16,6 +16,7 @@
 - [Hook System](#hook-system)
 - [CLI Tools Layer](#cli-tools-layer)
 - [Runtime Abstraction](#runtime-abstraction)
+- [Static Intelligence & Quality-First JIT](#static-intelligence--quality-first-jit)
 
 ---
 
@@ -44,25 +45,25 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
        │ (Despacho com JIT)          │ (Despacho com Guardrails)   │ (Auto-Upgrade & Telemetria) │ (Logs & Replay — Fase 14)
 ┌──────▼──────────────────────┐ ┌────▼──────────────────────┐ ┌────▼────────────────────────┐ ┌────▼────────────────────────┐
 │  NEXUS JIT CONTEXT INJECTOR │ │ PRE-FLIGHT GUARDRAILS &   │ │ NEXUS TELEMETRY &          │ │ NEXUS SESSION INTELLIGENCE │
-│ (Fases 2, 8, 9 — D-03, D-27)│ │ SELF-HEALING (Fases 3, 6) │ │ OBSERVABILITY (Fases 5, 7) │ │ & DETERMINISTIC REPLAY     │
+│(Fases 2,8,9,20 — D-03,D-99) │ │ SELF-HEALING (Fases 3,20) │ │ OBSERVABILITY (Fases 5, 7) │ │ & DETERMINISTIC REPLAY     │
 │ src/jit-context-injector.cts│ │ src/preflight-guardrails  │ │ src/jit-telemetry.cts      │ │ (Fase 14 — D-54, D-55, D-56│
-│ - Injeção cirúrgica ≤ 8k tok│ │ - Detecção CONTRACT_BREAK │ │ src/token-dashboard-render │ │ src/session-logger.cts     │
-│ - Orçamento elástico por LLM│ │ - EMPTY_FILE_GUARD        │ │ - Dashboard ASCII 65 col   │ │ src/session-replay.cts     │
-│ - Ancoragem Canônica        │ │ - Laço de Auto-Cura       │ │ - Schema v2.0 multidimens. │ │ - Smart Trimming (32 KB)   │
-└──────┬──────────────────────┘ └────┬──────────────────────┘ └────┬───────────────────────┘ │ - Ring Buffer (50/30d)     │
-       │                             │                             │                         │ - Sanitização de Segredos  │
+│ - Quality-First Type Closure│ │ - inMemoryPathSet O(1)<15m│ │ src/token-dashboard-render │ │ src/session-logger.cts     │
+│ - BFS 3-Hops / 50 Tipos Cap │ │ - SIGNATURE_DRIFT Warning │ │ - Dashboard ASCII 65 col   │ │ src/session-replay.cts     │
+│ - Orçamento elástico por LLM│ │ - CO_EVOLVE_CALLERS Action│ │ - Schema v2.0 multidimens. │ │ - Smart Trimming (32 KB)   │
+│ - Fast path dryRun (S-02)   │ │ - EMPTY_FILE_GUARD / Trunc│ │ - Rastreio Peak Burst      │ │ - Ring Buffer (50/30d)     │
+└──────┬──────────────────────┘ └────┬──────────────────────┘ └────┬───────────────────────┘ │ - Sanitização de Segredos  │
        │                             │                             │                         │ - Alimentação Anti-Patterns│
        │                             │                             │                         └────┬───────────────────────┘
        │                             │                             │                              │
 ┌──────▼─────────────────────────────▼─────────────────────────────▼──────────────────────────────▼───────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-31, D-33, D-68..D-73)                 │
-│   src/codebase-ast-analyzer.cts ── Motor AST 360° nativo em Node.js (16+ ecossistemas)                                  │
+│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-99..D-103)                             │
+│   src/codebase-ast-analyzer.cts ── Tiered AST Engine (Camada 1 TS Compiler + Camada 2 State-Machine Lexer 2 Passes)      │
 │   src/visual-graph-exporter.cts ── Gerador HTML Canvas 2D 100% offline & snapshot PNG (/gsd-graph — Fase 16)            │
 │   src/canvas-roadmap-generator.cts ── Exportador JSON Open Canvas para Obsidian (ROADMAP.canvas — Fase 16)              │
 │   src/obsidian-interop.cts ── Suporte a [[wikilinks]] e índice bidirecional (.planning/intel/backlinks.json — Fase 16)  │
 │   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                                           │
 │   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                                               │
-│   src/anti-pattern-store.cts ◄── Memória durável de lições de auto-cura & replay de sessão (.planning/intel/)           │
+│   src/anti-pattern-store.cts ◄── Memória de Lições Aprendidas (BM25 Relevance + Stack Sanitizer — Fase 20)              │
 │   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift, Kotlin, Java)         │
 └──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
        │                                                           │
@@ -1010,6 +1011,37 @@ on 2026-06-07:
 5. **Model references** — `inherit` profile lets GSD defer to runtime's model selection
 
 The installer handles all translation at install time. Workflows and agents are written in Claude Code's native format and transformed during deployment.
+
+---
+
+## Static Intelligence & Quality-First JIT
+
+Introduced and unified across **Phases 1–3, 8–10, and 20** (Decisions `D-01`, `D-03`, `D-06`, `D-99` through `D-103`), GSD Core features a native, zero-external-dependency static analysis and context injection pipeline.
+
+### 1. Tiered AST Engine (`src/codebase-ast-analyzer.cts`)
+The codebase analyzer operates via an incremental, 3-tiered parsing architecture:
+- **Tier 1 (Official TypeScript Compiler):** Dynamically loads `typescript` from the host project or environment. Extracts full class/interface heritage (`extends`), type aliases, discriminated unions, method signatures, parameter types, and arrow functions. **Guarantees zero memory retention (Fix L-02):** `ts.SourceFile` instances remain strictly confined to the local function scope and are immediately reclaimed by the V8 garbage collector.
+- **Tier 2 (Universal 2-Pass State-Machine Lexer):** Polyglot analyzer covering 9 languages (Python, Go, Rust, Java, Kotlin, Swift, C#, PHP, Ruby, C/C++). Pass 1 runs `sanitizeCodePreservingLines`, a finite state machine that cleans block comments, line comments, and docstrings by replacing characters with whitespace while **strictly preserving newline characters (`\n`)**. Line numbers remain 100% accurate with zero ghost symbols.
+- **Tier 3 (Declarative Infrastructure & Schema Parsers):** Extracts symbols from SQL DDL, Prisma schemas, GraphQL, CSS/SCSS design tokens, Vue/Svelte SFC `<script>` blocks, and Docker/Shell scripts.
+- **Incremental Cache (`mtime + size` — Fix L-01):** Validates cache hits against both file modification time and exact byte size, preventing stale hits on low-resolution filesystems.
+- **Canonical Topology:** Normalizes all paths using POSIX forward slashes (`toPosixPath`) and automatically resolves ESM imports (`.js` pointing to physical `.ts`/`.tsx`/`.cts` files).
+
+### 2. Quality-First JIT Context Injector (`src/jit-context-injector.cts`)
+Prioritizes full contractual fidelity over blind token compression:
+- **Transitive Type Closure (BFS 3 Hops):** Recursively traverses type dependencies (e.g. `OrderDto` → `CustomerDto` → `AddressDto`) up to 3 degrees of separation, ordered by topological PageRank score.
+- **Type Volume Cap:** Strict cap of 50 unique types prevents cyclic bloat or prompt overflow.
+- **Model-Aware Dynamic Budgeting:** Automatically sizes context injection based on the active model's context window (2.5K tokens for $\le$32K local models, 8K tokens for standard 128K–200K models, up to 24K tokens for 1M+ models).
+- **Fast-Path `dryRun` Mode (S-02):** Allows pre-flight verification and testing of applicable types and decisions without generating markdown output.
+
+### 3. Pre-Flight Guardrails & Active Co-Evolution (`src/preflight-guardrails.cts`)
+- **Sub-15ms In-Memory Path Cache (`inMemoryPathSet` — S-04):** Converts graph keys into an in-memory `Set<string>` lookup, slashing preflight path existence checks from ~60ms down to **1–3ms** ($O(1)$ lookup replacing repeated `fs.existsSync` syscalls).
+- **`SIGNATURE_DRIFT` Rule (Fix L-05):** Emits non-blocking `warning` violations with structured `CO_EVOLVE_CALLERS` payloads, guiding agents to update upstream callers when exported function/method signatures change.
+- **`UNINTENDED_TRUNCATION` Guard:** Intercepts 0-byte file truncations before writes reach disk.
+
+### 4. Durable Anti-Pattern Store (`src/anti-pattern-store.cts`)
+- **Okapi BM25 Ranking:** Reutilizes shared code-aware tokenization from `hybrid-semantic-rag.cts` to rank past errors and repair lessons, returning top relevance matches first.
+- **Canonical Stack Trace Sanitization:** Replaces file paths with `<PATH>`, line numbers with `<LINE>`, and memory addresses with `<HEX>`, ensuring errors across different sessions deduplicate properly.
+- **Atomic Concurrency:** Emits writes through temporary files (`.tmp`) with exponential backoff and atomic renaming.
 
 ---
 

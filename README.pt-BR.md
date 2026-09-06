@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-2.9.3-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.0.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD Core Nexus 2.9: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
+## GSD Core Nexus 3.0: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
 
-O GSD Core Nexus 2.9 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
+O GSD Core Nexus 3.0 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
 - **Suporte de 1ª Classe ao DeepSeek Harness (`@deepseek-ai/dsh` — D-53):** Adaptador declarativo completo com suporte ao micro-kernel Cordis, transporte MCP e resolução de aliases de CLI (`dsh`, `deepseek`, `deepseek-cli`).
 - **Log Estruturado de Sessão & Retenção Inteligente (D-54 / D-55):** Gravação append-only em JSON Lines (`.planning/intel/sessions/`) com smart trimming de 32 KB para stack traces e diffs, sanitização automática de segredos por regex, hook transparente no Hub e retenção generosa de 50 sessões / 30 dias delimitada em disco (~25-40 MB gitignored).
@@ -50,9 +50,10 @@ O GSD Core Nexus 2.9 transforma agentes de codificação em uma engenharia autô
 - **RAG Semântico Okapi BM25 & Tokenizador Poliglota (D-33):** Recuperação semântica de alta precisão com saturação de termos ($k_1=1.5, b=0.75$), divisão inteligente de identificadores (`camelCase`, `PascalCase`, `kebab-case`, `snake_case`) e exclusão de caches mobile.
 - **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real sem sobrecarga $O(n^2)$.
 - **Grafo Profundo & Âncoras Canônicas:** Módulos ordenados por relevância arquitetural (PageRank), permitindo que a IA se ancore em implementações canônicas de referência.
-- **Injeção Cirúrgica de Contexto (JIT):** Elimina prompts monolíticos injetando apenas vizinhos diretos, contratos de tipos e decisões ativas (80% a 90% de economia de tokens).
-- **Pre-Flight Guardrails & Verificações de Qualidade (D-34):** Simula diffs em memória e bloqueia quebra de contratos de export, dependências circulares (limite de 1000 nós no DFS), imports fantasmas e truncamento acidental para 0 bytes (`EMPTY_FILE_GUARD`), além de varreduras de complexidade ciclomática e anti-patterns de UI no `/gsd:review`.
-- **Memória Durável de Anti-Patterns:** Registra atomicamente lições aprendidas de correções com busca transversal inteligente (`errorQuery`) em `.planning/intel/anti-patterns.json` para evitar reincidência de erros entre sessões.
+- **Motor AST em 3 Camadas (D-100):** Compilador TypeScript oficial sob demanda (herança `extends`, type aliases, discriminated unions, assinaturas exatas e zero retenção no V8) com fallback universal para Lexer de 2 passes imune a comentários e docstrings em 9 linguagens poliglotas.
+- **JIT Quality-First & Fechamento Transitivo de Tipos (D-99):** Descoberta recursiva profunda de tipos até 3 graus de dependência (BFS 3 hops / cap de 50 tipos únicos) ordenados por PageRank com orçamentos dinâmicos model-aware (2.5K a 24K tokens).
+- **Pre-Flight Guardrails Sub-15ms & Co-Evolução Ativa (D-101 / D-102):** Cache de caminhos em memória ($O(1)$) derrubando a latência de validação de ~60ms para **1 a 3ms**, com emissão do aviso `SIGNATURE_DRIFT` e payload estruturado `CO_EVOLVE_CALLERS`.
+- **Memória Durável de Anti-Patterns com Okapi BM25:** Registra lições aprendidas de correções com ordenação de relevância BM25 e sanitização canônica de stack traces (`<PATH>`, `<LINE>`, `<HEX>`).
 - **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Python e Node isolados).
 - **Telemetria Pura de Tokens & Dashboard CLI:** Observabilidade em tempo real com economia de contexto, distribuição por comando e picos via `/gsd:tokens` e `/gsd:status`.
 - **Blindagem de Concorrência & Segurança (D-35 a D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), confinamento seguro do MCP em `.planning/`, streaming JSON-RPC resiliente a chunks e sincronização de versão nos 49 manifests.
@@ -83,10 +84,10 @@ Após a instalação, verifique o status ou inicie o planejamento:
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 2.9** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 3.0** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 2.9](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 3.0](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 

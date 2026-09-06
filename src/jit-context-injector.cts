@@ -71,6 +71,9 @@ interface AssembleJitContextOptions {
   rootDir?: string;
   maxTokens?: number;
   maxDecisions?: number;
+  maxTypeClosureDepth?: number;
+  maxUniqueTypes?: number;
+  dryRun?: boolean;
   modelProfile?: string;
   windowTier?: 'small' | 'standard' | 'large';
   modelName?: string;
@@ -232,26 +235,113 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
         allNeighbors.push(n);
       }
     }
+  }
 
-    // Extract type contracts (interfaces, types, structs, classes, traits, models, widgets, tables, enums)
-    const normalized = file.replace(/\\/g, '/');
-    const TARGET_TYPE_KINDS = new Set([
-      'interface',
-      'type',
-      'struct',
-      'class',
-      'trait',
-      'model',
-      'widget',
-      'table',
-      'enum',
-    ]);
-    if (graph.files[normalized]) {
-      for (const s of graph.files[normalized].symbols) {
-        if (TARGET_TYPE_KINDS.has(s.kind)) {
-          applicableTypes.push(`${s.name} (${s.kind} at line ${s.line})`);
+  // Transitive Type Closure (Quality-First: D-69, Q1)
+  const maxClosureDepth = options.maxTypeClosureDepth ?? 3;
+  const maxUniqueTypes = options.maxUniqueTypes ?? 50;
+
+  const TARGET_TYPE_KINDS = new Set([
+    'interface',
+    'type',
+    'struct',
+    'class',
+    'trait',
+    'model',
+    'widget',
+    'table',
+    'enum',
+  ]);
+
+  const seenTypeNames = new Set<string>();
+  const collectedTypes: Array<{
+    name: string;
+    kind: string;
+    line?: number;
+    file: string;
+    isDirect: boolean;
+    pageRank: number;
+    meta?: Record<string, string | number | boolean>;
+  }> = [];
+
+  const queue: Array<{ file: string; depth: number }> = [];
+  const visitedFiles = new Set<string>();
+
+  for (const file of targetFiles) {
+    const norm = file.replace(/\\/g, '/');
+    queue.push({ file: norm, depth: 0 });
+    visitedFiles.add(norm);
+  }
+
+  while (queue.length > 0) {
+    const item = queue.shift()!;
+    const fileNode = graph.files[item.file];
+    if (!fileNode) continue;
+
+    const pr = graph.pageRankScores?.[item.file] || 0;
+    const isDirect = item.depth === 0;
+
+    if (fileNode.symbols) {
+      for (const s of fileNode.symbols) {
+        if (TARGET_TYPE_KINDS.has(s.kind) && !seenTypeNames.has(s.name)) {
+          seenTypeNames.add(s.name);
+          collectedTypes.push({
+            name: s.name,
+            kind: s.kind,
+            line: s.line,
+            file: item.file,
+            isDirect,
+            pageRank: pr,
+            meta: s.meta,
+          });
+          if (collectedTypes.length >= maxUniqueTypes) break;
         }
       }
+    }
+
+    if (collectedTypes.length >= maxUniqueTypes) break;
+
+    // Expand to next degree of dependencies
+    if (item.depth < maxClosureDepth) {
+      const neighbors = fileNode.localDeps || [];
+      const fileDir = path.dirname(item.file);
+      for (const dep of neighbors) {
+        const resolved = path.normalize(path.join(fileDir, dep)).replace(/\\/g, '/');
+        const candidates = [
+          resolved,
+          resolved + '.ts',
+          resolved + '.tsx',
+          resolved + '.cts',
+          resolved + '.js',
+          resolved + '.py',
+          resolved + '.go',
+          resolved + '.rs',
+          resolved + '/index.ts',
+        ];
+        for (const cand of candidates) {
+          if (graph.files[cand] && !visitedFiles.has(cand)) {
+            visitedFiles.add(cand);
+            queue.push({ file: cand, depth: item.depth + 1 });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Sort: direct types first, then sorted by PageRank descending
+  collectedTypes.sort((a, b) => {
+    if (a.isDirect && !b.isDirect) return -1;
+    if (!a.isDirect && b.isDirect) return 1;
+    return b.pageRank - a.pageRank;
+  });
+
+  for (const t of collectedTypes.slice(0, maxUniqueTypes)) {
+    const heritage = typeof t.meta?.extends === 'string' ? ` extends ${t.meta.extends}` : '';
+    if (t.isDirect) {
+      applicableTypes.push(`${t.name} (${t.kind} at line ${t.line})${heritage}`);
+    } else {
+      applicableTypes.push(`${t.name} (${t.kind} at ${t.file}:${t.line})${heritage}`);
     }
   }
 
@@ -293,6 +383,19 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   // Discover canonical example file for coding style anchor
   const firstTargetExt = targetFiles[0] ? path.extname(targetFiles[0]) : undefined;
   const canonicalExample = findCanonicalExample(root, resolvedPlanningDir, firstTargetExt);
+
+  // Fast path for dryRun verification (S-02)
+  if (options.dryRun) {
+    return {
+      targetFiles,
+      estimatedTokens: 0,
+      neighborSymbols: allNeighbors,
+      applicableTypes,
+      applicableDecisions,
+      canonicalExample: null,
+      markdownBlock: '',
+    };
+  }
 
   // Build markdown representation
   const lines: string[] = [
