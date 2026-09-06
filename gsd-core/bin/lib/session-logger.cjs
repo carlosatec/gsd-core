@@ -224,7 +224,7 @@ class SessionLogger {
                 }
             })
                 .filter((entry) => entry !== null)
-                .sort((a, b) => b.mtime - a.mtime); // Newest first
+                .sort((a, b) => b.mtime - a.mtime || b.file.localeCompare(a.file)); // Newest first, deterministic tie-break
             const now = Date.now();
             const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
             for (let i = 0; i < files.length; i++) {
@@ -294,7 +294,12 @@ class SessionLogger {
         catch {
             // Skip directory scan error
         }
-        return result.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        return result.sort((a, b) => {
+            const timeDiff = b.timestamp.localeCompare(a.timestamp);
+            if (timeDiff !== 0)
+                return timeDiff;
+            return b.id.localeCompare(a.id);
+        });
     }
 }
 module.exports = {
