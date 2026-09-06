@@ -5,7 +5,6 @@
  * to prevent recurring regressions across agent sessions.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { platformReadSync, platformWriteSync, platformEnsureDir, withFileLockSync } from './shell-command-projection.cjs';
@@ -105,8 +104,8 @@ function recordAntiPattern(
   return withFileLockSync(storePath, () => {
     const data = loadAntiPatterns(planningDir);
     const record: AntiPatternRecord = {
-      id: `ap-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-      timestamp: new Date().toISOString(),
+      id: `ap-${realClock.now()}-${crypto.randomBytes(4).toString('hex')}`,
+      timestamp: realClock.nowIso(),
       rule: entry.rule,
       file: entry.file,
       error: sanitizeStackTrace(entry.error),

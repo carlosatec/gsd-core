@@ -11,6 +11,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const clock_cjs_1 = require("./clock.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const learningsMod = require("./learnings.cjs");
 const { learningsList } = learningsMod;
@@ -73,8 +74,8 @@ function recordAntiPattern(planningDir, entry) {
     return (0, shell_command_projection_cjs_1.withFileLockSync)(storePath, () => {
         const data = loadAntiPatterns(planningDir);
         const record = {
-            id: `ap-${Date.now()}-${node_crypto_1.default.randomBytes(4).toString('hex')}`,
-            timestamp: new Date().toISOString(),
+            id: `ap-${clock_cjs_1.realClock.now()}-${node_crypto_1.default.randomBytes(4).toString('hex')}`,
+            timestamp: clock_cjs_1.realClock.nowIso(),
             rule: entry.rule,
             file: entry.file,
             error: sanitizeStackTrace(entry.error),

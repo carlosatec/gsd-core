@@ -37,7 +37,7 @@ function run() {
   }
 
   if (result.status !== 0) {
-    process.exit(result.status || 1);
+    process.exitCode = result.status || 1;
   }
 }
 
@@ -45,5 +45,5 @@ try {
   run();
 } catch (err) {
   console.error('[gsd-core] ensure-build-lib failed:', err);
-  process.exit(1);
+  process.exitCode = 1;
 }

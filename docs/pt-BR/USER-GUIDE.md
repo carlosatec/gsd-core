@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 3.0
+# Guia do Usuário — GSD Core Nexus 3.1
 
-Guia prático e narrativo do GSD Core Nexus 3.0 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 3.1 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -29,7 +29,7 @@ Guia prático e narrativo do GSD Core Nexus 3.0 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 10 Comandos
 
-A partir do GSD Core Nexus 3.0, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.1, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -68,7 +68,7 @@ Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.m
 
 ## Inteligência de Sessão & Replay Determinístico CLI
 
-O GSD Core Nexus 3.0 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+O GSD Core Nexus 3.1 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
 
 ```bash
 # Replay da última sessão no terminal

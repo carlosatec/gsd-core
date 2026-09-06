@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 3.0.
+ * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 3.1.
  *
  * Scans the repository, creates the multi-language AST topology, materializes
  * living architecture & API contracts, and initializes telemetry.
@@ -193,7 +193,7 @@ function runAutoUpgrade(planningDir, rootDir) {
     const fwText = detectedFrameworks.length > 0 ? ` + [${detectedFrameworks.join(', ')}]` : '';
     return {
         success: true,
-        version: '3.0.0',
+        version: '3.1.0',
         isNewMigration,
         indexedFiles: graph.stats.totalFiles,
         detectedLanguages,
@@ -203,8 +203,8 @@ function runAutoUpgrade(planningDir, rootDir) {
         docsUpdated: syncReport.generatedDocs.length,
         generatedArtifacts,
         message: isNewMigration
-            ? `Successfully upgraded project to GSD Core Nexus 3.0. Indexed ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. Generated ${syncReport.generatedDocs.length} living doc(s).`
-            : `Refreshed GSD Core Nexus 3.0 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+            ? `Successfully upgraded project to GSD Core Nexus 3.1. Indexed ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. Generated ${syncReport.generatedDocs.length} living doc(s).`
+            : `Refreshed GSD Core Nexus 3.1 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
     };
 }
 module.exports = {
