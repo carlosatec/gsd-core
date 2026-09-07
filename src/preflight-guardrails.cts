@@ -175,30 +175,31 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
       }
     }
 
-    // Fallback to filesystem for external / un-indexed paths
+    // Fallback to filesystem for external / un-indexed paths (anchored to root to prevent cwd drift)
+    const absPath = path.isAbsolute(p) ? p : path.resolve(root, p);
     const exists =
-      fs.existsSync(p) ||
-      fs.existsSync(p + '.ts') ||
-      fs.existsSync(p + '.tsx') ||
-      fs.existsSync(p + '.cts') ||
-      fs.existsSync(p + '.mts') ||
-      fs.existsSync(p + '.js') ||
-      fs.existsSync(p + '.jsx') ||
-      fs.existsSync(p + '.cjs') ||
-      fs.existsSync(p + '.mjs') ||
-      fs.existsSync(p + '.py') ||
-      fs.existsSync(p + '.go') ||
-      fs.existsSync(p + '.rs') ||
-      fs.existsSync(p + '.dart') ||
-      fs.existsSync(p + '.css') ||
-      fs.existsSync(path.join(p, 'index.ts')) ||
-      fs.existsSync(path.join(p, 'index.tsx')) ||
-      fs.existsSync(path.join(p, 'index.cts')) ||
-      fs.existsSync(path.join(p, 'index.js')) ||
-      fs.existsSync(path.join(p, 'index.cjs')) ||
-      fs.existsSync(path.join(p, '__init__.py')) ||
-      fs.existsSync(path.join(p, 'mod.rs')) ||
-      fs.existsSync(path.join(p, 'lib.rs'));
+      fs.existsSync(absPath) ||
+      fs.existsSync(absPath + '.ts') ||
+      fs.existsSync(absPath + '.tsx') ||
+      fs.existsSync(absPath + '.cts') ||
+      fs.existsSync(absPath + '.mts') ||
+      fs.existsSync(absPath + '.js') ||
+      fs.existsSync(absPath + '.jsx') ||
+      fs.existsSync(absPath + '.cjs') ||
+      fs.existsSync(absPath + '.mjs') ||
+      fs.existsSync(absPath + '.py') ||
+      fs.existsSync(absPath + '.go') ||
+      fs.existsSync(absPath + '.rs') ||
+      fs.existsSync(absPath + '.dart') ||
+      fs.existsSync(absPath + '.css') ||
+      fs.existsSync(path.join(absPath, 'index.ts')) ||
+      fs.existsSync(path.join(absPath, 'index.tsx')) ||
+      fs.existsSync(path.join(absPath, 'index.cts')) ||
+      fs.existsSync(path.join(absPath, 'index.js')) ||
+      fs.existsSync(path.join(absPath, 'index.cjs')) ||
+      fs.existsSync(path.join(absPath, '__init__.py')) ||
+      fs.existsSync(path.join(absPath, 'mod.rs')) ||
+      fs.existsSync(path.join(absPath, 'lib.rs'));
     pathExistsCache.set(p, exists);
     return exists;
   }

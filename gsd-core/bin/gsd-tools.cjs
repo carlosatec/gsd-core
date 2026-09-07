@@ -3786,7 +3786,14 @@ const HOST_COMMAND_ROUTERS = {
   state: (ctx) => routeStateCommand({ state, ...ctx }),
   phase: (ctx) => routePhaseCommand({ phase, ...ctx }),
   roadmap: (ctx) => routeRoadmapCommand({ roadmap, ...ctx }),
-  verify: (ctx) => routeVerifyCommand({ verify, ...ctx }),
+  verify: (ctx) => {
+    const sub = ctx.args && ctx.args[1];
+    const { VERIFY_SUBCOMMANDS } = require('./lib/command-aliases.cjs');
+    if (sub && VERIFY_SUBCOMMANDS && VERIFY_SUBCOMMANDS.includes(sub)) {
+      return routeVerifyCommand({ verify, ...ctx });
+    }
+    return createUnifiedRouter('verify')(ctx);
+  },
   // validate additionally binds the module-scope `output` emitter.
   validate: (ctx) => routeValidateCommand({ verify, output, ...ctx }),
   // init preserves the #1688 stale-bake warning (best-effort, swallowed) that
@@ -3890,11 +3897,39 @@ const HOST_COMMAND_ROUTERS = {
     'session': routeSession,
     'graph': routeGraph,
     'telemetry': routeTelemetry,
+    'status': createUnifiedRouter('status'),
+    'plan': createUnifiedRouter('plan'),
+    'exec': createUnifiedRouter('exec'),
+    'review': createUnifiedRouter('review'),
+    'ship': createUnifiedRouter('ship'),
+    'auto': createUnifiedRouter('auto'),
+    'tokens': createUnifiedRouter('tokens'),
 };
+
+function createUnifiedRouter(cmdName) {
+  return function({ args, cwd, raw, error }) {
+    const hubMod = require('./lib/unified-workflow-hub.cjs');
+    try {
+      const result = hubMod.dispatchUnifiedCommand(cmdName, {
+        args: args || [],
+        cwd: cwd || process.cwd(),
+        raw: Boolean(raw),
+      });
+      if (raw) {
+        process.stdout.write(JSON.stringify(result));
+      } else {
+        console.log(result.message);
+      }
+    } catch (err) {
+      error((err && err.message) || String(err));
+    }
+  };
+}
 
 function routeTelemetry({ args, cwd, raw, error }) {
   const sub = (args[0] === 'telemetry' ? args[1] : args[0]) || 'summary';
-  const planningDir = path.join(cwd || process.cwd(), '.planning');
+  const rootDir = cwd || process.cwd();
+  const planningDir = path.join(rootDir, '.planning');
   const telemetryMod = require('./lib/jit-telemetry.cjs');
 
   if (sub === 'record') {
@@ -3903,17 +3938,95 @@ function routeTelemetry({ args, cwd, raw, error }) {
     let command = 'other';
     let phaseId = undefined;
     let targetFiles = [];
+    let invocationId = undefined;
+    let scopeMode = undefined;
 
     const offset = args[0] === 'telemetry' ? 2 : 1;
     for (let i = offset; i < args.length; i++) {
       if (args[i] === '--tokens' && args[i + 1]) jitTokens = parseInt(args[++i], 10) || 0;
       else if (args[i] === '--avoided' && args[i + 1]) fullRepoTokens = parseInt(args[++i], 10) || 0;
       else if (args[i] === '--command' && args[i + 1]) command = args[++i];
-      else if (args[i] === '--phase' && args[i + 1]) phaseId = args[++i];
-      else if (args[i] === '--files' && args[i + 1]) targetFiles = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+      else if ((args[i] === '--phase' || args[i] === '--from-phase') && args[i + 1]) phaseId = args[++i];
+      else if ((args[i] === '--files' || args[i] === '--from-files') && args[i + 1]) targetFiles = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+      else if (args[i] === '--invocation-id' && args[i + 1]) invocationId = args[++i];
+      else if (args[i] === '--scope-mode' && args[i + 1]) scopeMode = args[++i];
     }
 
-    const rec = telemetryMod.recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command, phaseId);
+    // Auto-Estimator (D-114): if target files not passed but phase passed, inspect phase
+    if (targetFiles.length === 0 && phaseId) {
+      try {
+        const phasesDir = path.join(planningDir, 'phases');
+        if (fs.existsSync(phasesDir)) {
+          const matching = fs.readdirSync(phasesDir).find(d => d.startsWith(phaseId) || d.includes(phaseId));
+          if (matching) {
+            const pDir = path.join(phasesDir, matching);
+            const files = fs.readdirSync(pDir);
+            for (const f of files) {
+              if (f.endsWith('-PLAN.md')) {
+                const planContent = fs.readFileSync(path.join(pDir, f), 'utf-8');
+                const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
+                if (fileMatches) {
+                  for (const m of fileMatches) {
+                    const clean = m.replace(/`/g, '');
+                    if (!clean.endsWith('.md') && !clean.endsWith('.json') && fs.existsSync(path.join(rootDir, clean))) {
+                      targetFiles.push(clean);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // non-blocking
+      }
+      targetFiles = Array.from(new Set(targetFiles));
+    }
+
+    // Auto-Estimator (D-114): calculate real file tokens if tokens=0
+    if (jitTokens <= 0 && targetFiles.length > 0) {
+      let totalChars = 0;
+      for (const tf of targetFiles) {
+        const fullP = path.isAbsolute(tf) ? tf : path.join(rootDir, tf);
+        if (fs.existsSync(fullP)) {
+          try {
+            totalChars += fs.readFileSync(fullP, 'utf-8').length;
+          } catch {
+            totalChars += 1000;
+          }
+        }
+      }
+      jitTokens = Math.max(100, Math.ceil(totalChars / 4));
+    }
+
+    // Baseline calculation if fullRepoTokens=0
+    if (fullRepoTokens <= 0) {
+      try {
+        const astMod = require('./lib/codebase-ast-analyzer.cjs');
+        let graph = astMod.loadCodebaseGraph(planningDir);
+        if (!graph) graph = astMod.buildCodebaseGraph(rootDir);
+        if (graph && graph.files) {
+          let totalRepoChars = 0;
+          const weights = telemetryMod.LANGUAGE_CHAR_WEIGHTS || {};
+          for (const f of Object.values(graph.files)) {
+            const weight = (f.language && weights[f.language.toLowerCase()]) || 45;
+            totalRepoChars += (f.linesCount || 10) * weight;
+          }
+          fullRepoTokens = Math.max(1000, Math.ceil(totalRepoChars / 4));
+        }
+      } catch {
+        // fallback
+      }
+      if (fullRepoTokens <= 0) {
+        fullRepoTokens = Math.max(5000, jitTokens * 10);
+      }
+    }
+
+    if (scopeMode === 'full-repo') {
+      fullRepoTokens = jitTokens;
+    }
+
+    const rec = telemetryMod.recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command, phaseId, invocationId, scopeMode);
     if (raw) {
       process.stdout.write(JSON.stringify(rec));
     } else {

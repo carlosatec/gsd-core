@@ -3414,3 +3414,22 @@ The load-bearing wire is the `plan-phase` lift into `must_haves.prohibitions`, s
 - A `STATE.md` with no `### Quick Tasks Completed` section at all is a normal, silent no-op for the reset step — the section is created lazily by `/gsd-quick`, not present in the project template.
 
 See [Archiving quick tasks](how-to/handle-quick-and-fast-tasks.md#archiving-quick-tasks) for the full walkthrough.
+
+---
+
+### 161. Holistic Multi-Command Token Telemetry & Dual-Mode Review (Phase 22 / Decisions D-111 to D-121)
+
+**Commands:** `/gsd-tokens`, `/gsd-review [--full|--repo] [--fix]`, `gsd-tools tokens`, `gsd-tools telemetry <dashboard|summary|record>`, `gsd-tools <status|plan|exec|review|verify|ship|auto|tokens>`
+
+**Behavior:**
+1. **Multi-Command Observability:** Extends token telemetry beyond execution waves to comprehensively monitor `plan`, `exec`, and `review` workflows. Telemetry data is recorded in `.planning/intel/telemetry.json` (Schema v2.0).
+2. **Transactional Concurrency Hardening (D-111):** Mutation operations are protected by `withFileLockSync` with atomic file locks and 5-second TTL stale-lock eviction, guaranteeing data integrity during parallel subagent execution.
+3. **Idempotency Deduplication (D-112):** Tracks `invocationId` to prevent duplicate counter increments and metric double-counting on repeated workflow hook invocations.
+4. **Dual-Mode Code Review (D-113, D-121):**
+   - *Targeted Mode (`targeted` — default):* Audits phase-scoped or explicit files (`--files=...`), computing language-weighted JIT savings (80% to 95%).
+   - *Whole-Repository Mode (`full-repo` — `--full` / `--repo`):* Audits the entire codebase AST topology at cost zero, guides attention to PageRank centrality hubs, and reports transparent metrics (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`).
+5. **Unified CLI Seam (D-117):** Direct router integration in `gsd-tools.cjs` for all 10 canonical commands (`node gsd-tools.cjs <command>`).
+6. **Physical File Auto-Estimator (D-114):** Inspects actual files on disk and phase plan markdown rather than relying on unexpanded shell variables.
+7. **Root-Anchored Guardrails (D-119):** Anchors `checkPathExists` to `path.resolve(root, p)`, eliminating working directory drift.
+8. **Deterministic 65-Column Dashboard (D-116):** Standardized ASCII box layout, canonical command ordering (`plan` → `review` → `exec`), `review (full-repo)` badge, and pre-exec lifecycle diagnostic notes.
+

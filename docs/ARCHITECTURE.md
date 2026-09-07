@@ -1043,6 +1043,18 @@ Prioritizes full contractual fidelity over blind token compression:
 - **Canonical Stack Trace Sanitization:** Replaces file paths with `<PATH>`, line numbers with `<LINE>`, and memory addresses with `<HEX>`, ensuring errors across different sessions deduplicate properly.
 - **Atomic Concurrency:** Emits writes through temporary files (`.tmp`) with exponential backoff and atomic renaming.
 
+### 5. Holistic Multi-Command Token Telemetry & Concurrency Hardening (`src/jit-telemetry.cts`, Phase 22 / D-111 to D-121)
+Introduced in Phase 22 to extend telemetry beyond execution waves across the entire lifecycle:
+- **Transactional Cooperative Locking (`withFileLockSync` — D-111):** Envelopes all mutations to `.planning/intel/telemetry.json` with synchronous filesystem locks and 5-second TTL stale-lock eviction, guaranteeing atomic writes even under intense parallel subagent workloads.
+- **Idempotency Deduplication (`invocationId` — D-112):** Guarantees that duplicate hook executions or re-runs with the same invocation identifier do not double-count saved or used tokens.
+- **Dual-Mode Review Architecture (D-113, D-121):**
+  - **Targeted Review (`targeted`):** Evaluates phase-scoped changes or explicit files, computing surgical JIT context savings (80% to 95%).
+  - **Full-Repo Audit (`full-repo`):** Activated via `--full` or `--repo`. Runs zero-cost local AST static analysis over the complete repository, queries PageRank centrality hubs (`queryTopCentralFiles`), and transparently records `scopeMode: 'full-repo'`, `tokensSaved = 0`, and `efficiencyPct = 0%` for absolute metric honesty.
+- **Unified CLI Seam (`HOST_COMMAND_ROUTERS` — D-117):** Direct router dispatch for canonical commands (`plan`, `exec`, `review`, `verify`, `ship`, `auto`, `status`, `tokens`) in `gsd-tools.cjs`.
+- **Physical File Auto-Estimator (D-114):** Inspects actual files and phase plans to determine accurate character and token weights without relying on unexpanded shell variables.
+- **Root-Anchored Guardrails (D-119):** Anchors all filesystem existence checks in `checkPathExists` to `path.resolve(root, p)`, completely eliminating working directory drift.
+- **Deterministic 65-Column ASCII Terminal Dashboard (D-116):** Standardized box-drawing layout (`INNER_WIDTH = 63`), canonical command ordering (`plan` → `review` → `exec`), badge labeling, and pre-exec lifecycle diagnostic notes.
+
 ---
 
 ## Related

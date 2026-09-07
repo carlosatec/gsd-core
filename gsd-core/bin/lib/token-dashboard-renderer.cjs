@@ -8,6 +8,15 @@
 const jitTelemetry = require("./jit-telemetry.cjs");
 const phase_lifecycle_cjs_1 = require("./phase-lifecycle.cjs");
 const { getTelemetrySummary } = jitTelemetry;
+const TARGET_WIDTH = 63;
+const INNER_WIDTH = TARGET_WIDTH - 2; // 61
+/**
+ * Ensures any row content is padded to exactly fit inside the ASCII box borders (63 chars total).
+ */
+function formatBoxLine(content) {
+    const truncated = content.length > INNER_WIDTH ? content.slice(0, INNER_WIDTH) : content;
+    return `│${truncated.padEnd(INNER_WIDTH)}│`;
+}
 /**
  * Creates a visual ASCII progress bar of specified length.
  */
@@ -28,30 +37,45 @@ function formatNumber(num) {
  */
 function renderTokenDashboard(planningDir) {
     const summary = getTelemetrySummary(planningDir);
+    const topBorder = `┌${'─'.repeat(INNER_WIDTH)}┐`;
+    const midBorder = `├${'─'.repeat(INNER_WIDTH)}┤`;
+    const botBorder = `└${'─'.repeat(INNER_WIDTH)}┘`;
     const lines = [
-        '┌─────────────────────────────────────────────────────────────┐',
-        '│ ⚡ GSD Core Nexus Token Telemetry (Observability)            │',
-        '├─────────────────────────────────────────────────────────────┤',
+        topBorder,
+        formatBoxLine(' ⚡ GSD Core Nexus Token Telemetry (Observability)'),
+        midBorder,
     ];
     if (summary.totalInvocations === 0) {
-        lines.push('│ No telemetry records found yet.                             │');
-        lines.push('│ Run /gsd:plan, /gsd:exec, or /gsd:review to record tokens.  │');
-        lines.push('└─────────────────────────────────────────────────────────────┘');
+        lines.push(formatBoxLine(' No telemetry records found yet.'));
+        lines.push(formatBoxLine(' Run /gsd:plan, /gsd:exec, or /gsd:review to record tokens.'));
+        lines.push(botBorder);
         return lines.join('\n');
     }
-    lines.push(`│ • Total Invocations:     ${formatNumber(summary.totalInvocations).padEnd(6)} executions             │`);
-    lines.push(`│ • Tokens Used (JIT):     ${formatNumber(summary.totalJitTokensUsed).padEnd(10)} tokens                 │`);
-    lines.push(`│ • Monolithic Avoided:    ${formatNumber(summary.totalMonolithicTokensAvoided).padEnd(10)} tokens                 │`);
-    lines.push(`│ • Tokens Saved:          ${formatNumber(summary.totalTokensSaved).padEnd(10)} tokens                 │`);
-    lines.push(`│ • Average Efficiency:    ${summary.averageEfficiencyPct.toFixed(1).padEnd(5)}% context saved           │`);
+    lines.push(formatBoxLine(` • Total Invocations:     ${formatNumber(summary.totalInvocations).padEnd(6)} executions`));
+    lines.push(formatBoxLine(` • Tokens Used (JIT):     ${formatNumber(summary.totalJitTokensUsed).padEnd(10)} tokens`));
+    lines.push(formatBoxLine(` • Monolithic Avoided:    ${formatNumber(summary.totalMonolithicTokensAvoided).padEnd(10)} tokens`));
+    lines.push(formatBoxLine(` • Tokens Saved:          ${formatNumber(summary.totalTokensSaved).padEnd(10)} tokens`));
+    lines.push(formatBoxLine(` • Average Efficiency:    ${summary.averageEfficiencyPct.toFixed(1).padEnd(5)}% context saved`));
     const compRatio = (summary.averageCompressionRatio || 1.0).toFixed(1) + 'x';
-    lines.push(`│ • Graph Compression:     ${compRatio.padEnd(6)} reduction factor       │`);
-    lines.push(`│ • Peak Invocation:       ${formatNumber(summary.peakInvocationTokens).padEnd(6)} tokens                     │`);
-    lines.push('├─────────────────────────────────────────────────────────────┤');
-    lines.push('│ 🔀 Distribution by Command:                                │');
-    const cmdKeys = Object.keys(summary.commandBreakdown);
+    lines.push(formatBoxLine(` • Graph Compression:     ${compRatio.padEnd(6)} reduction factor`));
+    lines.push(formatBoxLine(` • Peak Invocation:       ${formatNumber(summary.peakInvocationTokens).padEnd(6)} tokens`));
+    lines.push(midBorder);
+    lines.push(formatBoxLine(' 🔀 Distribution by Command:'));
+    // Deterministic ordering (D-116): plan -> review -> exec -> other
+    const CANONICAL_ORDER = ['plan', 'review', 'exec'];
+    const cmdKeys = Object.keys(summary.commandBreakdown).sort((a, b) => {
+        const idxA = CANONICAL_ORDER.indexOf(a);
+        const idxB = CANONICAL_ORDER.indexOf(b);
+        if (idxA !== -1 && idxB !== -1)
+            return idxA - idxB;
+        if (idxA !== -1)
+            return -1;
+        if (idxB !== -1)
+            return 1;
+        return a.localeCompare(b);
+    });
     if (cmdKeys.length === 0) {
-        lines.push('│   (none recorded)                                           │');
+        lines.push(formatBoxLine('   (none recorded)'));
     }
     else {
         const totalUsed = Math.max(1, summary.totalJitTokensUsed);
@@ -62,30 +86,39 @@ function renderTokenDashboard(planningDir) {
             const cmdPad = cmd.padEnd(8);
             const pctPad = `${pct}%`.padStart(4);
             const tokensPad = `(${formatNumber(stat.tokensUsed)} tokens)`.padEnd(18);
-            lines.push(`│ • ${cmdPad} [${bar}] ${pctPad} ${tokensPad}│`);
+            lines.push(formatBoxLine(` • ${cmdPad} [${bar}] ${pctPad} ${tokensPad}`));
         }
     }
     const phaseKeys = Object.keys(summary.phaseBreakdown);
     if (phaseKeys.length > 0) {
-        lines.push('├─────────────────────────────────────────────────────────────┤');
-        lines.push('│ 📁 Breakdown by Phase:                                      │');
+        lines.push(midBorder);
+        lines.push(formatBoxLine(' 📁 Breakdown by Phase:'));
         for (const phase of phaseKeys.slice(-5)) {
             const pStat = summary.phaseBreakdown[phase];
             const phasePad = phase.slice(0, 16).padEnd(16);
             const pTokensPad = `${formatNumber(pStat.tokensUsed)} tokens`.padStart(16);
             const pInvsPad = `(${pStat.invocations} runs)`.padStart(12);
-            lines.push(`│ • ${phasePad} ${pTokensPad} ${pInvsPad}    │`);
+            lines.push(formatBoxLine(` • ${phasePad} ${pTokensPad} ${pInvsPad}`));
         }
     }
     if (summary.lastInvocation) {
         const last = summary.lastInvocation;
-        lines.push('├─────────────────────────────────────────────────────────────┤');
+        lines.push(midBorder);
+        const isFullRepo = last.command === 'review' && last.scopeMode === 'full-repo';
+        const cmdLabel = isFullRepo ? 'review (full-repo)' : last.command;
         const targetPreview = last.targetFiles.slice(0, 2).join(', ');
-        const targetStr = (targetPreview.length > 30 ? targetPreview.slice(0, 27) + '...' : targetPreview).padEnd(30);
-        lines.push(`│ 🕒 Last Run (${last.command}): ${targetStr}│`);
-        lines.push(`│    Used: ${formatNumber(last.jitTokens)} tok | Avoided: ${formatNumber(last.fullRepoTokens)} tok | Saved: ${last.efficiencyPct}%   │`);
+        const targetStr = targetPreview.length > 28 ? targetPreview.slice(0, 25) + '...' : targetPreview;
+        lines.push(formatBoxLine(` 🕒 Last Run (${cmdLabel}): ${targetStr}`));
+        lines.push(formatBoxLine(`    Used: ${formatNumber(last.jitTokens)} tok | Avoided: ${formatNumber(last.fullRepoTokens)} tok | Saved: ${last.efficiencyPct}%`));
     }
-    lines.push('└─────────────────────────────────────────────────────────────┘');
+    // Pre-exec state diagnostic note (D-116)
+    const execInvocations = summary.commandBreakdown['exec'] ? summary.commandBreakdown['exec'].invocations : 0;
+    const hasPlanOrReview = (summary.commandBreakdown['plan']?.invocations || 0) > 0 || (summary.commandBreakdown['review']?.invocations || 0) > 0;
+    if (summary.totalInvocations > 0 && execInvocations === 0 && hasPlanOrReview) {
+        lines.push(midBorder);
+        lines.push(formatBoxLine(' 💡 Lifecycle note: Plan/Review active. Next: run /gsd:exec'));
+    }
+    lines.push(botBorder);
     return lines.join('\n');
 }
 module.exports = {

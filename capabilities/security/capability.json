@@ -1,7 +1,7 @@
 {
   "id": "security",
   "role": "feature",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "title": "Security enforcement",
   "description": "Threat mitigation verification and ship-time security blocking for phases with security enforcement enabled.",
   "tier": "full",

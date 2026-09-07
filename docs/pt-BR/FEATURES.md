@@ -39,26 +39,14 @@ Para catálogo completo e detalhamento exaustivo, consulte [FEATURES.md em ingl�
 - **Diagnóstico forense** com `/gsd-forensics`
 - **Relatório de sessão** com `/gsd-pause-work --report`
 
-## Novidades v1.31--v1.32
+## Novidades no GSD 3.2
 
-- **Schema drift detection** — detecta alterações em ORM schema sem migração correspondente
-- **Security enforcement** — verificação de segurança ancorada em threat model (`/gsd-secure-phase`)
-- **Discuss chain mode** — encadeia discuss → plan → execute com `--chain`
-- **Single-phase autonomous** — executa apenas uma fase com `--only N`
-- **Scope reduction detection** — defesa em 3 camadas contra remoção silenciosa de requisitos
-- **Worktree toggle** — desativa isolamento via `workflow.use_worktrees: false`
-- **STATE.md consistency gates** — detecta/repara drift entre STATE.md e filesystem (v1.32)
-- **Autonomous `--to N`** — para execução autônoma após fase N (v1.32)
-- **Research gate** — bloqueia planejamento quando RESEARCH.md tem questões abertas (v1.32)
-- **Verifier milestone scope filtering** — distingue gaps reais de itens deferidos (v1.32)
-- **Read-before-edit guard** — hook que previne loops infinitos de retry (v1.32)
-- **Context reduction** — truncamento de markdown e ordenação cache-friendly (v1.32)
-- **`--power` flag** — respostas em batch via arquivo para discuss-phase (v1.32)
-- **`--diagnose` flag** — modo diagnóstico sem modificações no `/gsd-debug` (v1.32)
-- **`/gsd-manager --analyze-deps`** — detecta dependências entre fases (v1.32)
-- **Response language config** — `response_language` para saída consistente em idioma (v1.32)
-- **Novos runtimes** — Trae IDE, Cline, Augment Code (v1.32)
-- **Manual update** — procedimento de atualização sem npm (v1.32)
+- **Telemetria Holística de Tokens Multi-Comando (D-111 a D-121):** Monitoramento de tokens em `plan`, `exec` e `review` com lock transacional (`withFileLockSync`), deduplicação de `invocationId`, auto-estimador por arquivos físicos e dashboard em 65 colunas.
+- **Review em Modo Duplo:** Suporte a `--full` / `--repo` para auditoria estática global de todo o repositório a custo zero de tokens com nós centrais de PageRank, ao lado da revisão seletiva cirúrgica via JIT (80-95% poupados).
+- **Roteamento Unificado de CLI:** Execução direta de todos os 10 comandos canônicos via `node gsd-tools.cjs <comando>` (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`).
+- **Guardrails Ancorados na Raiz:** Ancoragem de verificações em `path.resolve(root, p)`, imune a variações do diretório de trabalho.
+- **Log Estruturado e Replay Determinístico de Sessão:** Replay de execuções com filtros (`--errors-only`, `--diffs`) e retenção segura em disco.
+- **Suporte Nativo ao DeepSeek Harness:** Integração micro-kernel Cordis e MCP para modelos DeepSeek.
 
 ---
 

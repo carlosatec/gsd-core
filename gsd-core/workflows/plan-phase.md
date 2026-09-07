@@ -1340,6 +1340,9 @@ After plans pass all gates, record that planning is complete so STATE.md reflect
 
 ```bash
 gsd_run query state.planned-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
+
+# Record real telemetry for plan step (D-114)
+gsd_run telemetry record --command plan --phase "${PHASE_NUMBER}" --from-phase "${PHASE_NUMBER}" || true
 ```
 
 This updates STATUS to "Ready to execute", sets the correct plan count, and timestamps Last Activity.

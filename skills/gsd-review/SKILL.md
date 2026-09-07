@@ -1,7 +1,7 @@
 ---
 name: gsd-review
 description: "Deep code, architecture, UI/UX, and phase plan review with autonomous repairs (--fix)"
-argument-hint: "[phase-number] [--fix] [--ui] [--backlog]"
+argument-hint: "[phase-number] [--fix] [--full] [--repo] [--ui] [--backlog]"
 allowed-tools:
   - Read
   - Write
@@ -13,7 +13,7 @@ allowed-tools:
 
 
 <objective>
-Run comprehensive static and heuristic code review over modified files, checking complexity, UI/UX consistency, AST contract integrity, and anti-patterns, with optional autonomous repairs (--fix).
+Run comprehensive static and heuristic code review over modified files (or whole codebase with --full/--repo), checking complexity, UI/UX consistency, AST contract integrity, and anti-patterns, with optional autonomous repairs (--fix).
 </objective>
 
 <execution_context>
@@ -30,6 +30,7 @@ Arguments: $ARGUMENTS
 Phase number: extracted from $ARGUMENTS (optional — defaults to active phase in STATE.md or modified working tree files)
 
 **Flags:**
+- `--full` / `--repo` — Full repository audit: audits entire codebase AST, inspects PageRank centrality hubs, records whole-repo baseline with honest 0% compression
 - `--gemini` — Include Gemini CLI review
 - `--claude` — Include Claude CLI review (uses separate session)
 - `--codex` — Include Codex CLI review

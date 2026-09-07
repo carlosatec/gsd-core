@@ -1,7 +1,7 @@
 {
   "id": "codebuddy",
   "role": "runtime",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "title": "CodeBuddy",
   "description": "CodeBuddy (Tencent) — converted commands + skills artifact layout; settings-json hook surface; Claude hook event dialect; tier-2 support.",
   "tier": "core",

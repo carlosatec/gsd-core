@@ -16,7 +16,7 @@ const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jitTelemetry = require("./jit-telemetry.cjs");
-const { recordJitInvocation } = jitTelemetry;
+const { recordJitInvocation, LANGUAGE_CHAR_WEIGHTS, estimateTokens } = jitTelemetry;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const semanticRag = require("./hybrid-semantic-rag.cjs");
 const { querySemanticSimilarFiles } = semanticRag;
@@ -32,27 +32,6 @@ const { findCanonicalExample } = canonicalMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const modelCatalogMod = require("./model-catalog.cjs");
 const { getContextWindowLimit } = modelCatalogMod;
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const LANGUAGE_CHAR_WEIGHTS = {
-    typescript: 45,
-    javascript: 45,
-    python: 40,
-    go: 55,
-    rust: 55,
-    sql: 35,
-    csharp: 50,
-    java: 50,
-    ruby: 40,
-    php: 45,
-    dart: 45,
-    html: 40,
-    css: 35,
-    yaml: 35,
-    json: 30,
-};
-function estimateTokens(text) {
-    return Math.ceil(text.length / 4);
-}
 // ─── Core Implementation ──────────────────────────────────────────────────────
 /**
  * Finds symbols from directly connected files (imports & callers) in the AST graph.

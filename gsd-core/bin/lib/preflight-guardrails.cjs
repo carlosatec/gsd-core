@@ -125,29 +125,30 @@ function runPreFlightChecks(ctx) {
                 return true;
             }
         }
-        // Fallback to filesystem for external / un-indexed paths
-        const exists = node_fs_1.default.existsSync(p) ||
-            node_fs_1.default.existsSync(p + '.ts') ||
-            node_fs_1.default.existsSync(p + '.tsx') ||
-            node_fs_1.default.existsSync(p + '.cts') ||
-            node_fs_1.default.existsSync(p + '.mts') ||
-            node_fs_1.default.existsSync(p + '.js') ||
-            node_fs_1.default.existsSync(p + '.jsx') ||
-            node_fs_1.default.existsSync(p + '.cjs') ||
-            node_fs_1.default.existsSync(p + '.mjs') ||
-            node_fs_1.default.existsSync(p + '.py') ||
-            node_fs_1.default.existsSync(p + '.go') ||
-            node_fs_1.default.existsSync(p + '.rs') ||
-            node_fs_1.default.existsSync(p + '.dart') ||
-            node_fs_1.default.existsSync(p + '.css') ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.ts')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.tsx')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.cts')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.js')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'index.cjs')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, '__init__.py')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'mod.rs')) ||
-            node_fs_1.default.existsSync(node_path_1.default.join(p, 'lib.rs'));
+        // Fallback to filesystem for external / un-indexed paths (anchored to root to prevent cwd drift)
+        const absPath = node_path_1.default.isAbsolute(p) ? p : node_path_1.default.resolve(root, p);
+        const exists = node_fs_1.default.existsSync(absPath) ||
+            node_fs_1.default.existsSync(absPath + '.ts') ||
+            node_fs_1.default.existsSync(absPath + '.tsx') ||
+            node_fs_1.default.existsSync(absPath + '.cts') ||
+            node_fs_1.default.existsSync(absPath + '.mts') ||
+            node_fs_1.default.existsSync(absPath + '.js') ||
+            node_fs_1.default.existsSync(absPath + '.jsx') ||
+            node_fs_1.default.existsSync(absPath + '.cjs') ||
+            node_fs_1.default.existsSync(absPath + '.mjs') ||
+            node_fs_1.default.existsSync(absPath + '.py') ||
+            node_fs_1.default.existsSync(absPath + '.go') ||
+            node_fs_1.default.existsSync(absPath + '.rs') ||
+            node_fs_1.default.existsSync(absPath + '.dart') ||
+            node_fs_1.default.existsSync(absPath + '.css') ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'index.ts')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'index.tsx')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'index.cts')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'index.js')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'index.cjs')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, '__init__.py')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'mod.rs')) ||
+            node_fs_1.default.existsSync(node_path_1.default.join(absPath, 'lib.rs'));
         pathExistsCache.set(p, exists);
         return exists;
     }

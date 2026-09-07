@@ -605,6 +605,9 @@ CRITICAL=$(echo "$FRONTMATTER" | grep -E "^[[:space:]]*(critical|blocker):" | he
 WARNING=$(echo "$FRONTMATTER" | grep "warning:" | head -1 | cut -d: -f2 | xargs)
 INFO=$(echo "$FRONTMATTER" | grep "info:" | head -1 | cut -d: -f2 | xargs)
 TOTAL=$(echo "$FRONTMATTER" | grep "total:" | head -1 | cut -d: -f2 | xargs)
+
+# Record real telemetry for review step (D-114)
+gsd_run telemetry record --command review --phase "${PHASE_NUMBER}" --from-files "${REVIEW_FILES:-}" || true
 ```
 
 Display inline summary to user:

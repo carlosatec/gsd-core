@@ -13,7 +13,7 @@ import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import jitTelemetry = require('./jit-telemetry.cjs');
-const { recordJitInvocation } = jitTelemetry;
+const { recordJitInvocation, LANGUAGE_CHAR_WEIGHTS, estimateTokens } = jitTelemetry;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import semanticRag = require('./hybrid-semantic-rag.cjs');
 const { querySemanticSimilarFiles } = semanticRag;
@@ -82,29 +82,7 @@ interface AssembleJitContextOptions {
   phaseId?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const LANGUAGE_CHAR_WEIGHTS: Record<string, number> = {
-  typescript: 45,
-  javascript: 45,
-  python: 40,
-  go: 55,
-  rust: 55,
-  sql: 35,
-  csharp: 50,
-  java: 50,
-  ruby: 40,
-  php: 45,
-  dart: 45,
-  html: 40,
-  css: 35,
-  yaml: 35,
-  json: 30,
-};
-
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
 
 // ─── Core Implementation ──────────────────────────────────────────────────────
 

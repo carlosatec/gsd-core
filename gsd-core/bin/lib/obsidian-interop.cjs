@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 3.1
+ * Obsidian Interoperability & Bidirectional Wikilinks Engine — GSD Core Nexus 3.2
  *
  * Implements native parsing, resolution, and bidirectional backlink indexing
  * for Obsidian-style `[[wikilinks]]` in `.planning/` Markdown documents.

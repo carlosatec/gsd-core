@@ -31,6 +31,59 @@ node gsd-tools.cjs <command> [args] [--raw] [--cwd <path>]
 | `--cwd <path>` | Override working directory (for sandboxed subagents)                         |
 | `--ws <name>`  | Workstream context for `.planning/workstreams/<name>` paths |
 
+---
+
+## Canonical Unified Command Routers
+
+Starting in GSD 3.2, all canonical commands dispatch directly through `gsd-tools`:
+
+```bash
+# Situational diagnostics & active roadmap inspection
+node gsd-tools.cjs status
+
+# Wave-based phase planning with AST analysis
+node gsd-tools.cjs plan [phase]
+
+# Wave-based execution with fresh 200k subagents
+node gsd-tools.cjs exec [phase]
+
+# Code review: targeted (default) or whole-repo (--full / --repo) with optional auto-repairs
+node gsd-tools.cjs review [phase] [--fix]
+node gsd-tools.cjs review --full
+node gsd-tools.cjs review --repo --fix
+
+# Conversational UAT acceptance and verification
+node gsd-tools.cjs verify [phase]
+
+# Complete milestone, sanitize branch, and create PR
+node gsd-tools.cjs ship
+
+# Autonomous end-to-end autopilot
+node gsd-tools.cjs auto [phase]
+
+# Real-time token telemetry dashboard
+node gsd-tools.cjs tokens
+```
+
+---
+
+## Telemetry & Token Observability Commands
+
+Inspect and record context economy metrics stored in `.planning/intel/telemetry.json` under atomic file locking (`withFileLockSync`):
+
+```bash
+# Render the responsive 65-column ASCII telemetry dashboard
+node gsd-tools.cjs tokens
+node gsd-tools.cjs telemetry dashboard
+
+# Output high-level JSON summary of tokens used, avoided, saved, and compression ratio
+node gsd-tools.cjs telemetry summary --raw
+
+# Record an invocation manually with physical file auto-estimation
+node gsd-tools.cjs telemetry record --command review --from-files src/app.ts,src/utils.ts
+node gsd-tools.cjs telemetry record --command plan --from-phase 22 --scope-mode targeted
+node gsd-tools.cjs telemetry record --command review --scope-mode full-repo
+```
 
 ---
 

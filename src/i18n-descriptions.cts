@@ -1,5 +1,5 @@
 /**
- * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 3.1.
+ * i18n Command Descriptions — English & Portuguese (Brazil) for GSD Nexus 3.2.
  *
  * Maintains universal English command names while providing localized descriptions
  * in the IDE slash-command autocomplete palette.
@@ -56,13 +56,13 @@ const CANONICAL_COMMAND_DESCRIPTIONS: Record<string, CommandDescriptionEntry> = 
   },
   migrate: {
     name: 'migrate',
-    en: 'Upgrade legacy project to GSD Core Nexus 3.1 architecture',
-    'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 3.1',
+    en: 'Upgrade legacy project to GSD Core Nexus 3.2 architecture',
+    'pt-br': 'Modernizar projeto legado para a arquitetura GSD Core Nexus 3.2',
   },
   help: {
     name: 'help',
-    en: 'Display GSD Core Nexus 3.1 commands and quick reference guide',
-    'pt-br': 'Exibir comandos do GSD Core Nexus 3.1 e guia de referência rápida',
+    en: 'Display GSD Core Nexus 3.2 commands and quick reference guide',
+    'pt-br': 'Exibir comandos do GSD Core Nexus 3.2 e guia de referência rápida',
   },
 };
 

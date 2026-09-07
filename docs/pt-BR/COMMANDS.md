@@ -13,28 +13,83 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (GSD 3.1)
+## Interface Canônica Unificada (GSD 3.2)
 
-A partir do GSD 3.1, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 3.2, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
 | `/gsd-status` | Diagnóstico situacional, estado do projeto, roadmap e telemetria de tokens |
 | `/gsd-plan` | Decomposição da fase em ondas paralelas atômicas, especificações e discussões (`PLAN.md`, `SPEC.md`) |
 | `/gsd-exec` | Execução paralela em ondas com subagentes de 200k tokens e Pre-Flight Guardrails |
-| `/gsd-review` | Análise profunda de código e UI com auto-correção autônoma (`--fix`) |
+| `/gsd-review` | Análise profunda de código e UI com auto-correção autônoma (`--fix`) e modo duplo (`--full`/`--repo`) |
 | `/gsd-verify` | Validação conversacional de UAT e critérios de aceitação (Auto-Pass habilitado) |
 | `/gsd-ship` | Higiene git, preparação de branch, changelog e Pull Request |
 | `/gsd-auto` | Piloto automático ponta a ponta através de todo o ciclo da fase |
-| `/gsd-tokens` | Painel visual de telemetria e economia de tokens em tempo real |
+| `/gsd-tokens` | Painel visual de telemetria multi-comando e economia de tokens em tempo real |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados em um clique |
 | `/gsd-help` | Guia de uso e referência rápida para todos os comandos unificados |
 
 ---
 
+### Code Review em Dois Modos (`/gsd-review`)
+
+O GSD 3.2 introduz uma distinção explícita entre revisões seletivas focadas na fase e auditorias globais de todo o repositório:
+
+- **Modo Seletivo (`targeted` — padrão):** Audita os arquivos modificados identificados via git diff ou pelos planos da fase ativa (`--files=...`, `[fase]`). Utiliza a injeção JIT calibrada por linguagem para atingir de 80% a 95% de economia de tokens contra o repositório completo.
+- **Modo Global do Repositório (`full-repo` — `--full` / `--repo`):** Executa auditoria estática abrangente de todo o AST do projeto a custo zero de tokens locais. Identifica gargalos arquiteturais priorizando os hubs centrais de PageRank (`queryTopCentralFiles`), registrando métricas transparentes (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) com honestidade métrica rigorosa.
+- **Reparo Autônomo (`--fix`):** Sincroniza e resolve divergências na documentação viva, alinha grafos de dependência AST e corrige formatações e convenções de linter.
+
+```bash
+/gsd-review                       # Revisão seletiva das alterações da fase ativa
+/gsd-review 22 --fix              # Revisão seletiva da fase 22 com auto-reparo
+/gsd-review --files=src/app.ts    # Revisão de arquivos específicos
+/gsd-review --full                # Auditoria global de todo o repositório via AST e PageRank
+/gsd-review --repo --fix          # Auditoria global com auto-reparo de documentação viva
+```
+
+---
+
+### CLI de Telemetria Holística de Tokens (`/gsd-tokens` & `gsd-tools tokens`)
+
+A telemetria de tokens no GSD 3.2 monitora o consumo em **todas** as etapas operacionais — incluindo `plan`, `exec` e `review`. As gravações são protegidas por lock atômico cooperativo (`withFileLockSync`) e deduplicação (`invocationId`).
+
+```bash
+# Exibe o painel ASCII de 65 colunas responsivo
+/gsd-tokens
+
+# Execução direta via CLI pelo gsd-tools
+node gsd-core/bin/gsd-tools.cjs tokens
+node gsd-core/bin/gsd-tools.cjs telemetry summary --raw
+
+# Gravação manual com estimativa automática a partir de arquivos físicos
+node gsd-core/bin/gsd-tools.cjs telemetry record --command review --from-files src/app.ts,src/utils.ts
+node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
+```
+
+---
+
+### Execução Direta de Comandos via CLI Seam (`gsd-tools <comando>`)
+
+Todos os 10 Comandos Canônicos Unificados podem ser acionados diretamente pelo terminal, scripts de automação ou pipelines de CI/CD:
+
+```bash
+node gsd-core/bin/gsd-tools.cjs status
+node gsd-core/bin/gsd-tools.cjs plan 22
+node gsd-core/bin/gsd-tools.cjs exec 22
+node gsd-core/bin/gsd-tools.cjs review 22 --fix
+node gsd-core/bin/gsd-tools.cjs review --full
+node gsd-core/bin/gsd-tools.cjs verify 22
+node gsd-core/bin/gsd-tools.cjs ship
+node gsd-core/bin/gsd-tools.cjs auto 22
+node gsd-core/bin/gsd-tools.cjs tokens
+```
+
+---
+
 ### Inteligência de Sessão & CLI de Replay Determinístico
 
-O GSD 2.6 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
+O GSD 3.2 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
 
 ```bash
 # Replay da última sessão no terminal

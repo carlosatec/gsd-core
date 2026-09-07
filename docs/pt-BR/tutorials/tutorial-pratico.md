@@ -1,8 +1,8 @@
-# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 3.1
+# 🚀 Tutorial Prático: Dominando o GSD Core Nexus 3.2
 
 > 🌐 **Language / Idioma:** **Português (Brasil)** | [English Version](../../tutorials/practical-tutorial.md)  
 > **Git. Ship. Done.**  
-> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 3.1**.
+> O guia definitivo para engenharia de software autônoma, meta-prompting, injeção cirúrgica de contexto, observabilidade causal de sessões e governança de IA com o **GSD Core Nexus 3.2**.
 
 ---
 
@@ -92,17 +92,17 @@ Gera a especificação e o plano da primeira fase com base no objetivo informado
 ```bash
 /gsd-migrate
 ```
-Atualiza a estrutura e schemas para o padrão GSD Core Nexus 3.1 de forma 100% não-destrutiva.
+Atualiza a estrutura e schemas para o padrão GSD Core Nexus 3.2 de forma 100% não-destrutiva.
 
 ---
 
 ## 4. A Interface Canônica dos 10 Comandos Unificados
 
-No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
+No GSD 3.2, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE CANÔNICA GSD 3.1                  │
+│                 INTERFACE CANÔNICA GSD 3.2                  │
 ├────────────┬────────────────────────────────────────────────┤
 │ Comando    │ Ação Operacional                               │
 ├────────────┼────────────────────────────────────────────────┤
@@ -126,15 +126,18 @@ No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comand
    - **Quando usar:** No início de qualquer sessão ou quando tiver dúvida sobre qual é o próximo passo a ser executado.
 
 2. **`/gsd-plan [N]` — Planejamento Atômico com AST e Specs:**
-   - **O que faz:** Dispara a varredura AST na base de código, calcula a centralidade (PageRank) e o índice BM25 em `.planning/intel/`, alinha decisões técnicas no `SPEC.md` e decompõe a fase em tarefas atômicas distribuídas em ondas paralelas no `PLAN.md`.
+   - **O que faz:** Dispara a varredura AST na base de código, calcula a centralidade (PageRank) e o índice BM25 em `.planning/intel/`, alinha decisões técnicas no `SPEC.md` e decompõe a fase em tarefas atômicas distribuídas em ondas paralelas no `PLAN.md`. Registra telemetria de tokens da etapa de planejamento sob locks transacionais.
    - **Quando usar:** Antes de iniciar o desenvolvimento de qualquer fase nova ou funcionalidade.
 
 3. **`/gsd-exec [N]` — Execução em Ondas com Injeção JIT:**
-   - **O que faz:** Executa as tarefas do plano onda por onda. Dispara verificações de pré-voo (*pre-flight guardrails*), injeta cirurgicamente apenas os tipos e dependências necessárias (JIT) e spawna subagentes com contexto limpo de 200k tokens que criam commits atômicos para cada tarefa.
+   - **O que faz:** Executa as tarefas do plano onda por onda. Dispara verificações de pré-voo ancoradas na raiz com cache sub-15ms, injeta cirurgicamente apenas os tipos e dependências necessárias (JIT) e spawna subagentes com contexto limpo de 200k tokens que criam commits atômicos para cada tarefa.
    - **Quando usar:** Logo após aprovar o plano gerado pelo `/gsd-plan`.
 
-4. **`/gsd-review [--fix]` — Auditoria Estática e Autocorreção:**
-   - **O que faz:** Analisa todos os arquivos modificados na fase buscando regressões de estilo, complexidade ciclomática excessiva e anti-patterns. Com a flag `--fix`, aplica reparos autônomos de código automaticamente.
+4. **`/gsd-review [--fix] [--full]` — Auditoria Estática em Modo Duplo & Autocorreção:**
+   - **O que faz:** 
+     - *Modo Seletivo (padrão / `--files`):* Analisa os arquivos modificados na fase buscando regressões de estilo, complexidade ciclomática excessiva e anti-patterns, economizando de 80% a 95% de tokens via JIT.
+     - *Modo Global (`--full` / `--repo`):* Audita todo o grafo AST do projeto a custo zero, destacando nós centrais de PageRank com reporte de base transparente (`tokensSaved = 0`).
+     - *Autocorreção (`--fix`):* Aplica reparos autônomos de drift na documentação viva e formatações de linter.
    - **Quando usar:** Ao término da execução das tarefas, antes de validar os critérios de aceitação.
 
 5. **`/gsd-verify [N]` — Validação Conversacional de UAT & Auto-Pass:**
@@ -149,13 +152,13 @@ No GSD 2.7, a superfície de comandos é estritamente consolidada em **10 comand
    - **O que faz:** Modo autônomo que orquestra o ciclo completo sem intervenção manual intermediária: planeja a fase, executa as tarefas com guardrails de autocura, roda a revisão de código e prepara os entregáveis.
    - **Quando usar:** Para tarefas bem especificadas que você deseja que o agente resolva do início ao fim com máxima autonomia.
 
-8. **`/gsd-tokens` — Painel Visual de Economia de Tokens:**
-   - **O que faz:** Renderiza um painel ASCII em 65 colunas mostrando métricas em tempo real: total de invocações, taxa de economia de contexto JIT (em média 80-90%), picos de consumo (*bursts*) e distribuição de uso por comando.
+8. **`/gsd-tokens` — Telemetria Holística de Tokens & Dashboard:**
+   - **O que faz:** Renderiza um painel ASCII em 65 colunas mostrando métricas em tempo real em `plan`, `exec` e `review`: total de invocações, taxa de economia JIT (em média 80-90%), picos de consumo (*bursts*), nota diagnóstica pré-execução e distribuição por comando. Acessível também diretamente via CLI com `gsd-tools tokens`.
    - **Quando usar:** Para monitorar a eficiência de custos e consumo de contexto em projetos de médio e grande porte.
 
 9. **`/gsd-migrate` — Modernização Não-Destrutiva de Projetos:**
    - **O que faz:** Faz backup seguro de versões antigas do GSD, converte schemas e roadmaps legados para o formato moderno de ondas, roda o analisador Universal 360° AST e gera a pasta `.planning/intel/` com o grafo de dependências e documentação viva (`ARCHITECTURE.md` e `APIS.md`).
-   - **Quando usar:** Ao trazer para o GSD Nexus 2.7 um projeto que usava versões antigas do GSD ou que estava sem a estrutura `intel/`.
+   - **Quando usar:** Ao trazer para o GSD Nexus 3.2 um projeto que usava versões antigas do GSD ou que estava sem a estrutura `intel/`.
 
 10. **`/gsd-help` — Guia Interativo de Ajuda:**
     - **O que faz:** Lista os 10 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
@@ -303,7 +306,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Sistema Unificado de Versionamento & Release
 
-O GSD Core Nexus 3.1 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
+O GSD Core Nexus 3.2 conta com um orquestrador automatizado de release em 1 único comando (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevar a versão em todos os 49 manifestos, módulos core, lockfiles e badges
@@ -384,4 +387,4 @@ Acompanhe um fluxo completo de desenvolvimento no GSD:
 
 ---
 
-*GSD Core Nexus 3.1 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*
+*GSD Core Nexus 3.2 — Desenvolva com precisão cirúrgica, zero context rot, observabilidade causal e máxima eficiência.*

@@ -18,6 +18,8 @@ export interface CodeReviewFlags {
   all: boolean;
   /** true when --auto is present (implies fix) */
   auto: boolean;
+  /** true when --full or --repo is present (audit whole repo) */
+  fullRepo?: boolean;
   /** --depth= override value, or '' if not supplied */
   depth: string;
   /** --files= override value, or '' if not supplied */
@@ -48,6 +50,8 @@ export function parseCodeReviewFlags(argv: string[]): CodeReviewFlags {
       flags.all = true;
     } else if (arg === '--auto') {
       flags.auto = true;
+    } else if (arg === '--full' || arg === '--repo') {
+      flags.fullRepo = true;
     } else if (arg.startsWith('--depth=')) {
       flags.depth = arg.slice('--depth='.length);
     } else if (arg.startsWith('--files=')) {

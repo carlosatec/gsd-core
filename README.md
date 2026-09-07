@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-3.1.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.2.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 3.1: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
+## GSD Core Nexus 3.2: DeepSeek Harness, Session Replay, Universal Versioning & AST 360°
 
-GSD Core Nexus 3.1 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
+GSD Core Nexus 3.2 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
 - **DeepSeek Harness 1st-Class Support (`@deepseek-ai/dsh` — D-53):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution (`dsh`, `deepseek`, `deepseek-cli`).
 - **Structured Session Logging & Intelligent Ring Buffer (D-54 / D-55):** Append-only JSONL execution event logging (`.planning/intel/sessions/`) with 32 KB smart trimming for stack traces and code patches, regex-based secret sanitization, transparent hub tracking across all 10 commands, and generous 50-session/30-day disk-bounded retention (~25-40 MB gitignored).
@@ -55,7 +55,9 @@ GSD Core Nexus 3.1 elevates AI coding agents with deep execution observability, 
 - **Sub-15ms Pre-Flight Guardrails & Active Co-Evolution (D-101 / D-102):** In-memory path caching ($O(1)$) cutting preflight latency from ~60ms to **1–3ms**, combined with `SIGNATURE_DRIFT` warnings and structured `CO_EVOLVE_CALLERS` payloads.
 - **Persistent Anti-Pattern Store with Okapi BM25:** Durably remembers lessons from autonomous self-healing loops with BM25 relevance ranking and canonical stack trace sanitization (`<PATH>`, `<LINE>`, `<HEX>`).
 - **Topology-Aware & Polyglot Test Scaffolding:** Synthesizes test skeletons matching native language conventions (Swift XCTest, Kotlin/Java JUnit 5, inline `_test.go` for Go, `#[cfg(test)]` for Rust, Dart/Flutter `test/*_test.dart`, isolated test suites for Python/Node).
-- **Pure Token Telemetry & Dashboard:** Real-time observability tracking token savings, command breakdowns, and peak bursts via `/gsd:tokens` and `/gsd:status`.
+- **Holistic Multi-Command Token Telemetry & Concurrency Hardening (D-111 to D-121):** End-to-end token tracking across `plan`, `exec`, and `review` backed by transactional locking (`withFileLockSync`), `invocationId` deduplication, physical file auto-estimation, and a 65-column stabilized ASCII dashboard with pre-exec diagnostics.
+- **Dual-Mode Review Architecture (D-113, D-121):** Surgical targeted reviews saving 80–95% tokens via JIT, alongside zero-cost whole-repository audits (`/gsd:review --full` / `--repo`) with PageRank hub prioritization and honest metric reporting.
+- **Unified Hub CLI Seam & Root-Anchored Guardrails (D-117, D-119, D-120):** Direct terminal execution for all 10 commands (`node gsd-tools.cjs <command>`), flexible phase resolution, and cwd-independent preflight validation (`path.resolve(root, p)`).
 - **Concurrency & Security Hardening (D-35 to D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), secure MCP confinement within `.planning/`, chunk-resilient JSON-RPC streaming, and lockstep versioning across all 49 manifests.
 
 ---
@@ -84,10 +86,10 @@ New here? Check the [Complete Practical GSD Tutorial](docs/tutorials/practical-t
 
 ## Documentation
 
-**What's new in GSD Core Nexus 3.1** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 3.2** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 3.1](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 3.2](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 

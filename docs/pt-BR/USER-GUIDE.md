@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 3.1
+# Guia do Usuário — GSD Core Nexus 3.2
 
-Guia prático e narrativo do GSD Core Nexus 3.1 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 3.2 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -29,18 +29,18 @@ Guia prático e narrativo do GSD Core Nexus 3.1 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 10 Comandos
 
-A partir do GSD Core Nexus 3.1, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.2, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
 | `/gsd-status` | Consciência situacional, progresso e detecção de drift | `--detail`, `--drift` |
 | `/gsd-plan` | Pesquisa, contrato de UI e geração de planos em ondas | `[fase]`, `--skip-research`, `--mvp` |
 | `/gsd-exec` | Execução paralela em ondas com testes automatizados e commits | `[fase]`, `--wave <N>`, `--tdd` |
-| `/gsd-review` | Code review estático e auto-reparo de inconformidades | `--fix`, `--all`, `--depth <N>` |
+| `/gsd-review` | Code review estático e auto-reparo (`--fix`), com auditoria em modo duplo (`--full`/`--repo`) | `--fix`, `--full`, `--repo`, `--all`, `--depth <N>` |
 | `/gsd-verify` | UAT conversacional e validação dos critérios de aceitação | `[fase]`, `--strict` |
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
-| `/gsd-tokens` | Dashboard de telemetria em tempo real, taxa de compressão e economia JIT | `--raw`, `--history` |
+| `/gsd-tokens` | Dashboard de telemetria em tempo real multi-comando, taxa de compressão e economia JIT | `--raw`, `--history`, `gsd-tools tokens` |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Nexus 3.0 | `--dry-run`, `--force` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
@@ -68,7 +68,7 @@ Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.m
 
 ## Inteligência de Sessão & Replay Determinístico CLI
 
-O GSD Core Nexus 3.1 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+O GSD Core Nexus 3.2 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
 
 ```bash
 # Replay da última sessão no terminal
@@ -208,11 +208,13 @@ O GSD Nexus inclui observabilidade técnica pura sobre a injeção cirúrgica de
 ```
 
 Exibe um painel responsivo em ASCII de 65 colunas contendo:
+- **Observabilidade Multi-Comando no Ciclo de Vida:** Rastreamento real de consumo e economia de tokens em `plan`, `exec` e `review`.
 - **Tokens JIT Utilizados vs Evitados:** Compara o contexto cirúrgico do grafo AST contra o peso monolítico total do repositório.
 - **Fator de Redução / Compressão de Grafo:** Taxa em tempo real ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrando o ganho de densidade (ex: `10895.2x`).
-- **Dimensionamento Dinâmico Model-Aware:** Calibração automática de orçamento de acordo com a janela do modelo ativo (Gemini 24K, Claude/GPT-4o 8K, Locais 2.5K).
-- **Distribuição por Comando e Fase:** Barras visuais de progresso por comando e divisão por fase.
-- **Subcomandos CLI:** `gsd-tools telemetry get`, `gsd-tools telemetry record` e `gsd-tools telemetry dashboard`.
+- **Lock Cooperativo Transacional:** Protegido por `withFileLockSync` com descarte de locks expirados, evitando perdas de dados sob concorrência paralela de subagentes.
+- **Diagnóstico Pré-Execução no Ciclo de Vida:** Exibe nota orientadora se houver planos/reviews ativos antes do disparo da execução.
+- **Transparência em Modo Duplo:** Diferencia com precisão revisões cirúrgicas de fase (`targeted`, 80-95% poupados) de auditorias globais (`full-repo`, com `tokensSaved = 0` e badge `review (full-repo)`).
+- **Subcomandos CLI & Seam:** `gsd-tools tokens`, `gsd-tools telemetry summary` e `gsd-tools telemetry record`.
 
 ---
 

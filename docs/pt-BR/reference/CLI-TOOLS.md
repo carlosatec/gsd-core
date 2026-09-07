@@ -31,6 +31,59 @@ node gsd-tools.cjs <command> [args] [--raw] [--cwd <path>]
 | `--cwd <path>` | Substitui o diretório de trabalho (para subagentes em sandbox)                         |
 | `--ws <name>`  | Contexto de fluxo de trabalho para caminhos `.planning/workstreams/<name>` |
 
+---
+
+## Roteamento Canônico de Comandos Unificados
+
+A partir do GSD 3.2, todos os 10 comandos canônicos podem ser despachados diretamente pelo `gsd-tools`:
+
+```bash
+# Diagnóstico situacional e inspeção do roadmap ativo
+node gsd-tools.cjs status
+
+# Planejamento de fase em ondas com análise AST nativa
+node gsd-tools.cjs plan [fase]
+
+# Execução em ondas com subagentes de 200k tokens
+node gsd-tools.cjs exec [fase]
+
+# Code review: seletivo (padrão) ou global (--full / --repo) com auto-reparos
+node gsd-tools.cjs review [fase] [--fix]
+node gsd-tools.cjs review --full
+node gsd-tools.cjs review --repo --fix
+
+# Validação e UAT conversacional de aceitação
+node gsd-tools.cjs verify [fase]
+
+# Conclusão de milestone, sanitização de branch e PR
+node gsd-tools.cjs ship
+
+# Piloto automático ponta a ponta
+node gsd-tools.cjs auto [fase]
+
+# Painel visual de telemetria de tokens em tempo real
+node gsd-tools.cjs tokens
+```
+
+---
+
+## Comandos de Telemetria & Observabilidade de Tokens
+
+Inspeciona e registra métricas de economia de contexto gravadas em `.planning/intel/telemetry.json` com lock atômico cooperativo (`withFileLockSync`):
+
+```bash
+# Renderiza o dashboard visual de telemetria em 65 colunas
+node gsd-tools.cjs tokens
+node gsd-tools.cjs telemetry dashboard
+
+# Emite resumo JSON de alto nível com tokens usados, evitados, poupados e compressão
+node gsd-tools.cjs telemetry summary --raw
+
+# Grava invocação manualmente com auto-estimador por arquivos físicos
+node gsd-tools.cjs telemetry record --command review --from-files src/app.ts,src/utils.ts
+node gsd-tools.cjs telemetry record --command plan --from-phase 22 --scope-mode targeted
+node gsd-tools.cjs telemetry record --command review --scope-mode full-repo
+```
 
 ---
 

@@ -13,28 +13,83 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ---
 
-## Canonical Unified Interface (GSD 3.1)
+## Canonical Unified Interface (GSD 3.2)
 
-Starting in GSD 3.1, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
+Starting in GSD 3.2, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step |
 |---------|------------------------|
 | `/gsd-status` | Situational diagnostics, project state, roadmap, and token savings telemetry |
 | `/gsd-plan` | Decompose phase into atomic parallel waves, specs, and discussions (`PLAN.md`, `SPEC.md`) |
 | `/gsd-exec` | Wave-based execution with fresh 200k subagent contexts & Pre-Flight Guardrails |
-| `/gsd-review` | Deep code, architecture, and UI review with autonomous repairs (`--fix`) |
+| `/gsd-review` | Deep code, architecture, and UI review with autonomous repairs (`--fix`) and dual-mode audit (`--full`/`--repo`) |
 | `/gsd-verify` | Conversational UAT acceptance and verification walkthrough (Auto-Pass enabled) |
 | `/gsd-ship` | Git hygiene, branch preparation, changelog, and Pull Request merge |
 | `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle |
-| `/gsd-tokens` | Real-time token telemetry dashboard & savings breakdown |
+| `/gsd-tokens` | Real-time multi-command token telemetry dashboard & savings breakdown |
 | `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync |
 | `/gsd-help` | Comprehensive reference and usage guide for all unified commands |
 
 ---
 
+### Dual-Mode Code Review (`/gsd-review`)
+
+GSD 3.2 introduces an explicit architectural distinction between surgical phase reviews and whole-repository audits:
+
+- **Targeted Mode (`targeted` — default):** Audits changed files derived from git diff or active phase plans (`--files=...`, `[phase]`). Leverages language-calibrated JIT context injection to achieve 80% to 95% token savings versus the full repository baseline.
+- **Whole-Repository Mode (`full-repo` — `--full` / `--repo`):** Performs a comprehensive static audit of the entire codebase AST at cost zero. Identifies architectural hotspots using PageRank centrality hubs (`queryTopCentralFiles`), reporting transparent metrics (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) with absolute metric honesty.
+- **Autonomous Repair (`--fix`):** Automatically resolves living documentation drift, aligns AST dependency graphs, and fixes linter whitespace/casing inconsistencies.
+
+```bash
+/gsd-review                       # Targeted review of active phase changes
+/gsd-review 22 --fix              # Targeted review of phase 22 with auto-repairs
+/gsd-review --files=src/app.ts    # Review specific target files
+/gsd-review --full                # Comprehensive whole-repository AST & PageRank audit
+/gsd-review --repo --fix          # Whole-repository audit with autonomous drift repairs
+```
+
+---
+
+### Holistic Token Telemetry CLI (`/gsd-tokens` & `gsd-tools tokens`)
+
+Token telemetry in GSD 3.2 tracks context economy across **all** workflow steps — including `plan`, `exec`, and `review`. Telemetry persistence is strictly protected by atomic file locking (`withFileLockSync`) and deduplication (`invocationId`).
+
+```bash
+# Display the stabilized 65-column ASCII telemetry dashboard
+/gsd-tokens
+
+# Direct CLI execution via gsd-tools
+node gsd-core/bin/gsd-tools.cjs tokens
+node gsd-core/bin/gsd-tools.cjs telemetry summary --raw
+
+# Manually record an invocation with real-file auto-estimation
+node gsd-core/bin/gsd-tools.cjs telemetry record --command review --from-files src/app.ts,src/utils.ts
+node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
+```
+
+---
+
+### Direct CLI Execution Seam (`gsd-tools <command>`)
+
+All 10 Canonical Unified Commands can now be triggered directly from shell scripts, terminal pipelines, or external CI/CD harnesses without entering an interactive agent session:
+
+```bash
+node gsd-core/bin/gsd-tools.cjs status
+node gsd-core/bin/gsd-tools.cjs plan 22
+node gsd-core/bin/gsd-tools.cjs exec 22
+node gsd-core/bin/gsd-tools.cjs review 22 --fix
+node gsd-core/bin/gsd-tools.cjs review --full
+node gsd-core/bin/gsd-tools.cjs verify 22
+node gsd-core/bin/gsd-tools.cjs ship
+node gsd-core/bin/gsd-tools.cjs auto 22
+node gsd-core/bin/gsd-tools.cjs tokens
+```
+
+---
+
 ### Session Intelligence & Deterministic Replay CLI
 
-GSD 2.6 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/`. You can inspect, replay, and export sessions via `gsd-tools`:
+GSD 3.2 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/`. You can inspect, replay, and export sessions via `gsd-tools`:
 
 ```bash
 # Replay the latest session timeline in the terminal

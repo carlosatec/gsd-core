@@ -832,6 +832,18 @@ Prioriza a fidelidade contratual sobre a compressão agressiva de tokens:
 - **Sanitização Canônica de Stack Traces:** Mapeia caminhos para `<PATH>`, linhas para `<LINE>` e endereços de memória para `<HEX>`, garantindo deduplicação entre sessões.
 - **Escrita Atômica:** Gravações seguras via arquivos temporários `.tmp` com retentativas exponenciais e substituição atômica (`renameSync`).
 
+### 5. Telemetria Holística de Tokens Multi-Comando & Blindagem de Concorrência (`src/jit-telemetry.cts`, Fase 22 / D-111 a D-121)
+Introduzido na Fase 22 para estender a observabilidade para além da execução, cobrindo todo o ciclo de vida:
+- **Lock Cooperativo Transacional (`withFileLockSync` — D-111):** Protege todas as mutações no arquivo `.planning/intel/telemetry.json` com locks síncronos no sistema de arquivos e descarte automático de locks órfãos (TTL de 5s), garantindo persistência sem corrupção mesmo sob intensa concorrência paralela.
+- **Deduplicação de Idempotência (`invocationId` — D-112):** Impede que re-execuções de hooks ou comandos repetidos com o mesmo identificador dupliquem contagens e métricas acumuladas.
+- **Arquitetura de Review em Dois Modos (D-113, D-121):**
+  - **Modo Seletivo (`targeted`):** Avalia arquivos modificados da fase ou arquivos específicos, reportando economia real JIT de 80% a 95%.
+  - **Modo Global (`full-repo`):** Ativado com `--full` ou `--repo`. Executa auditoria estática total no AST local a custo zero, destaca os nós críticos de PageRank (`queryTopCentralFiles`) e reporta transparentemente `scopeMode: 'full-repo'`, `tokensSaved = 0` e `efficiencyPct = 0%` com total honestidade métrica.
+- **Roteamento Unificado no CLI (`HOST_COMMAND_ROUTERS` — D-117):** Roteamento nativo para os comandos canônicos (`plan`, `exec`, `review`, `verify`, `ship`, `auto`, `status`, `tokens`) diretamente via `gsd-tools.cjs`.
+- **Auto-Estimador Físico de Arquivos (D-114):** Inspeciona arquivos reais em disco e planos de fases para calcular métricas com pesos por linguagem sem variáveis mágicas de shell.
+- **Guardrails Ancorados na Raiz (D-119):** Ancoragem de todas as checagens físicas de arquivos em `checkPathExists` para `path.resolve(root, p)`, eliminando drift do diretório de trabalho (`cwd`).
+- **Dashboard ASCII Determinístico em 65 Colunas (D-116):** Formatação estrita de largura (`INNER_WIDTH = 63`), ordenação determinística de comandos (`plan` → `review` → `exec`), badge visual e nota diagnóstica pré-execução.
+
 ---
 
 ## Relacionados

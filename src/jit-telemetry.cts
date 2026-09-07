@@ -6,7 +6,43 @@
  */
 
 import path from 'node:path';
-import { platformReadSync, platformWriteSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { platformReadSync, platformWriteSync, platformEnsureDir, withFileLockSync } from './shell-command-projection.cjs';
+
+// ─── Constants & Helpers ──────────────────────────────────────────────────────
+
+const CANONICAL_TELEMETRY_COMMANDS = ['plan', 'exec', 'review', 'verify', 'status', 'other'] as const;
+type _CanonicalTelemetryCommand = (typeof CANONICAL_TELEMETRY_COMMANDS)[number];
+
+const LANGUAGE_CHAR_WEIGHTS: Record<string, number> = {
+  typescript: 45,
+  javascript: 45,
+  python: 40,
+  go: 55,
+  rust: 55,
+  sql: 35,
+  csharp: 50,
+  java: 50,
+  ruby: 40,
+  php: 45,
+  dart: 45,
+  html: 40,
+  css: 35,
+  yaml: 35,
+  json: 30,
+};
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+function normalizeTelemetryCommand(cmd?: string): string {
+  if (!cmd) return 'other';
+  const clean = cmd.trim().toLowerCase().replace(/^[/\\$]/, '').replace(/^gsd[:-]/, '').replace(/^gsd\s+/, '');
+  if ((CANONICAL_TELEMETRY_COMMANDS as readonly string[]).includes(clean)) {
+    return clean;
+  }
+  return 'other';
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +56,8 @@ interface JitTelemetryRecord {
   tokensSaved: number;
   efficiencyPct: number;
   compressionRatio?: number;
+  invocationId?: string;
+  scopeMode?: 'targeted' | 'full-repo';
 }
 
 interface CommandUsageStat {
@@ -82,6 +120,9 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       fullRepoTokens: r.fullRepoTokens || 0,
       tokensSaved: r.tokensSaved || 0,
       efficiencyPct: r.efficiencyPct || 0,
+      compressionRatio: r.compressionRatio,
+      invocationId: r.invocationId,
+      scopeMode: r.scopeMode,
     }));
 
     const compressionRatio = parsed.averageCompressionRatio ||
@@ -132,7 +173,8 @@ function saveTelemetry(planningDir: string, data: JitTelemetryData): void {
 
 /**
  * Records a single JIT invocation and updates aggregate efficiency metrics.
- * Parameters command and phaseId are optional to preserve 100% backward compatibility.
+ * Parameters command, phaseId, invocationId, and scopeMode are optional to preserve 100% backward compatibility.
+ * All mutations are wrapped in an atomic cooperative file lock (withFileLockSync).
  */
 function recordJitInvocation(
   planningDir: string,
@@ -140,96 +182,134 @@ function recordJitInvocation(
   jitTokens: number,
   fullRepoTokens: number,
   command: string = 'other',
-  phaseId?: string
+  phaseId?: string,
+  invocationId?: string,
+  scopeMode?: 'targeted' | 'full-repo'
 ): JitTelemetryRecord {
-  const data = loadTelemetry(planningDir);
-  const effectiveFull = Math.max(fullRepoTokens, jitTokens);
-  const tokensSaved = Math.max(0, effectiveFull - jitTokens);
-  const efficiencyPct = effectiveFull > 0 ? Number(((tokensSaved / effectiveFull) * 100).toFixed(1)) : 0;
-  const compressionRatio = Number(Math.max(1.0, effectiveFull / Math.max(1, jitTokens)).toFixed(1));
+  const intelDir = path.join(planningDir, 'intel');
+  const telemetryPath = path.join(intelDir, 'telemetry.json');
 
-  const record: JitTelemetryRecord = {
-    timestamp: new Date().toISOString(),
-    command: command || 'other',
-    phaseId,
-    targetFiles,
-    jitTokens,
-    fullRepoTokens: effectiveFull,
-    tokensSaved,
-    efficiencyPct,
-    compressionRatio,
-  };
+  return withFileLockSync(telemetryPath, () => {
+    const data = loadTelemetry(planningDir);
 
-  data.records.push(record);
-  // Keep last 100 records
-  if (data.records.length > 100) {
-    data.records = data.records.slice(-100);
-  }
-
-  data.totalInvocations += 1;
-  data.totalTokensSaved += tokensSaved;
-  data.totalJitTokensUsed += jitTokens;
-  data.totalMonolithicTokensAvoided += effectiveFull;
-
-  if (jitTokens > data.peakInvocationTokens) {
-    data.peakInvocationTokens = jitTokens;
-  }
-
-  if (data.totalMonolithicTokensAvoided > 0) {
-    data.averageEfficiencyPct = Number(
-      ((data.totalTokensSaved / data.totalMonolithicTokensAvoided) * 100).toFixed(1)
-    );
-  }
-
-  if (data.totalJitTokensUsed > 0) {
-    data.averageCompressionRatio = Number(
-      Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)
-    );
-  }
-
-  // Update command breakdown
-  const cmdKey = record.command;
-  if (!data.commandBreakdown[cmdKey]) {
-    data.commandBreakdown[cmdKey] = { invocations: 0, tokensUsed: 0, tokensSaved: 0 };
-  }
-  data.commandBreakdown[cmdKey].invocations += 1;
-  data.commandBreakdown[cmdKey].tokensUsed += jitTokens;
-  data.commandBreakdown[cmdKey].tokensSaved += tokensSaved;
-
-  // Prune commandBreakdown to max 50 keys
-  const cmdKeys = Object.keys(data.commandBreakdown);
-  if (cmdKeys.length > 50) {
-    cmdKeys.sort((a, b) => data.commandBreakdown[b].invocations - data.commandBreakdown[a].invocations);
-    const pruned: Record<string, CommandUsageStat> = {};
-    for (const k of cmdKeys.slice(0, 50)) {
-      pruned[k] = data.commandBreakdown[k];
-    }
-    data.commandBreakdown = pruned;
-  }
-
-  // Update phase breakdown if available
-  if (phaseId) {
-    if (!data.phaseBreakdown[phaseId]) {
-      data.phaseBreakdown[phaseId] = { invocations: 0, tokensUsed: 0, tokensSaved: 0 };
-    }
-    data.phaseBreakdown[phaseId].invocations += 1;
-    data.phaseBreakdown[phaseId].tokensUsed += jitTokens;
-    data.phaseBreakdown[phaseId].tokensSaved += tokensSaved;
-
-    // Prune phaseBreakdown to max 50 keys
-    const phaseKeys = Object.keys(data.phaseBreakdown);
-    if (phaseKeys.length > 50) {
-      phaseKeys.sort((a, b) => data.phaseBreakdown[b].invocations - data.phaseBreakdown[a].invocations);
-      const pruned: Record<string, PhaseUsageStat> = {};
-      for (const k of phaseKeys.slice(0, 50)) {
-        pruned[k] = data.phaseBreakdown[k];
+    // D-112: Idempotency deduplication via invocationId
+    if (invocationId) {
+      const existing = data.records.find(r => r.invocationId === invocationId);
+      if (existing) {
+        return existing;
       }
-      data.phaseBreakdown = pruned;
     }
-  }
 
-  saveTelemetry(planningDir, data);
-  return record;
+    // D-115: Strict Sanitization
+    const sanitizedCmd = normalizeTelemetryCommand(command);
+    const sanitizedJit = Math.max(0, Math.floor(Number(jitTokens) || 0));
+    const sanitizedFull = Math.max(0, Math.floor(Number(fullRepoTokens) || 0));
+
+    let effectiveFull: number;
+    let tokensSaved: number;
+    let efficiencyPct: number;
+    let compressionRatio: number;
+
+    // D-113 & D-121: Dual-mode review / targeted vs full-repo
+    const resolvedScopeMode = scopeMode || (sanitizedFull > sanitizedJit ? 'targeted' : (sanitizedFull > 0 ? 'full-repo' : 'targeted'));
+
+    if (resolvedScopeMode === 'full-repo') {
+      effectiveFull = sanitizedFull > 0 ? sanitizedFull : sanitizedJit;
+      tokensSaved = 0;
+      efficiencyPct = 0;
+      compressionRatio = 1.0;
+    } else {
+      effectiveFull = Math.max(sanitizedFull, sanitizedJit);
+      tokensSaved = Math.max(0, effectiveFull - sanitizedJit);
+      efficiencyPct = effectiveFull > 0 ? Number(((tokensSaved / effectiveFull) * 100).toFixed(1)) : 0;
+      compressionRatio = Number(Math.max(1.0, effectiveFull / Math.max(1, sanitizedJit)).toFixed(1));
+    }
+
+    const record: JitTelemetryRecord = {
+      timestamp: new Date().toISOString(),
+      command: sanitizedCmd,
+      phaseId,
+      targetFiles,
+      jitTokens: sanitizedJit,
+      fullRepoTokens: effectiveFull,
+      tokensSaved,
+      efficiencyPct,
+      compressionRatio,
+      invocationId,
+      scopeMode: resolvedScopeMode,
+    };
+
+    data.records.push(record);
+    // Keep last 100 records
+    if (data.records.length > 100) {
+      data.records = data.records.slice(-100);
+    }
+
+    data.totalInvocations += 1;
+    data.totalTokensSaved += tokensSaved;
+    data.totalJitTokensUsed += sanitizedJit;
+    data.totalMonolithicTokensAvoided += effectiveFull;
+
+    if (sanitizedJit > data.peakInvocationTokens) {
+      data.peakInvocationTokens = sanitizedJit;
+    }
+
+    if (data.totalMonolithicTokensAvoided > 0) {
+      data.averageEfficiencyPct = Number(
+        ((data.totalTokensSaved / data.totalMonolithicTokensAvoided) * 100).toFixed(1)
+      );
+    }
+
+    if (data.totalJitTokensUsed > 0) {
+      data.averageCompressionRatio = Number(
+        Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)
+      );
+    }
+
+    // Update command breakdown
+    const cmdKey = record.command;
+    if (!data.commandBreakdown[cmdKey]) {
+      data.commandBreakdown[cmdKey] = { invocations: 0, tokensUsed: 0, tokensSaved: 0 };
+    }
+    data.commandBreakdown[cmdKey].invocations += 1;
+    data.commandBreakdown[cmdKey].tokensUsed += sanitizedJit;
+    data.commandBreakdown[cmdKey].tokensSaved += tokensSaved;
+
+    // Prune commandBreakdown to max 50 keys
+    const cmdKeys = Object.keys(data.commandBreakdown);
+    if (cmdKeys.length > 50) {
+      cmdKeys.sort((a, b) => data.commandBreakdown[b].invocations - data.commandBreakdown[a].invocations);
+      const pruned: Record<string, CommandUsageStat> = {};
+      for (const k of cmdKeys.slice(0, 50)) {
+        pruned[k] = data.commandBreakdown[k];
+      }
+      data.commandBreakdown = pruned;
+    }
+
+    // Update phase breakdown if available
+    if (phaseId) {
+      if (!data.phaseBreakdown[phaseId]) {
+        data.phaseBreakdown[phaseId] = { invocations: 0, tokensUsed: 0, tokensSaved: 0 };
+      }
+      data.phaseBreakdown[phaseId].invocations += 1;
+      data.phaseBreakdown[phaseId].tokensUsed += sanitizedJit;
+      data.phaseBreakdown[phaseId].tokensSaved += tokensSaved;
+
+      // Prune phaseBreakdown to max 50 keys
+      const phaseKeys = Object.keys(data.phaseBreakdown);
+      if (phaseKeys.length > 50) {
+        phaseKeys.sort((a, b) => data.phaseBreakdown[b].invocations - data.phaseBreakdown[a].invocations);
+        const pruned: Record<string, PhaseUsageStat> = {};
+        for (const k of phaseKeys.slice(0, 50)) {
+          pruned[k] = data.phaseBreakdown[k];
+        }
+        data.phaseBreakdown = pruned;
+      }
+    }
+
+    saveTelemetry(planningDir, data);
+    return record;
+  });
 }
 
 /**
@@ -256,4 +336,9 @@ export = {
   saveTelemetry,
   recordJitInvocation,
   getTelemetrySummary,
+  LANGUAGE_CHAR_WEIGHTS,
+  estimateTokens,
+  CANONICAL_TELEMETRY_COMMANDS,
+  normalizeTelemetryCommand,
 };
+

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.1.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.2.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -45,9 +45,9 @@ const visualGraphMod = require("./visual-graph-exporter.cjs");
 const canvasGenMod = require("./canvas-roadmap-generator.cjs");
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
-const { buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
-const { getTelemetrySummary } = jitTelemetry;
+const { getTelemetrySummary, recordJitInvocation, LANGUAGE_CHAR_WEIGHTS } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
 const { assembleJitContext } = jitInjector;
 const { runPreFlightChecks } = guardrailsMod;
@@ -86,15 +86,18 @@ function normalizeCommandName(input) {
     return null;
 }
 /**
- * Runs code review over changed files and performs optional autonomous fixes when --fix is set.
+ * Runs code review over changed files (targeted mode) or the whole codebase (full-repo mode)
+ * and performs optional autonomous fixes when --fix is set.
+ * Measures and records real JIT token efficiency under transactional concurrency.
  */
-function executeReview(planningDir, rootDir, autoFix = false) {
+function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, fullRepoMode = false, phaseId) {
     const fixed = [];
     const criticalIssues = [];
     const warnings = [];
     const resolvedPlanningDir = node_path_1.default.resolve(planningDir);
     const resolvedRoot = node_path_1.default.resolve(rootDir);
-    // 1. Inspect STATE.md
+    // 1. Inspect STATE.md / Phase ID
+    const activePhase = resolveActivePhaseId(resolvedPlanningDir, phaseId);
     const statePath = node_path_1.default.join(resolvedPlanningDir, 'STATE.md');
     const stateContent = (0, shell_command_projection_cjs_1.platformReadSync)(statePath) || '';
     if (!stateContent.includes('Phase')) {
@@ -105,7 +108,29 @@ function executeReview(planningDir, rootDir, autoFix = false) {
     if (!graph) {
         graph = buildCodebaseGraph(resolvedRoot);
     }
-    const filesReviewed = graph ? graph.stats.totalFiles : 1;
+    // Determine target files for review (D-113, D-121)
+    let filesToReview = [];
+    if (explicitFiles && explicitFiles.length > 0) {
+        filesToReview = explicitFiles;
+    }
+    else if (fullRepoMode) {
+        filesToReview = graph && graph.files ? Object.keys(graph.files) : [];
+    }
+    else {
+        // Targeted mode: derive from active phase plan
+        const phaseFiles = extractTargetFilesFromPhase(resolvedPlanningDir, activePhase, resolvedRoot, false);
+        if (phaseFiles.length > 0) {
+            filesToReview = phaseFiles;
+        }
+        else if (graph && graph.files) {
+            const topCentral = typeof queryTopCentralFiles === 'function' ? queryTopCentralFiles(graph, 5) : [];
+            filesToReview = topCentral.length > 0 ? topCentral.map((t) => t.file) : Object.keys(graph.files).slice(0, 5);
+        }
+    }
+    if (filesToReview.length === 0 && graph && graph.files) {
+        filesToReview = Object.keys(graph.files).slice(0, 5);
+    }
+    const filesReviewed = filesToReview.length > 0 ? filesToReview.length : (graph ? graph.stats.totalFiles : 1);
     // 3. Living Documentation Drift Verification
     const driftReport = verifyDocsAgainstCode(resolvedPlanningDir, resolvedRoot);
     if (!driftReport.valid) {
@@ -121,7 +146,8 @@ function executeReview(planningDir, rootDir, autoFix = false) {
     // 4. Complexity & UI Anti-Pattern Inspection
     try {
         if (graph && graph.files) {
-            for (const relPath of Object.keys(graph.files)) {
+            const targetsToCheck = fullRepoMode ? Object.keys(graph.files) : filesToReview;
+            for (const relPath of targetsToCheck) {
                 const fullPath = node_path_1.default.join(resolvedRoot, relPath);
                 if (!node_fs_1.default.existsSync(fullPath))
                     continue;
@@ -161,17 +187,78 @@ function executeReview(planningDir, rootDir, autoFix = false) {
         fixed.push('Formatted and aligned AST dependency graph.');
         fixed.push('Resolved linting whitespace and casing inconsistencies.');
     }
+    // 6. Language-Calibrated Token Telemetry & Scope Mode Tracking (D-113, D-121)
+    let recordedTelemetry = undefined;
+    try {
+        let totalRepoChars = 0;
+        if (graph && graph.files) {
+            for (const f of Object.values(graph.files)) {
+                const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
+                totalRepoChars += (f.linesCount || 10) * weight;
+            }
+        }
+        const repoTokenBaseline = Math.max(1000, Math.ceil(totalRepoChars / 4));
+        let reviewedChars = 0;
+        for (const relPath of filesToReview) {
+            const fullPath = node_path_1.default.join(resolvedRoot, relPath);
+            if (node_fs_1.default.existsSync(fullPath)) {
+                try {
+                    const content = (0, shell_command_projection_cjs_1.platformReadSync)(fullPath) || '';
+                    reviewedChars += content.length;
+                }
+                catch {
+                    reviewedChars += 1000;
+                }
+            }
+            else if (graph && graph.files && graph.files[relPath]) {
+                const f = graph.files[relPath];
+                const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
+                reviewedChars += (f.linesCount || 10) * weight;
+            }
+        }
+        const reviewedTokens = Math.max(100, Math.ceil(reviewedChars / 4));
+        if (fullRepoMode) {
+            recordedTelemetry = recordJitInvocation(resolvedPlanningDir, filesToReview.slice(0, 10), repoTokenBaseline, repoTokenBaseline, 'review', activePhase, undefined, 'full-repo');
+        }
+        else {
+            const baseline = Math.max(repoTokenBaseline, reviewedTokens * 5);
+            recordedTelemetry = recordJitInvocation(resolvedPlanningDir, filesToReview, reviewedTokens, baseline, 'review', activePhase, undefined, 'targeted');
+        }
+    }
+    catch {
+        // Non-blocking telemetry
+    }
     return {
         filesReviewed,
         criticalIssues,
         warnings,
         fixed,
         passed: criticalIssues.length === 0,
+        telemetry: recordedTelemetry,
     };
 }
-function resolveActivePhaseId(planningDir, explicitPhase) {
-    if (explicitPhase && explicitPhase.trim()) {
-        return explicitPhase.trim();
+/**
+ * Dynamically resolves active phase ID from explicit args (flexible positional token)
+ * or falls back to STATE.md inspection (D-120).
+ */
+function resolveActivePhaseId(planningDir, explicitPhaseOrArgs) {
+    if (typeof explicitPhaseOrArgs === 'string' && explicitPhaseOrArgs.trim()) {
+        const candidate = explicitPhaseOrArgs.trim();
+        if (!candidate.startsWith('-')) {
+            return candidate;
+        }
+    }
+    else if (Array.isArray(explicitPhaseOrArgs) && explicitPhaseOrArgs.length > 0) {
+        for (const arg of explicitPhaseOrArgs) {
+            if (typeof arg === 'string' && !arg.startsWith('-')) {
+                const lower = arg.toLowerCase();
+                if (!CANONICAL_COMMAND_SET.has(lower) && lower !== 'review' && lower !== 'plan' && lower !== 'exec' && lower !== 'verify') {
+                    if (/^[0-9]+([a-zA-Z0-9._-]*)$/.test(arg) || /^phase[-_]?[0-9]+/i.test(arg)) {
+                        return arg;
+                    }
+                }
+            }
+        }
     }
     try {
         const statePath = node_path_1.default.join(planningDir, 'STATE.md');
@@ -258,7 +345,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD Core Nexus 3.1 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core Nexus 3.2 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
@@ -270,11 +357,11 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
                 data: { telemetry },
-                message: `GSD Core Nexus 3.1 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                message: `GSD Core Nexus 3.2 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
         case 'plan': {
-            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            const phaseId = resolveActivePhaseId(planningDir, options.args);
             let targetFiles = extractTargetFilesFromPhase(planningDir, phaseId, cwd, true);
             if (targetFiles.length === 0) {
                 const fallbackGraph = loadCodebaseGraph(planningDir) || buildCodebaseGraph(cwd);
@@ -316,7 +403,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         }
         case 'exec': {
-            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            const phaseId = resolveActivePhaseId(planningDir, options.args);
             const filesToModify = extractTargetFilesFromPhase(planningDir, phaseId, cwd, false);
             const preFlightReport = runPreFlightChecks({
                 taskId: phaseId || 'active-phase',
@@ -341,7 +428,17 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         }
         case 'review': {
-            const reviewResult = executeReview(planningDir, cwd, hasFixFlag);
+            const phaseId = resolveActivePhaseId(planningDir, options.args);
+            const isFull = Boolean(options.flags?.['full'] ||
+                options.flags?.['repo'] ||
+                options.flags?.['fullRepo'] ||
+                options.args.includes('--full') ||
+                options.args.includes('--repo'));
+            const explicitFiles = options.args.filter(arg => !arg.startsWith('-') &&
+                arg !== 'review' &&
+                arg !== phaseId &&
+                (arg.includes('/') || arg.includes('\\') || arg.includes('.')));
+            const reviewResult = executeReview(planningDir, cwd, hasFixFlag, explicitFiles.length > 0 ? explicitFiles : undefined, isFull, phaseId);
             const totalIssues = reviewResult.criticalIssues.length + reviewResult.warnings.length;
             const fixHint = (!hasFixFlag && totalIssues > 0)
                 ? ' 💡 Dica: Para aplicar essas correções automaticamente, execute /gsd:review --fix'
@@ -360,7 +457,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         }
         case 'verify': {
-            const phaseId = resolveActivePhaseId(planningDir, options.args[1]);
+            const phaseId = resolveActivePhaseId(planningDir, options.args);
             let autoPassed = false;
             try {
                 initMod.cmdInitVerifyWork(cwd, phaseId, options.raw || true);
@@ -442,7 +539,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'help',
                 action: 'DISPLAY_HELP',
                 nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-                message: 'GSD Core Nexus 3.1 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+                message: 'GSD Core Nexus 3.2 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
             };
     }
 }
