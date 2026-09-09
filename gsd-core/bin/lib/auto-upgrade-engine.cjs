@@ -177,7 +177,7 @@ function runAutoUpgrade(planningDir, rootDir, options) {
     if (options?.dryRun) {
         return {
             success: true,
-            version: '3.3.0',
+            version: '3.3.2',
             isNewMigration,
             indexedFiles: graph.stats.totalFiles,
             detectedLanguages,
@@ -224,7 +224,7 @@ function runAutoUpgrade(planningDir, rootDir, options) {
     ];
     return {
         success: true,
-        version: '3.3.0',
+        version: '3.3.2',
         isNewMigration,
         indexedFiles: graph.stats.totalFiles,
         detectedLanguages,

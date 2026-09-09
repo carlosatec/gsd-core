@@ -1282,6 +1282,9 @@ function sanitizeCodePreservingLines(content, lang) {
     let inBlockComment = false;
     let inLineComment = false;
     let inDocstring = null;
+    let inStringSingle = false;
+    let inStringDouble = false;
+    let inTemplateLiteral = false;
     const chars = content.split('');
     const len = chars.length;
     for (let i = 0; i < len; i++) {
@@ -1321,6 +1324,54 @@ function sanitizeCodePreservingLines(content, lang) {
             }
             continue;
         }
+        if (inStringSingle) {
+            if (ch === '\\' && i + 1 < len) {
+                if (chars[i + 1] !== '\n')
+                    chars[i + 1] = ' ';
+                chars[i] = ' ';
+                i++;
+            }
+            else if (ch === "'") {
+                inStringSingle = false;
+                chars[i] = ' ';
+            }
+            else if (ch !== '\n') {
+                chars[i] = ' ';
+            }
+            continue;
+        }
+        if (inStringDouble) {
+            if (ch === '\\' && i + 1 < len) {
+                if (chars[i + 1] !== '\n')
+                    chars[i + 1] = ' ';
+                chars[i] = ' ';
+                i++;
+            }
+            else if (ch === '"') {
+                inStringDouble = false;
+                chars[i] = ' ';
+            }
+            else if (ch !== '\n') {
+                chars[i] = ' ';
+            }
+            continue;
+        }
+        if (inTemplateLiteral) {
+            if (ch === '\\' && i + 1 < len) {
+                if (chars[i + 1] !== '\n')
+                    chars[i + 1] = ' ';
+                chars[i] = ' ';
+                i++;
+            }
+            else if (ch === '`') {
+                inTemplateLiteral = false;
+                chars[i] = ' ';
+            }
+            else if (ch !== '\n') {
+                chars[i] = ' ';
+            }
+            continue;
+        }
         // Block comment /* ... */
         if (ch === '/' && next === '*') {
             inBlockComment = true;
@@ -1351,6 +1402,22 @@ function sanitizeCodePreservingLines(content, lang) {
                 continue;
             }
         }
+        // String literals
+        if (ch === '"') {
+            inStringDouble = true;
+            chars[i] = ' ';
+            continue;
+        }
+        if (ch === "'") {
+            inStringSingle = true;
+            chars[i] = ' ';
+            continue;
+        }
+        if (ch === '`') {
+            inTemplateLiteral = true;
+            chars[i] = ' ';
+            continue;
+        }
     }
     return chars.join('');
 }
@@ -1359,9 +1426,8 @@ function sanitizeCodePreservingLines(content, lang) {
  * Strictly self-contained to guarantee zero memory retention by the V8 garbage collector (Fix L-02).
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion */
-function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases) {
+function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir = process.cwd()) {
     try {
-        const rootDir = process.cwd();
         const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, false);
         const imports = [];
         const exports = [];
@@ -1600,7 +1666,7 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases) {
 /**
  * Analyzes a source file across any supported ecosystem (TS/JS, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, Flutter, SQL, CSS, Docker, Shell).
  */
-function analyzeSourceFile(filePath, sourceText) {
+function analyzeSourceFile(filePath, sourceText, explicitRoot) {
     const content = sourceText ?? (0, shell_command_projection_cjs_1.platformReadSync)(filePath) ?? '';
     const ext = node_path_1.default.extname(filePath).toLowerCase();
     const baseName = node_path_1.default.basename(filePath).toLowerCase();
@@ -1668,13 +1734,13 @@ function analyzeSourceFile(filePath, sourceText) {
         return analyzeDevOpsAndShellFile(filePath, content);
     }
     // 15. TypeScript / JavaScript — Tiered AST Engine
-    const rootDir = process.cwd();
+    const rootDir = explicitRoot ?? process.cwd();
     const tsConfigAliases = loadTsConfigAliases(rootDir);
     // Camada 1: Compilador TypeScript Oficial
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const tsModule = getTsModule();
     if (tsModule) {
-        const compiled = analyzeWithTypeScriptCompiler(filePath, content, tsModule, tsConfigAliases);
+        const compiled = analyzeWithTypeScriptCompiler(filePath, content, tsModule, tsConfigAliases, rootDir);
         if (compiled)
             return compiled;
     }
@@ -1963,7 +2029,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
                         result = prevFile;
                     }
                     else {
-                        result = analyzeSourceFile(fullPath);
+                        result = analyzeSourceFile(fullPath, undefined, rootDir);
                         result.filePath = relKey;
                         result.mtime = mtime;
                         result.size = size;

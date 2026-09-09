@@ -172,6 +172,105 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   return results;
 }
 
+interface DecisionCandidate {
+  id: string;
+  text: string;
+  category?: string;
+  formatted: string;
+}
+
+/**
+ * Ranks architectural decisions by keyword/BM25 relevance to target files and query.
+ * Falls back to chronological recency when no specific lexical match is found.
+ */
+function rankDecisions(
+  decisions: DecisionCandidate[],
+  targetFiles: string[],
+  query?: string,
+  neighborFiles: string[] = [],
+  maxDecisions: number = 5
+): string[] {
+  if (decisions.length === 0) return [];
+  if (decisions.length <= maxDecisions && (!targetFiles || targetFiles.length === 0) && !query) {
+    return decisions.map(d => d.formatted);
+  }
+
+  const keywords = new Set<string>();
+  const fileStems: string[] = [];
+
+  for (const f of targetFiles) {
+    const stem = path.basename(f, path.extname(f)).toLowerCase();
+    if (stem.length > 2) {
+      fileStems.push(stem);
+      for (const part of stem.split(/[-_.]+/)) {
+        if (part.length > 2 && !['src', 'lib', 'test', 'tests', 'index'].includes(part)) {
+          keywords.add(part);
+        }
+      }
+    }
+    const dirParts = path.dirname(f).toLowerCase().split(/[/\\]+/);
+    for (const part of dirParts) {
+      if (part.length > 2 && !['src', 'lib', 'test', 'tests', 'dist', 'bin'].includes(part)) {
+        keywords.add(part);
+      }
+    }
+  }
+
+  for (const f of neighborFiles) {
+    const stem = path.basename(f, path.extname(f)).toLowerCase();
+    for (const part of stem.split(/[-_.]+/)) {
+      if (part.length > 2 && !['src', 'lib', 'test', 'tests', 'index'].includes(part)) {
+        keywords.add(part);
+      }
+    }
+  }
+
+  if (query) {
+    for (const token of query.toLowerCase().split(/[^a-z0-9_-]+/)) {
+      if (token.length > 2 && !['the', 'and', 'for', 'with', 'from', 'that', 'this'].includes(token)) {
+        keywords.add(token);
+      }
+    }
+  }
+
+  const scored = decisions.map((d, index) => {
+    let score = 0;
+    const catLower = (d.category || '').toLowerCase();
+    const textLower = d.text.toLowerCase();
+    const combined = `${d.id.toLowerCase()} ${catLower} ${textLower}`;
+
+    for (const stem of fileStems) {
+      if (combined.includes(stem)) {
+        score += 15;
+      }
+    }
+
+    for (const kw of keywords) {
+      if (catLower.includes(kw)) {
+        score += 6;
+      }
+      if (textLower.includes(kw)) {
+        score += 2;
+      }
+    }
+
+    const numMatch = d.id.match(/\d+/);
+    const num = numMatch ? parseInt(numMatch[0], 10) : 0;
+    score += num * 0.001;
+
+    return { formatted: d.formatted, score, index, num };
+  });
+
+  const hasMatches = scored.some(s => s.score >= 1);
+  if (hasMatches) {
+    scored.sort((a, b) => b.score - a.score || b.num - a.num);
+  } else {
+    scored.sort((a, b) => b.num - a.num || b.index - a.index);
+  }
+
+  return scored.slice(0, maxDecisions).map(s => s.formatted);
+}
+
 /**
  * Assembles a surgical, token-budgeted JIT context package for specific target files.
  */
@@ -366,24 +465,53 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const statePath = path.join(resolvedPlanningDir, 'STATE.md');
   const stateContent = platformReadSync(statePath);
   if (stateContent) {
+    const rawCandidates: DecisionCandidate[] = [];
     try {
       const parsed = parseDecisions(stateContent);
       for (const d of parsed) {
         if (d.id && d.text) {
-          applicableDecisions.push(`- **${d.id}${d.category ? ' [' + d.category + ']' : ''}**: ${d.text}`);
-          if (applicableDecisions.length >= maxDecisions) break;
+          rawCandidates.push({
+            id: d.id,
+            text: d.text,
+            category: d.category,
+            formatted: `- **${d.id}${d.category ? ' [' + d.category + ']' : ''}**: ${d.text}`,
+          });
         }
       }
     } catch {
       // Non-blocking
     }
 
-    if (applicableDecisions.length === 0) {
+    if (rawCandidates.length === 0) {
       const decisionMatches = stateContent.match(/-\s+\*\*D-[A-Za-z0-9_-]+(?:\[[^\]]+\])?(?:\s*\[[^\]]+\])?(?::\*\*|\*\*:)\s*.*$/gm);
       if (decisionMatches) {
-        applicableDecisions.push(...decisionMatches.slice(0, maxDecisions));
+        for (const line of decisionMatches) {
+          const m = line.match(/-\s+\*\*(D-[A-Za-z0-9_-]+)(?:\[([^\]]+)\])?(?::\*\*|\*\*:)\s*(.*)$/);
+          if (m) {
+            rawCandidates.push({
+              id: m[1],
+              category: m[2],
+              text: m[3] || '',
+              formatted: line,
+            });
+          } else {
+            rawCandidates.push({
+              id: '',
+              text: line,
+              formatted: line,
+            });
+          }
+        }
       }
     }
+
+    applicableDecisions.push(...rankDecisions(
+      rawCandidates,
+      targetFiles,
+      options.query,
+      allNeighbors.map(n => n.file),
+      maxDecisions
+    ));
   }
 
   // Discover canonical example file for coding style anchor

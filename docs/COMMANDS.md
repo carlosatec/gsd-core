@@ -15,7 +15,7 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ## Canonical Unified Interface (GSD 3.3)
 
-Starting in GSD 3.3, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
+Starting in GSD 3.3, the public command surface is strictly consolidated into **11 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step |
 |---------|------------------------|
@@ -28,6 +28,7 @@ Starting in GSD 3.3, the public command surface is strictly consolidated into **
 | `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle |
 | `/gsd-tokens` | Real-time multi-command token telemetry dashboard & savings breakdown |
 | `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync |
+| `/gsd-graph` | Interactive HTML canvas and Obsidian-compatible visual knowledge graph exporter |
 | `/gsd-help` | Comprehensive reference and usage guide for all unified commands |
 
 ---
@@ -69,9 +70,24 @@ node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
 
 ---
 
+### Visual Knowledge Graph Exporter (`/gsd-graph` & `gsd-tools graph`)
+
+Exports an interactive HTML visualization and an Obsidian Canvas representation of your project's roadmap, phases, AST dependencies, and architectural state into `.planning/intel/graph-view.html` and `.planning/ROADMAP.canvas`:
+
+```bash
+# Export and automatically launch in default browser
+/gsd-graph
+
+# Export silently or without opening browser
+/gsd-graph --no-open
+node gsd-core/bin/gsd-tools.cjs graph --no-open
+```
+
+---
+
 ### Direct CLI Execution Seam (`gsd-tools <command>`)
 
-All 10 Canonical Unified Commands can now be triggered directly from shell scripts, terminal pipelines, or external CI/CD harnesses without entering an interactive agent session:
+All 11 Canonical Unified Commands can now be triggered directly from shell scripts, terminal pipelines, or external CI/CD harnesses without entering an interactive agent session:
 
 ```bash
 node gsd-core/bin/gsd-tools.cjs status
@@ -83,6 +99,7 @@ node gsd-core/bin/gsd-tools.cjs verify 22
 node gsd-core/bin/gsd-tools.cjs ship
 node gsd-core/bin/gsd-tools.cjs auto 22
 node gsd-core/bin/gsd-tools.cjs tokens
+node gsd-core/bin/gsd-tools.cjs graph
 ```
 
 ---

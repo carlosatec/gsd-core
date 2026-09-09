@@ -1467,6 +1467,9 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
   let inBlockComment = false;
   let inLineComment = false;
   let inDocstring: string | null = null;
+  let inStringSingle = false;
+  let inStringDouble = false;
+  let inTemplateLiteral = false;
   const chars = content.split('');
   const len = chars.length;
 
@@ -1508,6 +1511,48 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
       continue;
     }
 
+    if (inStringSingle) {
+      if (ch === '\\' && i + 1 < len) {
+        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
+        chars[i] = ' ';
+        i++;
+      } else if (ch === "'") {
+        inStringSingle = false;
+        chars[i] = ' ';
+      } else if (ch !== '\n') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inStringDouble) {
+      if (ch === '\\' && i + 1 < len) {
+        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
+        chars[i] = ' ';
+        i++;
+      } else if (ch === '"') {
+        inStringDouble = false;
+        chars[i] = ' ';
+      } else if (ch !== '\n') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inTemplateLiteral) {
+      if (ch === '\\' && i + 1 < len) {
+        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
+        chars[i] = ' ';
+        i++;
+      } else if (ch === '`') {
+        inTemplateLiteral = false;
+        chars[i] = ' ';
+      } else if (ch !== '\n') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
     // Block comment /* ... */
     if (ch === '/' && next === '*') {
       inBlockComment = true;
@@ -1542,6 +1587,23 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
         continue;
       }
     }
+
+    // String literals
+    if (ch === '"') {
+      inStringDouble = true;
+      chars[i] = ' ';
+      continue;
+    }
+    if (ch === "'") {
+      inStringSingle = true;
+      chars[i] = ' ';
+      continue;
+    }
+    if (ch === '`') {
+      inTemplateLiteral = true;
+      chars[i] = ' ';
+      continue;
+    }
   }
 
   return chars.join('');
@@ -1556,10 +1618,10 @@ function analyzeWithTypeScriptCompiler(
   filePath: string,
   content: string,
   ts: any,
-  aliases: TsConfigAliases | null
+  aliases: TsConfigAliases | null,
+  rootDir: string = process.cwd()
 ): FileAnalysisResult | null {
   try {
-    const rootDir = process.cwd();
     const sourceFile = ts.createSourceFile(
       filePath,
       content,
@@ -1805,7 +1867,7 @@ function analyzeWithTypeScriptCompiler(
 /**
  * Analyzes a source file across any supported ecosystem (TS/JS, Python, Go, Rust, C#, Java, PHP, Ruby, C/C++, Flutter, SQL, CSS, Docker, Shell).
  */
-function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisResult {
+function analyzeSourceFile(filePath: string, sourceText?: string, explicitRoot?: string): FileAnalysisResult {
   const content = sourceText ?? platformReadSync(filePath) ?? '';
   const ext = path.extname(filePath).toLowerCase();
   const baseName = path.basename(filePath).toLowerCase();
@@ -1878,14 +1940,14 @@ function analyzeSourceFile(filePath: string, sourceText?: string): FileAnalysisR
   }
 
   // 15. TypeScript / JavaScript — Tiered AST Engine
-  const rootDir = process.cwd();
+  const rootDir = explicitRoot ?? process.cwd();
   const tsConfigAliases = loadTsConfigAliases(rootDir);
 
   // Camada 1: Compilador TypeScript Oficial
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const tsModule = getTsModule();
   if (tsModule) {
-    const compiled = analyzeWithTypeScriptCompiler(filePath, content, tsModule, tsConfigAliases);
+    const compiled = analyzeWithTypeScriptCompiler(filePath, content, tsModule, tsConfigAliases, rootDir);
     if (compiled) return compiled;
   }
 
@@ -2177,7 +2239,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
             // Incremental AST cache hit via mtime + size
             result = prevFile;
           } else {
-            result = analyzeSourceFile(fullPath);
+            result = analyzeSourceFile(fullPath, undefined, rootDir);
             result.filePath = relKey;
             result.mtime = mtime;
             result.size = size;

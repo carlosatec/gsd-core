@@ -39,6 +39,7 @@
     "commands": [
       "/gsd-auto",
       "/gsd-exec",
+      "/gsd-graph",
       "/gsd-help",
       "/gsd-migrate",
       "/gsd-plan",

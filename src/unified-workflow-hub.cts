@@ -242,8 +242,6 @@ function executeReview(
       syncLivingDocs(resolvedPlanningDir, resolvedRoot);
       fixed.push(`Synchronized and resolved ${driftReport.discrepancies.length} living documentation drift item(s).`);
     }
-    fixed.push('Formatted and aligned AST dependency graph.');
-    fixed.push('Resolved linting whitespace and casing inconsistencies.');
   }
 
   // 6. Language-Calibrated Token Telemetry & Scope Mode Tracking (D-113, D-121)
@@ -399,7 +397,7 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
 
   if (!canonicalName) {
     throw new Error(
-      `Unknown or retired command "${rawCommand}". GSD Core strictly supports only the 10 unified canonical commands: status, plan, exec, review, verify, ship, auto, tokens, migrate, help.`
+      `Unknown or retired command "${rawCommand}". GSD Core strictly supports only the 11 unified canonical commands: status, plan, exec, review, verify, ship, auto, tokens, migrate, graph, help.`
     );
   }
 
@@ -506,6 +504,19 @@ function runInternalUnifiedCommand(
         planningDir,
         rootDir: cwd,
       });
+
+      const errorViolations = preFlightReport.violations.filter(v => v.severity === 'error');
+      const isForced = Boolean(options.flags?.['force'] || options.args.includes('--force'));
+
+      if (errorViolations.length > 0 && !isForced) {
+        return {
+          command: 'exec',
+          action: 'BLOCKED_BY_GUARDRAIL',
+          nextStep: 'resolve guardrail error violations or rerun with --force to bypass',
+          data: { preFlight: preFlightReport },
+          message: `Execution blocked by pre-flight guardrails: ${errorViolations.length} error-level violation(s) detected. Rerun with --force to override.`,
+        };
+      }
 
       try {
         initMod.cmdInitExecutePhase(cwd, phaseId, Boolean(options.raw));
@@ -657,7 +668,7 @@ function runInternalUnifiedCommand(
         command: 'help',
         action: 'DISPLAY_HELP',
         nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-        message: 'GSD Core Nexus 3.3 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help',
+        message: 'GSD Core Nexus 3.3 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
       };
   }
 }
@@ -671,6 +682,7 @@ export = {
   normalizeCommandName,
   dispatchUnifiedCommand,
   executeReview,
+  executeWithSelfHealing: guardrailsMod.executeWithSelfHealing,
   generateTestScaffold: testScaffolder.generateTestScaffold,
   findCanonicalExample: canonicalFinder.findCanonicalExample,
   renderTokenDashboard,

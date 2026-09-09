@@ -92,10 +92,10 @@ describe('unified-workflow-hub', () => {
         `# Roadmap\n## Phase 1\n- status: pending\n`
       );
 
-      const commands = ['auto', 'status', 'plan', 'exec', 'verify', 'ship'];
+      const commands = ['auto', 'status', 'plan', 'exec', 'verify', 'ship', 'graph', 'help'];
       for (const cmd of commands) {
         try {
-          const result = dispatchUnifiedCommand(cmd, { args: [], cwd: tmpProject, raw: true });
+          const result = dispatchUnifiedCommand(cmd, { args: ['--no-open'], cwd: tmpProject, raw: true });
           assert.strictEqual(result.command, cmd);
           assert.ok(result.message.length > 0);
 
@@ -107,6 +107,14 @@ describe('unified-workflow-hub', () => {
             assert.ok(result.data && result.data.preFlight);
             assert.ok(result.message.includes('guardrails'));
           }
+          if (cmd === 'help') {
+            assert.ok(result.message.includes('/gsd:graph'));
+            assert.ok(result.message.includes('/gsd:migrate'));
+          }
+          if (cmd === 'graph') {
+            assert.ok(result.data && result.data.htmlPath);
+            assert.ok(result.message.includes('Visual knowledge graph'));
+          }
         } catch (err) {
           // Some commands might legitimately throw in a mock env, but we just want to ensure they dispatch
           if (err.code !== 'ENOENT' && !err.message.includes('No current phase')) {
@@ -117,5 +125,15 @@ describe('unified-workflow-hub', () => {
     } finally {
       cleanup(tmpProject);
     }
+  });
+
+  test('enforces 11 canonical unified commands and rejects unknown with informative message', () => {
+    assert.strictEqual(normalizeCommandName('/gsd:graph'), 'graph');
+    assert.strictEqual(normalizeCommandName('/gsd-graph'), 'graph');
+
+    assert.throws(
+      () => dispatchUnifiedCommand('unknown-cmd', { args: [] }),
+      /strictly supports only the 11 unified canonical commands/
+    );
   });
 });

@@ -951,7 +951,7 @@ describe('installRuntimeArtifacts — H1: symlink escape still refuses', () => {
     sandboxHome(t, configDir);
     // Pre-create the skills destDir AS a symlink pointing outside configDir —
     // the guard must refuse before mkdirSync ever follows it.
-    fs.symlinkSync(outsideDir, path.join(configDir, 'skills'), 'dir');
+    fs.symlinkSync(outsideDir, path.join(configDir, 'skills'), process.platform === 'win32' ? 'junction' : 'dir');
 
     assert.throws(
       () => installRuntimeArtifacts('claude', configDir, 'global', RESOLVED_CORE),
@@ -967,7 +967,7 @@ describe('installRuntimeArtifacts — H2: opt-in still follows', () => {
     const outsideDir = createTempDir('gsd-h2-outside-');
     t.after(() => { cleanup(configDir); cleanup(outsideDir); });
     sandboxHome(t, configDir);
-    fs.symlinkSync(outsideDir, path.join(configDir, 'skills'), 'dir');
+    fs.symlinkSync(outsideDir, path.join(configDir, 'skills'), process.platform === 'win32' ? 'junction' : 'dir');
 
     const savedOptIn = process.env.GSD_ALLOW_SYMLINKED_DEST;
     process.env.GSD_ALLOW_SYMLINKED_DEST = '1';

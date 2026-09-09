@@ -1,7 +1,7 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 23 (Code Review Hardening, Security Sanitization & Full-Repo Telemetry Parity) | Status: Complete
-> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript.; **D-02 [Docs]:** Documentação viva incremental.; **D-03 [Context]:** JIT context injection cirúrgico.; **D-04 [Guardrails]:** Pre-flight static verification.; **D-122 [DOM Sanitization]:** Escape estrito em visual graph.; **D-123 [Spawn Isolation]:** Spawn seguro em openBrowserUrl.; **D-124 [Fail-Safe Atomic Write]:** Sem fallback destrutivo em platformWriteSync.; **D-125 [Structured Living Docs]:** Exposição de erros e partial.; **D-126 [Full-Repo Parity]:** Auto-estimador full-repo no CLI.; **D-127 [Self-Repo Guard]:** Bloqueio contra auto-destruição em uninstall.; **D-128 [MCP Strict Allowlist]:** Confinamento do MCP em .planning.; **D-129 [Telemetry Lock]:** withFileLockSync em toda gravação.; **D-130 [Case-Insensitive]:** Validação case-insensitive Windows/macOS.; **D-131 [Boolean Hub]:** Eliminação de tautologia booleana.; **D-132 [Build Invalidation]:** Limpeza de tsbuildinfo se faltarem arquivos.; **D-133 [Multi-Command Telemetry]:** Emissão em exec e verify.; **D-134 [Workflow Context]:** Comando auto com rastreamento.; **D-135 [Router Completeness]:** Registro de migrate, verify, help.; **D-136 [Migration Hardening]:** Suporte a dry-run e force em auto-upgrade.
-> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:help
+> **GSD Active State**: Phase: Phase 23 (Code Review Hardening, Security Sanitization & Full-Repo Telemetry Parity) | Status: In Progress (Plan 23-02 Active)
+> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 
 # GSD Core Nexus — Antigravity CLI context
@@ -49,6 +49,7 @@ namespace):
 - `/gsd-auto` — autonomous end-to-end autopilot across phase workflows.
 - `/gsd-tokens` — real-time token telemetry dashboard and savings breakdown.
 - `/gsd-migrate` — one-click non-destructive legacy project upgrade.
+- `/gsd-graph` — interactive HTML and Obsidian-compatible visual knowledge graph exporter.
 - `/gsd-help` — list every available command.
 
 ## Working with GSD

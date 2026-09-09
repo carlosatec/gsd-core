@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-3.3.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.3.2-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,30 +35,17 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## GSD Core Nexus 3.3: DeepSeek Harness, Session Replay, Versionamento Universal & AST 360°
+## Destaques do GSD Core Nexus 3.3
 
 O GSD Core Nexus 3.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
-- **Suporte de 1ª Classe ao DeepSeek Harness (`@deepseek-ai/dsh` — D-53):** Adaptador declarativo completo com suporte ao micro-kernel Cordis, transporte MCP e resolução de aliases de CLI (`dsh`, `deepseek`, `deepseek-cli`).
-- **Log Estruturado de Sessão & Retenção Inteligente (D-54 / D-55):** Gravação append-only em JSON Lines (`.planning/intel/sessions/`) com smart trimming de 32 KB para stack traces e diffs, sanitização automática de segredos por regex, hook transparente no Hub e retenção generosa de 50 sessões / 30 dias delimitada em disco (~25-40 MB gitignored).
-- **CLI de Replay Determinístico de Sessão (`gsd-tools session` — D-56):** Reconstrução interativa da linha do tempo com `--summary`, `--errors-only`, `--diffs`, atalho default `latest`, exportação Markdown e alimentação direta de diagnósticos de falha no `anti-pattern-store.cts`.
-- **Sistema Unificado de Versionamento & Release (`npm run version:bump` — D-57 / D-58):** Orquestrador atômico em um único comando (`scripts/bump-version.cjs`) com validação SemVer, sincronização em lockstep de todos os 49 manifestos, badges, módulos core e regeneração de pipelines derivados (`npm run version:check`).
-- **Superfície Pública Estrita de 10 Comandos (D-41 / D-42):** Menu slash simplificado e limpo contendo exclusivamente os 10 Comandos Canônicos Unificados (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `help`) com despacho fail-closed estrito e zero duplicações.
-- **Motor AST Universal & Mobile 360° Nativo:** Análise estática nativa cobrindo mais de 35 extensões com suporte completo **Mobile 360°** para iOS (Swift, SwiftUI, XCTest) e Android (Kotlin, Jetpack Compose, Hilt, JUnit 5, Gradle).
-- **Grafo de Conhecimento 100% Nativo (Zero Python — D-31):** Fachada Graphify nativa em TypeScript puro (`2.3-native`) construindo e consultando o grafo de dependências AST em memória sem dependência de Python externo.
-- **Hook de Contexto de Sessão (Zero Cegueira — D-30):** Injeta e atualiza automaticamente o estado ativo do projeto em `GEMINI.md`, `AGENTS.md` ou regras, fornecendo contexto instantâneo à IA na inicialização.
-- **RAG Semântico Okapi BM25 & Tokenizador Poliglota (D-33):** Recuperação semântica de alta precisão com saturação de termos ($k_1=1.5, b=0.75$), divisão inteligente de identificadores (`camelCase`, `PascalCase`, `kebab-case`, `snake_case`) e exclusão de caches mobile.
-- **Documentação Viva e Verificada:** Sincronização pós-commit que gera e valida automaticamente `.planning/codebase/ARCHITECTURE.md` e `.planning/codebase/APIS.md` contra o código real sem sobrecarga $O(n^2)$.
-- **Grafo Profundo & Âncoras Canônicas:** Módulos ordenados por relevância arquitetural (PageRank), permitindo que a IA se ancore em implementações canônicas de referência.
-- **Motor AST em 3 Camadas (D-100):** Compilador TypeScript oficial sob demanda (herança `extends`, type aliases, discriminated unions, assinaturas exatas e zero retenção no V8) com fallback universal para Lexer de 2 passes imune a comentários e docstrings em 9 linguagens poliglotas.
-- **JIT Quality-First & Fechamento Transitivo de Tipos (D-99):** Descoberta recursiva profunda de tipos até 3 graus de dependência (BFS 3 hops / cap de 50 tipos únicos) ordenados por PageRank com orçamentos dinâmicos model-aware (2.5K a 24K tokens).
-- **Pre-Flight Guardrails Sub-15ms & Co-Evolução Ativa (D-101 / D-102):** Cache de caminhos em memória ($O(1)$) derrubando a latência de validação de ~60ms para **1 a 3ms**, com emissão do aviso `SIGNATURE_DRIFT` e payload estruturado `CO_EVOLVE_CALLERS`.
-- **Memória Durável de Anti-Patterns com Okapi BM25:** Registra lições aprendidas de correções com ordenação de relevância BM25 e sanitização canônica de stack traces (`<PATH>`, `<LINE>`, `<HEX>`).
-- **Scaffolding de Testes por Topologia & Poliglota:** Gera esqueletos de teste respeitando a convenção nativa da linguagem (Swift XCTest, Kotlin/Java JUnit 5, Go `_test.go` inline, Rust `#[cfg(test)]`, Dart/Flutter `test/*_test.dart`, Python e Node isolados).
-- **Telemetria Holística de Tokens Multi-Comando & Blindagem de Concorrência (D-111 a D-121):** Observabilidade de tokens de ponta a ponta em `plan`, `exec` e `review`, com lock transacional (`withFileLockSync`), deduplicação de `invocationId`, auto-estimativa física de arquivos e painel ASCII estabilizado em 65 colunas com diagnósticos de pré-execução.
-- **Arquitetura de Review em Dois Modos (D-113, D-121):** Revisão seletiva cirúrgica poupando 80–95% de tokens via JIT, ao lado de auditoria global a custo zero (`/gsd:review --full` / `--repo`) com nós de PageRank e transparência métrica absoluta.
-- **Hub CLI Seam & Guardrails Ancorados na Raiz (D-117, D-119, D-120):** Execução direta dos 10 comandos pelo terminal (`node gsd-tools.cjs <comando>`), resolução dinâmica de argumentos de fase e validação pré-voo ancorada em `rootDir` imune a desvios de diretório (`cwd`).
-- **Blindagem de Concorrência & Segurança (D-35 a D-40):** Universal clock seam (`realClock.sleep` via `Atomics.wait`), confinamento seguro do MCP em `.planning/`, streaming JSON-RPC resiliente a chunks e sincronização de versão nos 49 manifests.
+1. **AST Universal 360° & Grafo Nativo (Zero Python):** Análise estática nativa em TypeScript puro para 35+ extensões com suporte completo a **Mobile 360°** (iOS/SwiftUI e Android/Kotlin Compose) e PageRank arquitetural.
+2. **Injeção Cirúrgica JIT & Fechamento Transitivo de Tipos:** Descoberta profunda de tipos em até 3 graus (BFS 3 hops), eliminando o *context rot* e economizando de **80% a 95% de tokens**.
+3. **Superfície Canônica Estrita de 11 Comandos:** Interface consolidada e unificada (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `graph`, `help`) consistente e sem duplicidades em todos os runtimes de IA.
+4. **Inteligência Causal de Sessão & CLI de Replay Determinístico (`gsd-tools session`):** Log append-only em JSONL com smart trimming de 32 KB, sanitização de segredos, ring buffer (50 sessões / 30 dias) e replay interativo no terminal.
+5. **Telemetria Holística de Tokens (Painel de 65 Colunas):** Observabilidade em tempo real com rastreamento transacional (`withFileLockSync`) nas etapas de `plan`, `exec`, `review` e `auto`.
+6. **Code Review em Modo Duplo com Auto-Reparo (`--fix`):** Revisão seletiva cirúrgica via JIT versus auditoria estática global de todo o repositório a custo zero (`--full` / `--repo`).
+7. **Suporte Nativo ao DeepSeek Harness (`@deepseek-ai/dsh`):** Integração declarativa via micro-kernel Cordis, transporte MCP e resolução transparente de aliases de CLI.
 
 ---
 

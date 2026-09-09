@@ -36,6 +36,7 @@
   "agents/gsd-verifier.md",
   "commands/gsd-auto.md",
   "commands/gsd-exec.md",
+  "commands/gsd-graph.md",
   "commands/gsd-help.md",
   "commands/gsd-migrate.md",
   "commands/gsd-plan.md",

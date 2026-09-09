@@ -126,10 +126,40 @@ function buildVisualGraphPayload(planningDir: string, rootDir?: string): VisualG
 
     // Add import links
     if (fileData.localDeps && Array.isArray(fileData.localDeps)) {
+      const fileDir = path.dirname(fileRel);
       for (const dep of fileData.localDeps) {
+        let resolvedDep = dep.replace(/\\/g, '/').replace(/^\.\//, '');
+        if (dep.startsWith('.')) {
+          resolvedDep = path.normalize(path.join(fileDir, dep)).replace(/\\/g, '/').replace(/^\.\//, '');
+        }
+        const candidates = [
+          resolvedDep,
+          resolvedDep + '.ts',
+          resolvedDep + '.tsx',
+          resolvedDep + '.cts',
+          resolvedDep + '.mts',
+          resolvedDep + '.js',
+          resolvedDep + '.jsx',
+          resolvedDep + '.cjs',
+          resolvedDep + '.mjs',
+          resolvedDep.replace(/\.c?js$/, '.cts'),
+          resolvedDep.replace(/\.c?js$/, '.ts'),
+          resolvedDep.replace(/\.m?js$/, '.mts'),
+          resolvedDep + '/index.ts',
+          resolvedDep + '/index.cts',
+          resolvedDep + '/index.js',
+          resolvedDep + '/index.cjs',
+        ];
+        let targetKey = dep;
+        for (const cand of candidates) {
+          if (graph.files && graph.files[cand]) {
+            targetKey = cand;
+            break;
+          }
+        }
         links.push({
           source: fileRel,
-          target: dep,
+          target: targetKey,
           type: 'import',
         });
       }

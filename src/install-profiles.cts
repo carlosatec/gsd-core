@@ -80,6 +80,7 @@ const CANONICAL_COMMAND_STEMS = Object.freeze([
   'auto',
   'tokens',
   'migrate',
+  'graph',
   'help',
 ]);
 
@@ -158,8 +159,34 @@ function loadSkillsManifest(commandsDir: string = DEFAULT_COMMANDS_DIR): Map<str
     try {
       const content = fs.readFileSync(path.join(commandsDir, entry.name), 'utf8');
       manifest.set(stem, parseRequires(content));
-      // Derive agent references from body text
-      const agentRefs = parseCallsAgents(content);
+      // Derive agent references from body text and referenced workflow descriptors
+      let agentRefs = parseCallsAgents(content);
+      const wfMatches = content.match(/workflows\/([a-z0-9_-]+)\.md/g);
+      if (wfMatches) {
+        const possibleWfDirs = [
+          path.resolve(commandsDir, '..', '..', 'gsd-core', 'workflows'),
+          path.resolve(commandsDir, '..', '..', 'workflows'),
+          path.resolve(__dirname, '..', '..', 'workflows'),
+        ];
+        let wfDir: string | undefined;
+        for (const d of possibleWfDirs) {
+          if (fs.existsSync(d)) { wfDir = d; break; }
+        }
+        if (wfDir) {
+          for (const wfMatch of wfMatches) {
+            const wfFile = path.join(wfDir, path.basename(wfMatch));
+            if (fs.existsSync(wfFile)) {
+              try {
+                const wfContent = fs.readFileSync(wfFile, 'utf8');
+                const wfAgents = parseCallsAgents(wfContent);
+                agentRefs = [...new Set([...agentRefs, ...wfAgents])];
+              } catch {
+                // Non-blocking
+              }
+            }
+          }
+        }
+      }
       manifest.set(`_calls_agents_${stem}`, agentRefs);
     } catch {
       manifest.set(stem, []);

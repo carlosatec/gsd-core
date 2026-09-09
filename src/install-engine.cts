@@ -1775,6 +1775,10 @@ function installOpencodeFamilyArtifacts(
     configDir,
     behaviors.flatCommandDir || 'command',
   );
+  const skillsDest = runtimeArtifactInstallPlan.assertDestWithinConfigHome(
+    configDir,
+    'skills',
+  );
   installOpencodeFamilyCommands(runtime, commandDir, rawCommandsDir, pathPrefix, resolveAttribution);
   const skillsWritten = installOpencodeFamilySkills(runtime, configDir, rawCommandsDir, pathPrefix, resolveAttribution, resolvedProfile, capabilityRegistry);
   // #2875 Part 2 Task A: agents kind, reusing the SAME descriptor path the
@@ -1795,7 +1799,7 @@ function installOpencodeFamilyArtifacts(
     scope,
     kinds: [
       { kind: 'commands', sourceDir: rawCommandsDir, destDir: commandDir },
-      { kind: 'skills', sourceDir: rawCommandsDir, destDir: configDir, written: skillsWritten },
+      { kind: 'skills', sourceDir: rawCommandsDir, destDir: skillsDest, written: skillsWritten },
       ...(agentsResult ? [{ kind: 'agents', sourceDir: agentsResult.sourceDir, destDir: agentsResult.destDir }] : []),
     ],
     cleanup: [],

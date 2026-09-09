@@ -271,13 +271,20 @@ function isAllowedStatePath(targetPath: string, cwd: string): { safe: boolean; r
     }
   }
 
-  // 2. Authorized state document in root or test dir
+  // 2. Authorized state document in project root
   const baseName = path.basename(resolved).toLowerCase();
   if (ALLOWED_ROOT_STATE_FILES.has(baseName)) {
     const parentDir = path.dirname(resolved);
-    const parentCheck = validatePath(resolved, parentDir, { allowAbsolute: true });
-    if (parentCheck.safe) {
-      return { safe: true, resolved };
+    const resolvedCwd = path.resolve(cwd);
+    const isExactRoot = process.platform === 'win32' || process.platform === 'darwin'
+      ? parentDir.toLowerCase() === resolvedCwd.toLowerCase()
+      : parentDir === resolvedCwd;
+
+    if (isExactRoot) {
+      const rootCheck = validatePath(resolved, resolvedCwd, { allowAbsolute: true });
+      if (rootCheck.safe) {
+        return { safe: true, resolved };
+      }
     }
   }
 

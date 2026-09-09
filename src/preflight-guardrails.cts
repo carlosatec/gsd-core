@@ -443,6 +443,18 @@ async function executeWithSelfHealing(
     }
   }
 
+  if (planningDir && history.length > 0) {
+    const last = history[history.length - 1];
+    try {
+      recordAntiPattern(planningDir, {
+        error: last.error,
+        lesson: `Persistent unhealed error after ${attempts} attempt(s): "${last.error}"`,
+      });
+    } catch {
+      // Non-blocking
+    }
+  }
+
   return {
     success: false,
     attempts,

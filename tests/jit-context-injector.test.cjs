@@ -100,4 +100,33 @@ describe('jit-context-injector', () => {
       cleanup(tmpProject);
     }
   });
+
+  test('ranks decisions by relevance to targetFiles and query over naive chronological order', () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), 'jit-decisions-'));
+    try {
+      const srcDir = path.join(tmpProject, 'src');
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(path.join(srcDir, 'auth.ts'), 'export const auth = true;');
+
+      const planningDir = path.join(tmpProject, '.planning');
+      fs.mkdirSync(planningDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(planningDir, 'STATE.md'),
+        `# State\n## Decisions\n- **D-01 [Database]**: Use connection pool for all database operations.\n- **D-02 [Cache]**: Use Redis for distributed session caching.\n- **D-03 [Logging]**: Standardize Winston JSON structured logging.\n- **D-04 [Metrics]**: Prometheus endpoint on port 9090.\n- **D-05 [Networking]**: Keep-alive HTTP agent timeout 30s.\n- **D-12 [Security / Auth]**: Require JWT Bearer tokens on all auth endpoints.\n`
+      );
+
+      const result = assembleJitContext({
+        targetFiles: ['src/auth.ts'],
+        planningDir,
+        rootDir: tmpProject,
+        maxDecisions: 2,
+      });
+
+      // D-12 matches "auth" from src/auth.ts and must be ranked first over D-01/D-02
+      assert.strictEqual(result.applicableDecisions.length, 2);
+      assert.ok(result.applicableDecisions[0].includes('D-12 [Security / Auth]'));
+    } finally {
+      cleanup(tmpProject);
+    }
+  });
 });
