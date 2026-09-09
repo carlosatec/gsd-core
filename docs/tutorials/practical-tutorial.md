@@ -1,8 +1,8 @@
-# 🚀 Practical Tutorial: Mastering GSD Core Nexus 3.2
+# 🚀 Practical Tutorial: Mastering GSD Core Nexus 3.3
 
 > 🌐 **Language / Idioma:** **English** | [Versão em Português (Brasil)](../pt-BR/tutorials/tutorial-pratico.md)  
 > **Git. Ship. Done.**  
-> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 3.2**.
+> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 3.3**.
 
 ---
 
@@ -92,17 +92,17 @@ Generates the specification and task plans for the upcoming milestone phase base
 ```bash
 /gsd-migrate
 ```
-Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 3.2 non-destructively.
+Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 3.3 non-destructively.
 
 ---
 
 ## 4. The 10 Canonical Unified Commands Surface
 
-In GSD 3.2, the user-facing command surface is strictly consolidated into **10 canonical commands**, while all operational playbooks are dynamically loaded on-demand via execution context:
+In GSD 3.3, the user-facing command surface is strictly consolidated into **10 canonical commands**, while all operational playbooks are dynamically loaded on-demand via execution context:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 GSD 3.2 CANONICAL INTERFACE                 │
+│                 GSD 3.3 CANONICAL INTERFACE                 │
 ├────────────┬────────────────────────────────────────────────┤
 │ Command    │ Operational Purpose                            │
 ├────────────┼────────────────────────────────────────────────┤
@@ -158,7 +158,7 @@ In GSD 3.2, the user-facing command surface is strictly consolidated into **10 c
 
 9. **`/gsd-migrate` — Non-Destructive Project Modernization:**
    - **What it does:** Safely snapshots legacy GSD directories, converts older schemas and roadmaps to wave execution, runs the Universal 360° AST analyzer, and generates `.planning/intel/` (`codebase-graph.json`, `ARCHITECTURE.md`, `APIS.md`).
-   - **When to use:** When bringing an existing project from older GSD versions to GSD Nexus 3.2.
+   - **When to use:** When bringing an existing project from older GSD versions to GSD Core Nexus 3.3.
 
 10. **`/gsd-help` — Interactive Reference Guide:**
     - **What it does:** Displays all 10 canonical commands, accepted runtime syntax variants, and CLI flags.
@@ -306,7 +306,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Unified Version Management & Release System
 
-GSD Core Nexus 3.2 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
+GSD Core Nexus 3.3 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevate version across all 49 capability manifests, core modules, lockfiles, and badges
@@ -387,4 +387,4 @@ Follow a complete end-to-end GSD development flow:
 
 ---
 
-*GSD Core Nexus 3.2 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*
+*GSD Core Nexus 3.3 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*

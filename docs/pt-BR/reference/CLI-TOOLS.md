@@ -35,7 +35,7 @@ node gsd-tools.cjs <command> [args] [--raw] [--cwd <path>]
 
 ## Roteamento Canônico de Comandos Unificados
 
-A partir do GSD 3.2, todos os 10 comandos canônicos podem ser despachados diretamente pelo `gsd-tools`:
+A partir do GSD 3.3, todos os 10 comandos canônicos podem ser despachados diretamente pelo `gsd-tools`:
 
 ```bash
 # Diagnóstico situacional e inspeção do roadmap ativo

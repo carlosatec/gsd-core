@@ -8,7 +8,7 @@ Versões por idioma: [English](../README.md) · [Português (pt-BR)](README.md)
 
 ## Tutoriais
 
-- [Tutorial Prático: Dominando o GSD Core Nexus 3.2](tutorials/tutorial-pratico.md) ([English](../tutorials/practical-tutorial.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 3.3](tutorials/tutorial-pratico.md) ([English](../tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](tutorials/your-first-project.md) — da instalação à primeira fase entregue, um caminho garantido
 - [Integrando uma base de código existente](tutorials/onboarding-an-existing-codebase.md) — leve o GSD Core a um repositório já existente
 

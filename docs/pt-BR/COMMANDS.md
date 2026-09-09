@@ -13,9 +13,9 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (GSD 3.2)
+## Interface Canônica Unificada (GSD 3.3)
 
-A partir do GSD 3.2, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 3.3, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
@@ -34,7 +34,7 @@ A partir do GSD 3.2, a superfície pública de comandos foi estritamente consoli
 
 ### Code Review em Dois Modos (`/gsd-review`)
 
-O GSD 3.2 introduz uma distinção explícita entre revisões seletivas focadas na fase e auditorias globais de todo o repositório:
+O GSD 3.3 introduz uma distinção explícita entre revisões seletivas focadas na fase e auditorias globais de todo o repositório:
 
 - **Modo Seletivo (`targeted` — padrão):** Audita os arquivos modificados identificados via git diff ou pelos planos da fase ativa (`--files=...`, `[fase]`). Utiliza a injeção JIT calibrada por linguagem para atingir de 80% a 95% de economia de tokens contra o repositório completo.
 - **Modo Global do Repositório (`full-repo` — `--full` / `--repo`):** Executa auditoria estática abrangente de todo o AST do projeto a custo zero de tokens locais. Identifica gargalos arquiteturais priorizando os hubs centrais de PageRank (`queryTopCentralFiles`), registrando métricas transparentes (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) com honestidade métrica rigorosa.
@@ -52,7 +52,7 @@ O GSD 3.2 introduz uma distinção explícita entre revisões seletivas focadas 
 
 ### CLI de Telemetria Holística de Tokens (`/gsd-tokens` & `gsd-tools tokens`)
 
-A telemetria de tokens no GSD 3.2 monitora o consumo em **todas** as etapas operacionais — incluindo `plan`, `exec` e `review`. As gravações são protegidas por lock atômico cooperativo (`withFileLockSync`) e deduplicação (`invocationId`).
+A telemetria de tokens no GSD 3.3 monitora o consumo em **todas** as etapas operacionais — incluindo `plan`, `exec` e `review`. As gravações são protegidas por lock atômico cooperativo (`withFileLockSync`) e deduplicação (`invocationId`).
 
 ```bash
 # Exibe o painel ASCII de 65 colunas responsivo
@@ -89,7 +89,7 @@ node gsd-core/bin/gsd-tools.cjs tokens
 
 ### Inteligência de Sessão & CLI de Replay Determinístico
 
-O GSD 3.2 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
+O GSD 3.3 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
 
 ```bash
 # Replay da última sessão no terminal

@@ -116,7 +116,7 @@ function updateDocumentationFiles(root, version, majorMinor, dryRun = false) {
     }
   }
 
-  // 2. TUTORIALs & User Guides
+  // 2. TUTORIALs, User Guides & Docs Indexes
   for (const rel of [
     'docs/tutorials/practical-tutorial.md',
     'docs/pt-BR/tutorials/tutorial-pratico.md',
@@ -124,12 +124,14 @@ function updateDocumentationFiles(root, version, majorMinor, dryRun = false) {
     'docs/pt-BR/USER-GUIDE.md',
     'docs/ARCHITECTURE.md',
     'docs/pt-BR/ARCHITECTURE.md',
+    'docs/README.md',
+    'docs/pt-BR/README.md',
   ]) {
     const abs = path.join(root, rel);
     if (fs.existsSync(abs)) {
       let content = fs.readFileSync(abs, 'utf8');
       const prev = content;
-      content = content.replace(/GSD Core Nexus \d+\.\d+/g, `GSD Core Nexus ${majorMinor}`);
+      content = content.replace(/GSD (?:Core )?Nexus \d+\.\d+/g, `GSD Core Nexus ${majorMinor}`);
       content = content.replace(/GSD \d+\.\d+ CANONICAL INTERFACE/g, `GSD ${majorMinor} CANONICAL INTERFACE`);
       content = content.replace(/INTERFACE CANÔNICA GSD \d+\.\d+/g, `INTERFACE CANÔNICA GSD ${majorMinor}`);
       content = content.replace(/INTERFACE CANONICA GSD \d+\.\d+/g, `INTERFACE CANONICA GSD ${majorMinor}`);
@@ -308,17 +310,21 @@ function checkRepositoryVersionSync(opts = {}) {
     }
   }
 
-  // Check TUTORIALs & User Guides
+  // Check TUTORIALs, User Guides & Docs Indexes
   for (const rel of [
     'docs/tutorials/practical-tutorial.md',
     'docs/pt-BR/tutorials/tutorial-pratico.md',
     'docs/USER-GUIDE.md',
     'docs/pt-BR/USER-GUIDE.md',
+    'docs/ARCHITECTURE.md',
+    'docs/pt-BR/ARCHITECTURE.md',
+    'docs/README.md',
+    'docs/pt-BR/README.md',
   ]) {
     const abs = path.join(root, rel);
     if (fs.existsSync(abs)) {
       const content = fs.readFileSync(abs, 'utf8');
-      const m = content.match(/GSD Core Nexus (\d+\.\d+)/);
+      const m = content.match(/GSD (?:Core )?Nexus (\d+\.\d+)/);
       if (m && m[1] !== majorMinor) {
         drift.push({ manifest: rel, found: m[1], expected: majorMinor });
       }
@@ -332,6 +338,26 @@ function checkRepositoryVersionSync(opts = {}) {
     const m = content.match(/version:\s*['"]([^'"]+)['"]/);
     if (m && m[1] !== version) {
       drift.push({ manifest: 'src/auto-upgrade-engine.cts', found: m[1], expected: version });
+    }
+  }
+
+  // Check src/living-docs-engine.cts
+  const livingDocsPath = path.join(root, 'src', 'living-docs-engine.cts');
+  if (fs.existsSync(livingDocsPath)) {
+    const content = fs.readFileSync(livingDocsPath, 'utf8');
+    const m = content.match(/GSD Core Nexus (\d+\.\d+) Living Docs/);
+    if (m && m[1] !== majorMinor) {
+      drift.push({ manifest: 'src/living-docs-engine.cts', found: m[1], expected: majorMinor });
+    }
+  }
+
+  // Check src/unified-workflow-hub.cts
+  const hubPath = path.join(root, 'src', 'unified-workflow-hub.cts');
+  if (fs.existsSync(hubPath)) {
+    const content = fs.readFileSync(hubPath, 'utf8');
+    const m = content.match(/GSD Core Nexus (\d+\.\d+)/);
+    if (m && m[1] !== majorMinor) {
+      drift.push({ manifest: 'src/unified-workflow-hub.cts', found: m[1], expected: majorMinor });
     }
   }
 

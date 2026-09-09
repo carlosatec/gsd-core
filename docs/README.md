@@ -8,7 +8,7 @@ Language versions: [English](README.md) · [Português (pt-BR)](pt-BR/README.md)
 
 ## Tutorials
 
-- [Practical Tutorial: Mastering GSD Core Nexus 3.2](tutorials/practical-tutorial.md) ([Português](pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 3.3](tutorials/practical-tutorial.md) ([Português](pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](tutorials/your-first-project.md) — install to first shipped phase, one guaranteed path
 - [Onboarding an existing codebase](tutorials/onboarding-an-existing-codebase.md) — bring GSD Core to a brownfield repo
 - [Build your first capability](tutorials/build-your-first-capability.md) — author a tiny declarative capability and watch it act in the loop

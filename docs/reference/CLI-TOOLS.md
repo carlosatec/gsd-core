@@ -35,7 +35,7 @@ node gsd-tools.cjs <command> [args] [--raw] [--cwd <path>]
 
 ## Canonical Unified Command Routers
 
-Starting in GSD 3.2, all canonical commands dispatch directly through `gsd-tools`:
+Starting in GSD 3.3, all canonical commands dispatch directly through `gsd-tools`:
 
 ```bash
 # Situational diagnostics & active roadmap inspection

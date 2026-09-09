@@ -39,7 +39,7 @@ Para catálogo completo e detalhamento exaustivo, consulte [FEATURES.md em ingl�
 - **Diagnóstico forense** com `/gsd-forensics`
 - **Relatório de sessão** com `/gsd-pause-work --report`
 
-## Novidades no GSD 3.2
+## Novidades no GSD Core Nexus 3.3
 
 - **Telemetria Holística de Tokens Multi-Comando (D-111 a D-121):** Monitoramento de tokens em `plan`, `exec` e `review` com lock transacional (`withFileLockSync`), deduplicação de `invocationId`, auto-estimador por arquivos físicos e dashboard em 65 colunas.
 - **Review em Modo Duplo:** Suporte a `--full` / `--repo` para auditoria estática global de todo o repositório a custo zero de tokens com nós centrais de PageRank, ao lado da revisão seletiva cirúrgica via JIT (80-95% poupados).

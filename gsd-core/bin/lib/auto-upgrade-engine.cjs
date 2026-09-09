@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 3.2.
+ * Auto-Upgrade Engine — Seamless non-destructive upgrade from legacy projects to GSD Core Nexus 3.3.
  *
  * Scans the repository, creates the multi-language AST topology, materializes
  * living architecture & API contracts, and initializes telemetry.
@@ -177,7 +177,7 @@ function runAutoUpgrade(planningDir, rootDir, options) {
     if (options?.dryRun) {
         return {
             success: true,
-            version: '3.2.0',
+            version: '3.3.0',
             isNewMigration,
             indexedFiles: graph.stats.totalFiles,
             detectedLanguages,
@@ -186,7 +186,7 @@ function runAutoUpgrade(planningDir, rootDir, options) {
             totalRoutes: graph.stats.totalRoutes,
             docsUpdated: 0,
             generatedArtifacts: [],
-            message: `[Dry-Run] Projected upgrade to GSD Core Nexus 3.2: would index ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. No files were written.`,
+            message: `[Dry-Run] Projected upgrade to GSD Core Nexus 3.3: would index ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. No files were written.`,
         };
     }
     (0, shell_command_projection_cjs_1.platformEnsureDir)(resolvedPlanningDir);
@@ -224,7 +224,7 @@ function runAutoUpgrade(planningDir, rootDir, options) {
     ];
     return {
         success: true,
-        version: '3.2.0',
+        version: '3.3.0',
         isNewMigration,
         indexedFiles: graph.stats.totalFiles,
         detectedLanguages,
@@ -236,8 +236,8 @@ function runAutoUpgrade(planningDir, rootDir, options) {
         errors: syncReport.errors,
         partial: syncReport.partial,
         message: isNewMigration
-            ? `Successfully upgraded project to GSD Core Nexus 3.2. Indexed ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. Generated ${syncReport.generatedDocs.length} living doc(s).`
-            : `Refreshed GSD Core Nexus 3.2 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
+            ? `Successfully upgraded project to GSD Core Nexus 3.3. Indexed ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. Generated ${syncReport.generatedDocs.length} living doc(s).`
+            : `Refreshed GSD Core Nexus 3.3 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,
     };
 }
 module.exports = {

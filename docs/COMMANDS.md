@@ -13,9 +13,9 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ---
 
-## Canonical Unified Interface (GSD 3.2)
+## Canonical Unified Interface (GSD 3.3)
 
-Starting in GSD 3.2, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
+Starting in GSD 3.3, the public command surface is strictly consolidated into **10 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step |
 |---------|------------------------|
@@ -34,7 +34,7 @@ Starting in GSD 3.2, the public command surface is strictly consolidated into **
 
 ### Dual-Mode Code Review (`/gsd-review`)
 
-GSD 3.2 introduces an explicit architectural distinction between surgical phase reviews and whole-repository audits:
+GSD 3.3 introduces an explicit architectural distinction between surgical phase reviews and whole-repository audits:
 
 - **Targeted Mode (`targeted` — default):** Audits changed files derived from git diff or active phase plans (`--files=...`, `[phase]`). Leverages language-calibrated JIT context injection to achieve 80% to 95% token savings versus the full repository baseline.
 - **Whole-Repository Mode (`full-repo` — `--full` / `--repo`):** Performs a comprehensive static audit of the entire codebase AST at cost zero. Identifies architectural hotspots using PageRank centrality hubs (`queryTopCentralFiles`), reporting transparent metrics (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) with absolute metric honesty.
@@ -52,7 +52,7 @@ GSD 3.2 introduces an explicit architectural distinction between surgical phase 
 
 ### Holistic Token Telemetry CLI (`/gsd-tokens` & `gsd-tools tokens`)
 
-Token telemetry in GSD 3.2 tracks context economy across **all** workflow steps — including `plan`, `exec`, and `review`. Telemetry persistence is strictly protected by atomic file locking (`withFileLockSync`) and deduplication (`invocationId`).
+Token telemetry in GSD 3.3 tracks context economy across **all** workflow steps — including `plan`, `exec`, and `review`. Telemetry persistence is strictly protected by atomic file locking (`withFileLockSync`) and deduplication (`invocationId`).
 
 ```bash
 # Display the stabilized 65-column ASCII telemetry dashboard
@@ -89,7 +89,7 @@ node gsd-core/bin/gsd-tools.cjs tokens
 
 ### Session Intelligence & Deterministic Replay CLI
 
-GSD 3.2 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/`. You can inspect, replay, and export sessions via `gsd-tools`:
+GSD 3.3 automatically records append-only execution events for all unified commands in `.planning/intel/sessions/`. You can inspect, replay, and export sessions via `gsd-tools`:
 
 ```bash
 # Replay the latest session timeline in the terminal
