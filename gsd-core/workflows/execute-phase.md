@@ -1434,6 +1434,9 @@ Gap closure cycle: `/gsd:plan-phase {X} --gaps ${GSD_WS}` reads VERIFICATION.md 
 
 ```bash
 COMPLETION=$(gsd_run query phase.complete "${PHASE_NUMBER}")
+
+# Record real telemetry for exec step (D-114, Phase 23)
+gsd_run telemetry record --command exec --phase "${PHASE_NUMBER}" --from-phase "${PHASE_NUMBER}" || true
 ```
 
 The CLI handles:

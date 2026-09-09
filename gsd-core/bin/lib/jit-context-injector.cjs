@@ -37,7 +37,7 @@ const { getContextWindowLimit } = modelCatalogMod;
  * Finds symbols from directly connected files (imports & callers) in the AST graph.
  */
 function queryNeighboringSymbols(graph, targetFile) {
-    const normalized = targetFile.replace(/\\/g, '/');
+    const normalized = targetFile.replace(/\\/g, '/').replace(/^\.\//, '');
     const deps = queryFileDependencies(graph, normalized);
     const results = [];
     const scores = graph.pageRankScores || {};
@@ -59,7 +59,7 @@ function queryNeighboringSymbols(graph, targetFile) {
     // Outgoing dependencies (files that targetFile imports)
     const fileDir = node_path_1.default.dirname(targetFile);
     for (const imp of deps.imports) {
-        const resolved = node_path_1.default.normalize(node_path_1.default.join(fileDir, imp)).replace(/\\/g, '/');
+        const resolved = node_path_1.default.normalize(node_path_1.default.join(fileDir, imp)).replace(/\\/g, '/').replace(/^\.\//, '');
         const candidates = [
             imp,
             resolved,
@@ -196,7 +196,7 @@ function assembleJitContext(options) {
     const queue = [];
     const visitedFiles = new Set();
     for (const file of targetFiles) {
-        const norm = file.replace(/\\/g, '/');
+        const norm = file.replace(/\\/g, '/').replace(/^\.\//, '');
         queue.push({ file: norm, depth: 0 });
         visitedFiles.add(norm);
     }
@@ -232,7 +232,7 @@ function assembleJitContext(options) {
             const neighbors = fileNode.localDeps || [];
             const fileDir = node_path_1.default.dirname(item.file);
             for (const dep of neighbors) {
-                const resolved = node_path_1.default.normalize(node_path_1.default.join(fileDir, dep)).replace(/\\/g, '/');
+                const resolved = node_path_1.default.normalize(node_path_1.default.join(fileDir, dep)).replace(/\\/g, '/').replace(/^\.\//, '');
                 const candidates = [
                     resolved,
                     resolved + '.ts',

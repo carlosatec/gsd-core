@@ -104,7 +104,14 @@ export function validatePath(filePath: unknown, baseDir: unknown, opts: { allowA
   }
   const normalizedBase = resolvedBase + path.sep;
   const normalizedPath = resolvedPath + path.sep;
-  if (resolvedPath !== resolvedBase && !normalizedPath.startsWith(normalizedBase)) {
+  const isCaseInsensitive = process.platform === 'win32' || process.platform === 'darwin';
+  const cmpBase = isCaseInsensitive ? normalizedBase.toLowerCase() : normalizedBase;
+  const cmpPath = isCaseInsensitive ? normalizedPath.toLowerCase() : normalizedPath;
+  const isExactMatch = isCaseInsensitive
+    ? resolvedPath.toLowerCase() === resolvedBase.toLowerCase()
+    : resolvedPath === resolvedBase;
+
+  if (!isExactMatch && !cmpPath.startsWith(cmpBase)) {
     return {
       safe: false,
       resolved: resolvedPath,

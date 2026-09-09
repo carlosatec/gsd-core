@@ -90,7 +90,7 @@ interface AssembleJitContextOptions {
  * Finds symbols from directly connected files (imports & callers) in the AST graph.
  */
 function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): NeighborSymbolInfo[] {
-  const normalized = targetFile.replace(/\\/g, '/');
+  const normalized = targetFile.replace(/\\/g, '/').replace(/^\.\//, '');
   const deps = queryFileDependencies(graph, normalized);
   const results: NeighborSymbolInfo[] = [];
   const scores = graph.pageRankScores || {};
@@ -113,7 +113,7 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   // Outgoing dependencies (files that targetFile imports)
   const fileDir = path.dirname(targetFile);
   for (const imp of deps.imports) {
-    const resolved = path.normalize(path.join(fileDir, imp)).replace(/\\/g, '/');
+    const resolved = path.normalize(path.join(fileDir, imp)).replace(/\\/g, '/').replace(/^\.\//, '');
     const candidates = [
       imp,
       resolved,
@@ -268,7 +268,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const visitedFiles = new Set<string>();
 
   for (const file of targetFiles) {
-    const norm = file.replace(/\\/g, '/');
+    const norm = file.replace(/\\/g, '/').replace(/^\.\//, '');
     queue.push({ file: norm, depth: 0 });
     visitedFiles.add(norm);
   }
@@ -306,7 +306,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
       const neighbors = fileNode.localDeps || [];
       const fileDir = path.dirname(item.file);
       for (const dep of neighbors) {
-        const resolved = path.normalize(path.join(fileDir, dep)).replace(/\\/g, '/');
+        const resolved = path.normalize(path.join(fileDir, dep)).replace(/\\/g, '/').replace(/^\.\//, '');
         const candidates = [
           resolved,
           resolved + '.ts',

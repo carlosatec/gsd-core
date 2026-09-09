@@ -38,7 +38,10 @@ const testFiles = [
   'tests/visual-graph-exporter.test.cjs',
   'tests/obsidian-interop.test.cjs',
   'tests/canvas-roadmap-generator.test.cjs',
-  'tests/bump-version.test.cjs'
+  'tests/bump-version.test.cjs',
+  'tests/uninstall-self-repo-guard.test.cjs',
+  'tests/telemetry-multi-command.test.cjs',
+  'tests/mcp-server-security.test.cjs'
 ];
 
 const concurrency = Math.max(1, Math.min(os.cpus()?.length || 2, 4));

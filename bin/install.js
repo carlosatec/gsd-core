@@ -741,6 +741,7 @@ const installEngine = require(path.join(_gsdLibDir, 'install-engine.cjs'));
 // same — unused local bindings that were never part of this module's export
 // surface either — found and retired in the same sweep.
 const {
+  assertNotSourceRepository,
   installRuntimeArtifacts,
   uninstallRuntimeArtifacts,
   installOpencodeFamilySkills,
@@ -7872,6 +7873,8 @@ function uninstall(isGlobal, runtime = DEFAULT_RUNTIME) {
   // runtimeLabel is now the single-source getRuntimeLabel lookup (ADR-1239
   // Phase B / #1679) — collapses the prior 15-line assignment chain.
   const runtimeLabel = getRuntimeLabel(runtime);
+
+  assertNotSourceRepository(targetDir, isGlobal);
 
   console.log(`  Uninstalling GSD from ${cyan}${runtimeLabel}${reset} at ${cyan}${locationLabel}${reset}\n`);
 

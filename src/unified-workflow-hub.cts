@@ -426,7 +426,7 @@ function runInternalUnifiedCommand(
   switch (canonicalName) {
     case 'auto':
       try {
-        initMod.cmdInitAutonomous(cwd, options.raw || true);
+        initMod.cmdInitAutonomous(cwd, Boolean(options.raw));
       } catch {
         // Non-blocking in mock environments
       }
@@ -483,7 +483,7 @@ function runInternalUnifiedCommand(
       }
 
       try {
-        initMod.cmdInitPlanPhase(cwd, phaseId, options.raw || true);
+        initMod.cmdInitPlanPhase(cwd, phaseId, Boolean(options.raw));
       } catch {
         // Non-blocking in mock environments
       }
@@ -508,7 +508,7 @@ function runInternalUnifiedCommand(
       });
 
       try {
-        initMod.cmdInitExecutePhase(cwd, phaseId, options.raw || true);
+        initMod.cmdInitExecutePhase(cwd, phaseId, Boolean(options.raw));
       } catch {
         // Non-blocking in mock environments
       }
@@ -569,7 +569,7 @@ function runInternalUnifiedCommand(
       const phaseId = resolveActivePhaseId(planningDir, options.args);
       let autoPassed = false;
       try {
-        initMod.cmdInitVerifyWork(cwd, phaseId, options.raw || true);
+        initMod.cmdInitVerifyWork(cwd, phaseId, Boolean(options.raw));
       } catch {
         // Non-blocking in mock environments
       }
@@ -600,7 +600,7 @@ function runInternalUnifiedCommand(
     }
 
     case 'ship':
-      initMod.cmdInitCompleteMilestone(cwd, options.raw || true);
+      initMod.cmdInitCompleteMilestone(cwd, Boolean(options.raw));
       return {
         command: 'ship',
         action: 'SHIP_RELEASE',
@@ -609,7 +609,11 @@ function runInternalUnifiedCommand(
       };
 
     case 'migrate': {
-      const report = runAutoUpgrade(planningDir, cwd);
+      const upgradeOpts = {
+        dryRun: Boolean(options.flags?.['dry-run'] || options.flags?.['dryRun'] || options.args.includes('--dry-run')),
+        force: Boolean(options.flags?.['force'] || options.args.includes('--force')),
+      };
+      const report = runAutoUpgrade(planningDir, cwd, upgradeOpts);
       return {
         command: 'migrate',
         action: 'UPGRADE_LEGACY_PROJECT',

@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { platformEnsureDir } from './shell-command-projection.cjs';
+import { platformEnsureDir, platformWriteSync, withFileLockSync } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -21,6 +21,11 @@ const { loadTelemetry, saveTelemetry } = jitTelemetry;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface AutoUpgradeOptions {
+  dryRun?: boolean;
+  force?: boolean;
+}
+
 interface AutoUpgradeReport {
   success: boolean;
   version: string;
@@ -33,6 +38,8 @@ interface AutoUpgradeReport {
   docsUpdated: number;
   generatedArtifacts: string[];
   message: string;
+  errors?: Array<{ artifact: string; error: string }>;
+  partial?: boolean;
 }
 
 // ─── Framework Detection & Bootstrap Helpers ─────────────────────────────────
@@ -111,7 +118,7 @@ function bootstrapPlanningDefaults(planningDir: string, rootDir: string, framewo
       telemetry: true,
       phase_locking: true,
     };
-    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf-8');
+    platformWriteSync(configPath, JSON.stringify(configData, null, 2));
   }
 
   if (!fs.existsSync(statePath)) {
@@ -134,7 +141,7 @@ function bootstrapPlanningDefaults(planningDir: string, rootDir: string, framewo
 ## Completed Phases
 (None yet — initialize with /gsd-plan)
 `;
-    fs.writeFileSync(statePath, stateContent, 'utf-8');
+    platformWriteSync(statePath, stateContent);
   }
 
   if (!fs.existsSync(roadmapPath)) {
@@ -156,7 +163,7 @@ function bootstrapPlanningDefaults(planningDir: string, rootDir: string, framewo
 |---|---|---|---|
 | 1. Project Onboarding & Architecture Mapping | 0/1 | In Progress | - |
 `;
-    fs.writeFileSync(roadmapPath, roadmapContent, 'utf-8');
+    platformWriteSync(roadmapPath, roadmapContent);
   }
 }
 
@@ -165,31 +172,19 @@ function bootstrapPlanningDefaults(planningDir: string, rootDir: string, framewo
 /**
  * Runs the non-destructive auto-upgrade pipeline on a project.
  */
-function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeReport {
+function runAutoUpgrade(planningDir: string, rootDir?: string, options?: AutoUpgradeOptions): AutoUpgradeReport {
   const resolvedPlanningDir = path.resolve(planningDir);
   const resolvedRoot = rootDir ? path.resolve(rootDir) : path.dirname(resolvedPlanningDir);
 
-  platformEnsureDir(resolvedPlanningDir);
   const intelDir = path.join(resolvedPlanningDir, 'intel');
   const codebaseDir = path.join(resolvedPlanningDir, 'codebase');
-  platformEnsureDir(intelDir);
-  platformEnsureDir(codebaseDir);
-
   const graphPath = path.join(intelDir, 'codebase-graph.json');
   const isNewMigration = !fs.existsSync(graphPath);
 
-  // 1. Build and persist Universal AST Graph
+  // 1. Build Universal AST Graph
   const graph = buildCodebaseGraph(resolvedRoot);
-  saveCodebaseGraph(resolvedPlanningDir, graph);
 
-  // 2. Materialize Living Documentation
-  const syncReport = syncLivingDocs(resolvedPlanningDir, resolvedRoot);
-
-  // 3. Initialize Telemetry if missing
-  const telemetryData = loadTelemetry(resolvedPlanningDir);
-  saveTelemetry(resolvedPlanningDir, telemetryData);
-
-  // 4. Extract detected languages & frameworks
+  // 2. Extract detected languages & frameworks
   const languageSet = new Set<string>();
   for (const f of Object.values(graph.files)) {
     if (f.language) {
@@ -198,6 +193,52 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
   }
   const detectedLanguages = Array.from(languageSet);
   const detectedFrameworks = detectProjectFrameworks(resolvedRoot);
+  const fwText = detectedFrameworks.length > 0 ? ` + [${detectedFrameworks.join(', ')}]` : '';
+
+  if (options?.dryRun) {
+    return {
+      success: true,
+      version: '3.2.0',
+      isNewMigration,
+      indexedFiles: graph.stats.totalFiles,
+      detectedLanguages,
+      detectedFrameworks,
+      totalSymbols: graph.stats.totalSymbols,
+      totalRoutes: graph.stats.totalRoutes,
+      docsUpdated: 0,
+      generatedArtifacts: [],
+      message: `[Dry-Run] Projected upgrade to GSD Core Nexus 3.2: would index ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. No files were written.`,
+    };
+  }
+
+  platformEnsureDir(resolvedPlanningDir);
+  platformEnsureDir(intelDir);
+  platformEnsureDir(codebaseDir);
+
+  saveCodebaseGraph(resolvedPlanningDir, graph);
+
+  // 3. Materialize Living Documentation
+  const syncReport = syncLivingDocs(resolvedPlanningDir, resolvedRoot);
+
+  // 4. Initialize Telemetry with Lock & Baseline Seeding
+  const telemetryPath = path.join(intelDir, 'telemetry.json');
+  withFileLockSync(telemetryPath, () => {
+    const telemetryData = loadTelemetry(resolvedPlanningDir);
+    const rawData = (telemetryData as unknown) as Record<string, unknown>;
+    if (telemetryData.totalInvocations === 0 && !rawData['migratedAt']) {
+      rawData['migratedAt'] = new Date().toISOString();
+      let totalRepoChars = 0;
+      const weights = (jitTelemetry as { LANGUAGE_CHAR_WEIGHTS?: Record<string, number> }).LANGUAGE_CHAR_WEIGHTS || {};
+      for (const f of Object.values(graph.files)) {
+        const langKey = f.language ? f.language.toLowerCase() : '';
+        const weight = (langKey && weights[langKey]) || 45;
+        totalRepoChars += (f.linesCount || 10) * weight;
+      }
+      rawData['baselineRepoTokens'] = Math.max(1000, Math.ceil(totalRepoChars / 4));
+      rawData['initialFilesCount'] = graph.stats.totalFiles;
+    }
+    saveTelemetry(resolvedPlanningDir, telemetryData);
+  });
 
   // 5. Bootstrap default planning files on greenfield projects
   bootstrapPlanningDefaults(resolvedPlanningDir, resolvedRoot, detectedFrameworks, detectedLanguages);
@@ -208,8 +249,6 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
     path.join(codebaseDir, 'APIS.md'),
     path.join(intelDir, 'telemetry.json'),
   ];
-
-  const fwText = detectedFrameworks.length > 0 ? ` + [${detectedFrameworks.join(', ')}]` : '';
 
   return {
     success: true,
@@ -222,6 +261,8 @@ function runAutoUpgrade(planningDir: string, rootDir?: string): AutoUpgradeRepor
     totalRoutes: graph.stats.totalRoutes,
     docsUpdated: syncReport.generatedDocs.length,
     generatedArtifacts,
+    errors: syncReport.errors,
+    partial: syncReport.partial,
     message: isNewMigration
       ? `Successfully upgraded project to GSD Core Nexus 3.2. Indexed ${graph.stats.totalFiles} files across [${detectedLanguages.join(', ')}]${fwText}. Generated ${syncReport.generatedDocs.length} living doc(s).`
       : `Refreshed GSD Core Nexus 3.2 intelligence layer for ${graph.stats.totalFiles} files (${syncReport.generatedDocs.length} doc(s) updated).`,

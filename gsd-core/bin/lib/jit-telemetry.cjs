@@ -11,7 +11,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 // ─── Constants & Helpers ──────────────────────────────────────────────────────
-const CANONICAL_TELEMETRY_COMMANDS = ['plan', 'exec', 'review', 'verify', 'status', 'other'];
+const CANONICAL_TELEMETRY_COMMANDS = ['plan', 'exec', 'review', 'verify', 'auto', 'status', 'other'];
 const LANGUAGE_CHAR_WEIGHTS = {
     typescript: 45,
     javascript: 45,
@@ -114,7 +114,7 @@ function saveTelemetry(planningDir, data) {
  * Parameters command, phaseId, invocationId, and scopeMode are optional to preserve 100% backward compatibility.
  * All mutations are wrapped in an atomic cooperative file lock (withFileLockSync).
  */
-function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode) {
+function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode, workflowContext) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     const telemetryPath = node_path_1.default.join(intelDir, 'telemetry.json');
     return (0, shell_command_projection_cjs_1.withFileLockSync)(telemetryPath, () => {
@@ -160,6 +160,7 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
             compressionRatio,
             invocationId,
             scopeMode: resolvedScopeMode,
+            ...(workflowContext ? { workflowContext } : {}),
         };
         data.records.push(record);
         // Keep last 100 records

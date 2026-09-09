@@ -606,8 +606,12 @@ WARNING=$(echo "$FRONTMATTER" | grep "warning:" | head -1 | cut -d: -f2 | xargs)
 INFO=$(echo "$FRONTMATTER" | grep "info:" | head -1 | cut -d: -f2 | xargs)
 TOTAL=$(echo "$FRONTMATTER" | grep "total:" | head -1 | cut -d: -f2 | xargs)
 
-# Record real telemetry for review step (D-114)
-gsd_run telemetry record --command review --phase "${PHASE_NUMBER}" --from-files "${REVIEW_FILES:-}" || true
+# Record real telemetry for review step (D-114, D-121)
+SCOPE_MODE_FLAG=""
+if echo "$ARGUMENTS" | grep -qE -- '--(full|repo)'; then
+  SCOPE_MODE_FLAG="--scope-mode full-repo"
+fi
+gsd_run telemetry record --command review --phase "${PHASE_NUMBER}" --from-files "${REVIEW_FILES:-}" $SCOPE_MODE_FLAG || true
 ```
 
 Display inline summary to user:

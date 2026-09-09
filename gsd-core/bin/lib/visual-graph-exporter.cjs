@@ -690,21 +690,30 @@ function generateVisualGraphHtml(payload) {
       });
     }
 
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function showSidebar(node) {
       document.getElementById('node-title').innerText = node.label;
       const details = document.getElementById('node-details');
       let html = \`
-        <div class="meta-row"><span class="meta-label">Type</span><span class="meta-val">\${node.type.toUpperCase()}</span></div>
-        <div class="meta-row"><span class="meta-label">PageRank</span><span class="meta-val">\${node.pageRank}</span></div>
+        <div class="meta-row"><span class="meta-label">Type</span><span class="meta-val">\${escapeHtml(node.type.toUpperCase())}</span></div>
+        <div class="meta-row"><span class="meta-label">PageRank</span><span class="meta-val">\${escapeHtml(node.pageRank)}</span></div>
       \`;
       if (node.filePath) {
-        html += \`<div class="meta-row"><span class="meta-label">Path</span><span class="meta-val">\${node.filePath}</span></div>\`;
+        html += \`<div class="meta-row"><span class="meta-label">Path</span><span class="meta-val">\${escapeHtml(node.filePath)}</span></div>\`;
       }
       if (node.symbolsCount !== undefined) {
-        html += \`<div class="meta-row"><span class="meta-label">Symbols</span><span class="meta-val">\${node.symbolsCount}</span></div>\`;
+        html += \`<div class="meta-row"><span class="meta-label">Symbols</span><span class="meta-val">\${escapeHtml(node.symbolsCount)}</span></div>\`;
       }
       if (node.routesCount !== undefined && node.routesCount > 0) {
-        html += \`<div class="meta-row"><span class="meta-label">Routes</span><span class="meta-val">\${node.routesCount}</span></div>\`;
+        html += \`<div class="meta-row"><span class="meta-label">Routes</span><span class="meta-val">\${escapeHtml(node.routesCount)}</span></div>\`;
       }
       details.innerHTML = html;
       document.getElementById('sidebar').classList.add('open');

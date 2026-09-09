@@ -336,7 +336,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
     switch (canonicalName) {
         case 'auto':
             try {
-                initMod.cmdInitAutonomous(cwd, options.raw || true);
+                initMod.cmdInitAutonomous(cwd, Boolean(options.raw));
             }
             catch {
                 // Non-blocking in mock environments
@@ -389,7 +389,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 // Non-blocking
             }
             try {
-                initMod.cmdInitPlanPhase(cwd, phaseId, options.raw || true);
+                initMod.cmdInitPlanPhase(cwd, phaseId, Boolean(options.raw));
             }
             catch {
                 // Non-blocking in mock environments
@@ -412,7 +412,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 rootDir: cwd,
             });
             try {
-                initMod.cmdInitExecutePhase(cwd, phaseId, options.raw || true);
+                initMod.cmdInitExecutePhase(cwd, phaseId, Boolean(options.raw));
             }
             catch {
                 // Non-blocking in mock environments
@@ -460,7 +460,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             const phaseId = resolveActivePhaseId(planningDir, options.args);
             let autoPassed = false;
             try {
-                initMod.cmdInitVerifyWork(cwd, phaseId, options.raw || true);
+                initMod.cmdInitVerifyWork(cwd, phaseId, Boolean(options.raw));
             }
             catch {
                 // Non-blocking in mock environments
@@ -490,7 +490,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         }
         case 'ship':
-            initMod.cmdInitCompleteMilestone(cwd, options.raw || true);
+            initMod.cmdInitCompleteMilestone(cwd, Boolean(options.raw));
             return {
                 command: 'ship',
                 action: 'SHIP_RELEASE',
@@ -498,7 +498,11 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 message: 'Release prepared, branch cleaned and ready for PR merge.',
             };
         case 'migrate': {
-            const report = runAutoUpgrade(planningDir, cwd);
+            const upgradeOpts = {
+                dryRun: Boolean(options.flags?.['dry-run'] || options.flags?.['dryRun'] || options.args.includes('--dry-run')),
+                force: Boolean(options.flags?.['force'] || options.args.includes('--force')),
+            };
+            const report = runAutoUpgrade(planningDir, cwd, upgradeOpts);
             return {
                 command: 'migrate',
                 action: 'UPGRADE_LEGACY_PROJECT',

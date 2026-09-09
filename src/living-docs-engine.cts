@@ -35,6 +35,8 @@ interface LivingDocsSyncReport {
   totalFiles: number;
   discrepancies: DocDiscrepancy[];
   generatedDocs: string[];
+  errors?: Array<{ artifact: string; error: string }>;
+  partial?: boolean;
 }
 
 // ─── Markdown Generators ──────────────────────────────────────────────────────
@@ -148,28 +150,33 @@ function syncLivingDocs(planningDir: string, rootDir?: string): LivingDocsSyncRe
   platformWriteSync(apiPath, apiDoc);
   generatedDocs.push(apiPath);
 
+  const errors: Array<{ artifact: string; error: string }> = [];
+
   // 5. Generate Standalone Visual Knowledge Graph HTML
   try {
     const { htmlPath } = visualGraph.exportVisualGraph(planningDir, root);
     generatedDocs.push(htmlPath);
-  } catch {
-    // non-blocking
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    errors.push({ artifact: 'graph-view.html', error: errMsg });
   }
 
   // 6. Generate Obsidian Backlink Index
   try {
     const { filePath } = obsidianInterop.saveBacklinkIndex(planningDir, root);
     generatedDocs.push(filePath);
-  } catch {
-    // non-blocking
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    errors.push({ artifact: 'backlinks.json', error: errMsg });
   }
 
   // 7. Generate Visual Canvas Roadmap
   try {
     const { canvasPath } = canvasGenerator.exportRoadmapCanvas(planningDir);
     generatedDocs.push(canvasPath);
-  } catch {
-    // non-blocking
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    errors.push({ artifact: 'ROADMAP.canvas', error: errMsg });
   }
 
   return {
@@ -180,6 +187,8 @@ function syncLivingDocs(planningDir: string, rootDir?: string): LivingDocsSyncRe
     totalFiles: graph.stats.totalFiles,
     discrepancies: preCheck.discrepancies,
     generatedDocs,
+    errors: errors.length > 0 ? errors : undefined,
+    partial: errors.length > 0,
   };
 }
 

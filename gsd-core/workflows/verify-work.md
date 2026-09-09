@@ -507,6 +507,9 @@ Clear Current Test section:
 Commit the UAT file:
 ```bash
 gsd_run query commit "test({phase_num}): complete UAT - {passed} passed, {issues} issues" --files ".planning/phases/XX-name/{phase_num}-UAT.md"
+
+# Record real telemetry for verify step (D-114, Phase 23)
+gsd_run telemetry record --command verify --phase "${phase_number}" --from-phase "${phase_number}" || true
 ```
 
 Present summary:

@@ -35,7 +35,6 @@ import shellCommandProjection = require('./shell-command-projection.cjs');
 const { dispatchGsdCommand } = shellCommandProjection;
 import { validatePath } from './security.cjs';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import {
   buildCatalog,
@@ -230,6 +229,65 @@ function wirePrompt(entry: { name: string; title: string; description: string })
   return { name: entry.name, title: entry.title, description: entry.description };
 }
 
+const ALLOWED_ROOT_STATE_FILES = new Set([
+  'state.md',
+  'roadmap.md',
+  'requirements.md',
+  'config.md',
+  'config.json',
+]);
+
+function isAllowedStatePath(targetPath: string, cwd: string): { safe: boolean; resolved: string; error?: string } {
+  if (!targetPath || typeof targetPath !== 'string') {
+    return { safe: false, resolved: '', error: 'Empty or invalid file path' };
+  }
+  if (targetPath.includes('\0')) {
+    return { safe: false, resolved: '', error: 'Path contains null bytes' };
+  }
+
+  const planningDir = path.resolve(cwd, '.planning');
+  let resolved: string;
+  if (path.isAbsolute(targetPath)) {
+    resolved = path.resolve(targetPath);
+  } else {
+    resolved = path.resolve(cwd, targetPath);
+  }
+
+  // 1. Direct confinement inside .planning/
+  const planningCheck = validatePath(resolved, planningDir, { allowAbsolute: true });
+  if (planningCheck.safe) {
+    return planningCheck;
+  }
+
+  // Also check if relative path was meant relative to .planning
+  if (!path.isAbsolute(targetPath) && !targetPath.startsWith('.planning')) {
+    const candidateInPlanning = path.resolve(planningDir, targetPath);
+    const candidateCheck = validatePath(candidateInPlanning, planningDir, { allowAbsolute: true });
+    if (candidateCheck.safe) {
+      const baseLower = path.basename(candidateInPlanning).toLowerCase();
+      if (fs.existsSync(candidateInPlanning) || ALLOWED_ROOT_STATE_FILES.has(baseLower)) {
+        return candidateCheck;
+      }
+    }
+  }
+
+  // 2. Authorized state document in root or test dir
+  const baseName = path.basename(resolved).toLowerCase();
+  if (ALLOWED_ROOT_STATE_FILES.has(baseName)) {
+    const parentDir = path.dirname(resolved);
+    const parentCheck = validatePath(resolved, parentDir, { allowAbsolute: true });
+    if (parentCheck.safe) {
+      return { safe: true, resolved };
+    }
+  }
+
+  return {
+    safe: false,
+    resolved: '',
+    error: `Path '${targetPath}' is outside the .planning directory and is not an authorized planning state document.`,
+  };
+}
+
 function callTool(name: string, args: unknown, ctx: McpContext): { content: Array<{ type: string; text: string }>; isError?: boolean } {
   const a = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
   const cwd = asString(ctx.cwd) || process.cwd();
@@ -249,17 +307,7 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
     if (name === 'gsd_read_state') {
       const p = asString(a.path);
       if (!p) return { isError: true, content: [{ type: 'text', text: 'gsd_read_state requires string "path".' }] };
-      const resolvedP = path.resolve(cwd, p);
-      let allowedBase = path.join(cwd, '.planning');
-      if (path.isAbsolute(p)) {
-        const tmp = path.resolve(os.tmpdir());
-        if (resolvedP.startsWith(tmp)) {
-          allowedBase = tmp;
-        } else if (resolvedP.startsWith(path.resolve(cwd))) {
-          allowedBase = path.resolve(cwd);
-        }
-      }
-      const pathCheck = validatePath(p, allowedBase, { allowAbsolute: true });
+      const pathCheck = isAllowedStatePath(p, cwd);
       if (!pathCheck.safe) {
         return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
       }
@@ -270,17 +318,7 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
       const p = asString(a.path);
       const content = asString(a.content);
       if (!p || content === null) return { isError: true, content: [{ type: 'text', text: 'gsd_write_state requires string "path" and "content".' }] };
-      const resolvedP = path.resolve(cwd, p);
-      let allowedBase = path.join(cwd, '.planning');
-      if (path.isAbsolute(p)) {
-        const tmp = path.resolve(os.tmpdir());
-        if (resolvedP.startsWith(tmp)) {
-          allowedBase = tmp;
-        } else if (resolvedP.startsWith(path.resolve(cwd))) {
-          allowedBase = path.resolve(cwd);
-        }
-      }
-      const pathCheck = validatePath(p, allowedBase, { allowAbsolute: true });
+      const pathCheck = isAllowedStatePath(p, cwd);
       if (!pathCheck.safe) {
         return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
       }

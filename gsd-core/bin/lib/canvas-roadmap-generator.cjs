@@ -24,19 +24,30 @@ const { scanPhasePlans } = planScanMod;
 const phaseLocatorMod = require("./phase-locator.cjs");
 const { listMilestonePhaseDirs } = phaseLocatorMod;
 // ─── Roadmap Parser & Serializer ──────────────────────────────────────────────
+function formatPhaseId(numStr) {
+    const clean = numStr.trim();
+    const n = parseFloat(clean);
+    if (!isNaN(n) && Number.isInteger(n)) {
+        return `phase-${String(n).padStart(2, '0')}`;
+    }
+    return `phase-${clean.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+}
 /**
  * Parses phases from ROADMAP.md or .planning/phases directory.
  */
 function parseRoadmapPhases(planningDir) {
     const roadmapPath = node_path_1.default.join(planningDir, 'ROADMAP.md');
     const phases = [];
+    const seenIds = new Set();
     if (node_fs_1.default.existsSync(roadmapPath)) {
         const content = (0, shell_command_projection_cjs_1.platformReadSync)(roadmapPath) || '';
-        const phaseHeaderRegex = /(?:###?\s*(?:Phase\s*)?(\d+)[.:\s-]+([^\n]+))/gi;
+        const phaseHeaderRegex = /(?:###?\s*(?:Phase\s*)?([0-9]+(?:\.[0-9]+)?|[0-9]+[A-Za-z]?)[.:\s-]+([^\n]+))/gi;
         const matches = Array.from(content.matchAll(phaseHeaderRegex));
         for (let i = 0; i < matches.length; i++) {
             const match = matches[i];
-            const num = parseInt(match[1], 10);
+            const rawNum = match[1].trim();
+            const num = isNaN(Number(rawNum)) ? rawNum : parseFloat(rawNum);
+            const id = formatPhaseId(rawNum);
             const title = match[2].trim();
             const nextIndex = i < matches.length - 1 ? (matches[i + 1].index ?? content.length) : content.length;
             const snippet = content.substring(match.index ?? 0, nextIndex);
@@ -47,13 +58,34 @@ function parseRoadmapPhases(planningDir) {
             else if (/in progress|em progresso|active|ativo|⏳|executando/i.test(snippet)) {
                 status = 'in_progress';
             }
+            seenIds.add(id);
             phases.push({
-                id: `phase-${String(num).padStart(2, '0')}`,
+                id,
                 number: num,
                 title,
                 status,
                 description: snippet.split('\n').slice(1, 4).join('\n').trim(),
             });
+        }
+        // Also parse checkbox list items if any were not captured in headers
+        const checkboxRegex = /(?:-\s*\[([ xX])\]\s*\*\*Phase\s*([0-9]+(?:\.[0-9]+)?|[0-9]+[A-Za-z]?)\s*[:*]\s*([^\n]+))/gi;
+        const cbMatches = Array.from(content.matchAll(checkboxRegex));
+        for (const m of cbMatches) {
+            const isChecked = m[1].toLowerCase() === 'x';
+            const rawNum = m[2].trim();
+            const num = isNaN(Number(rawNum)) ? rawNum : parseFloat(rawNum);
+            const id = formatPhaseId(rawNum);
+            if (!seenIds.has(id)) {
+                seenIds.add(id);
+                const rawTitle = m[3].replace(/\*\*/g, '').trim();
+                phases.push({
+                    id,
+                    number: num,
+                    title: rawTitle,
+                    status: isChecked ? 'complete' : 'planned',
+                    description: `Phase ${rawNum}: ${rawTitle}`,
+                });
+            }
         }
     }
     // Fallback / Supplement: inspect .planning/phases/ directory
@@ -62,11 +94,13 @@ function parseRoadmapPhases(planningDir) {
         try {
             const phaseDirs = listMilestonePhaseDirs(phasesDir, { cwd: node_path_1.default.dirname(planningDir) }).value;
             for (const entName of phaseDirs) {
-                const match = entName.match(/^(\d+)[-_](.+)$/);
+                const match = entName.match(/^(\d+(?:\.\d+)?|\d+[A-Za-z]?)[-_](.+)$/);
                 if (match) {
-                    const num = parseInt(match[1], 10);
-                    const id = `phase-${String(num).padStart(2, '0')}`;
-                    if (!phases.some(p => p.id === id)) {
+                    const rawNum = match[1].trim();
+                    const num = isNaN(Number(rawNum)) ? rawNum : parseFloat(rawNum);
+                    const id = formatPhaseId(rawNum);
+                    if (!seenIds.has(id) && !phases.some(p => p.id === id)) {
+                        seenIds.add(id);
                         const phaseFolderPath = node_path_1.default.join(phasesDir, entName);
                         const summaryExists = scanPhasePlans(phaseFolderPath).summaryFiles.length > 0;
                         phases.push({
@@ -84,7 +118,13 @@ function parseRoadmapPhases(planningDir) {
             // non-blocking
         }
     }
-    return phases.sort((a, b) => a.number - b.number);
+    return phases.sort((a, b) => {
+        const numA = typeof a.number === 'number' ? a.number : parseFloat(a.number) || 0;
+        const numB = typeof b.number === 'number' ? b.number : parseFloat(b.number) || 0;
+        if (numA !== numB)
+            return numA - numB;
+        return String(a.number).localeCompare(String(b.number));
+    });
 }
 /**
  * Builds the Obsidian Canvas JSON structure from parsed phases.

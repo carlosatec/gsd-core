@@ -13,11 +13,64 @@ const TARGET_WIDTH = 63;
 const INNER_WIDTH = TARGET_WIDTH - 2; // 61
 
 /**
- * Ensures any row content is padded to exactly fit inside the ASCII box borders (63 chars total).
+ * Calculates terminal visual column width, accounting for 2-column wide characters and emojis.
+ */
+function getVisualWidth(str: string): number {
+  let width = 0;
+  for (const char of str) {
+    const code = char.codePointAt(0) || 0;
+    if (code === 0xfe0f || (code >= 0x0300 && code <= 0x036f)) {
+      continue;
+    }
+    if (
+      (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x2600 && code <= 0x27bf) ||
+      (code >= 0x2e80 && code <= 0xa4cf) ||
+      (code >= 0xac00 && code <= 0xd7a3) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe10 && code <= 0xfe19) ||
+      (code >= 0xfe30 && code <= 0xfe6f) ||
+      (code >= 0xff00 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6) ||
+      (code >= 0x1f000 && code <= 0x1faff)
+    ) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+
+/**
+ * Ensures any row content is padded to exactly fit inside the ASCII box borders (63 chars visual width).
  */
 function formatBoxLine(content: string): string {
-  const truncated = content.length > INNER_WIDTH ? content.slice(0, INNER_WIDTH) : content;
-  return `│${truncated.padEnd(INNER_WIDTH)}│`;
+  const vWidth = getVisualWidth(content);
+  if (vWidth > INNER_WIDTH) {
+    let acc = '';
+    let curWidth = 0;
+    for (const char of content) {
+      const charCode = char.codePointAt(0) || 0;
+      const charWidth = (charCode === 0xfe0f || (charCode >= 0x0300 && charCode <= 0x036f))
+        ? 0
+        : ((charCode >= 0x1100 && charCode <= 0x115f) ||
+           (charCode >= 0x2600 && charCode <= 0x27bf) ||
+           (charCode >= 0x2e80 && charCode <= 0xa4cf) ||
+           (charCode >= 0xac00 && charCode <= 0xd7a3) ||
+           (charCode >= 0xf900 && charCode <= 0xfaff) ||
+           (charCode >= 0xfe10 && charCode <= 0xfe19) ||
+           (charCode >= 0xfe30 && charCode <= 0xfe6f) ||
+           (charCode >= 0xff00 && charCode <= 0xff60) ||
+           (charCode >= 0xffe0 && charCode <= 0xffe6) ||
+           (charCode >= 0x1f000 && charCode <= 0x1faff)) ? 2 : 1;
+      if (curWidth + charWidth > INNER_WIDTH) break;
+      acc += char;
+      curWidth += charWidth;
+    }
+    return `│${acc}${' '.repeat(Math.max(0, INNER_WIDTH - curWidth))}│`;
+  }
+  return `│${content}${' '.repeat(Math.max(0, INNER_WIDTH - vWidth))}│`;
 }
 
 /**
@@ -85,8 +138,8 @@ function renderTokenDashboard(planningDir: string): string {
   lines.push(midBorder);
   lines.push(formatBoxLine(' 🔀 Distribution by Command:'));
 
-  // Deterministic ordering (D-116): plan -> review -> exec -> other
-  const CANONICAL_ORDER = ['plan', 'review', 'exec'];
+  // Deterministic ordering (D-116): plan -> exec -> review -> verify -> auto
+  const CANONICAL_ORDER = ['plan', 'exec', 'review', 'verify', 'auto'];
   const cmdKeys = Object.keys(summary.commandBreakdown).sort((a, b) => {
     const idxA = CANONICAL_ORDER.indexOf(a);
     const idxB = CANONICAL_ORDER.indexOf(b);

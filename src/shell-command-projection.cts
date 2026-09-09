@@ -1194,14 +1194,12 @@ export function platformWriteSync(filePath: string, content: string, opts: { enc
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tmpPath = filePath + '.tmp.' + process.pid;
 
-  // Step 1: write the sibling tmp file. If THIS fails, nothing was published, so a
-  // direct fallback write cannot truncate a concurrent reader of an existing file.
+  // Step 1: write the sibling tmp file. If THIS fails, clean up and rethrow to protect existing target.
   try {
     fs.writeFileSync(tmpPath, normalized, encoding);
-  } catch {
+  } catch (err) {
     try { fs.unlinkSync(tmpPath); } catch { /* already gone */ }
-    fs.writeFileSync(filePath, normalized, encoding);
-    return;
+    throw err;
   }
 
   // Step 2: atomic publish, retrying transient Windows locks.

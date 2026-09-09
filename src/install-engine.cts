@@ -1808,6 +1808,29 @@ function installOpencodeFamilyArtifacts(
 // ---------------------------------------------------------------------------
 
 /**
+ * Guards against accidental self-repo destruction when local uninstall is run
+ * inside the gsd-core source development repository itself.
+ */
+function assertNotSourceRepository(targetDir: string, isGlobal: boolean): void {
+  if (isGlobal) return;
+  const dir = path.resolve(targetDir);
+  const pkgPath = path.join(dir, 'package.json');
+  const srcDir = path.join(dir, 'src');
+  if (fs.existsSync(pkgPath) && fs.existsSync(srcDir)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      if (pkg.name === 'gsd-core' || pkg.name === '@opengsd/gsd-core') {
+        throw new Error(
+          `Refusing to uninstall locally from inside the GSD Core source development repository (${dir}). This operation would delete source files.`
+        );
+      }
+    } catch (err: any) {
+      if (err.message && err.message.includes('Refusing to uninstall')) throw err;
+    }
+  }
+}
+
+/**
  * Layout-driven uninstall orchestrator.
  * Runs legacy cleanup first, then uses resolveRuntimeArtifactLayout to
  * determine which GSD-owned entries to remove.
@@ -1817,6 +1840,7 @@ function installOpencodeFamilyArtifacts(
  * @param scope
  */
 function uninstallRuntimeArtifacts(runtime: string, configDir: string, scope: string): void {
+  assertNotSourceRepository(configDir, scope === 'global');
   // A retired descriptor kind is absent from the current uninstall plan, just
   // as it is absent from the install plan. Sweep manifest-proven output from
   // retired kinds before removing the current layout so a direct uninstall
@@ -1900,6 +1924,7 @@ function uninstallRuntimeArtifacts(runtime: string, configDir: string, scope: st
 // ---------------------------------------------------------------------------
 
 export = {
+  assertNotSourceRepository,
   installRuntimeArtifacts,
   uninstallRuntimeArtifacts,
   installOpencodeFamilySkills,

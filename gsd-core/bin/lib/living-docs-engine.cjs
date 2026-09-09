@@ -114,29 +114,33 @@ function syncLivingDocs(planningDir, rootDir) {
     const apiPath = node_path_1.default.join(codebaseDir, 'APIS.md');
     (0, shell_command_projection_cjs_1.platformWriteSync)(apiPath, apiDoc);
     generatedDocs.push(apiPath);
+    const errors = [];
     // 5. Generate Standalone Visual Knowledge Graph HTML
     try {
         const { htmlPath } = visualGraph.exportVisualGraph(planningDir, root);
         generatedDocs.push(htmlPath);
     }
-    catch {
-        // non-blocking
+    catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        errors.push({ artifact: 'graph-view.html', error: errMsg });
     }
     // 6. Generate Obsidian Backlink Index
     try {
         const { filePath } = obsidianInterop.saveBacklinkIndex(planningDir, root);
         generatedDocs.push(filePath);
     }
-    catch {
-        // non-blocking
+    catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        errors.push({ artifact: 'backlinks.json', error: errMsg });
     }
     // 7. Generate Visual Canvas Roadmap
     try {
         const { canvasPath } = canvasGenerator.exportRoadmapCanvas(planningDir);
         generatedDocs.push(canvasPath);
     }
-    catch {
-        // non-blocking
+    catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        errors.push({ artifact: 'ROADMAP.canvas', error: errMsg });
     }
     return {
         timestamp: new Date().toISOString(),
@@ -146,6 +150,8 @@ function syncLivingDocs(planningDir, rootDir) {
         totalFiles: graph.stats.totalFiles,
         discrepancies: preCheck.discrepancies,
         generatedDocs,
+        errors: errors.length > 0 ? errors : undefined,
+        partial: errors.length > 0,
     };
 }
 /**

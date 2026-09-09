@@ -27,6 +27,35 @@ function run() {
     return;
   }
 
+  // Invalidate incremental build cache if outputs are missing or incomplete (D-126)
+  const buildInfoPath = path.join(rootDir, 'tsconfig.build.tsbuildinfo');
+  const outDir = path.join(rootDir, 'gsd-core', 'bin', 'lib');
+  const srcDir = path.join(rootDir, 'src');
+
+  if (fs.existsSync(buildInfoPath)) {
+    let invalidate = false;
+    if (!fs.existsSync(outDir)) {
+      invalidate = true;
+    } else {
+      try {
+        const srcFiles = fs.readdirSync(srcDir).filter((f) => f.endsWith('.cts'));
+        const outFiles = fs.readdirSync(outDir).filter((f) => f.endsWith('.cjs'));
+        if (outFiles.length < srcFiles.length) {
+          invalidate = true;
+        }
+      } catch {
+        invalidate = true;
+      }
+    }
+    if (invalidate) {
+      try {
+        fs.unlinkSync(buildInfoPath);
+      } catch {
+        // non-blocking
+      }
+    }
+  }
+
   const result = childProcess.spawnSync(process.execPath, [tscPath, '-p', 'tsconfig.build.json'], {
     cwd: rootDir,
     stdio: 'inherit',

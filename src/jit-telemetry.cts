@@ -10,7 +10,7 @@ import { platformReadSync, platformWriteSync, platformEnsureDir, withFileLockSyn
 
 // ─── Constants & Helpers ──────────────────────────────────────────────────────
 
-const CANONICAL_TELEMETRY_COMMANDS = ['plan', 'exec', 'review', 'verify', 'status', 'other'] as const;
+const CANONICAL_TELEMETRY_COMMANDS = ['plan', 'exec', 'review', 'verify', 'auto', 'status', 'other'] as const;
 type _CanonicalTelemetryCommand = (typeof CANONICAL_TELEMETRY_COMMANDS)[number];
 
 const LANGUAGE_CHAR_WEIGHTS: Record<string, number> = {
@@ -58,6 +58,7 @@ interface JitTelemetryRecord {
   compressionRatio?: number;
   invocationId?: string;
   scopeMode?: 'targeted' | 'full-repo';
+  workflowContext?: string;
 }
 
 interface CommandUsageStat {
@@ -184,7 +185,8 @@ function recordJitInvocation(
   command: string = 'other',
   phaseId?: string,
   invocationId?: string,
-  scopeMode?: 'targeted' | 'full-repo'
+  scopeMode?: 'targeted' | 'full-repo',
+  workflowContext?: string
 ): JitTelemetryRecord {
   const intelDir = path.join(planningDir, 'intel');
   const telemetryPath = path.join(intelDir, 'telemetry.json');
@@ -237,6 +239,7 @@ function recordJitInvocation(
       compressionRatio,
       invocationId,
       scopeMode: resolvedScopeMode,
+      ...(workflowContext ? { workflowContext } : {}),
     };
 
     data.records.push(record);

@@ -3686,14 +3686,35 @@ function routeSession({ args, cwd, raw, error }) {
 }
 
 function openBrowserUrl(targetPath) {
-  const url = targetPath.startsWith('http') ? targetPath : `file://${path.resolve(targetPath)}`;
-  const cmd = process.platform === 'win32'
-    ? `cmd.exe /c start "" "${url}"`
-    : process.platform === 'darwin'
-      ? `open "${url}"`
-      : `xdg-open "${url}"`;
+  let url;
+  if (/^https?:\/\//i.test(targetPath)) {
+    url = targetPath;
+  } else {
+    url = `file://${path.resolve(targetPath)}`;
+  }
+
   try {
-    require('node:child_process').exec(cmd);
+    const parsed = new URL(url);
+    if (!['file:', 'http:', 'https:'].includes(parsed.protocol)) {
+      return;
+    }
+  } catch {
+    return;
+  }
+
+  try {
+    const { spawn } = require('node:child_process');
+    let child;
+    if (process.platform === 'win32') {
+      child = spawn('cmd.exe', ['/c', 'start', '', url], { shell: false, detached: true, stdio: 'ignore' });
+    } else if (process.platform === 'darwin') {
+      child = spawn('open', [url], { shell: false, detached: true, stdio: 'ignore' });
+    } else {
+      child = spawn('xdg-open', [url], { shell: false, detached: true, stdio: 'ignore' });
+    }
+    if (child && child.unref) {
+      child.unref();
+    }
   } catch {
     // non-blocking
   }
@@ -3904,6 +3925,8 @@ const HOST_COMMAND_ROUTERS = {
     'ship': createUnifiedRouter('ship'),
     'auto': createUnifiedRouter('auto'),
     'tokens': createUnifiedRouter('tokens'),
+    'migrate': createUnifiedRouter('migrate'),
+    'help': createUnifiedRouter('help'),
 };
 
 function createUnifiedRouter(cmdName) {
@@ -4023,7 +4046,14 @@ function routeTelemetry({ args, cwd, raw, error }) {
     }
 
     if (scopeMode === 'full-repo') {
-      fullRepoTokens = jitTokens;
+      if (jitTokens <= 0) {
+        jitTokens = fullRepoTokens;
+      } else {
+        fullRepoTokens = jitTokens;
+      }
+      if (targetFiles.length === 0) {
+        targetFiles = ['<entire-codebase>'];
+      }
     }
 
     const rec = telemetryMod.recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command, phaseId, invocationId, scopeMode);
