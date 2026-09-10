@@ -64,36 +64,28 @@ const EXPECTED_ALL_HOOKS = [
 const RUNTIME_META = {
   claude:       { localDir: '.claude',           globalSuffix: '.claude' },
   antigravity:  { localDir: '.agents',           globalSuffix: path.join('.gemini', 'antigravity') },
-  augment:      { localDir: '.augment',          globalSuffix: '.augment' },
   cline:        { localDir: '.cline',            globalSuffix: '.cline' },
-  codebuddy:    { localDir: '.codebuddy',        globalSuffix: '.codebuddy' },
   codex:        { localDir: '.codex',            globalSuffix: '.codex' },
   copilot:      { localDir: '.github',           globalSuffix: '.copilot' },
   cursor:       { localDir: '.cursor',           globalSuffix: '.cursor' },
-  hermes:       { localDir: '.hermes',           globalSuffix: '.hermes' },
-  kimi:         { localDir: '.kimi-code',        globalSuffix: path.join('.config', 'agents') },
   'kimi-code':  { localDir: '.kimi-code',        globalSuffix: '.kimi-code' },
-  kilo:         { localDir: '.kilo',             globalSuffix: path.join('.config', 'kilo') },
   opencode:     { localDir: '.opencode',         globalSuffix: path.join('.config', 'opencode') },
-  pi:           { localDir: '.pi',               globalSuffix: path.join('.pi', 'agent') },
   qwen:         { localDir: '.qwen',             globalSuffix: '.qwen' },
-  trae:         { localDir: '.trae',             globalSuffix: '.trae' },
-  windsurf:     { localDir: '.windsurf',          globalSuffix: path.join('.codeium', 'windsurf') },
-  zcode:        { localDir: '.zcode',             globalSuffix: '.zcode' },
+  windsurf:     { localDir: '.windsurf',         globalSuffix: path.join('.codeium', 'windsurf') },
   'deepseek-harness': { localDir: '.dsh',        globalSuffix: '.dsh' },
 };
 
 /**
  * The emitted manifest families, as (fixtureName -> install spec).
  *
- * NOT simply `Object.keys(RUNTIME_META)`: that has 18 entries while the fixture set has
- * 19. The extra one is `claude-local` — claude is the reference host and the ONLY
+ * NOT simply `Object.keys(RUNTIME_META)`: that has 11 entries while the fixture set has
+ * 12. The extra one is `claude-local` — claude is the reference host and the ONLY
  * runtime with a distinct LOCAL "legacy flat-commands" layout (`commands/gsd-*.md` +
  * `agents/gsd-*.md` at project scope), which `golden-install-parity.test.cjs` guards
  * with a hand-coded test outside its RUNTIME_META loop (#2086).
  *
  * Enumerating from RUNTIME_META alone dropped that family from BOTH sides of the
- * differential, so a same-count self-check (18 === 18) passed vacuously and a PR
+ * differential, so a same-count self-check (11 === 11) passed vacuously and a PR
  * changing Claude's local-scope output would fail the golden while the attribution
  * check reported ok.
  *
@@ -113,16 +105,16 @@ const MANIFEST_FAMILIES = [
  *
  * A pure equality between "derived" and "recorded" cannot catch a universe that shrank
  * on BOTH sides at once (drop a RUNTIME_META entry and delete its fixture together, and
- * 18 === 18 passes over a smaller world). This floor is the one number that must not be
+ * 11 === 11 passes over a smaller world). This floor is the one number that must not be
  * derived — it ratchets, and lowering it is a deliberate, reviewable act. It never
  * blocks ADDING a runtime, which is the asymmetry the old shared literal lacked.
  */
-const MINIMUM_MANIFEST_FAMILIES = 19;
+const MINIMUM_MANIFEST_FAMILIES = 12;
 
 // Runtimes that emit per-skill files under skills/ (not rules-based or commands-based)
 const SKILL_RUNTIMES = [
-  'claude', 'opencode', 'kilo', 'codex', 'copilot', 'antigravity',
-  'cursor', 'augment', 'trae', 'qwen', 'codebuddy',
+  'claude', 'opencode', 'codex', 'copilot', 'antigravity',
+  'cursor', 'qwen',
 ];
 
 // ─── Golden install-parity manifest (canonical — issue #2266) ────────────────

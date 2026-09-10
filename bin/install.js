@@ -843,7 +843,7 @@ if (hasMinimal && _profileArgRaw) {
 
 function selectRuntimesFromArgs(runtimeArgs) {
   if (runtimeArgs.includes('--all')) {
-    return ['claude', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'codex', 'copilot', 'antigravity', 'cursor', 'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'zcode', 'deepseek-harness'];
+    return allRuntimes.slice();
   }
   if (runtimeArgs.includes('--both')) {
     return ['claude', 'opencode'];
@@ -851,85 +851,21 @@ function selectRuntimesFromArgs(runtimeArgs) {
 
   const selected = [];
   if (runtimeArgs.includes('--claude')) selected.push('claude');
-  if (runtimeArgs.includes('--opencode')) selected.push('opencode');
-  if (runtimeArgs.includes('--pi')) selected.push('pi');
-  if (runtimeArgs.includes('--kilo')) selected.push('kilo');
+  if (runtimeArgs.includes('--antigravity')) selected.push('antigravity');
+  if (runtimeArgs.includes('--cline')) selected.push('cline');
   if (runtimeArgs.includes('--codex')) selected.push('codex');
   if (runtimeArgs.includes('--copilot')) selected.push('copilot');
-  if (runtimeArgs.includes('--antigravity')) selected.push('antigravity');
   if (runtimeArgs.includes('--cursor')) selected.push('cursor');
-  if (runtimeArgs.includes('--windsurf') || runtimeArgs.includes('--devin-desktop')) selected.push('windsurf');
-  if (runtimeArgs.includes('--augment')) selected.push('augment');
-  if (runtimeArgs.includes('--trae')) selected.push('trae');
-  if (runtimeArgs.includes('--qwen')) selected.push('qwen');
-  if (runtimeArgs.includes('--hermes')) selected.push('hermes');
-  if (runtimeArgs.includes('--kimi')) selected.push('kimi');
-  if (runtimeArgs.includes('--kimi-code')) selected.push('kimi-code');
-  if (runtimeArgs.includes('--codebuddy')) selected.push('codebuddy');
-  if (runtimeArgs.includes('--cline')) selected.push('cline');
-  if (runtimeArgs.includes('--zcode')) selected.push('zcode');
   if (runtimeArgs.includes('--deepseek-harness') || runtimeArgs.includes('--deepseek') || runtimeArgs.includes('--dsh')) selected.push('deepseek-harness');
+  if (runtimeArgs.includes('--kimi-code')) selected.push('kimi-code');
+  if (runtimeArgs.includes('--opencode')) selected.push('opencode');
+  if (runtimeArgs.includes('--qwen')) selected.push('qwen');
+  if (runtimeArgs.includes('--windsurf') || runtimeArgs.includes('--devin-desktop')) selected.push('windsurf');
   return selected;
 }
 
 // Runtime selection - can be set by flags or interactive prompt
 let selectedRuntimes = selectRuntimesFromArgs(args);
-
-// #2505 Phase 5: Kimi variant disambiguation (#2513). Kimi CLI (Python, ~/.kimi/)
-// and Kimi Code (Node, ~/.kimi-code/) are two distinct Moonshot products that
-// share the "kimi" brand. Probe for each product's config.toml and warn when
-// the selected runtime doesn't match the detected install — catches the common
-// "ran --kimi --global but actually on Kimi Code" mistake that produced inert
-// YAMLs and empty agent-skills before the Phase 1 descriptor split.
-function disambiguateKimiVariant(runtimes) {
-  const home = os.homedir();
-  const hasKimiCli = fs.existsSync(path.join(home, '.kimi', 'config.toml'));
-  const hasKimiCode = fs.existsSync(path.join(home, '.kimi-code', 'config.toml'));
-  const notices = [];
-  if (runtimes.includes('kimi') && hasKimiCode && !hasKimiCli) {
-    notices.push({
-      kind: 'wrong-variant',
-      selected: 'kimi',
-      detected: 'kimi-code',
-      message: `Detected ~/.kimi-code/config.toml (Kimi Code, Node CLI) but not ~/.kimi/config.toml (Kimi CLI, Python). You selected --kimi but appear to be on Kimi Code. Re-run with --kimi-code for a working install. (Kimi CLI = Python kimi-cli with named subagents; Kimi Code = Node CLI with coder/explore/plan built-ins only.)`,
-    });
-  }
-  if (runtimes.includes('kimi-code') && hasKimiCli && !hasKimiCode) {
-    notices.push({
-      kind: 'wrong-variant',
-      selected: 'kimi-code',
-      detected: 'kimi',
-      message: `Detected ~/.kimi/config.toml (Kimi CLI, Python) but not ~/.kimi-code/config.toml (Kimi Code, Node CLI). You selected --kimi-code but appear to be on Kimi CLI. Re-run with --kimi for a working install.`,
-    });
-  }
-  // Distinct-entry descriptions when either Kimi variant is selected.
-  if (runtimes.includes('kimi')) {
-    notices.push({
-      kind: 'description',
-      runtime: 'kimi',
-      message: 'Kimi CLI (Python kimi-cli): named subagents via YAML, config at ~/.kimi/, hooks via ~/.kimi/config.toml [[hooks]].',
-    });
-  }
-  if (runtimes.includes('kimi-code')) {
-    notices.push({
-      kind: 'description',
-      runtime: 'kimi-code',
-      message: 'Kimi Code (Node CLI): three built-in subagents (coder/explore/plan), Agent Skills at ~/.kimi-code/skills/, config at ~/.kimi-code/.',
-    });
-  }
-  return notices;
-}
-
-if (selectedRuntimes.includes('kimi') || selectedRuntimes.includes('kimi-code')) {
-  const kimiNotices = disambiguateKimiVariant(selectedRuntimes);
-  for (const notice of kimiNotices) {
-    if (notice.kind === 'wrong-variant') {
-      console.error(`${yellow}⚠ Kimi variant mismatch (${notice.selected} → ${notice.detected}).${reset} ${notice.message}`);
-    } else if (notice.kind === 'description') {
-      console.log(`${dim}  ${notice.runtime}: ${notice.message}${reset}`);
-    }
-  }
-}
 
 // #1928: Google sunset Gemini CLI on 2026-06-18; Antigravity CLI is its
 // official successor. `--gemini` is no longer a valid runtime selector —
@@ -1295,19 +1231,8 @@ function resolveOpencodeConfigPath(configDir) {
   return path.join(configDir, 'opencode.json');
 }
 
-/**
- * Resolve the Kilo config file path, preferring .jsonc if it exists.
- */
-function resolveKiloConfigPath(configDir) {
-  const jsoncPath = path.join(configDir, 'kilo.jsonc');
-  if (fs.existsSync(jsoncPath)) {
-    return jsoncPath;
-  }
-  return path.join(configDir, 'kilo.json');
-}
-
 // #2087 — attribution config-path resolvers, keyed by descriptor (hostBehaviors.attributionConfigResolver)
-const ATTRIBUTION_CONFIG_RESOLVERS = { opencode: resolveOpencodeConfigPath, kilo: resolveKiloConfigPath };
+const ATTRIBUTION_CONFIG_RESOLVERS = { opencode: resolveOpencodeConfigPath };
 
 /**
  * Strip JSONC comments (// and /* *​/) from a string to produce valid JSON.
@@ -1593,116 +1518,7 @@ function convertGeminiToolName(claudeTool) {
   return claudeTool.toLowerCase();
 }
 
-function createKimiToolDiagnostic(reason, tool, source = null) {
-  const isMcp = reason === 'mcp_managed';
-  return {
-    level: 'warning',
-    code: isMcp ? 'kimi_mcp_tool_excluded' : 'kimi_unsupported_tool',
-    reason,
-    message: isMcp
-      ? `MCP-managed tool '${tool}' is configured outside Kimi agent YAML.`
-      : `Tool '${tool}' is not supported by the Kimi tool mapper.`,
-    value: tool,
-    source,
-  };
-}
 
-/**
- * Convert a Claude/GSD tool name to a Kimi CLI module path.
- * @returns {string|null} Kimi module path, or null when excluded/unsupported.
- */
-function convertKimiToolName(claudeTool) {
-  const tool = String(claudeTool || '').trim();
-  if (!tool) return null;
-  if (tool.startsWith('mcp__')) return null;
-  return claudeToKimiTools[tool] || null;
-}
-
-function mapClaudeToolsToKimiTools(claudeTools, options = {}) {
-  const diagnostics = [];
-  const tools = [];
-  const seen = new Set();
-  const source = options && Object.prototype.hasOwnProperty.call(options, 'source')
-    ? options.source
-    : null;
-
-  for (const rawTool of Array.isArray(claudeTools) ? claudeTools : []) {
-    const tool = String(rawTool || '').trim();
-    if (!tool) continue;
-
-    if (tool.startsWith('mcp__')) {
-      diagnostics.push(createKimiToolDiagnostic('mcp_managed', tool, source));
-      continue;
-    }
-
-    const kimiTool = convertKimiToolName(tool);
-    if (!kimiTool) {
-      diagnostics.push(createKimiToolDiagnostic('unsupported_tool', tool, source));
-      continue;
-    }
-
-    if (!seen.has(kimiTool)) {
-      seen.add(kimiTool);
-      tools.push(kimiTool);
-    }
-  }
-
-  return { tools, diagnostics };
-}
-
-const claudeToKiloAgentPermissions = {
-  Read: 'read',
-  Write: 'edit',
-  Edit: 'edit',
-  Bash: 'bash',
-  Grep: 'grep',
-  Glob: 'glob',
-  Task: 'task',
-  WebFetch: 'webfetch',
-  WebSearch: 'websearch',
-  TodoWrite: 'todowrite',
-  AskUserQuestion: 'question',
-  SlashCommand: 'skill',
-};
-
-const kiloAgentPermissionOrder = [
-  'read',
-  'edit',
-  'bash',
-  'grep',
-  'glob',
-  'task',
-  'webfetch',
-  'websearch',
-  'skill',
-  'question',
-  'todowrite',
-  'list',
-  'codesearch',
-  'lsp',
-];
-
-function convertClaudeToKiloPermissionTool(claudeTool) {
-  return claudeToKiloAgentPermissions[claudeTool] || null;
-}
-
-function buildKiloAgentPermissionBlock(claudeTools) {
-  const allowedPermissions = new Set();
-
-  for (const tool of claudeTools) {
-    const mapped = convertClaudeToKiloPermissionTool(tool);
-    if (mapped) {
-      allowedPermissions.add(mapped);
-    }
-  }
-
-  const lines = ['permission:'];
-  for (const permission of kiloAgentPermissionOrder) {
-    lines.push(`  ${permission}: ${allowedPermissions.has(permission) ? 'allow' : 'deny'}`);
-  }
-
-  return lines;
-}
 
 function replaceRelativePathReference(content, fromPath, toPath) {
   const escapedPath = escapeRegExp(fromPath);
@@ -1931,300 +1747,6 @@ function convertClaudeCommandToClaudeSkill(content, skillName, runtime = null, c
   return `${fm}\n${normalizedBody}`;
 }
 
-function normalizeKimiSkillName(skillName) {
-  let text = String(skillName || '').trim().toLowerCase();
-  if (text.startsWith('/')) text = text.slice(1);
-  if (text.startsWith('$')) text = text.slice(1);
-  text = text.replace(/^gsd:/, 'gsd-');
-  if (!text.startsWith('gsd-')) text = `gsd-${text}`;
-  text = text.replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  return text || 'gsd-command';
-}
-
-function convertGsdCommandReferencesToKimiSkillInvocations(content, cmdNames) {
-  if (!Array.isArray(cmdNames) || cmdNames.length === 0) return content;
-  const commands = [...cmdNames].sort((a, b) => b.length - a.length).map(escapeRegExp);
-  const commandGroup = commands.join('|');
-  const colonPattern = new RegExp(`(?<![A-Za-z0-9_/:.-])/?gsd:(${commandGroup})(?=[^A-Za-z0-9_-]|$)`, 'g');
-  const hyphenPattern = new RegExp(`(?:/|\\$)gsd-(${commandGroup})(?=[^A-Za-z0-9_-]|$)`, 'g');
-
-  return content
-    .replace(colonPattern, (_, cmd) => `/skill:gsd-${cmd}`)
-    .replace(hyphenPattern, (_, cmd) => `/skill:gsd-${cmd}`);
-}
-
-// DEFECT.GENERATIVE-FIX: this body is mirrored in
-// src/runtime-artifact-conversion.cts's convertClaudeCommandToKimiSkill (dead
-// for the live skills-install path, which routes here via
-// install-engine.cts's SKILLS_CONVERTER_REGISTRY through the kimi capability
-// descriptor's artifactLayout `converter: "convertClaudeCommandToKimiSkill"`;
-// kept for bin/install.js's own module-level export/test surface). Neither
-// copy re-exports the other — mirror any behavior change into both. Guarded
-// by the output-parity test in tests/runtime-converters.test.cjs (#2095).
-function convertClaudeCommandToKimiSkill(content, skillName, _runtime = null, cmdNames = null) {
-  const { frontmatter, body } = extractFrontmatterAndBody(content);
-  const kimiSkillName = normalizeKimiSkillName(skillName);
-  const names = cmdNames || readGsdCommandNames();
-  const description = frontmatter
-    ? extractFrontmatterField(frontmatter, 'description') || `Run GSD workflow ${kimiSkillName}.`
-    : `Run GSD workflow ${kimiSkillName}.`;
-  const normalizedBody = convertGsdCommandReferencesToKimiSkillInvocations(
-    frontmatter ? body : content,
-    names
-  );
-
-  return `---\nname: ${kimiSkillName}\ndescription: ${yamlQuote(toSingleLine(description))}\n---\nInvoke this Kimi skill with \`/skill:${kimiSkillName}\`.\n\n${normalizedBody}`;
-}
-
-const KIMI_CANONICAL_GSD_AGENT_RE = /^gsd-[a-z0-9-]+$/;
-
-function parseKimiAgentSource(source) {
-  if (typeof source === 'string') {
-    return {
-      path: null,
-      content: source,
-    };
-  }
-  if (!source || typeof source !== 'object' || typeof source.content !== 'string') {
-    return null;
-  }
-  return {
-    path: typeof source.path === 'string' ? source.path : null,
-    content: source.content,
-  };
-}
-
-function parseFrontmatterTools(frontmatter) {
-  if (!frontmatter) return [];
-  const lines = frontmatter.split(/\r?\n/);
-  const tools = [];
-  let collecting = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    if (collecting) {
-      if (trimmed.startsWith('- ')) {
-        tools.push(trimmed.slice(2).trim());
-        continue;
-      }
-      collecting = false;
-    }
-
-    if (trimmed === 'tools:' || trimmed === 'allowed-tools:') {
-      collecting = true;
-      continue;
-    }
-
-    if (trimmed.startsWith('tools:') || trimmed.startsWith('allowed-tools:')) {
-      const value = trimmed.slice(trimmed.indexOf(':') + 1).trim();
-      if (value) {
-        for (const tool of value.split(',')) {
-          const name = tool.trim();
-          if (name) tools.push(name);
-        }
-      } else {
-        collecting = true;
-      }
-    }
-  }
-
-  return tools;
-}
-
-function addKimiAgentDiagnostic(diagnostics, code, message, value, source = null) {
-  diagnostics.push({
-    level: 'warning',
-    code,
-    message,
-    value,
-    source,
-  });
-}
-
-function mapKimiAgentContractTools(toolNames, diagnostics, sourceName) {
-  const result = mapClaudeToolsToKimiTools(toolNames, { source: sourceName });
-  diagnostics.push(...result.diagnostics);
-  return result.tools;
-}
-
-function neutralizeKimiAgentPrompt(content) {
-  const { frontmatter, body } = extractFrontmatterAndBody(content);
-  let prompt = frontmatter ? body : content;
-  prompt = neutralizeAgentReferences(prompt, 'AGENTS.md');
-  prompt = prompt.replace(/~\/\.claude\/gsd-core\b/g, 'GSD core');
-  prompt = prompt.replace(/\$HOME\/\.claude\/gsd-core\b/g, 'GSD core');
-  return prompt.replace(/^\s*\r?\n/, '');
-}
-
-function pushKimiToolsYaml(lines, indent, tools) {
-  const prefix = ' '.repeat(indent);
-  if (!Array.isArray(tools) || tools.length === 0) {
-    lines.push(`${prefix}tools: []`);
-    return;
-  }
-  lines.push(`${prefix}tools:`);
-  for (const tool of tools) {
-    lines.push(`${prefix}  - ${yamlQuote(tool)}`);
-  }
-}
-
-function buildKimiRootAgentYaml({ description, tools, subagents }) {
-  const lines = [
-    'version: 1',
-    'agent:',
-    '  name: gsd',
-    `  description: ${yamlQuote(toSingleLine(description || 'Run GSD workflows in Kimi CLI.'))}`,
-    '  extend: default',
-    '  system_prompt_path: ./gsd.md',
-  ];
-  pushKimiToolsYaml(lines, 2, tools);
-
-  if (subagents.length > 0) {
-    lines.push('  subagents:');
-    for (const subagent of subagents) {
-      lines.push(`    ${subagent.name}:`);
-      lines.push(`      path: ./subagents/${subagent.name}.yaml`);
-      lines.push(`      description: ${yamlQuote(toSingleLine(subagent.description))}`);
-    }
-  }
-
-  return `${lines.join('\n')}\n`;
-}
-
-function buildKimiSubagentYaml({ name, description, tools }) {
-  const lines = [
-    'version: 1',
-    'agent:',
-    `  name: ${name}`,
-    `  description: ${yamlQuote(toSingleLine(description || `Run ${name}.`))}`,
-    `  system_prompt_path: ./${name}.md`,
-  ];
-  pushKimiToolsYaml(lines, 2, tools);
-  return `${lines.join('\n')}\n`;
-}
-
-// DEFECT.GENERATIVE-FIX: this body is mirrored in
-// src/runtime-artifact-conversion.cts's buildKimiAgentArtifacts (dead for the
-// live install path, which routes here via runtime-artifact-layout.cts's
-// kimiAgentsKind — see its `conversionExports['buildKimiAgentArtifacts']`
-// dynamic lookup against the compiled runtime-artifact-conversion.cjs; kept
-// for bin/install.js's own module-level export/test surface). Neither copy
-// re-exports the other — mirror any behavior change into both, including the
-// kimi_cli.tools.agent:Agent grant that enables background dispatch
-// (#2095 Upgrade 2). Guarded by the output-parity test in
-// tests/runtime-converters.test.cjs (#2095).
-function buildKimiAgentArtifacts({
-  rootAgent = '',
-  subagents = [],
-  requestedSubagents = null,
-} = {}) {
-  const diagnostics = [];
-  const rootSource = parseKimiAgentSource(rootAgent) || { path: null, content: '' };
-  const { frontmatter: rootFrontmatter } = extractFrontmatterAndBody(rootSource.content);
-  const rootDescription = rootFrontmatter
-    ? extractFrontmatterField(rootFrontmatter, 'description') || 'Run GSD workflows in Kimi CLI.'
-    : 'Run GSD workflows in Kimi CLI.';
-
-  const subagentSources = Array.isArray(subagents) ? subagents : [];
-  if (!Array.isArray(subagents)) {
-    addKimiAgentDiagnostic(
-      diagnostics,
-      'kimi_unsupported_subagents_input',
-      'Subagents input must be an array of Markdown strings or source objects.',
-      typeof subagents,
-      null
-    );
-  }
-
-  const subagentMap = new Map();
-  for (const source of subagentSources) {
-    const parsed = parseKimiAgentSource(source);
-    if (!parsed) {
-      addKimiAgentDiagnostic(
-        diagnostics,
-        'kimi_unsupported_subagent_input',
-        'Subagent source must be a Markdown string or an object with content.',
-        typeof source,
-        null
-      );
-      continue;
-    }
-
-    const { frontmatter } = extractFrontmatterAndBody(parsed.content);
-    const fallbackName = parsed.path ? path.basename(parsed.path, path.extname(parsed.path)) : null;
-    const name = frontmatter
-      ? extractFrontmatterField(frontmatter, 'name') || fallbackName
-      : fallbackName;
-    if (!name || !KIMI_CANONICAL_GSD_AGENT_RE.test(name)) {
-      addKimiAgentDiagnostic(
-        diagnostics,
-        'kimi_invalid_subagent_name',
-        'Subagent source does not use a canonical gsd-* Kimi agent name.',
-        name || '(missing)',
-        parsed.path
-      );
-      continue;
-    }
-
-    const description = frontmatter
-      ? extractFrontmatterField(frontmatter, 'description') || `Run ${name}.`
-      : `Run ${name}.`;
-    const tools = mapKimiAgentContractTools(parseFrontmatterTools(frontmatter), diagnostics, name);
-    subagentMap.set(name, {
-      name,
-      description,
-      tools,
-      prompt: neutralizeKimiAgentPrompt(parsed.content),
-    });
-  }
-
-  const requested = Array.isArray(requestedSubagents) && requestedSubagents.length > 0
-    ? requestedSubagents
-    : [...subagentMap.keys()];
-  const selectedSubagents = [];
-  for (const requestedName of requested) {
-    if (subagentMap.has(requestedName)) {
-      selectedSubagents.push(subagentMap.get(requestedName));
-      continue;
-    }
-    addKimiAgentDiagnostic(
-      diagnostics,
-      'kimi_unknown_subagent',
-      'Requested subagent was not generated and will not be emitted in Kimi YAML.',
-      requestedName,
-      null
-    );
-  }
-
-  const rootTools = mapKimiAgentContractTools(parseFrontmatterTools(rootFrontmatter), diagnostics, 'gsd');
-  if (selectedSubagents.length > 0 && !rootTools.includes('kimi_cli.tools.agent:Agent')) {
-    rootTools.push('kimi_cli.tools.agent:Agent');
-  }
-
-  return {
-    root: {
-      name: 'gsd',
-      yamlPath: 'agents/gsd.yaml',
-      promptPath: 'agents/gsd.md',
-      yaml: buildKimiRootAgentYaml({
-        description: rootDescription,
-        tools: rootTools,
-        subagents: selectedSubagents,
-      }),
-      prompt: neutralizeKimiAgentPrompt(rootSource.content),
-    },
-    subagents: selectedSubagents.map((subagent) => ({
-      name: subagent.name,
-      yamlPath: `agents/subagents/${subagent.name}.yaml`,
-      promptPath: `agents/subagents/${subagent.name}.md`,
-      yaml: buildKimiSubagentYaml(subagent),
-      prompt: subagent.prompt,
-    })),
-    diagnostics,
-  };
-}
 
 /**
  * Convert a Claude agent (.md) to a Copilot agent (.agent.md).
@@ -2500,233 +2022,7 @@ function convertClaudeAgentToCursorAgent(content) {
 // #1675 (ADR-1508): the augment converter family below was a byte-identical
 // duplicate of runtime-artifact-conversion.cjs:
 //   convertSlashCommandsToAugmentSkillMentions, convertClaudeToAugmentMarkdown,
-//   getAugmentSkillAdapterHeader, convertClaudeCommandToAugmentSkill,
-//   convertClaudeAgentToAugmentAgent
-// Deleted here and bound from runtimeArtifactConversion above (single source).
-// The DEFECT.GENERATIVE-FIX parity guard in
-// tests/enh-1511-rewrite-engine-relocation.test.cjs asserts reference identity.
 
-function convertSlashCommandsToTraeSkillMentions(content) {
-  return content.replace(/\/gsd:([a-z0-9-]+)/g, (_, commandName) => {
-    return `/gsd-${commandName}`;
-  });
-}
-
-function convertClaudeToTraeMarkdown(content) {
-  let converted = convertSlashCommandsToTraeSkillMentions(content);
-  converted = converted.replace(/\bBash\(/g, 'Shell(');
-  converted = converted.replace(/\bEdit\(/g, 'StrReplace(');
-  // Replace general-purpose subagent type with Trae's equivalent "general_purpose_task"
-  converted = converted.replace(/subagent_type="general-purpose"/g, 'subagent_type="general_purpose_task"');
-  converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
-  // #2658: full-path forms (with a leading dot-claude-slash prefix) MUST be
-  // replaced before the bare Claude-instruction-file pattern and before the
-  // generic dot-claude-slash rewrite below — otherwise the bare pattern
-  // consumes only the instruction-filename tail, leaving that prefix stale
-  // in place, and the generic rewrite then mutates the stale leftover too,
-  // producing a doubled trae-prefix segment ahead of the rules path instead
-  // of a single clean one. (Deliberately never spelling the instruction
-  // filename as one contiguous "CLAUDE" + dot + "md" token, and never
-  // spelling either malformed shape out as a literal contiguous string, in
-  // ANY comment in this function: this file ships verbatim into local
-  // `--trae` installs, where it is itself run through this same class of
-  // find/replace — a literal instruction-filename token sitting in a
-  // comment gets "fixed" right along with real code, and the emitted-content
-  // regression test added alongside this fix asserts neither malformed
-  // shape appears anywhere in the installed tree, comments included; this
-  // bit the fix itself twice during development.) All forms converge on the
-  // same concrete file (never a bare directory) so this stays in parity
-  // with the `trae.js` RUNTIME_CONTENT_DISPATCH entry.
-  converted = converted.replace(/`\.\/\.claude\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.\/\.claude\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  converted = converted.replace(/`\.claude\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.claude\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  // #2658 (found via the end-to-end install regression test, not the static
-  // trace above): `copyWithPathReplacement` runs a GENERIC dot-claude-slash
-  // -> runtime-config-dir rewrite on every .md file before calling this
-  // converter — for `~/.claude/`, `$HOME/.claude/`, AND `./.claude/` alike —
-  // substituting a runtime-appropriate `pathPrefix` this function is never
-  // given and cannot itself compute (it differs per install invocation: a
-  // relative `./.trae/` for a project-local install, an arbitrary absolute
-  // path for a local install rooted elsewhere, `~/.trae/` for a global one).
-  // So for source using any of those prefixed forms, the patterns above
-  // never fire here — this converter only ever sees the ALREADY-rewritten
-  // "<runtime-config-dir>/" + instruction-filename shape, with whatever
-  // prefix the install actually used. The generic pattern below preserves
-  // that prefix verbatim (via the capture group) and only fixes the
-  // filename suffix, rather than assuming a fixed `./.trae/` shape — a
-  // narrower fixed-prefix version of this pattern shipped first and still
-  // left the doubled-prefix defect live for the `$HOME/.claude/` and
-  // `~/.claude/` forms specifically (found the same way, one regression-test
-  // run later). Scoped to a `.trae/` tail so it cannot also swallow the
-  // unprefixed `./CLAUDE.md` form the very next pattern handles differently
-  // (discarding the prefix entirely, not preserving it). Must run before
-  // the bare pattern for the same consume-the-full-match-first reason.
-  converted = converted.replace(/`([^\s`]*\.trae\/)CLAUDE\.md`/g, '`$1rules/rules.md`');
-  converted = converted.replace(/([^\s`]*\.trae\/)CLAUDE\.md/g, '$1rules/rules.md');
-  converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  converted = converted.replace(/`CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\bCLAUDE\.md\b/g, '.trae/rules/rules.md');
-  converted = converted.replace(/\.claude\/skills\//g, '.trae/skills/');
-  converted = converted.replace(/\.\/\.claude\//g, './.trae/');
-  converted = converted.replace(/\.claude\//g, '.trae/');
-  // Bare forms (no trailing slash) — after slash forms to avoid double-rewrite.
-  // Use negative lookahead (?![\w-]) to preserve .claude-plugin and .claudeignore.
-  converted = converted.replace(/~\/\.claude(?![\w-])/g, '~/.trae');
-  converted = converted.replace(/\$HOME\/\.claude(?![\w-])/g, '$HOME/.trae');
-  // Environment variable name rewrite
-  converted = converted.replace(/\bCLAUDE_CONFIG_DIR\b/g, 'TRAE_CONFIG_DIR');
-  converted = converted.replace(/\*\*Known Claude Code bug \(classifyHandoffIfNeeded\):\*\*[^\n]*\n/g, '');
-  converted = converted.replace(/- \*\*classifyHandoffIfNeeded false failure:\*\*[^\n]*\n/g, '');
-  // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-  converted = applyClaudeCodeBrandSwap(converted, 'Trae');
-  return converted;
-}
-
-// DEFECT.GENERATIVE-FIX: this body is mirrored in
-// src/runtime-artifact-conversion.cts's convertClaudeCommandToTraeSkill (used
-// by src/install-engine.cts's skills-install path via
-// SKILLS_CONVERTER_REGISTRY). This bin/install.js copy is dead for the live
-// skills-install path — kept for this file's own module-level export/test
-// surface. Neither copy re-exports the other — mirror any behavior change
-// into both. Guarded by the output-parity test in
-// tests/runtime-converters.test.cjs (#2094).
-function convertClaudeCommandToTraeSkill(content, skillName) {
-  const converted = convertClaudeToTraeMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${skillName}.`;
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) {
-      description = maybeDescription;
-    }
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote so YAML flow indicators (`[BETA] …`) don't break Trae's
-  // frontmatter parser.
-  let fm = `---\nname: ${yamlIdentifier(skillName)}\ndescription: ${yamlQuote(shortDescription)}\n`;
-  // #2094: emit `stage:` so Trae's SOLO agent can auto-invoke GSD skills at
-  // the corresponding stage (docs.trae.ai/ide/agent). The field name/schema
-  // is not formally documented (thin SPA docs) — descriptor-driven, single
-  // fixed GSD-side value (runtime.hostBehaviors.soloStageMetadata), inferred/
-  // best-effort.
-  const soloStage = _hostBehaviors('trae').soloStageMetadata;
-  if (soloStage) fm += `stage: ${soloStage}\n`;
-  fm += '---';
-  return `${fm}\n${body}`;
-}
-
-function convertClaudeAgentToTraeAgent(content) {
-  let converted = convertClaudeToTraeMarkdown(content);
-
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  if (!frontmatter) return converted;
-
-  const name = extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
-
-  const cleanFrontmatter = `---\nname: ${yamlIdentifier(name)}\ndescription: ${yamlQuote(toSingleLine(description))}\n---`;
-
-  return `${cleanFrontmatter}\n${body}`;
-}
-
-function convertSlashCommandsToCodebuddySkillMentions(content) {
-  return content.replace(/\/gsd:([a-z0-9-]+)/g, (_, commandName) => {
-    return `/gsd-${commandName}`;
-  });
-}
-
-function convertClaudeToCodebuddyMarkdown(content) {
-  let converted = convertSlashCommandsToCodebuddySkillMentions(content);
-  // CodeBuddy uses the same tool names as Claude Code (Bash, Edit, Read, Write, etc.)
-  // No tool name conversion needed
-  converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
-  converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`CODEBUDDY.md`');
-  converted = converted.replace(/\.\/CLAUDE\.md/g, 'CODEBUDDY.md');
-  converted = converted.replace(/`CLAUDE\.md`/g, '`CODEBUDDY.md`');
-  converted = converted.replace(/\bCLAUDE\.md\b/g, 'CODEBUDDY.md');
-  converted = converted.replace(/\.claude\/skills\//g, '.codebuddy/skills/');
-  converted = converted.replace(/\.\/\.claude\//g, './.codebuddy/');
-  converted = converted.replace(/\.claude\//g, '.codebuddy/');
-  converted = converted.replace(/\*\*Known Claude Code bug \(classifyHandoffIfNeeded\):\*\*[^\n]*\n/g, '');
-  converted = converted.replace(/- \*\*classifyHandoffIfNeeded false failure:\*\*[^\n]*\n/g, '');
-  // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-  converted = applyClaudeCodeBrandSwap(converted, 'CodeBuddy');
-  return converted;
-}
-
-function convertClaudeCommandToCodebuddySkill(content, skillName) {
-  const converted = convertClaudeToCodebuddyMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${skillName}.`;
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) {
-      description = maybeDescription;
-    }
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote so YAML flow indicators (`[BETA] …`) don't break
-  // CodeBuddy's frontmatter parser.
-  //
-  // #789: mark user-invocable:false so the skill is NOT shown in CodeBuddy's
-  // '/' menu (it defaults to true). The commands/ surface (#789) is the sole
-  // '/' entry point; skills remain model-invocable background knowledge,
-  // avoiding a duplicated /gsd-* entry per workflow.
-  return `---\nname: ${yamlIdentifier(skillName)}\ndescription: ${yamlQuote(shortDescription)}\nuser-invocable: false\n---\n${body}`;
-}
-
-/**
- * Convert a Claude Code slash-command (.md) to a CodeBuddy slash-command (.md).
- *
- * CodeBuddy reads user-level slash commands from ~/.codebuddy/commands/<name>.md
- * (https://www.codebuddy.ai/docs/cli/slash-commands). The filename determines the
- * command name (gsd-help.md → /gsd-help), so the Claude-specific `name: gsd:<x>`
- * frontmatter field is dropped. CodeBuddy command frontmatter supports
- * `description` and `argument-hint`; both are preserved when present. The body is
- * brand/path-converted via convertClaudeToCodebuddyMarkdown.
- *
- * @param {string} content      raw Claude command markdown
- * @param {string} commandName  installed command name (e.g. 'gsd-help')
- * @returns {string}
- */
-function convertClaudeCommandToCodebuddyCommand(content, commandName) {
-  const converted = convertClaudeToCodebuddyMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${commandName}.`;
-  let argumentHint = '';
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) description = maybeDescription;
-    const maybeArgHint = extractFrontmatterField(frontmatter, 'argument-hint');
-    if (maybeArgHint) argumentHint = maybeArgHint;
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote values so YAML flow indicators (`[BETA] …`, `[name]`) don't
-  // break CodeBuddy's frontmatter parser.
-  const lines = ['---', `description: ${yamlQuote(shortDescription)}`];
-  if (argumentHint) lines.push(`argument-hint: ${yamlQuote(toSingleLine(argumentHint))}`);
-  lines.push('---', body.trimStart());
-  return lines.join('\n');
-}
-
-function convertClaudeAgentToCodebuddyAgent(content) {
-  let converted = convertClaudeToCodebuddyMarkdown(content);
-
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  if (!frontmatter) return converted;
-
-  const name = extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
-
-  const cleanFrontmatter = `---\nname: ${yamlIdentifier(name)}\ndescription: ${yamlQuote(toSingleLine(description))}\n---`;
-
-  return `${cleanFrontmatter}\n${body}`;
-}
 
 // ── Cline converters ────────────────────────────────────────────────────────
 
@@ -2801,825 +2097,6 @@ function convertClaudeCommandToClineSkill(content, skillName, runtime = null, cm
 }
 
 // ── End Cline converters ─────────────────────────────────────────────────────
-
-// ── Hermes converters (#2284) ────────────────────────────────────────────────
-//
-// Hermes exposes `delegate_task` for subagent dispatch, not the Claude-shaped
-// `Agent(...)` tool the host-neutral `gsd-core/workflows/*.md` corpus assumes.
-// Prior to this fix, the hermes `.md` hook (RUNTIME_CONTENT_DISPATCH.hermes)
-// only brand-swapped "Claude Code" → "Hermes Agent" via
-// hostBehaviors.brandingRewrites, leaving the false "Agent tool IS available"
-// assertion and literal `Agent(...)` call syntax installed verbatim.
-//
-// `projectNamedDispatchToStructuralDelegate` is GENERIC projection machinery:
-// it branches ENTIRELY on the runtime's documentation-sourced
-// `hostIntegration.dispatch` facts (read via `_hostIntegrationDispatch`,
-// capabilities/<runtime>/capability.json — never hardcoded here) and a
-// `toolConfig` that supplies only the target primitive's own vocabulary (its
-// call name + native parameter names — not a capability claim; there is no
-// `dispatch` axis for "the call's own parameter names", so that vocabulary is
-// necessarily supplied by the caller, exactly as every other runtime's
-// converter supplies its own tool-name vocabulary, e.g. Trae's `Shell(`).
-//
-// Hermes-specific facts consumed (capabilities/hermes/capability.json,
-// docs/reference/host-integration-capability-matrix.md:244-249 — UNCHANGED by
-// this fix):
-//   - dispatch.namedDispatch: false — Hermes's delegate_task has no named-
-//     agent lookup ("Subagents are identified only by role ('leaf' or
-//     'orchestrator')"). GSD resolves the referenced gsd-* role itself
-//     (fail-closed against the staged agents/ dir) and embeds the loaded
-//     PROMPT CONTENT into the delegate_task payload.
-//   - dispatch.background: true — `delegate_task(background=true)` "returns a
-//     handle immediately"; Claude's `run_in_background=` maps onto Hermes's
-//     own `background=` parameter, preserving the async-handle / no-busy-poll
-//     / resume-on-completion wording already used throughout these workflows.
-//   - dispatch.subagentToolkit: "read-only" / dispatch.maxDepth: 1 — dispatched
-//     roles never themselves further delegate, so no nested-delegation
-//     instruction is ever emitted toward them.
-
-/**
- * Resolve the set of gsd-* role-prompt stems actually shipped in this
- * package's `agents/` directory (the FULL source set, not profile-staged —
- * `--minimal`/`--profile=core` intentionally excludes many agents from a
- * given install without those workflows being unreachable, so validating
- * against the profile-filtered subset would fail every restricted-profile
- * Hermes install; validating against the shipped source catches genuine
- * authoring bugs — a stale/typo'd role reference — without that regression).
- * Returns `null` if the directory cannot be resolved (fail-closed: callers
- * must refuse to install rather than skip validation).
- */
-function _resolveAvailableGsdRoles() {
-  try {
-    const agentsDir = path.join(__dirname, '..', 'agents');
-    return new Set(
-      fs.readdirSync(agentsDir, { withFileTypes: true })
-        .filter((e) => e.isFile() && e.name.endsWith('.md'))
-        .map((e) => e.name.slice(0, -3)),
-    );
-  } catch (_e) {
-    return null;
-  }
-}
-
-/**
- * Fail-closed validation (#2284 AC: "Missing role prompts fail closed" /
- * "never emit a workflow referencing an unresolvable role"). A single literal
- * `gsd-*` role value must resolve to a real `agents/<role>.md` file — throws
- * an explicit Error otherwise, aborting the install (the standard
- * `copyWithPathReplacement` failure path already used for its own
- * confinement-violation throws). Called per extracted role value from EVERY
- * call-syntax form (`subagent_type=`, `subagent_type:`, post-rename
- * `gsd_role=`) — the check operates on the resolved value, independent of
- * which source syntax produced it. Non-literal / dynamic expressions (e.g.
- * `research_hook.ref.agent`) are not quoted strings and are never passed
- * here; they carry their own runtime resolution + fail-closed instruction via
- * the injected per-call resolution line.
- */
-function _assertRoleResolvable(role, availableRoles, runtime, sourceDescription) {
-  if (!availableRoles) {
-    throw new Error(
-      `${runtime} workflow install: could not resolve the shipped agents/ directory to validate named-role ` +
-      'dispatch references — refusing to install (fail-closed, #2284)',
-    );
-  }
-  if (role.startsWith('gsd-') && !availableRoles.has(role)) {
-    throw new Error(
-      `${runtime} workflow install: dispatch references role "${role}" via ${sourceDescription}, but no ` +
-      `matching agents/${role}.md prompt file is shipped — refusing to install a workflow that dispatches ` +
-      'an unresolvable role (fail-closed, #2284)',
-    );
-  }
-}
-
-/**
- * Segment `text` into 'code' and 'string' runs (recognizes `"..."`, `'...'`,
- * and Python-style `"""..."""`, with backslash-escaping). Required because
- * the real corpus embeds unescaped parens inside quoted prompt bodies (e.g.
- * discuss-phase-assumptions.md's `(e.g., "Technical Approach")` inside a
- * `"""`-quoted prompt) — naive paren/keyword scanning across raw text would
- * desync on these. Downstream call-span detection and header-token
- * extraction operate on a same-length MASK derived from this segmentation
- * (see `maskStringLiterals`) so string content can never be mistaken for
- * call structure.
- */
-function _segmentCodeAndStrings(text) {
-  const segments = [];
-  let i = 0;
-  let segStart = 0;
-  const flushCode = (end) => { if (end > segStart) segments.push({ type: 'code', start: segStart, end }); };
-  while (i < text.length) {
-    const ch = text[i];
-    if (ch === '"' && text[i + 1] === '"' && text[i + 2] === '"') {
-      flushCode(i);
-      const strStart = i;
-      i += 3;
-      while (i < text.length && !(text[i] === '"' && text[i + 1] === '"' && text[i + 2] === '"')) {
-        i += text[i] === '\\' ? 2 : 1;
-      }
-      i = Math.min(i + 3, text.length);
-      segments.push({ type: 'string', start: strStart, end: i, quoteLen: 3 });
-      segStart = i;
-      continue;
-    }
-    // Only `"` is recognized as a single-char string delimiter — NOT `'`.
-    // The corpus is markdown prose, not code: apostrophes are routine English
-    // contractions/possessives ("install's", "don't") and treating them as
-    // string delimiters would swallow everything up to the next unrelated
-    // apostrophe as "inside a string" (verified against the real corpus —
-    // this was a real, disqualifying bug during development of this fix).
-    // Every real call-argument value in the corpus uses `"`/`"""` only.
-    if (ch === '"') {
-      flushCode(i);
-      const strStart = i;
-      i += 1;
-      while (i < text.length && text[i] !== '"') {
-        i += text[i] === '\\' ? 2 : 1;
-      }
-      i = Math.min(i + 1, text.length);
-      segments.push({ type: 'string', start: strStart, end: i, quoteLen: 1 });
-      segStart = i;
-      continue;
-    }
-    i += 1;
-  }
-  flushCode(text.length);
-  return segments;
-}
-
-/**
- * Same-length mask of `text` with the INTERIOR of every string literal
- * replaced by a space (newlines preserved, so line-based regexes still work).
- * The delimiting quote character(s) themselves (`"`, `'`, `"""`) are kept
- * verbatim so a value-extraction regex like `key\s*[=:]\s*"[^"]*"` still
- * matches correctly against the mask — only the STRING CONTENT is blanked,
- * never the quote structure. Positions in the mask line up 1:1 with `text`,
- * so match indices/offsets found against the mask are valid offsets into the
- * original.
- */
-function maskStringLiterals(text) {
-  let mask = '';
-  for (const seg of _segmentCodeAndStrings(text)) {
-    const slice = text.slice(seg.start, seg.end);
-    if (seg.type === 'code') { mask += slice; continue; }
-    const q = seg.quoteLen;
-    if (slice.length <= q) { mask += slice; continue; } // truncated/unterminated — keep verbatim
-    const closeLen = Math.min(q, slice.length - q);
-    const open = slice.slice(0, q);
-    const close = slice.slice(slice.length - closeLen);
-    const interiorLen = slice.length - q - closeLen;
-    const interior = interiorLen > 0 ? slice.slice(q, q + interiorLen) : '';
-    mask += open + interior.replace(/[^\n]/g, ' ') + close;
-  }
-  return mask;
-}
-
-/**
- * Locate every `<headWord>(` / `<headWord>({` call span in `text`.
- *
- * #2284 round-2 CRITICAL fix: this MUST NOT rely on whole-document quote
- * parity. A markdown workflow file mixes prose, ```bash code fences (full of
- * their own double-quoted strings), and shell quoting — there is no single
- * document-wide quote grammar, so a `"`-heavy bash `echo` upstream of a real
- * call (e.g. code-review.md's fenced `echo "..."` block before its
- * `Agent(subagent_type="gsd-code-reviewer", ...)` call) can desync a
- * CUMULATIVE quote-state scan, making the scanner believe the real call's
- * `Agent(` sits "inside a string" and silently skipping it entirely — the
- * call then survives completely unnormalized. (Reproduced and root-caused
- * against the real corpus.)
- *
- * Fixed shape: find each `<headWord>(` occurrence via a PLAIN literal-text
- * search (`indexOf`, immune to any prior document content), then run a
- * balanced paren-matching scan whose quote-tracking state STARTS FRESH AT
- * THE HEAD — local to this one call, never inherited from (or able to be
- * corrupted by) anything earlier in the document. Handles all three real
- * corpus shapes: multi-line one-key-per-line, single-line object-literal
- * (`Agent({ ... })`), and single-line compact
- * (`Agent(subagent_type="x", model="y", prompt="...")`) — including prompt
- * bodies containing their own unescaped `()`/`{}` (skipped via the SAME
- * span-local quote tracking, e.g. discuss-phase-assumptions.md's
- * `"""`-quoted parenthetical prose).
- *
- * Returns `[{start, end, hasBraceWrapper}]` — `start`/`end` bound the FULL
- * call INCLUDING the head word and the closing `)`/`})`.
- */
-function findDispatchCallSpans(text, headWord) {
-  const spans = [];
-  const headToken = `${headWord}(`;
-  let searchFrom = 0;
-  for (;;) {
-    const start = text.indexOf(headToken, searchFrom);
-    if (start === -1) break;
-    const prevChar = start > 0 ? text[start - 1] : '';
-    if (/[A-Za-z0-9_]/.test(prevChar)) { searchFrom = start + 1; continue; } // word-boundary guard
-
-    let i = start + headToken.length; // just past the '('
-    let j = i;
-    while (j < text.length && /\s/.test(text[j])) j++;
-    const hasBraceWrapper = text[j] === '{';
-
-    // LOCAL scan — quote/paren state is fresh here, never inherited from
-    // anything before `start` in the document.
-    let parenDepth = 1;
-    let inString = null; // null | '"' | 'triple'
-    let end = -1;
-    for (; i < text.length; i++) {
-      const ch = text[i];
-      if (inString) {
-        if (ch === '\\') { i++; continue; }
-        if (inString === 'triple') {
-          if (ch === '"' && text[i + 1] === '"' && text[i + 2] === '"') { inString = null; i += 2; }
-          continue;
-        }
-        if (ch === inString) inString = null;
-        continue;
-      }
-      if (ch === '"' && text[i + 1] === '"' && text[i + 2] === '"') { inString = 'triple'; i += 2; continue; }
-      if (ch === '"') { inString = '"'; continue; }
-      if (ch === '(') { parenDepth++; continue; }
-      if (ch === ')') {
-        parenDepth--;
-        if (parenDepth === 0) { end = i + 1; break; }
-        continue;
-      }
-    }
-    if (end === -1) { searchFrom = start + 1; continue; } // unterminated — skip past, keep scanning
-    spans.push({ start, end, hasBraceWrapper });
-    searchFrom = end;
-  }
-  return spans;
-}
-
-/**
- * Remove a call argument's `[matchStart, matchEnd)` token from `spanText`,
- * consuming its surrounding comma/whitespace so no dangling `, ,` or trailing
- * comment survives. When the argument owns its whole line, the whole line
- * (including a trailing inline `# comment`) is removed; `consumeLeadingComments`
- * additionally removes contiguous comment-only lines immediately ABOVE it —
- * #2284 Finding 5: explanatory prose describing a now-removed conditional
- * (e.g. execute-phase.md's "# Only include model= when ...") must not survive
- * describing a branch that no longer exists. Inline (single-line-compact /
- * object-literal) occurrences instead eat one adjacent comma.
- */
-function _stripCallArgument(spanText, matchStart, matchEnd, { consumeLeadingComments = false } = {}) {
-  let end = matchEnd;
-  const afterRe = /^[ \t]*,?[ \t]*(#[^\n]*)?\r?\n?/;
-  const afterMatch = afterRe.exec(spanText.slice(end));
-  const hadTrailingComma = !!(afterMatch && /,/.test(afterMatch[0]));
-  if (afterMatch) end += afterMatch[0].length;
-
-  let start = matchStart;
-  const lineStart = spanText.lastIndexOf('\n', start - 1) + 1;
-  const ownLine = /^[ \t]*$/.test(spanText.slice(lineStart, start));
-  if (ownLine) {
-    start = lineStart;
-    if (consumeLeadingComments) {
-      for (;;) {
-        const prevLineStart = start > 0 ? spanText.lastIndexOf('\n', start - 2) + 1 : 0;
-        const prevLine = spanText.slice(prevLineStart, start);
-        if (/^[ \t]*#[^\n]*\r?\n$/.test(prevLine)) {
-          start = prevLineStart;
-          if (prevLineStart === 0) break;
-        } else break;
-      }
-    }
-  } else if (!hadTrailingComma) {
-    // Inline form and this was the LAST arg (no trailing comma) — eat a
-    // leading comma so the previous arg doesn't dangle one.
-    const before = spanText.slice(0, start);
-    const cm = /,[ \t]*$/.exec(before);
-    if (cm) start -= cm[0].length;
-  }
-  return spanText.slice(0, start) + spanText.slice(end);
-}
-
-/**
- * Replace a named-role argument token's `[matchStart, matchEnd)` span
- * (`subagent_type=`/`subagent_type:` + its value) with the projected
- * `gsd_role=` / role-prompt-resolution / structural-role argument group.
- * Preserves the pretty multi-line one-arg-per-line style when the original
- * token owned its own line; falls back to an inline, comma-joined group for
- * the single-line-compact and object-literal forms.
- */
-function _projectRoleArgument(spanText, matchStart, matchEnd, roleValueExpr, toolConfig, canOrchestrate) {
-  const { namedRoleParam, promptContentParam, structuralRoleParam, leafRoleValue } = toolConfig;
-  const lineStart = spanText.lastIndexOf('\n', matchStart - 1) + 1;
-  const startsOwnLine = /^[ \t]*$/.test(spanText.slice(lineStart, matchStart));
-
-  // Consume an immediately-following separator comma (+ same-line whitespace/
-  // newline) into `end` — never leave it dangling AFTER an injected trailing
-  // `# comment` (a bare `,` after `#...` would sit on the comment's own line,
-  // outside any real argument list).
-  let end = matchEnd;
-  const afterRe = /^[ \t]*,[ \t]*\r?\n?/;
-  const afterMatch = afterRe.exec(spanText.slice(end));
-  const hadTrailingComma = !!afterMatch;
-  if (afterMatch) end += afterMatch[0].length;
-  const ownLine = startsOwnLine && hadTrailingComma && /\n$/.test(afterMatch[0]);
-
-  const promptContentPhrase =
-    `${promptContentParam}=<resolve ${roleValueExpr} against the active install's gsd-* role prompts and load ` +
-    'its contents; FAIL CLOSED with an explicit error if unresolved — never execute the role inline>';
-
-  let replacement;
-  if (ownLine) {
-    const indent = spanText.slice(lineStart, matchStart);
-    const depthNote = canOrchestrate ? '' : '  # nested delegation is unavailable at this dispatch depth/toolkit';
-    replacement =
-      `${namedRoleParam}=${roleValueExpr},\n` +
-      `${indent}${promptContentPhrase},\n` +
-      `${indent}${structuralRoleParam}="${leafRoleValue}",${depthNote}\n`;
-  } else {
-    // Inline forms never carry a trailing `#` comment mid-argument-list (it
-    // would silently "comment out" the remainder of the call), so the
-    // depth/toolkit caveat is only ever emitted in the pretty own-line form.
-    // Re-emit exactly the separator that originally followed this argument
-    // (a comma if more args follow; nothing if it was the last one).
-    replacement =
-      `${namedRoleParam}=${roleValueExpr}, ${promptContentPhrase}, ${structuralRoleParam}="${leafRoleValue}"` +
-      (hadTrailingComma ? ', ' : '');
-  }
-  return spanText.slice(0, matchStart) + replacement + spanText.slice(end);
-}
-
-// Matches a `subagent_type`/`model` argument's key+delimiter+value across all
-// three corpus forms: quoted-string values ("gsd-planner", "{model}") and
-// bare dynamic-expression values (ref.agent, research_hook.ref.agent,
-// executor_model). The captured group is always the value (a suffix of the
-// whole match), so its start offset is `match.index + match[0].length -
-// match[1].length` — avoids needing the regex `d` (indices) flag.
-function _callArgValueRe(key) {
-  return new RegExp(`\\b${key}\\s*[=:]\\s*("(?:[^"\\\\]|\\\\.)*"|[A-Za-z_][\\w.]*)`);
-}
-
-/**
- * Returns the literal role name from a captured role-argument value EXPR
- * (e.g. `"gsd-planner"`) — or `null` when it is not a genuine static
- * literal: a bare dynamic expression (`ref.agent`), OR a quoted value that
- * still contains `{...}` template interpolation (the corpus's own
- * placeholder convention, e.g. `model="{researcher_model}"` — and,
- * critically, `subagent_type: "gsd-{agent}"` in
- * gsd-core/references/universal-anti-patterns.md, a DOCUMENTATION template
- * illustrating the naming pattern, never a concrete role to resolve).
- * Fail-closed validation only ever runs on a genuine static literal; a
- * template/dynamic value still gets the full role-prompt-resolution
- * projection treatment (the resolve+fail-closed instruction applies equally
- * once a template is substituted at runtime) — only the STATIC CHECK is
- * skipped, never the projection itself.
- */
-function _literalRoleValue(roleValueExpr) {
-  const m = /^"([^"]*)"$/.exec(roleValueExpr);
-  if (!m) return null;
-  if (/[{}]/.test(m[1])) return null;
-  return m[1];
-}
-
-/**
- * `maskStringLiterals` PLUS `#`-to-end-of-line comment blanking (comments are
- * never string literals, so they survive string-masking as literal `#...`
- * text). Header-token searches (subagent_type/model/run_in_background) must
- * use THIS mask, not the string-only one — verified necessary against the
- * real corpus: execute-phase.md's explanatory comment "# Only include
- * model= when executor_model is..." literally contains the substring
- * "model= when", which a comment-blind `model` regex mismatches as a real
- * `model=when` argument, corrupting the comment AND missing the real
- * `model="{executor_model}"` line beneath it. Scoped to call-span text only
- * (never the whole document), so markdown `#`/`##` headings elsewhere are
- * unaffected.
- */
-function _maskStringsAndComments(text) {
-  return maskStringLiterals(text).replace(/#[^\n]*/g, (m) => ' '.repeat(m.length));
-}
-
-/**
- * Normalize ONE `Agent(...)`/`Agent({...})` call span (already isolated by
- * `findDispatchCallSpans`) onto the target's real dispatch primitive. Every
- * behavioral branch reads `dispatch` (the runtime's sourced
- * `hostIntegration.dispatch` facts) — none is hardcoded. Handles all three
- * corpus call-argument shapes uniformly via string-aware token location
- * (`maskStringLiterals` recomputed after each structural edit, since prior
- * edits shift offsets).
- */
-function _normalizeDispatchCallSpan(spanText, hasBraceWrapper, dispatch, toolConfig) {
-  const namedDispatch = dispatch.namedDispatch === true;
-  const backgroundCapable = dispatch.background === true;
-  const canOrchestrate = dispatch.subagentToolkit === 'full'
-    && (dispatch.maxDepth === -1 || (typeof dispatch.maxDepth === 'number' && dispatch.maxDepth > 1));
-  const { toolName, backgroundParam, supportsPerCallModel, availableRoles, runtime } = toolConfig;
-
-  let text = spanText;
-
-  // 1. Named-role argument (subagent_type= / subagent_type:) — only when the
-  //    target has no native named-agent lookup (dispatch.namedDispatch).
-  //    Fail-closed validation runs on the extracted value REGARDLESS of
-  //    which source syntax produced it (#2284 requirement 2).
-  if (!namedDispatch) {
-    const roleRe = _callArgValueRe('subagent_type');
-    const rm = roleRe.exec(_maskStringsAndComments(text));
-    if (rm) {
-      // Read the VALUE from the original (unmasked) text at the matched
-      // offset — `rm[1]` was captured against the mask, whose string
-      // INTERIOR is blanked, so it must never be used as the real value.
-      const roleValueExpr = text.slice(rm.index + rm[0].length - rm[1].length, rm.index + rm[0].length);
-      const literalRole = _literalRoleValue(roleValueExpr);
-      if (literalRole !== null) {
-        _assertRoleResolvable(literalRole, availableRoles, runtime, 'subagent_type');
-      } else if (!availableRoles) {
-        // No literal value to check, but a null availableRoles still means
-        // the shipped agents/ dir couldn't be resolved at all — fail closed
-        // unconditionally rather than silently install an unverifiable call.
-        _assertRoleResolvable('', availableRoles, runtime, 'subagent_type');
-      }
-      text = _projectRoleArgument(text, rm.index, rm.index + rm[0].length, roleValueExpr, toolConfig, canOrchestrate);
-    }
-  }
-
-  // 2. Per-call model argument (model= / model:) — stripped entirely when the
-  //    target has no per-call model-selection parameter (there is no
-  //    `dispatch` axis for this — it is inherent tool vocabulary, like the
-  //    parameter names themselves). Also removes now-dead explanatory
-  //    comment lines directly above a `model=` line that owns its own line
-  //    (#2284 Finding 5).
-  if (!supportsPerCallModel) {
-    const modelRe = _callArgValueRe('model');
-    const mm = modelRe.exec(_maskStringsAndComments(text));
-    if (mm) {
-      text = _stripCallArgument(text, mm.index, mm.index + mm[0].length, { consumeLeadingComments: true });
-    }
-  }
-
-  // 3. Background-dispatch flag (run_in_background= / run_in_background:) —
-  //    maps onto the target's own background parameter ONLY when documented
-  //    to support it; otherwise stripped rather than forwarding a parameter
-  //    the primitive doesn't accept.
-  {
-    const bgRe = /\brun_in_background\s*[=:]\s*(?:true|false)/;
-    const bm = bgRe.exec(_maskStringsAndComments(text));
-    if (bm) {
-      if (backgroundCapable) {
-        const matched = text.slice(bm.index, bm.index + bm[0].length);
-        const replaced = matched.replace(/^run_in_background(\s*[=:]\s*)/, `${backgroundParam}$1`);
-        text = text.slice(0, bm.index) + replaced + text.slice(bm.index + bm[0].length);
-      } else {
-        text = _stripCallArgument(text, bm.index, bm.index + bm[0].length);
-      }
-    }
-  }
-
-  // 4. Call-syntax head rename + object-literal brace stripping. Hermes's
-  //    delegate_task is a flat kwarg call — `Agent({...})`'s wrapper braces
-  //    are dropped rather than carried through, so every projected call ends
-  //    up in the same flat shape regardless of source syntax.
-  text = text.replace(/^Agent\(/, `${toolName}(`);
-  if (hasBraceWrapper) {
-    const openMask = maskStringLiterals(text);
-    const braceOpenIdx = openMask.indexOf('{');
-    if (braceOpenIdx !== -1) text = text.slice(0, braceOpenIdx) + text.slice(braceOpenIdx + 1);
-    const closeMask = maskStringLiterals(text);
-    const braceCloseIdx = closeMask.lastIndexOf('}');
-    if (braceCloseIdx !== -1) text = text.slice(0, braceCloseIdx) + text.slice(braceCloseIdx + 1);
-  }
-
-  return text;
-}
-
-/**
- * Blank the interior (and delimiters) of every string literal inside
- * `spanText` to spaces — same length, newlines preserved — using a fresh,
- * LOCAL quote-tracking scan that starts at `spanText[0]` with NO inherited
- * state. This is deliberately the SAME state-machine shape as the
- * `inString`/`\\`/triple-quote handling inside `findDispatchCallSpans`
- * (double-quoted and `"""`-triple-quoted, backslash-escape aware) — reused
- * here so a call span's quoted argument VALUES (documentation prose, prompt
- * bodies) never masquerade as real call syntax, without EVER falling back to
- * a whole-document cumulative quote-parity mask (the round-2 defect
- * documented on `findDispatchCallSpans` above).
- */
-function _blankStringLiteralInteriors(spanText) {
-  let out = '';
-  let inString = null; // null | '"' | 'triple'
-  for (let i = 0; i < spanText.length; i++) {
-    const ch = spanText[i];
-    if (inString) {
-      if (ch === '\\') {
-        out += ' ';
-        i++;
-        if (i < spanText.length) out += (spanText[i] === '\n') ? '\n' : ' ';
-        continue;
-      }
-      if (inString === 'triple') {
-        if (ch === '"' && spanText[i + 1] === '"' && spanText[i + 2] === '"') {
-          inString = null;
-          out += '   ';
-          i += 2;
-          continue;
-        }
-        out += (ch === '\n') ? '\n' : ' ';
-        continue;
-      }
-      if (ch === inString) { inString = null; out += ' '; continue; }
-      out += (ch === '\n') ? '\n' : ' ';
-      continue;
-    }
-    if (ch === '"' && spanText[i + 1] === '"' && spanText[i + 2] === '"') {
-      inString = 'triple';
-      out += '   ';
-      i += 2;
-      continue;
-    }
-    if (ch === '"') { inString = '"'; out += ' '; continue; }
-    out += ch;
-  }
-  return out;
-}
-
-/**
- * Quote-aware view of `content` for the completeness checks below: for every
- * REAL call span located via `findDispatchCallSpans` (once per head word in
- * `headWords`), the string-literal ARGUMENT VALUES inside that span are
- * blanked via `_blankStringLiteralInteriors`; the call's own head word and
- * bare (unquoted) argument tokens are left untouched. `headWords` is
- * processed in order and each pass re-scans the PROGRESSIVELY-masked string
- * — `toolName` first, then `'Agent'` — so a spurious `Agent(` that
- * `findDispatchCallSpans('Agent')` would otherwise "find" purely because it
- * sits inside an outer call's quoted string (e.g. a `description="...Agent()
- * ...subagent_type=x"` argument value) has ALREADY been blanked away by the
- * outer `toolName` pass by the time the `'Agent'` pass runs, so it is never
- * mistaken for a real, independent call. A genuinely real (unquoted) `Agent(`
- * — including one nested as a raw, un-renamed argument value — survives every
- * pass and remains visible to the caller's regex checks.
- */
-function _maskQuotedRegionsWithinCallSpans(content, headWords) {
-  let masked = content;
-  for (const headWord of headWords) {
-    const spans = findDispatchCallSpans(masked, headWord);
-    for (let i = spans.length - 1; i >= 0; i--) {
-      const { start, end } = spans[i];
-      const maskedSpan = _blankStringLiteralInteriors(masked.slice(start, end));
-      masked = masked.slice(0, start) + maskedSpan + masked.slice(end);
-    }
-  }
-  return masked;
-}
-
-/**
- * Post-projection guard (#2284 requirement 3 — belt-and-suspenders): after
- * projection, assert the corpus form the projection could not anticipate
- * never silently ships. Throws an explicit install error (fail-LOUD) rather
- * than let an unprojected/incompletely-projected dispatch call install.
- *
- * #2284 round-2 CRITICAL fix: this is an INDEPENDENT check — it does NOT use
- * `maskStringLiterals` over the whole document (the round-1 primitive whose
- * cumulative, document-wide quote-parity tracking was the root cause of the
- * round-2 defect: a `"`-heavy bash fence upstream of a real call desynced
- * quote state and made `findDispatchCallSpans` blind to that call, shipping
- * a Frankenstein `Agent(gsd_role="...", model="...")` with no detection).
- *
- * #2284 round-3 fix: a BLUNT, mask-free literal check over the whole
- * document (round-2's fix) over-throws — it cannot tell a real residual
- * `Agent(`/`subagent_type` call from the SAME text appearing INSIDE a quoted
- * string (documentation/prompt prose, e.g. `description="...Agent()..."`).
- * The completeness checks (residual `subagent_type` / literal `Agent(`) now
- * run against `_maskQuotedRegionsWithinCallSpans` — quote-aware, but scoped
- * strictly to already-correctly-bounded, per-occurrence-LOCAL call spans
- * (never a whole-document cumulative mask), so a real Frankenstein call
- * (unquoted, real call syntax) still fires while a same-text mention genuinely
- * inside a quoted string does not.
- *
- * The completeness checks also only apply when `namedDispatch` is false: when
- * `dispatch.namedDispatch === true`, `_normalizeDispatchCallSpan` step 1
- * INTENTIONALLY leaves `subagent_type` unprojected (the target primitive
- * resolves named agents itself) — a residual `subagent_type` in that case is
- * the correct, intended output, not a defect. (The call HEAD is still renamed
- * unconditionally regardless of `namedDispatch` — see step 4 there — so a
- * literal `Agent(` residual is gated the same way purely for symmetry with
- * the dispatch-facts-driven contract; it is never actually left unrenamed by
- * the projection in practice.)
- *
- * The model-leak check is unaffected by either fix above — it is orthogonal
- * to `namedDispatch` (gated only by `supportsPerCallModel`) and already
- * bounds each real call via the independently-fixed, per-occurrence-local,
- * non-cumulative `findDispatchCallSpans`, then does a raw substring check
- * within that bound.
- */
-function _assertProjectionComplete(content, toolConfig, namedDispatch = false) {
-  const { toolName, runtime, supportsPerCallModel } = toolConfig;
-
-  if (!namedDispatch) {
-    const quoteAware = _maskQuotedRegionsWithinCallSpans(content, [toolName, 'Agent']);
-    if (/\bsubagent_type\s*[=:]/.test(quoteAware)) {
-      throw new Error(
-        `${runtime} workflow install: projection left a residual subagent_type reference — refusing to install ` +
-        '(fail-closed post-projection guard, #2284)',
-      );
-    }
-    if (/\bAgent\(/.test(quoteAware)) {
-      throw new Error(
-        `${runtime} workflow install: projection left literal Agent( call syntax — refusing to install ` +
-        '(fail-closed post-projection guard, #2284)',
-      );
-    }
-  }
-
-  if (!supportsPerCallModel) {
-    for (const span of findDispatchCallSpans(content, toolName)) {
-      const rawSpanText = content.slice(span.start, span.end);
-      if (/\bmodel\s*[=:]/.test(rawSpanText)) {
-        throw new Error(
-          `${runtime} workflow install: projection left a leaked model= argument inside a ${toolName}(...) call ` +
-          '— refusing to install (fail-closed post-projection guard, #2284)',
-        );
-      }
-    }
-  }
-}
-
-/**
- * Project host-neutral `Agent(...)` named-subagent dispatch prose onto a
- * target runtime's real dispatch primitive. See the file-header comment above
- * for the governing rule: every behavioral branch reads `dispatch` (the
- * runtime's sourced `hostIntegration.dispatch` facts) — none is a hardcoded
- * assumption about a specific runtime. Handles all three real corpus call
- * forms (multi-line one-key-per-line, single-line object-literal, single-line
- * compact) via string-aware call-span detection rather than three independent
- * line-anchored regexes, and closes with a post-projection guard that fails
- * loud on any form it did not anticipate (#2284).
- *
- * @param {string} content
- * @param {{namedDispatch?: boolean, nested?: boolean, maxDepth?: number, background?: boolean, backgroundDispatch?: boolean, subagentToolkit?: string}} dispatch
- * @param {{toolName: string, namedRoleParam: string, promptContentParam: string, structuralRoleParam: string, leafRoleValue: string, backgroundParam: string, supportsPerCallModel: boolean, availableRoles: Set<string>|null, runtime: string}} toolConfig
- */
-function projectNamedDispatchToStructuralDelegate(content, dispatch, toolConfig) {
-  const d = dispatch || {};
-  const namedDispatch = d.namedDispatch === true;
-  const backgroundCapable = d.background === true;
-  const { toolName, promptContentParam } = toolConfig;
-
-  let converted = content;
-
-  // 1. The "Agent tool IS available" contract assertion (currently unique to
-  //    plan-phase.md, matched generically in case of future reuse elsewhere).
-  const assertionRe = /The Agent tool IS available in a top-level ([^\n]+?) session\.\s+Always spawn\s+([\s\S]*?)\s+as separate Agent\(\) calls\./;
-  converted = converted.replace(assertionRe, (_m, sessionName, roster) => {
-    const rosterFlat = roster.replace(/\s+/g, ' ').trim();
-    if (namedDispatch) {
-      return `The \`${toolName}\` tool IS available in a top-level ${sessionName} session. Always dispatch ${rosterFlat} as separate \`${toolName}()\` calls.`;
-    }
-    return (
-      `${sessionName} has no \`Agent\` tool. It exposes \`${toolName}\`, which dispatches by structural role — ` +
-      'it has no concept of a named subagent identity. GSD projects each named gsd-* role onto this primitive ' +
-      `itself: resolve the role's prompt file from the active install, load its contents, and embed them in the ` +
-      `\`${toolName}\` payload via \`${promptContentParam}\` as the dispatched task's operating instructions. ` +
-      'FAIL CLOSED — surface an explicit error and stop — if a referenced role prompt cannot be resolved; never ' +
-      `execute the role inline as a substitute. In a top-level ${sessionName} session, always dispatch ` +
-      `${rosterFlat} as separate \`${toolName}\` calls.`
-    );
-  });
-
-  // 1b. Dispatch-depth-availability prose immediately adjacent to a renamed
-  //     `Agent()` mention in the SAME sentence (plan-review-convergence.md
-  //     ~lines 108, 347, 355) — a bare "Agent" left un-renamed right next to
-  //     the projection's own `Agent()`→`${toolName}()` rename produced
-  //     self-contradictory installed text (e.g. "...delegate_task(...)...
-  //     with Agent available..."). Narrowly scoped to the EXACT known
-  //     phrases the projection itself creates the inconsistency beside —
-  //     never a broad bare-word `Agent` rename, which would corrupt
-  //     legitimate `Agent`-adjacent prose elsewhere in the corpus (role
-  //     names, "Agent Brief", agent-file references).
-  converted = converted.replace(
-    /\borchestrator runs at depth 0 with Agent available\b/g,
-    `orchestrator runs at depth 0 with ${toolName} available`,
-  );
-  converted = converted.replace(
-    /\(bug #936: depth-1 Agent has no Agent tool\)/g,
-    `(bug #936: depth-1 ${toolName} has no nested ${toolName})`,
-  );
-
-  // 2. Per-call model-selection prose ("Model resolution:" paragraph,
-  //    execute-phase.md) + inline backtick-quoted model-mention prose
-  //    examples (not live call sites) — only rewritten when the target
-  //    primitive has no per-call model parameter at all.
-  if (!toolConfig.supportsPerCallModel) {
-    const modelResolutionRe = /\*\*Model resolution:\*\* If `executor_model` is `"inherit"`, omit the `model=` parameter from all `Agent\(\)` calls — do NOT pass `model="inherit"` to Agent\. Omitting the `model=` parameter causes [^.]+\. Only set `model=` when `executor_model` is an explicit model name \(e\.g\., `"claude-sonnet-5"`, `"claude-opus-4-8"`\)\./;
-    converted = converted.replace(
-      modelResolutionRe,
-      `**Model resolution:** \`${toolName}\` has no per-call model-selection parameter — every dispatched role ` +
-      `always inherits the host session's active model. Never pass \`model=\` to \`${toolName}\`; drop the ` +
-      '`executor_model` value entirely for this runtime.',
-    );
-    converted = converted.replace(/`model="[^"`\n]*"`,?\s*(?:and\s+)?/g, '');
-  }
-
-  // 3. Background-dispatch PROSE mentions outside any real call span (e.g.
-  //    execute-phase.md:595,600 — `run_in_background: true` inline
-  //    documentation, not a call argument) — #2284 Finding 3. Only rewritten
-  //    when the target is documented to support background dispatch (a
-  //    prose mention of an unsupported capability would be equally
-  //    misleading as a real leaked argument).
-  if (backgroundCapable) {
-    converted = converted.replace(
-      /\brun_in_background(\s*[=:]\s*(?:true|false))/g,
-      `${toolConfig.backgroundParam}$1`,
-    );
-  }
-
-  // 4. Call-span-based normalization — the core of the fix. Every
-  //    `Agent(...)`/`Agent({...})` occurrence (all three corpus forms) is
-  //    located via string-aware balanced paren/brace matching, then
-  //    normalized as a unit; spans are rebuilt right-to-left so earlier
-  //    offsets stay valid while later ones are rewritten.
-  const spans = findDispatchCallSpans(converted, 'Agent');
-  for (let i = spans.length - 1; i >= 0; i--) {
-    const { start, end, hasBraceWrapper } = spans[i];
-    const rebuilt = _normalizeDispatchCallSpan(converted.slice(start, end), hasBraceWrapper, d, toolConfig);
-    converted = converted.slice(0, start) + rebuilt + converted.slice(end);
-  }
-
-  // 5. "Agent tool" capability mentions (conditions gating parallel vs.
-  //    sequential dispatch, e.g. map-codebase.md) → the real target primitive
-  //    name, which resolves these conditions accurately since it IS a real,
-  //    always-available dispatch primitive for this target.
-  converted = converted.replace(/\bAgent tool\b/g, toolName);
-
-  // 5b. Catch-all: a `subagent_type` mention that is NOT part of any real
-  //     `Agent(...)` call span (e.g. map-codebase.md's inline documentation
-  //     prose ``Use Agent tool with `subagent_type="X"`, ...`` — disconnected
-  //     example syntax, not a live call). Renamed for the same accuracy the
-  //     real calls get; a literal quoted role value is still fail-closed
-  //     validated even though there is no call structure to inject
-  //     role-prompt/fail-closed guidance INTO.
-  if (!namedDispatch) {
-    converted = converted.replace(
-      /\bsubagent_type(\s*[=:]\s*"[^"]*")/g,
-      (_m, rest) => {
-        const literalRole = _literalRoleValue(rest.replace(/^\s*[=:]\s*/, ''));
-        if (literalRole !== null) {
-          _assertRoleResolvable(literalRole, toolConfig.availableRoles, toolConfig.runtime, 'subagent_type (prose mention)');
-        }
-        return `${toolConfig.namedRoleParam}${rest}`;
-      },
-    );
-    converted = converted.replace(/\bsubagent_type(\s*[=:])/g, `${toolConfig.namedRoleParam}$1`);
-  }
-
-  // 5c. Safety net (#2284 requirement 2): the PRIMARY mechanism for
-  //     eliminating literal `Agent(` syntax is complete span detection (step
-  //     4) — this unconditional final rename exists only so that even a call
-  //     span detection somehow misses at least loses its `Agent(` head
-  //     rather than shipping the literal Claude-shaped tool name verbatim.
-  //     A call caught only by this safety net is still INCOMPLETELY
-  //     normalized (no role/model handling) and gets caught by the
-  //     independent post-projection guard below via its OTHER invariants
-  //     (residual subagent_type / leaked model=), which this safety net does
-  //     not touch — the install still fails closed for a missed span.
-  converted = converted.replace(/\bAgent\(/g, `${toolName}(`);
-
-  // 6. Post-projection guard (#2284 requirement 3): fail loud, never ship
-  //    silently, on any residual/leaked form the projection above did not
-  //    anticipate. `namedDispatch` gates the completeness checks — a
-  //    residual subagent_type is INTENTIONAL, not a defect, when the target
-  //    resolves named agents itself (see `_assertProjectionComplete`).
-  _assertProjectionComplete(converted, toolConfig, namedDispatch);
-
-  return converted;
-}
-
-const HERMES_DISPATCH_TOOL_CONFIG = Object.freeze({
-  toolName: 'delegate_task',
-  namedRoleParam: 'gsd_role',
-  promptContentParam: 'gsd_role_prompt',
-  structuralRoleParam: 'role',
-  leafRoleValue: 'leaf',
-  backgroundParam: 'background',
-  supportsPerCallModel: false,
-});
-
-/**
- * Hermes `.md` content converter (#2284): brand-swap (unchanged behavior,
- * descriptor-driven per `hostBehaviors.brandingRewrites`) followed by the
- * generic named-dispatch → `delegate_task` projection above, driven by
- * `capabilities/hermes/capability.json`'s `hostIntegration.dispatch` (read
- * via `_hostIntegrationDispatch`, values UNCHANGED by this fix — they are
- * already documentation-sourced and correct).
- */
-function convertClaudeToHermesMarkdown(content, ctx) {
-  const runtime = (ctx && ctx.runtime) || 'hermes';
-  const b = _hostBehaviors(runtime).brandingRewrites;
-  let converted = content;
-  if (b) {
-    converted = converted.replace(/CLAUDE\.md/g, b['CLAUDE.md']);
-    // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-    converted = applyClaudeCodeBrandSwap(converted, b['Claude Code']);
-    converted = converted.replace(/\.claude\//g, b['.claude/']);
-  }
-  const dispatch = _hostIntegrationDispatch(runtime);
-  const toolConfig = Object.assign({}, HERMES_DISPATCH_TOOL_CONFIG, {
-    availableRoles: _resolveAvailableGsdRoles(),
-    runtime,
-  });
-  return projectNamedDispatchToStructuralDelegate(converted, dispatch, toolConfig);
-}
-
-// ── End Hermes converters ────────────────────────────────────────────────────
 
 function convertSlashCommandsToCodexSkillMentions(content) {
   // Colon-style /gsd: never appears as a filesystem path segment, so no boundary guard is needed (unlike the hyphen-style below).
@@ -7036,194 +5513,6 @@ function convertClaudeToOpencodeFrontmatter(content, { isAgent = false, modelOve
   return `---\n${newFrontmatter}\n---${body}`;
 }
 
-// Kilo CLI — same conversion logic as OpenCode, different config paths.
-// DEFECT.GENERATIVE-FIX: this body is mirrored in
-// src/runtime-artifact-conversion.cts's convertClaudeToKiloFrontmatter (used by
-// src/install-engine.cts's install path). Neither copy re-exports the other —
-// mirror any behavior change into both. Guarded by the output-parity test in
-// tests/runtime-converters.test.cjs (#2093).
-function convertClaudeToKiloFrontmatter(content, { isAgent = false, modelOverride = null } = {}) {
-  // Replace tool name references in content (applies to all files)
-  let convertedContent = content;
-  convertedContent = convertedContent.replace(/\bAskUserQuestion\b/g, 'question');
-  convertedContent = convertedContent.replace(/\bSlashCommand\b/g, 'skill');
-  convertedContent = convertedContent.replace(/\bTodoWrite\b/g, 'todowrite');
-  // Replace /gsd-command colon variant with /gsd-command for Kilo (flat command structure)
-  convertedContent = convertedContent.replace(/\/gsd:/g, '/gsd-');
-  // Replace ~/.claude and $HOME/.claude with Kilo's config location
-  convertedContent = convertedContent.replace(/~\/\.claude\b/g, '~/.config/kilo');
-  convertedContent = convertedContent.replace(/\$HOME\/\.claude\b/g, '$HOME/.config/kilo');
-  convertedContent = convertedContent.replace(/\.\/\.claude\//g, './.kilo/');
-  // Normalize both Claude skill directory variants to Kilo's canonical skills dir.
-  convertedContent = replaceRelativePathReference(convertedContent, '.claude/skills/', '.kilo/skills/');
-  convertedContent = replaceRelativePathReference(convertedContent, '.agents/skills/', '.kilo/skills/');
-  convertedContent = replaceRelativePathReference(convertedContent, '.claude/agents/', '.kilo/agents/');
-  // Replace general-purpose subagent type with Kilo's equivalent "general"
-  convertedContent = convertedContent.replace(/subagent_type="general-purpose"/g, 'subagent_type="general"');
-  // Runtime-neutral agent name replacement (#766)
-  convertedContent = neutralizeAgentReferences(convertedContent, 'AGENTS.md');
-
-  // Check if content has frontmatter
-  if (!convertedContent.startsWith('---')) {
-    return convertedContent;
-  }
-
-  // Find the end of frontmatter
-  const endIndex = convertedContent.indexOf('---', 3);
-  if (endIndex === -1) {
-    return convertedContent;
-  }
-
-  const frontmatter = convertedContent.substring(3, endIndex).trim();
-  const body = convertedContent.substring(endIndex + 3);
-
-  // Parse frontmatter line by line (simple YAML parsing)
-  const lines = frontmatter.split('\n');
-  const newLines = [];
-  let inAllowedTools = false;
-  let inAgentTools = false;
-  let inSkippedArray = false;
-  const allowedTools = [];
-  const agentTools = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // For agents: skip commented-out lines (e.g. hooks blocks)
-    if (isAgent && trimmed.startsWith('#')) {
-      continue;
-    }
-
-    // Detect start of allowed-tools array
-    if (trimmed.startsWith('allowed-tools:')) {
-      inAllowedTools = true;
-      continue;
-    }
-
-    if (isAgent && inAgentTools) {
-      if (trimmed.startsWith('- ')) {
-        agentTools.push(trimmed.substring(2).trim());
-        continue;
-      }
-      if (trimmed && !trimmed.startsWith('-')) {
-        inAgentTools = false;
-      }
-    }
-
-    // Detect inline tools: field (comma-separated string)
-    if (trimmed.startsWith('tools:')) {
-      if (isAgent) {
-        const toolsValue = trimmed.substring(6).trim();
-        if (toolsValue) {
-          const tools = toolsValue.split(',').map(t => t.trim()).filter(t => t);
-          agentTools.push(...tools);
-        } else {
-          inAgentTools = true;
-        }
-        continue;
-      }
-      const toolsValue = trimmed.substring(6).trim();
-      if (toolsValue) {
-        // Parse comma-separated tools
-        const tools = toolsValue.split(',').map(t => t.trim()).filter(t => t);
-        allowedTools.push(...tools);
-      }
-      continue;
-    }
-
-    // For agents: strip skills:, color:, memory:, maxTurns:, permissionMode:, disallowedTools:
-    if (isAgent && /^(skills|color|memory|maxTurns|permissionMode|disallowedTools):/.test(trimmed)) {
-      inSkippedArray = true;
-      continue;
-    }
-
-    // Skip continuation lines of a stripped array/object field
-    if (inSkippedArray) {
-      if (trimmed.startsWith('- ') || trimmed.startsWith('#') || /^\s/.test(line)) {
-        continue;
-      }
-      inSkippedArray = false;
-    }
-
-    // For commands: remove name: field (Kilo uses filename for command name)
-    // For agents: keep name: (required by Kilo agents)
-    if (!isAgent && trimmed.startsWith('name:')) {
-      continue;
-    }
-
-    // Strip model: field — Kilo doesn't support Claude Code model aliases
-    // like 'haiku', 'sonnet', 'opus', or 'inherit'. Omitting lets Kilo use
-    // its configured default model.
-    if (trimmed.startsWith('model:')) {
-      continue;
-    }
-
-    // Convert color names to hex for Kilo (commands only; agents strip color above)
-    if (trimmed.startsWith('color:')) {
-      const colorValue = trimmed.substring(6).trim().toLowerCase();
-      const hexColor = colorNameToHex[colorValue];
-      if (hexColor) {
-        newLines.push(`color: "${hexColor}"`);
-      } else if (colorValue.startsWith('#')) {
-        // Validate hex color format (#RGB or #RRGGBB)
-        if (/^#[0-9a-f]{3}$|^#[0-9a-f]{6}$/i.test(colorValue)) {
-          // Already hex and valid, keep as is
-          newLines.push(line);
-        }
-        // Skip invalid hex colors
-      }
-      // Skip unknown color names
-      continue;
-    }
-
-    // Collect allowed-tools items
-    if (inAllowedTools) {
-      if (trimmed.startsWith('- ')) {
-        const tool = trimmed.substring(2).trim();
-        if (isAgent) {
-          agentTools.push(tool);
-        } else {
-          allowedTools.push(tool);
-        }
-        continue;
-      } else if (trimmed && !trimmed.startsWith('-')) {
-        // End of array, new field started
-        inAllowedTools = false;
-      }
-    }
-
-    // Keep other fields
-    if (!inAllowedTools) {
-      newLines.push(line);
-    }
-  }
-
-  // For agents: add required Kilo agent fields
-  if (isAgent) {
-    newLines.push('mode: subagent');
-    // Embed model override from ~/.gsd/defaults.json so model_overrides is
-    // respected on Kilo (which uses static agent frontmatter, not inline
-    // Task() model parameters) — mirrors convertClaudeToOpencodeFrontmatter's
-    // model emission exactly (#2093 UPGRADE 2 / ADR-1239). See #2256.
-    if (modelOverride) {
-      newLines.push(['model:', modelOverride].join(' '));
-    }
-    newLines.push(...buildKiloAgentPermissionBlock(agentTools));
-  }
-
-  // For commands: add tools object if we had allowed-tools or tools
-  if (!isAgent && allowedTools.length > 0) {
-    newLines.push('tools:');
-    for (const tool of allowedTools) {
-      newLines.push(`  ${convertToolName(tool)}: true`);
-    }
-  }
-
-  // Rebuild frontmatter (body already has tool names converted)
-  const newFrontmatter = newLines.join('\n').trim();
-  return `---\n${newFrontmatter}\n---${body}`;
-}
-
 // convertClaudeCommandToOpencodeFamilySkill, convertClaudeCommandToOpencodeSkill,
 // convertClaudeCommandToKiloSkill: moved to src/install-engine.cts (ADR-1239 Phase B).
 // #2876 found no install.js internal caller for the latter two (tests import
@@ -7276,19 +5565,9 @@ function listCodexSkillNames(skillsDir, prefix = 'gsd-') {
 
 
 /**
- * Copy Claude commands as CodeBuddy skills — one folder per skill with SKILL.md.
- * CodeBuddy uses the same tool names as Claude Code, but has its own config directory structure.
- */
-
-/**
- * Copy Claude commands as Copilot skills — one folder per skill with SKILL.md.
- * Applies CONV-01 (structure), CONV-02 (allowed-tools), CONV-06 (paths), CONV-07 (command names).
- */
-
-/**
  * Copy Claude commands as Claude skills — one folder per skill with SKILL.md.
  * Claude Code 2.1.88+ uses skills/xxx/SKILL.md instead of commands/gsd/xxx.md.
- * Supports runtime='claude'|'qwen'|'hermes'; branding rewrites are applied via
+ * Supports runtime='claude'|'qwen'; branding rewrites are applied via
  * applyRuntimeContentRewritesInPlace inside _copyCommandsAsSkillsViaConverter.
  * @param {string} srcDir - Source commands directory
  * @param {string} skillsDir - Target skills directory
@@ -7298,32 +5577,6 @@ function listCodexSkillNames(skillsDir, prefix = 'gsd-') {
  * @param {boolean} isGlobal - Whether this is a global install (unused; kept for compat)
  */
 
-/**
- * Write the Hermes "gsd" category DESCRIPTION.md.
- * Hermes' skill loader reads DESCRIPTION.md at the top of each skill category
- * directory and surfaces it in the system prompt so the model knows when to
- * reach for that category. Per spec in #2841 we collapse all 86 GSD commands
- * under a single "gsd" category to keep system-prompt overhead bounded.
- */
-function writeHermesCategoryDescription(categoryDir) {
-  fs.mkdirSync(categoryDir, { recursive: true });
-  const body = [
-    '---',
-    'name: gsd',
-    `version: ${pkg.version}`,
-    'description: GSD Core — Git. Ship. Done. Disciplined planning, execution, and shipping workflows. Use any gsd-* skill in this category to drive a project through new-project → discuss-phase → plan-phase → execute-phase → ship.',
-    '---',
-    '',
-    '# GSD Core',
-    '',
-    'GSD is a structured development workflow. Skills in this category cover',
-    'project initialization, phase planning, execution, code review, and shipping.',
-    '',
-    'Invoke any `gsd-*` skill in this category to drive the corresponding step.',
-    '',
-  ].join('\n');
-  fs.writeFileSync(path.join(categoryDir, 'DESCRIPTION.md'), body);
-}
 
 /**
  * Recursively install GSD commands as Antigravity skills.
@@ -7372,9 +5625,6 @@ const RUNTIME_CONTENT_DISPATCH = {
   opencode: {
     md: (content) => convertClaudeToOpencodeFrontmatter(content),
   },
-  kilo: {
-    md: (content) => convertClaudeToKiloFrontmatter(content),
-  },
   codex: {
     md: (content) => convertClaudeToCodexMarkdown(content),
   },
@@ -7411,29 +5661,6 @@ const RUNTIME_CONTENT_DISPATCH = {
       return content;
     },
   },
-  trae: {
-    md: (content) => convertClaudeToTraeMarkdown(content),
-    js: (content) => {
-      content = content.replace(/\/gsd:([a-z0-9-]+)/g, (_, commandName) => {
-        return `/gsd-${commandName}`;
-      });
-      content = content.replace(/\.claude\/skills\//g, '.trae/skills/');
-      // #2658: the full dot-claude-slash-prefixed instruction-file path must
-      // be replaced before the bare instruction-filename fallback, or the
-      // bare regex only rewrites that filename and leaves the prefix stale
-      // in place, producing a malformed doubled-prefix path (see the longer
-      // note in convertClaudeToTraeMarkdown above — the instruction filename
-      // and either malformed shape are deliberately never spelled out
-      // contiguously here either, for the same reason: this file ships
-      // verbatim). Both forms target the same concrete file (never a bare
-      // directory), matching the `.md` converter (convertClaudeToTraeMarkdown)
-      // so js/cjs and md content agree on one canonical path.
-      content = content.replace(/\.claude\/CLAUDE\.md/g, '.trae/rules/rules.md');
-      content = content.replace(/CLAUDE\.md/g, '.trae/rules/rules.md');
-      content = content.replace(/\bClaude Code\b/g, 'Trae');
-      return content;
-    },
-  },
   cline: {
     md: (content) => convertClaudeToCliineMarkdown(content),
     js: (content) => {
@@ -7443,7 +5670,7 @@ const RUNTIME_CONTENT_DISPATCH = {
       return content;
     },
   },
-  // qwen/hermes: brand VALUES are descriptor-driven (ADR-1239 / #2092) via
+  // qwen: brand VALUES are descriptor-driven (ADR-1239 / #2092) via
   // _hostBehaviors(ctx.runtime).brandingRewrites — EXACT regexes/ordering
   // preserved from the prior hardcoded-literal versions (including the
   // qwen-specific `.claude/skills/` -> `.qwen/skills/` pre-rewrite, whose
@@ -7461,25 +5688,6 @@ const RUNTIME_CONTENT_DISPATCH = {
       }
       return content;
     },
-    js: (content, ctx) => {
-      const b = _hostBehaviors(ctx.runtime).brandingRewrites;
-      if (b) {
-        content = content.replace(/\.claude\/skills\//g, `${b['.claude/']}skills/`);
-        content = content.replace(/\.claude\//g, b['.claude/']);
-        content = content.replace(/CLAUDE\.md/g, b['CLAUDE.md']);
-        content = content.replace(/\bClaude Code\b/g, b['Claude Code']);
-      }
-      return content;
-    },
-  },
-  hermes: {
-    // #2284: brand-swap alone left the false "Agent tool IS available"
-    // assertion + literal `Agent(...)` call syntax installed verbatim — see
-    // convertClaudeToHermesMarkdown / projectNamedDispatchToStructuralDelegate
-    // above (the Hermes converters section) for the full named-dispatch →
-    // `delegate_task` projection, driven by capabilities/hermes/capability.json's
-    // hostIntegration.dispatch facts.
-    md: (content, ctx) => convertClaudeToHermesMarkdown(content, ctx),
     js: (content, ctx) => {
       const b = _hostBehaviors(ctx.runtime).brandingRewrites;
       if (b) {
@@ -7617,9 +5825,6 @@ function copyWithPathReplacement(srcDir, destDir, pathPrefix, runtime, isCommand
         content = content.replace(/~\/\.qwen\//g, pathPrefix);
         content = content.replace(/\$HOME\/\.qwen\//g, pathPrefix);
         content = content.replace(/\.\/\.qwen\//g, `./${dirName}/`);
-        content = content.replace(/~\/\.hermes\//g, pathPrefix);
-        content = content.replace(/\$HOME\/\.hermes\//g, pathPrefix);
-        content = content.replace(/\.\/\.hermes\//g, `./${dirName}/`);
         // #3544: restore @-file-reference lines to the tilde form Claude Code
         // actually expands — the SAME correction #3133 already applies to
         // skill/command bodies via _applyRuntimeRewrites's 'claude' case (see
@@ -7850,7 +6055,7 @@ function uninstall(isGlobal, runtime = DEFAULT_RUNTIME) {
   // #2099: isCopilot dropped — both Copilot side-effect branches below are now
   // gated on resolveInstallPlan(runtime).installSurface === 'copilot-instructions'.
   // #2100: isWindsurf dropped — unused in this function.
-  const { isOpencode, isCodex, isCursor, isAugment, isQwen, isHermes, isCline } = runtimeFlags(runtime);
+  const { isOpencode, isCodex, isCursor, isQwen, isCline } = runtimeFlags(runtime);
   const dirName = getDirName(runtime);
 
   // Get the target directory based on runtime and install type. Cline local
@@ -8752,20 +6957,7 @@ function uninstall(isGlobal, runtime = DEFAULT_RUNTIME) {
       }
     }
 
-    // #2097 UPGRADE 3 — Remove the MCP companion entry from settings.json for
-    // runtimes that host MCP there (Augment), symmetric to the mcp_config.json
-    // removal for Antigravity below. Only the GSD-owned mcpServers.gsd key is
-    // removed — any other user-configured MCP servers are preserved.
-    if (_hostBehaviors(runtime).mcpCompanion === 'settings-json' &&
-      settings.mcpServers && typeof settings.mcpServers === 'object' &&
-      settings.mcpServers.gsd !== undefined) {
-      delete settings.mcpServers.gsd;
-      if (Object.keys(settings.mcpServers).length === 0) {
-        delete settings.mcpServers;
-      }
-      settingsModified = true;
-      console.log(`  ${green}✓${reset} Removed GSD MCP companion server from settings.json`);
-    }
+
 
     if (settingsModified) {
       writeSettings(settingsPath, settings);
@@ -8814,48 +7006,6 @@ function uninstall(isGlobal, runtime = DEFAULT_RUNTIME) {
     }
   }
 
-  // 7. For Kilo, clean up permissions from kilo.json or kilo.jsonc
-  // #2093: descriptor-driven via resolveInstallPlan(runtime).finishPermissionWriter,
-  // mirroring the OpenCode branch above (was hardcoded `isKilo`).
-  if (resolveInstallPlan(runtime).finishPermissionWriter === 'kilo') {
-    const configPath = resolveKiloConfigPath(targetDir);
-    if (fs.existsSync(configPath)) {
-      try {
-        const config = parseJsonc(fs.readFileSync(configPath, 'utf8'));
-        let modified = false;
-
-        // Remove GSD permission entries
-        if (config.permission) {
-          for (const permType of ['read', 'external_directory']) {
-            if (config.permission[permType]) {
-              const keys = Object.keys(config.permission[permType]);
-              for (const key of keys) {
-                if (key.includes('gsd-core')) {
-                  delete config.permission[permType][key];
-                  modified = true;
-                }
-              }
-              // Clean up empty objects
-              if (Object.keys(config.permission[permType]).length === 0) {
-                delete config.permission[permType];
-              }
-            }
-          }
-          if (Object.keys(config.permission).length === 0) {
-            delete config.permission;
-          }
-        }
-
-        if (modified) {
-          fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
-          removedCount++;
-          console.log(`  ${green}✓${reset} Removed GSD permissions from ${path.basename(configPath)}`);
-        }
-      } catch (e) {
-        // Ignore JSON parse errors
-      }
-    }
-  }
 
   // 8. For Antigravity, remove the MCP companion entry from mcp_config.json
   // (#2096 Phase B Upgrade 2). Only the GSD-owned mcpServers.gsd key is
@@ -9059,79 +7209,7 @@ function configureOpencodePermissions(isGlobal = true, configDir = null) {
   console.log(`  ${green}✓${reset} Configured read permission for GSD docs`);
 }
 
-/**
- * Configure Kilo permissions to allow reading GSD reference docs
- * This prevents permission prompts when GSD accesses the gsd-core directory
- * @param {boolean} isGlobal - Whether this is a global or local install
- * @param {string|null} configDir - Resolved config directory when already known
- */
-function configureKiloPermissions(isGlobal = true, configDir = null) {
-  // For local installs, use ./.kilo/
-  // For global installs, use ~/.config/kilo/
-  const kiloConfigDir = configDir || (isGlobal
-    ? getGlobalConfigDir('kilo', explicitConfigDir)
-    : path.join(process.cwd(), '.kilo'));
-  // Ensure config directory exists
-  fs.mkdirSync(kiloConfigDir, { recursive: true });
 
-  const configPath = resolveKiloConfigPath(kiloConfigDir);
-
-  // Read existing config or create empty object
-  let config = {};
-  if (fs.existsSync(configPath)) {
-    try {
-      const content = fs.readFileSync(configPath, 'utf8');
-      config = parseJsonc(content);
-    } catch (e) {
-      // Cannot parse - DO NOT overwrite user's config
-      const configFile = path.basename(configPath);
-      console.log(`  ${yellow}⚠${reset} Could not parse ${configFile} - skipping permission config`);
-      console.log(`    ${dim}Reason: ${e.message}${reset}`);
-      console.log(`    ${dim}Your config was NOT modified. Fix the syntax manually if needed.${reset}`);
-      return;
-    }
-  }
-
-  // Ensure permission structure exists
-  if (!config.permission || typeof config.permission !== 'object') {
-    config.permission = {};
-  }
-
-  // Build the GSD path using the actual config directory
-  // Use ~ shorthand if it's in the default location, otherwise use full path
-  const defaultConfigDir = path.join(os.homedir(), '.config', 'kilo');
-  const gsdPath = kiloConfigDir === defaultConfigDir
-    ? '~/.config/kilo/gsd-core/*'
-    : `${kiloConfigDir.replace(/\\/g, '/')}/gsd-core/*`;
-
-  let modified = false;
-
-  // Configure read permission
-  if (!config.permission.read || typeof config.permission.read !== 'object') {
-    config.permission.read = {};
-  }
-  if (config.permission.read[gsdPath] !== 'allow') {
-    config.permission.read[gsdPath] = 'allow';
-    modified = true;
-  }
-
-  // Configure external_directory permission (the safety guard for paths outside project)
-  if (!config.permission.external_directory || typeof config.permission.external_directory !== 'object') {
-    config.permission.external_directory = {};
-  }
-  if (config.permission.external_directory[gsdPath] !== 'allow') {
-    config.permission.external_directory[gsdPath] = 'allow';
-    modified = true;
-  }
-
-  if (!modified) {
-    return; // Already configured
-  }
-
-  // Write config back
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
-  console.log(`  ${green}✓${reset} Configured read permission for GSD docs`);
-}
 
 /**
  * Convert an absolute path to a `~`-relative form when it lives under the
@@ -9299,26 +7377,7 @@ function configureAntigravityMcpConfig(isGlobal = true, configDir = null) {
   console.log(`  ${green}✓${reset} Configured Antigravity MCP companion server (gsd)`);
 }
 
-/**
- * #2097 (ADR-1239 transport:mcp): register the GSD companion MCP server inside a
- * runtime's settings.json (Augment hosts MCP in settings.json.mcpServers, unlike
- * Antigravity's standalone mcp_config.json). Mutates the in-memory settings object
- * that finishInstall already writes — non-destructive + idempotent: only sets
- * mcpServers.gsd, preserving any user-defined servers (a user's own `gsd` override
- * is respected — Hyrum's Law).
- * @param {object} settings - the in-memory settings object finishInstall will write
- */
-function mergeGsdMcpServerIntoSettings(settings) {
-  if (!settings.mcpServers || typeof settings.mcpServers !== 'object' || Array.isArray(settings.mcpServers)) {
-    settings.mcpServers = {};
-  }
-  if (settings.mcpServers.gsd === undefined) {
-    settings.mcpServers.gsd = {
-      command: 'npx',
-      args: ['-y', '-p', PACKAGE_NAME, 'gsd-mcp-server'],
-    };
-  }
-}
+
 
 /**
  * Verify a directory exists and contains files
@@ -9440,7 +7499,7 @@ function writeManifest(configDir, runtime = DEFAULT_RUNTIME, options = {}) {
   // above, now covered by hostBehaviors.skipSharedHooksInstall.
   // #2100: isWindsurf dropped — was only used in the hooks-tracking conditional
   // above, now covered by hostBehaviors.skipSharedHooksInstall.
-  const { isOpencode, isCodex, isCursor, isAugment, isQwen, isHermes, isCline } = runtimeFlags(runtime);
+  const { isOpencode, isCodex, isCursor, isQwen, isCline } = runtimeFlags(runtime);
   const gsdDir = path.join(configDir, 'gsd-core');
   // #1367: Claude local now writes flat gsd-*.md files at commands/ (not commands/gsd/).
   // Claude local uses flatCommandsDir instead for manifest recording.
@@ -10005,7 +8064,7 @@ function install(isGlobal, runtime = DEFAULT_RUNTIME, options = {}) {
   // converter arm was likewise unreachable dead code (windsurf's agents were
   // already descriptor-driven) and was removed above.
   // #2101: isZcode dropped — folded onto hostBehaviors.skipSharedHooksInstall.
-  const { isOpencode, isCodex, isCursor, isAugment, isTrae, isQwen, isHermes, isCline } = runtimeFlags(runtime);
+  const { isOpencode, isCodex, isCursor, isQwen, isCline } = runtimeFlags(runtime);
   const plan = resolveInstallPlan(runtime);
   const dirName = getDirName(runtime);
   const src = path.join(__dirname, '..');
@@ -10627,51 +8686,8 @@ function install(isGlobal, runtime = DEFAULT_RUNTIME, options = {}) {
       }
     }
 
-    // Descriptor-driven (#2090): write DESCRIPTION.md for the gsd/ category after layout install
-    if (_hostBehaviors(runtime).writeCategoryDescription) {
-      writeHermesCategoryDescription(path.join(targetDir, 'skills', 'gsd'));
-    }
-
     // Verify installed artifacts and report
-    if (_hostBehaviors(runtime).reportSkillsCount) {
-      const hermesSkillsDir = path.join(targetDir, 'skills', 'gsd');
-      if (fs.existsSync(hermesSkillsDir)) {
-        // Hermes layout uses prefix: 'gsd-' (#947) — skill dirs have gsd-<stem> names
-        const count = fs.readdirSync(hermesSkillsDir, { withFileTypes: true })
-          .filter(e => e.isDirectory() && e.name.startsWith('gsd-')).length;
-        if (count > 0) {
-          console.log(`  ${green}✓${reset} Installed ${count} skills to skills/gsd/`);
-        } else {
-          failures.push('skills/gsd/*');
-        }
-      } else {
-        failures.push('skills/gsd/*');
-      }
-    } else if (_hostBehaviors(runtime).verificationStyle === 'kimi') {
-      const skillsDir = path.join(targetDir, 'skills');
-      const rootAgentPath = path.join(targetDir, 'agents', 'gsd.yaml');
-      if (fs.existsSync(skillsDir)) {
-        const count = fs.readdirSync(skillsDir, { withFileTypes: true })
-          .filter(e => e.isDirectory() && e.name.startsWith('gsd-')).length;
-        if (count > 0) {
-          console.log(`  ${green}✓${reset} Installed ${count} Kimi skills to skills/`);
-        } else {
-          failures.push('skills/gsd-*');
-        }
-      } else {
-        failures.push('skills/gsd-*');
-      }
-      if (fs.existsSync(rootAgentPath)) {
-        console.log(`  ${green}✓${reset} Generated Kimi root agent: ${rootAgentPath}`);
-        console.log(`      Launch with: kimi --agent-file ${rootAgentPath}`);
-      } else {
-        failures.push('agents/gsd.yaml');
-      }
-    // Descriptor-driven (ADR-1239 / #2100): folded from `isWindsurf` into
-    // hostBehaviors.verificationStyle === 'windsurf-workflows' (extends the
-    // same mechanism the 'kimi' verificationStyle branch above uses; windsurf
-    // is the only runtime that declares this value, so this is byte-parity).
-    } else if (_hostBehaviors(runtime).verificationStyle === 'windsurf-workflows') {
+    if (_hostBehaviors(runtime).verificationStyle === 'windsurf-workflows') {
       if (isGlobal) {
         console.log(`  ${green}✓${reset} Windsurf global install skipped workflow artifacts (workspace-only)`);
       } else {
@@ -10700,21 +8716,6 @@ function install(isGlobal, runtime = DEFAULT_RUNTIME, options = {}) {
         }
       } else {
         failures.push('skills/gsd-*');
-      }
-      // Augment: also verify commands/ (emitted alongside skills/)
-      if (isAugment) {
-        const commandsDir = path.join(targetDir, 'commands');
-        if (fs.existsSync(commandsDir)) {
-          const cmdCount = fs.readdirSync(commandsDir)
-            .filter(f => f.startsWith('gsd-') && f.endsWith('.md')).length;
-          if (cmdCount > 0) {
-            console.log(`  ${green}✓${reset} Installed ${cmdCount} commands to commands/`);
-          } else {
-            failures.push('commands/gsd-*');
-          }
-        } else {
-          failures.push('commands/gsd-*');
-        }
       }
 
       // Descriptor-driven commands/ output report (currently CodeBuddy).
@@ -12390,7 +10391,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   // #2098: isCodebuddy dropped — unused in this function.
   // #2099: isCopilot dropped — unused in this function.
   // #2100: isWindsurf dropped — unused in this function.
-  const { isOpencode, isCodex, isCursor, isAugment, isQwen, isHermes, isCline } = runtimeFlags(runtime);
+  const { isOpencode, isCodex, isCursor, isQwen, isCline } = runtimeFlags(runtime);
   const plan = resolveInstallPlan(runtime);
 
   if (shouldInstallStatusline && plan.writesSharedSettings && !_hostBehaviors(runtime).skipSettingsUi) {
@@ -12452,11 +10453,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
     mergeClaudePermissions(settings);
   }
 
-  // #2097 UPGRADE 3 (transport:mcp): companion MCP server for runtimes that host
-  // MCP in settings.json (Augment). settings.json is golden-excluded, so no golden change.
-  if (_hostBehaviors(runtime).mcpCompanion === 'settings-json' && settings && plan.writesSharedSettings) {
-    mergeGsdMcpServerIntoSettings(settings);
-  }
+
 
   // Write settings when runtime supports settings.json.
   // #3002 CR: defense-in-depth — re-run validateHookFields right before
@@ -12474,10 +10471,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
     configureOpencodePermissions(isGlobal, configDir);
   }
 
-  // Configure Kilo permissions
-  if (plan.finishPermissionWriter === 'kilo') {
-    configureKiloPermissions(isGlobal, configDir);
-  }
+
 
   // Configure Antigravity permissions + MCP companion server (#2096 Phase B
   // Upgrades 1+2). Not GSD_TEST_MODE-gated — mirrors Kilo's dispatch exactly;
@@ -12585,26 +10579,18 @@ function handleStatusline(settings, isInteractive, callback) {
 const runtimeMap = {
   '1': 'claude',
   '2': 'antigravity',
-  '3': 'augment',
-  '4': 'cline',
-  '5': 'codebuddy',
-  '6': 'codex',
-  '7': 'copilot',
-  '8': 'cursor',
-  '9': 'hermes',
-  '10': 'kimi',
-  '11': 'kimi-code',
-  '12': 'kilo',
-  '13': 'opencode',
-  '14': 'pi',
-  '15': 'qwen',
-  '16': 'trae',
-  '17': 'windsurf',
-  '18': 'zcode',
-  '19': 'deepseek-harness'
+  '3': 'cline',
+  '4': 'codex',
+  '5': 'copilot',
+  '6': 'cursor',
+  '7': 'deepseek-harness',
+  '8': 'kimi-code',
+  '9': 'opencode',
+  '10': 'qwen',
+  '11': 'windsurf'
 };
-const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'hermes', 'kimi', 'kimi-code', 'kilo', 'opencode', 'pi', 'qwen', 'trae', 'windsurf', 'zcode', 'deepseek-harness'];
-const ALL_RUNTIMES_OPTION = '20';
+const allRuntimes = ['claude', 'antigravity', 'cline', 'codex', 'copilot', 'cursor', 'deepseek-harness', 'kimi-code', 'opencode', 'qwen', 'windsurf'];
+const ALL_RUNTIMES_OPTION = '12';
 
 /**
  * Helper to normalize language tag
@@ -12628,24 +10614,16 @@ function buildRuntimePromptText(lang) {
 
   return `  ${yellow}${header}${reset}\n\n  ${cyan}1${reset}) Claude Code       ${dim}(~/.claude)${reset}
   ${cyan}2${reset}) Antigravity       ${dim}(~/.gemini/config)${reset}
-  ${cyan}3${reset}) Augment           ${dim}(~/.augment)${reset}
-  ${cyan}4${reset}) Cline             ${dim}(.clinerules)${reset}
-  ${cyan}5${reset}) CodeBuddy         ${dim}(~/.codebuddy)${reset}
-  ${cyan}6${reset}) Codex             ${dim}(~/.codex)${reset}
-  ${cyan}7${reset}) Copilot           ${dim}(~/.copilot)${reset}
-  ${cyan}8${reset}) Cursor            ${dim}(~/.cursor)${reset}
-  ${cyan}9${reset}) Hermes Agent      ${dim}(~/.hermes)${reset}
-  ${cyan}10${reset}) Kimi              ${dim}(~/.config/agents, then ~/.agents if existing)${reset}
-  ${cyan}11${reset}) Kimi Code         ${dim}(~/.kimi-code)${reset}
-  ${cyan}12${reset}) Kilo              ${dim}(~/.config/kilo)${reset}
-  ${cyan}13${reset}) OpenCode          ${dim}(~/.config/opencode)${reset}
-  ${cyan}14${reset}) pi                ${dim}(~/.pi/agent)${reset}
-  ${cyan}15${reset}) Qwen Code         ${dim}(~/.qwen)${reset}
-  ${cyan}16${reset}) Trae              ${dim}(~/.trae)${reset}
-  ${cyan}17${reset}) Windsurf          ${dim}(~/.codeium/windsurf)${reset}
-  ${cyan}18${reset}) ZCode             ${dim}(~/.zcode)${reset}
-  ${cyan}19${reset}) DeepSeek Harness  ${dim}(~/.dsh)${reset}
-  ${cyan}20${reset}) ${allLabel}
+  ${cyan}3${reset}) Cline             ${dim}(.clinerules)${reset}
+  ${cyan}4${reset}) Codex             ${dim}(~/.codex)${reset}
+  ${cyan}5${reset}) Copilot           ${dim}(~/.copilot)${reset}
+  ${cyan}6${reset}) Cursor            ${dim}(~/.cursor)${reset}
+  ${cyan}7${reset}) DeepSeek Harness  ${dim}(~/.dsh)${reset}
+  ${cyan}8${reset}) Kimi Code         ${dim}(~/.kimi-code)${reset}
+  ${cyan}9${reset}) OpenCode          ${dim}(~/.config/opencode)${reset}
+  ${cyan}10${reset}) Qwen Code         ${dim}(~/.qwen)${reset}
+  ${cyan}11${reset}) Windsurf          ${dim}(~/.codeium/windsurf)${reset}
+  ${cyan}12${reset}) ${allLabel}
 
   ${dim}${selectMulti}${reset}
 `;
@@ -13568,12 +11546,7 @@ module.exports = {
     GSD_SCRIPTS_LIB_FILES,
     convertSlashCommandsToCodexSkillMentions,
     convertClaudeCommandToCodexSkill,
-    convertClaudeCommandToKimiSkill,
-    convertKimiToolName,
-    mapClaudeToolsToKimiTools,
-    buildKimiAgentArtifacts,
     convertClaudeToOpencodeFrontmatter,
-    convertClaudeToKiloFrontmatter,
     configureOpencodePermissions,
     neutralizeAgentReferences,
     // #768 — Claude Code permissions pre-population
@@ -13585,15 +11558,11 @@ module.exports = {
     CODEX_AGENT_SANDBOX,
     getGlobalDir,
     getConfigDirFromHome,
-    resolveKiloConfigPath,
-    configureKiloPermissions,
     // #2096 Phase B Upgrades 1+2 — Antigravity permission-writer + MCP companion
     toTildePosixPath,
     buildAntigravityAllowRules,
     configureAntigravityPermissions,
     configureAntigravityMcpConfig,
-    // #2097 UPGRADE 3 — Augment MCP companion (settings.json-hosted)
-    mergeGsdMcpServerIntoSettings,
     claudeToCopilotTools,
     convertCopilotToolName,
     convertClaudeToCopilotContent,
@@ -13609,29 +11578,13 @@ module.exports = {
     convertClaudeAgentToAntigravityAgent,
     convertClaudeCommandToClaudeSkill,
     skillFrontmatterName,
-    convertClaudeToTraeMarkdown,
     detectSystemLanguage,
     buildLanguagePromptText,
     parseLanguageInput,
     promptLanguage,
-    convertClaudeCommandToTraeSkill,
-    convertClaudeAgentToTraeAgent,
-    convertClaudeToCodebuddyMarkdown,
-    convertClaudeCommandToCodebuddySkill,
-    convertClaudeCommandToCodebuddyCommand,
-    convertClaudeAgentToCodebuddyAgent,
     convertClaudeToCliineMarkdown,
     convertClaudeCommandToClineSkill,
     convertClaudeAgentToClineAgent,
-    // #2284 — Hermes named-dispatch → delegate_task projection
-    convertClaudeToHermesMarkdown,
-    projectNamedDispatchToStructuralDelegate,
-    _hostIntegrationDispatch,
-    _resolveAvailableGsdRoles,
-    HERMES_DISPATCH_TOOL_CONFIG,
-    maskStringLiterals,
-    findDispatchCallSpans,
-    _assertProjectionComplete,
     GSD_CURSOR_SESSION_HOOK_SCRIPT,
     GSD_CURSOR_POST_TOOL_HOOK_SCRIPT,
     GSD_CURSOR_HOOK_MARKER,

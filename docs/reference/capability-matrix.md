@@ -74,7 +74,7 @@ points.
 | `tdd` | feature | full | `>=1.6.0` | `plan:pre`, `execute:post` | contribution, gate | first-party |
 | `ui` | feature | full | `>=1.6.0` | `plan:pre`, `execute:wave:post`, `verify:post` | step, gate | first-party |
 
-### Runtime capabilities (role: runtime) — 20
+### Runtime capabilities (role: runtime) — 12
 
 Runtime capabilities adapt GSD to a specific AI runtime or IDE — emitting
 skills, agents, hooks configuration, and surface files for that host. They
@@ -84,25 +84,17 @@ emission), so their extension-point and hook-kind cells are `—`.
 | id | role | tier | engines.gsd | extension points | hook kinds | source |
 |---|---|---|---|---|---|---|
 | `antigravity` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `augment` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `claude` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `cline` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `codebuddy` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `codex` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `copilot` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `cursor` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `deepseek-harness` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `hermes` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `kilo` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `kimi` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `kimi-code` | runtime | core | `>=1.7.0` | — | — | first-party |
 | `opencode` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `pi` | runtime | core | `>=1.7.0` | — | — | first-party |
 | `qwen` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `trae` | runtime | core | `>=1.6.0` | — | — | first-party |
 | `vscode` | runtime | core | `>=1.7.0` | — | — | first-party |
 | `windsurf` | runtime | core | `>=1.6.0` | — | — | first-party |
-| `zcode` | runtime | core | `>=1.6.0` | — | — | first-party |
 
 ### Reviewer capabilities (role: reviewer) — 5
 

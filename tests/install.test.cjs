@@ -29,9 +29,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { createTempDir, createTempProject, cleanup, parseFrontmatter } = require('./helpers.cjs');
+const { createTempDir, cleanup } = require('./helpers.cjs');
 const { runNode } = require('./helpers/process-seam.cjs');
-const pkg = require('../package.json');
 
 // #3145: class-norm timeout, not a per-suite value — see helpers/timeouts.cjs.
 const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
@@ -42,10 +41,6 @@ const {
   uninstall,
   writeManifest,
   allRuntimes,
-  runtimeMap,
-  buildRuntimePromptText,
-  resolveKiloConfigPath,
-  configureKiloPermissions,
   selectRuntimesFromArgs,
   GSD_CHANGESET_FILES,
   GSD_SCRIPTS_LIB_FILES,
@@ -71,7 +66,6 @@ const RESOLVED_FULL = resolveProfile({
 
 const {
   RUNTIME_META,
-  stripAnsi,
   walk,
 } = require('./helpers/install-shared.cjs');
 
@@ -223,81 +217,8 @@ describe('getGlobalConfigDir/getConfigDirFromHome — antigravity 2.x layout det
 });
 
 describe('getGlobalConfigDir — explicit configDir overrides env for all runtimes', () => {
-  test('explicit dir overrides any env var for hermes', () => {
-    const savedHome = process.env.HERMES_HOME;
-    process.env.HERMES_HOME = '~/from-env';
-    try {
-      assert.strictEqual(String(getGlobalConfigDir('hermes', '/explicit/hermes')).replace(/\\/g, '/'), '/explicit/hermes');
-    } finally {
-      if (savedHome !== undefined) process.env.HERMES_HOME = savedHome;
-      else delete process.env.HERMES_HOME;
-    }
-  });
-
-  test('explicit dir overrides KILO_CONFIG_DIR', () => {
-    const saved = process.env.KILO_CONFIG_DIR;
-    process.env.KILO_CONFIG_DIR = '~/from-env';
-    try {
-      assert.strictEqual(String(getGlobalConfigDir('kilo', '/explicit/kilo')).replace(/\\/g, '/'), '/explicit/kilo');
-    } finally {
-      if (saved !== undefined) process.env.KILO_CONFIG_DIR = saved;
-      else delete process.env.KILO_CONFIG_DIR;
-    }
-  });
-});
-
-describe('getGlobalConfigDir — HERMES_HOME env var', () => {
-  let saved;
-  beforeEach(() => { saved = process.env.HERMES_HOME; });
-  afterEach(() => {
-    if (saved !== undefined) process.env.HERMES_HOME = saved;
-    else delete process.env.HERMES_HOME;
-  });
-
-  test('respects HERMES_HOME env var (tilde-expanded)', () => {
-    process.env.HERMES_HOME = '~/custom-hermes';
-    assert.strictEqual(getGlobalConfigDir('hermes'), path.join(os.homedir(), 'custom-hermes'));
-  });
-});
-
-describe('getGlobalConfigDir — Kilo env var priority', () => {
-  let savedEnv;
-  beforeEach(() => {
-    savedEnv = {
-      KILO_CONFIG_DIR: process.env.KILO_CONFIG_DIR,
-      KILO_CONFIG: process.env.KILO_CONFIG,
-      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-    };
-    delete process.env.KILO_CONFIG_DIR;
-    delete process.env.KILO_CONFIG;
-    delete process.env.XDG_CONFIG_HOME;
-  });
-  afterEach(() => {
-    for (const [k, v] of Object.entries(savedEnv)) {
-      if (v !== undefined) process.env[k] = v;
-      else delete process.env[k];
-    }
-  });
-
-  test('respects KILO_CONFIG_DIR', () => {
-    process.env.KILO_CONFIG_DIR = '~/custom-kilo';
-    assert.strictEqual(getGlobalConfigDir('kilo'), path.join(os.homedir(), 'custom-kilo'));
-  });
-
-  test('falls back to XDG_CONFIG_HOME/kilo', () => {
-    process.env.XDG_CONFIG_HOME = '~/xdg-config';
-    assert.strictEqual(getGlobalConfigDir('kilo'), path.join(os.homedir(), 'xdg-config', 'kilo'));
-  });
-
-  test('uses dirname(KILO_CONFIG) when KILO_CONFIG_DIR unset', () => {
-    process.env.KILO_CONFIG = '~/profiles/work/kilo.jsonc';
-    assert.strictEqual(getGlobalConfigDir('kilo'), path.join(os.homedir(), 'profiles', 'work'));
-  });
-
-  test('KILO_CONFIG_DIR takes precedence over KILO_CONFIG', () => {
-    process.env.KILO_CONFIG_DIR = '~/custom-kilo';
-    process.env.KILO_CONFIG = '~/profiles/work/kilo.jsonc';
-    assert.strictEqual(getGlobalConfigDir('kilo'), path.join(os.homedir(), 'custom-kilo'));
+  test('explicit dir overrides any env var for qwen', () => {
+    assert.strictEqual(String(getGlobalConfigDir('qwen', '/explicit/qwen')).replace(/\\/g, '/'), '/explicit/qwen');
   });
 });
 
@@ -307,19 +228,9 @@ describe('getConfigDirFromHome — spot-checks', () => {
     assert.strictEqual(getConfigDirFromHome('claude', true), "'.claude'");
   });
 
-  test('hermes returns .hermes for both scopes', () => {
-    assert.strictEqual(getConfigDirFromHome('hermes', false), "'.hermes'");
-    assert.strictEqual(getConfigDirFromHome('hermes', true), "'.hermes'");
-  });
-
   test('qwen returns .qwen for both scopes', () => {
     assert.strictEqual(getConfigDirFromHome('qwen', false), "'.qwen'");
     assert.strictEqual(getConfigDirFromHome('qwen', true), "'.qwen'");
-  });
-
-  test('trae returns .trae for both scopes', () => {
-    assert.strictEqual(getConfigDirFromHome('trae', false), "'.trae'");
-    assert.strictEqual(getConfigDirFromHome('trae', true), "'.trae'");
   });
 
   test('antigravity returns .agents (local) and legacy fallback global path when no 2.x dirs exist', () => {
@@ -343,114 +254,11 @@ describe('getConfigDirFromHome — spot-checks', () => {
       cleanup(home);
     }
   });
-
-  test('kilo returns .kilo (local) and .config, kilo (global)', () => {
-    assert.strictEqual(getConfigDirFromHome('kilo', false), "'.kilo'");
-    assert.strictEqual(getConfigDirFromHome('kilo', true), "'.config', 'kilo'");
-  });
 });
 
 // ─── Section 2: Local install / uninstall for subset of runtimes ─────────────
 // Full E2E for runtimes that have distinct install paths (hermes nested layout,
 // qwen flat layout, trae flat layout). Others are covered by layout-loop tests.
-
-describe('install/uninstall — hermes (nested skills/gsd/<router>/skills/<stem>/ layout)', () => {
-  let tmpDir;
-  let previousCwd;
-
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-hermes-install-');
-    previousCwd = process.cwd();
-    process.chdir(tmpDir);
-  });
-
-  afterEach(() => {
-    process.chdir(previousCwd);
-    cleanup(tmpDir);
-  });
-
-  test('installs GSD into ./.hermes and removes it cleanly', () => {
-    const result = install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-
-    assert.strictEqual(result.runtime, 'hermes');
-    assert.strictEqual(result.configDir, fs.realpathSync(targetDir));
-
-    // hermes nests: skills/gsd/gsd-<router>/skills/<stem>/SKILL.md (#947 — canonical gsd- prefix)
-    const hermesHelpPath = nestedSkillPath(path.join(targetDir, 'skills', 'gsd'), 'gsd-', 'help');
-    assert.ok(fs.existsSync(hermesHelpPath),
-      `help SKILL.md must exist at nested path: ${path.relative(targetDir, hermesHelpPath)}`);
-    assert.ok(fs.existsSync(path.join(targetDir, 'skills', 'gsd', 'DESCRIPTION.md')),
-      'DESCRIPTION.md at category root');
-    assert.ok(fs.existsSync(path.join(targetDir, 'gsd-core', 'VERSION')));
-    assert.ok(fs.existsSync(path.join(targetDir, 'agents')));
-
-    const manifest = writeManifest(targetDir, 'hermes');
-    assert.ok(
-      Object.keys(manifest.files).some(f =>
-        f.startsWith('skills/gsd/gsd-' + CHILD_ROUTER['help'] + '/skills/help/')
-      ),
-      JSON.stringify(manifest.files)
-    );
-
-    uninstall(false, 'hermes');
-
-    assert.ok(!fs.existsSync(hermesHelpPath));
-    assert.ok(!fs.existsSync(path.join(targetDir, 'skills', 'gsd')));
-    assert.ok(!fs.existsSync(path.join(targetDir, 'gsd-core')));
-  });
-
-  test('installed SKILL.md frontmatter conforms to Hermes spec', () => {
-    install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-    const categoryDir = path.join(targetDir, 'skills', 'gsd');
-    const skillDirs = fs.readdirSync(categoryDir, { withFileTypes: true })
-      .filter(e => e.isDirectory() && e.name !== 'DESCRIPTION.md')
-      .map(e => e.name);
-
-    assert.ok(skillDirs.length > 0, 'at least one skill installed');
-
-    for (const dir of skillDirs) {
-      const content = fs.readFileSync(path.join(categoryDir, dir, 'SKILL.md'), 'utf8');
-      const fm = parseFrontmatter(content);
-      assert.strictEqual(fm.name, dir, `${dir}/SKILL.md name matches dir`);
-      assert.ok(typeof fm.description === 'string' && fm.description.length > 0,
-        `${dir}/SKILL.md has description`);
-      assert.strictEqual(fm.version, pkg.version,
-        `${dir}/SKILL.md declares version ${pkg.version}`);
-    }
-
-    const desc = fs.readFileSync(path.join(categoryDir, 'DESCRIPTION.md'), 'utf8');
-    const descFm = parseFrontmatter(desc);
-    assert.strictEqual(descFm.name, 'gsd');
-    assert.ok(typeof descFm.description === 'string' && descFm.description.length > 0);
-    assert.strictEqual(descFm.version, pkg.version);
-
-    uninstall(false, 'hermes');
-  });
-
-  test('replaces CLAUDE.md references with HERMES.md', () => {
-    install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-    const skillsDir = path.join(targetDir, 'skills');
-
-    let referencedHermesMd = false;
-    const checkWalk = (dir) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) { checkWalk(full); continue; }
-        if (!entry.name.endsWith('.md')) continue;
-        const content = fs.readFileSync(full, 'utf8');
-        assert.ok(!/\bCLAUDE\.md\b/.test(content),
-          `${path.relative(targetDir, full)} still references CLAUDE.md`);
-        if (/\bHERMES\.md\b/.test(content)) referencedHermesMd = true;
-      }
-    };
-    checkWalk(skillsDir);
-    assert.ok(referencedHermesMd, 'at least one skill references HERMES.md');
-    uninstall(false, 'hermes');
-  });
-});
 
 describe('install/uninstall — qwen (nested skills/gsd-<router>/skills/<stem>/ layout)', () => {
   let tmpDir;
@@ -529,103 +337,6 @@ describe('install/uninstall — qwen (nested skills/gsd-<router>/skills/<stem>/ 
   });
 });
 
-describe('install/uninstall — trae (nested skills/gsd-<router>/skills/<stem>/ layout)', () => {
-  let tmpDir;
-  let previousCwd;
-
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-trae-install-');
-    previousCwd = process.cwd();
-    process.chdir(tmpDir);
-  });
-
-  afterEach(() => {
-    process.chdir(previousCwd);
-    cleanup(tmpDir);
-  });
-
-  test('installs GSD into ./.trae and removes it cleanly (typed IR result)', () => {
-    const result = install(false, 'trae');
-    const targetDir = path.join(tmpDir, '.trae');
-
-    assert.deepStrictEqual(result, {
-      settingsPath: null,
-      settings: null,
-      statuslineCommand: null,
-      updateBannerCommand: null,
-      runtime: 'trae',
-      configDir: fs.realpathSync(targetDir),
-    });
-
-    // trae nests: skills/gsd-<router>/skills/<stem>/SKILL.md
-    const traeHelpPath = nestedSkillPath(path.join(targetDir, 'skills'), 'gsd-', 'help');
-    assert.ok(fs.existsSync(traeHelpPath),
-      `help SKILL.md must exist at nested path: ${path.relative(targetDir, traeHelpPath)}`);
-    assert.ok(fs.existsSync(path.join(targetDir, 'gsd-core', 'VERSION')));
-    assert.ok(fs.existsSync(path.join(targetDir, 'agents')));
-
-    const manifest = writeManifest(targetDir, 'trae');
-    assert.ok(
-      Object.keys(manifest.files).some(f =>
-        f.startsWith('skills/gsd-' + CHILD_ROUTER['help'] + '/skills/help/')
-      )
-    );
-
-    uninstall(false, 'trae');
-    assert.ok(!fs.existsSync(traeHelpPath));
-    assert.ok(!fs.existsSync(path.join(targetDir, 'gsd-core')));
-  });
-});
-
-// ─── Section 3: Uninstall skills cleanup — parameterised ─────────────────────
-
-describe('uninstall skills cleanup — hermes', () => {
-  let tmpDir;
-  let previousCwd;
-
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-hermes-uninstall-');
-    previousCwd = process.cwd();
-    process.chdir(tmpDir);
-  });
-
-  afterEach(() => {
-    process.chdir(previousCwd);
-    cleanup(tmpDir);
-  });
-
-  test('removes skills/gsd/ category dir', () => {
-    install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-    const categoryDir = path.join(targetDir, 'skills', 'gsd');
-    assert.ok(fs.existsSync(categoryDir));
-    const skills = fs.readdirSync(categoryDir, { withFileTypes: true }).filter(e => e.isDirectory());
-    assert.ok(skills.length > 0);
-
-    uninstall(false, 'hermes');
-    assert.ok(!fs.existsSync(categoryDir));
-  });
-
-  test('preserves non-GSD skill directories', () => {
-    install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-    const custom = path.join(targetDir, 'skills', 'my-custom-skill');
-    fs.mkdirSync(custom, { recursive: true });
-    fs.writeFileSync(path.join(custom, 'SKILL.md'), '# custom\n');
-
-    uninstall(false, 'hermes');
-    assert.ok(fs.existsSync(path.join(custom, 'SKILL.md')));
-  });
-
-  test('removes engine directory', () => {
-    install(false, 'hermes');
-    const targetDir = path.join(tmpDir, '.hermes');
-    assert.ok(fs.existsSync(path.join(targetDir, 'gsd-core', 'VERSION')));
-    uninstall(false, 'hermes');
-    assert.ok(!fs.existsSync(path.join(targetDir, 'gsd-core')));
-  });
-});
-
 // ─── Section 4: No Claude references leak into non-Claude runtimes ────────────
 
 // #2284(b): a `<runtime_compatibility>...</runtime_compatibility>` block (e.g.
@@ -642,7 +353,7 @@ function stripRuntimeCompatibilityBlocks(content) {
   return content.replace(/<runtime_compatibility>[\s\S]*?<\/runtime_compatibility>/g, '');
 }
 
-for (const runtime of ['hermes', 'qwen']) {
+for (const runtime of ['qwen']) {
   describe(`no Claude references leak into ${runtime} install`, () => {
     let tmpDir;
     let previousCwd;
@@ -706,263 +417,6 @@ for (const runtime of ['hermes', 'qwen']) {
     });
   });
 }
-
-// ─── Section 5: Kilo-specific helpers ────────────────────────────────────────
-
-describe('resolveKiloConfigPath', () => {
-  let tmpDir;
-  beforeEach(() => { tmpDir = createTempProject('gsd-kilo-'); });
-  afterEach(() => { cleanup(tmpDir); });
-
-  test('prefers kilo.jsonc when present', () => {
-    const configDir = path.join(tmpDir, '.kilo');
-    fs.mkdirSync(configDir, { recursive: true });
-    fs.writeFileSync(path.join(configDir, 'kilo.jsonc'), '{\n}\n');
-    assert.strictEqual(resolveKiloConfigPath(configDir), path.join(configDir, 'kilo.jsonc'));
-  });
-
-  test('falls back to kilo.json', () => {
-    const configDir = path.join(tmpDir, '.kilo');
-    fs.mkdirSync(configDir, { recursive: true });
-    assert.strictEqual(resolveKiloConfigPath(configDir), path.join(configDir, 'kilo.json'));
-  });
-});
-
-describe('configureKiloPermissions', () => {
-  let tmpDir;
-  let configDir;
-  let savedEnv;
-
-  beforeEach(() => {
-    tmpDir = createTempProject('gsd-kilo-perms-');
-    configDir = path.join(tmpDir, '.config', 'kilo');
-    savedEnv = {
-      KILO_CONFIG_DIR: process.env.KILO_CONFIG_DIR,
-      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-    };
-    process.env.KILO_CONFIG_DIR = configDir;
-    delete process.env.XDG_CONFIG_HOME;
-  });
-
-  afterEach(() => {
-    for (const [k, v] of Object.entries(savedEnv)) {
-      if (v !== undefined) process.env[k] = v;
-      else delete process.env[k];
-    }
-    cleanup(tmpDir);
-  });
-
-  test('writes GSD permissions to kilo.json when config is missing', () => {
-    configureKiloPermissions(true);
-    const configPath = path.join(configDir, 'kilo.json');
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    const gsdPath = `${configDir.replace(/\\/g, '/')}/gsd-core/*`;
-    assert.strictEqual(config.permission.read[gsdPath], 'allow');
-    assert.strictEqual(config.permission.external_directory[gsdPath], 'allow');
-  });
-
-  test('updates existing kilo.jsonc configs via JSONC parsing', () => {
-    fs.mkdirSync(configDir, { recursive: true });
-    const configPath = path.join(configDir, 'kilo.jsonc');
-    fs.writeFileSync(configPath, '{\n  // existing\n  "permission": {\n    "bash": "ask",\n  },\n}\n');
-    configureKiloPermissions(true);
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    const gsdPath = `${configDir.replace(/\\/g, '/')}/gsd-core/*`;
-    assert.strictEqual(config.permission.bash, 'ask');
-    assert.strictEqual(config.permission.read[gsdPath], 'allow');
-    assert.strictEqual(config.permission.external_directory[gsdPath], 'allow');
-  });
-
-  test('writes permissions to an explicit config dir argument', () => {
-    const explicitDir = path.join(tmpDir, 'custom-kilo-config');
-    configureKiloPermissions(true, explicitDir);
-    const configPath = path.join(explicitDir, 'kilo.json');
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    const gsdPath = `${explicitDir.replace(/\\/g, '/')}/gsd-core/*`;
-    assert.strictEqual(config.permission.read[gsdPath], 'allow');
-    assert.strictEqual(config.permission.external_directory[gsdPath], 'allow');
-  });
-});
-
-describe('Kilo integration — install/uninstall behaviour', () => {
-  // update.md IS the deployed workflow contract — its literal command lines are
-  // what the runtime loads, and there is no runtime seam that executes update.md
-  // here, so this .md read stays a text assertion (does not trigger no-source-grep).
-  const updateWorkflowSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'gsd-core', 'workflows', 'update.md'), 'utf8');
-  // #498: update.md's runtime/scope/config-dir resolution moved into the tested
-  // projection gsd-core/bin/lib/update-context.cjs. Custom-config-dir detection
-  // (kilo.jsonc, KILO_CONFIG) is asserted behaviorally below via
-  // inferPreferredRuntime() itself, not via a source grep on update-context.cjs.
-  const { inferPreferredRuntime } = require('../gsd-core/bin/lib/update-context.cjs');
-
-  let tmpDir;
-  let previousCwd;
-  let savedKiloConfigDir;
-
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-kilo-integration-');
-    previousCwd = process.cwd();
-    process.chdir(tmpDir);
-    savedKiloConfigDir = process.env.KILO_CONFIG_DIR;
-    // Point KILO_CONFIG_DIR at the install target so configureKiloPermissions
-    // and uninstall resolve to the same dir without needing the real ~/.config/kilo.
-    process.env.KILO_CONFIG_DIR = path.join(tmpDir, '.kilo');
-  });
-
-  afterEach(() => {
-    process.chdir(previousCwd);
-    if (savedKiloConfigDir !== undefined) process.env.KILO_CONFIG_DIR = savedKiloConfigDir;
-    else delete process.env.KILO_CONFIG_DIR;
-    cleanup(tmpDir);
-  });
-
-  test('--kilo flag routes to kilo runtime via selectRuntimesFromArgs', () => {
-    // Behavioural replacement for source-grep on runtimeArgs.includes('--kilo').
-    // The flag must produce ['kilo'] — a rename or deletion of the flag branch
-    // would make this go red.
-    assert.deepStrictEqual(selectRuntimesFromArgs(['--kilo']), ['kilo']);
-  });
-
-  test('runtimeMap has Kilo as option 12 after Kimi Code (#2454)', () => {
-    assert.strictEqual(runtimeMap['12'], 'kilo');
-  });
-
-  test('prompt text shows Kilo above OpenCode without marketing copy', () => {
-    const plain = stripAnsi(buildRuntimePromptText());
-    assert.ok(/\b12\)\s*Kilo\b/.test(plain));
-    assert.ok(plain.indexOf('12) Kilo') < plain.indexOf('OpenCode'));
-    assert.ok(!plain.includes('the #1 AI coding platform on OpenRouter'));
-  });
-
-  test('install() for kilo writes artifacts to the configDir it returns', () => {
-    // Behavioural replacement for source-grep on the kilo install branch.
-    //
-    // IMPORTANT: GSD_TEST_MODE=1 (set at the top of this file) suppresses the
-    // configureKiloPermissions() call inside install() to avoid mutating the real
-    // ~/.config/kilo during unit tests.  Asserting on kilo.json permissions here
-    // would require manually calling configureKiloPermissions(), which only tests
-    // that helper — not install()'s wiring of it.
-    //
-    // Instead we assert on what install() ITSELF produces on disk, which is the
-    // correct target:
-    //   1. The returned configDir exists and is the KILO_CONFIG_DIR we set.
-    //   2. install() wrote kilo artifacts (skills/, agents/) into that dir.
-    //   3. The configDir returned by install() matches what resolveKiloConfigPath
-    //      resolves for the same env, proving the dir-resolution path is correct.
-    //
-    // If someone breaks the kilo install branch (wrong configDir, wrong skill
-    // target, removed case) these assertions go red immediately.
-    const result = install(false, 'kilo');
-    const configDir = result.configDir;
-
-    // (1) install() returned the expected configDir (respects KILO_CONFIG_DIR env).
-    assert.strictEqual(
-      result.runtime,
-      'kilo',
-      'install() must return runtime: "kilo"',
-    );
-    assert.ok(
-      fs.existsSync(configDir),
-      `install() must create the configDir it returns: ${configDir}`,
-    );
-
-    // (2) Kilo-specific artifacts were written by install() into configDir.
-    const skillsDir = path.join(configDir, 'skills');
-    assert.ok(
-      fs.existsSync(skillsDir),
-      `install() must create skills/ under the kilo configDir: ${skillsDir}`,
-    );
-    const agentsDir = path.join(configDir, 'agents');
-    assert.ok(
-      fs.existsSync(agentsDir),
-      `install() must create agents/ under the kilo configDir: ${agentsDir}`,
-    );
-
-    // (3) The configDir is consistent with resolveKiloConfigPath, proving the
-    // path-resolution wiring between install() and configureKiloPermissions is
-    // stable: both read from the same env (KILO_CONFIG_DIR).
-    const kiloConfigPath = resolveKiloConfigPath(configDir);
-    assert.ok(
-      typeof kiloConfigPath === 'string' && kiloConfigPath.length > 0,
-      `resolveKiloConfigPath must return a valid path for configDir: ${configDir}`,
-    );
-    assert.ok(
-      kiloConfigPath.startsWith(configDir),
-      `resolveKiloConfigPath must return a path inside the install configDir.\n` +
-      `Expected prefix: ${configDir}\n` +
-      `Got: ${kiloConfigPath}`,
-    );
-  });
-
-  test('uninstall removes GSD permissions from the resolved kilo config path', () => {
-    // Behavioural replacement for source-grep on
-    // "const configPath = resolveKiloConfigPath(targetDir)".
-    // The contract: after install + configureKiloPermissions, an uninstall must
-    // strip the GSD permission entries from kilo.json at the resolved path.
-    const result = install(false, 'kilo');
-    const configDir = result.configDir;
-    configureKiloPermissions(true, configDir);
-
-    const kiloJsonPath = resolveKiloConfigPath(configDir);
-    const beforeConfig = JSON.parse(fs.readFileSync(kiloJsonPath, 'utf8'));
-    const gsdGlob = `${configDir.replace(/\\/g, '/')}/gsd-core/*`;
-    assert.ok(
-      beforeConfig.permission.read[gsdGlob] === 'allow',
-      'pre-condition: GSD read permission must exist before uninstall',
-    );
-
-    uninstall(false, 'kilo');
-
-    // After uninstall the GSD permission keys must be absent. The file may
-    // still exist (Kilo preserves user settings) but the gsd-core/* entries
-    // must be gone.
-    const afterConfig = JSON.parse(fs.readFileSync(kiloJsonPath, 'utf8'));
-    assert.ok(
-      !(afterConfig.permission && afterConfig.permission.read && afterConfig.permission.read[gsdGlob]),
-      `GSD read permission must be removed from ${kiloJsonPath} after uninstall`,
-    );
-    assert.ok(
-      !(afterConfig.permission && afterConfig.permission.external_directory &&
-        afterConfig.permission.external_directory[gsdGlob]),
-      `GSD external_directory permission must be removed from ${kiloJsonPath} after uninstall`,
-    );
-  });
-
-  test('update workflow checks preferred custom config dirs', () => {
-    // update.md still derives the preferred config dir from execution_context…
-    assert.ok(updateWorkflowSrc.includes('PREFERRED_CONFIG_DIR'));
-  });
-
-  test('inferPreferredRuntime infers "kilo" from a kilo.jsonc marker in preferredConfigDir', () => {
-    // Behavioural replacement for the update-context.cjs source grep (#3466):
-    // the custom-dir detection (kilo.jsonc config marker) lives in this exact
-    // projection (#498) — calling it directly, with an injected fs seam, proves
-    // the kilo branch actually resolves rather than merely that the string
-    // "kilo.jsonc" appears in the file.
-    const fakeFs = {
-      exists: (p) => String(p).endsWith('kilo.jsonc'),
-    };
-    const runtime = inferPreferredRuntime({
-      fs: fakeFs,
-      env: {},
-      preferredConfigDir: '/fake/kilo-config-dir',
-    });
-    assert.strictEqual(runtime, 'kilo');
-  });
-
-  test('inferPreferredRuntime infers "kilo" from KILO_CONFIG_DIR / KILO_CONFIG env when no config-dir marker is present', () => {
-    const fakeFs = { exists: () => false };
-    assert.strictEqual(
-      inferPreferredRuntime({ fs: fakeFs, env: { KILO_CONFIG_DIR: '/custom/kilo' }, preferredConfigDir: '' }),
-      'kilo',
-    );
-    assert.strictEqual(
-      inferPreferredRuntime({ fs: fakeFs, env: { KILO_CONFIG: '/custom/kilo/kilo.jsonc' }, preferredConfigDir: '' }),
-      'kilo',
-    );
-  });
-});
 
 // ─── Section N: changeset CLI install regression (#935) ──────────────────────
 
@@ -5942,13 +5396,6 @@ describe('bug #376 — Suite 4: shouldNormalizeHyphenNamespaceInAgentBody covers
     );
   });
 
-  test('4d: hermes is in the hyphen-namespace set', () => {
-    assert.strictEqual(
-      install.shouldNormalizeHyphenNamespaceInAgentBody('hermes'),
-      true,
-    );
-  });
-
   test('4e: gemini is NOT in the hyphen-namespace set', () => {
     assert.strictEqual(
       install.shouldNormalizeHyphenNamespaceInAgentBody('gemini'),
@@ -6315,7 +5762,7 @@ describe('install.js --skills-root', () => {
     { runtime: 'codex', expected: path.join(os.homedir(), '.agents', 'skills') },
     { runtime: 'copilot', expected: path.join(os.homedir(), '.copilot', 'skills') },
     { runtime: 'cursor', expected: path.join(os.homedir(), '.cursor', 'skills') },
-    { runtime: 'trae', expected: path.join(os.homedir(), '.trae', 'skills') },
+    { runtime: 'cline', expected: path.join(os.homedir(), '.cline', 'skills') },
   ];
 
   for (const { runtime, expected } of CASES) {
@@ -7470,10 +6917,9 @@ describe('#3026: installer --help documents every accepted runtime flag', () => 
     // The installer's getRuntimeArgs defines which --<runtime> flags it accepts.
     // Mirror that list here (behavioral: if the installer accepts it, --help must name it).
     const acceptedRuntimeFlags = [
-      '--claude', '--opencode', '--kilo', '--codex', '--kimi',
-      '--copilot', '--antigravity', '--cursor', '--windsurf', '--augment',
-      '--trae', '--qwen', '--hermes', '--cline', '--codebuddy',
-      '--zcode', '--pi', '--gemini',
+      '--claude', '--opencode', '--codex', '--copilot',
+      '--antigravity', '--cursor', '--windsurf', '--qwen',
+      '--cline', '--deepseek-harness', '--kimi-code',
     ];
 
     const missing = acceptedRuntimeFlags.filter(

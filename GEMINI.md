@@ -1,6 +1,6 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 23 (Code Review Hardening, Security Sanitization & Full-Repo Telemetry Parity) | Status: In Progress (Plan 23-02 Active)
-> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
+> **GSD Active State**: Phase: Phase 24 (Runtime Streamlining & Tier 3 Deprecation — Scenario B Ultra-Enxuto) | Status: Complete
+> **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.; **D-05 [Consolidation]:** Consolidação de runtimes para 12 ativos (11 CLIs + VS Code host), deprecando e removendo 8 runtimes nicho com zero regressão.
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->
 

@@ -27,7 +27,7 @@ function generateArchitectureDoc(graph) {
     const lines = [
         '# Codebase Architecture & Topology (Living Document)',
         '',
-        `> Auto-generated and verified by GSD Core Nexus 3.3 Living Docs on ${new Date().toISOString()}.`,
+        `> Auto-generated and verified by GSD Core Nexus 3.4 Living Docs on ${new Date().toISOString()}.`,
         '',
         '## System Metrics',
         '',

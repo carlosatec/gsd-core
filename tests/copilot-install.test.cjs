@@ -73,7 +73,7 @@ describe('getDirName (Copilot)', () => {
     assert.strictEqual(getDirName('claude'), '.claude');
     assert.strictEqual(getDirName('opencode'), '.opencode');
     assert.strictEqual(getDirName('antigravity'), '.agents');
-    assert.strictEqual(getDirName('kilo'), '.kilo');
+    assert.strictEqual(getDirName('cline'), '.cline');
     assert.strictEqual(getDirName('codex'), '.codex');
   });
 });
@@ -175,7 +175,7 @@ describe('getConfigDirFromHome (Copilot)', () => {
     assert.strictEqual(getConfigDirFromHome('opencode', true), "'.config', 'opencode'");
     assert.strictEqual(getConfigDirFromHome('claude', true), "'.claude'");
     assert.strictEqual(getConfigDirFromHome('cursor', true), "'.cursor'");
-    assert.strictEqual(getConfigDirFromHome('kilo', true), "'.config', 'kilo'");
+    assert.strictEqual(getConfigDirFromHome('qwen', true), "'.qwen'");
     assert.strictEqual(getConfigDirFromHome('codex', true), "'.codex'");
   });
 });
@@ -185,8 +185,8 @@ describe('getConfigDirFromHome (Copilot)', () => {
 // buildRuntimePromptText) instead of source-grep on bin/install.js.
 
 describe('Runtime registry integration (Copilot)', () => {
-  test('CLI-02: runtimeMap has Copilot as option 7', () => {
-    assert.strictEqual(runtimeMap['7'], 'copilot', 'runtimeMap must map 7 to copilot');
+  test('CLI-02: runtimeMap has Copilot as option 5', () => {
+    assert.strictEqual(runtimeMap['5'], 'copilot', 'runtimeMap must map 5 to copilot');
   });
 
   test('CLI-03: allRuntimes array includes copilot', () => {
@@ -194,19 +194,11 @@ describe('Runtime registry integration (Copilot)', () => {
     assert.ok(allRuntimes.includes('copilot'), 'allRuntimes must include copilot');
   });
 
-  test('CLI-02: allRuntimes keeps kilo above opencode', () => {
-    const kiloIdx = allRuntimes.indexOf('kilo');
-    const opencodeIdx = allRuntimes.indexOf('opencode');
-    assert.ok(kiloIdx !== -1, 'allRuntimes must contain kilo');
-    assert.ok(opencodeIdx !== -1, 'allRuntimes must contain opencode');
-    assert.ok(kiloIdx < opencodeIdx, 'kilo must appear before opencode in allRuntimes');
-  });
-
-  test('CLI-01: parseRuntimeInput resolves option 7 to copilot runtime', () => {
-    // Copilot is option 7 in the runtime menu. parseRuntimeInput('7') must resolve to ['copilot'].
-    const result = parseRuntimeInput('7');
+  test('CLI-01: parseRuntimeInput resolves option 5 to copilot runtime', () => {
+    // Copilot is option 5 in the runtime menu. parseRuntimeInput('5') must resolve to ['copilot'].
+    const result = parseRuntimeInput('5');
     assert.ok(Array.isArray(result), 'parseRuntimeInput must return an array');
-    assert.ok(result.includes('copilot'), `parseRuntimeInput('7') must resolve to copilot, got: ${JSON.stringify(result)}`);
+    assert.ok(result.includes('copilot'), `parseRuntimeInput('5') must resolve to copilot, got: ${JSON.stringify(result)}`);
   });
 
   test('CLI-06: buildRuntimePromptText includes Copilot in the prompt', () => {

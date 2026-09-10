@@ -8,7 +8,7 @@
 
 **Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
 
-[![version](https://img.shields.io/badge/version-3.3.2-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.4.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
 
 ---
 
-## Destaques do GSD Core Nexus 3.3
+## Destaques do GSD Core Nexus 3.4
 
-O GSD Core Nexus 3.3 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
+O GSD Core Nexus 3.4 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
 
 1. **AST Universal 360° & Grafo Nativo (Zero Python):** Análise estática nativa em TypeScript puro para 35+ extensões com suporte completo a **Mobile 360°** (iOS/SwiftUI e Android/Kotlin Compose) e PageRank arquitetural.
 2. **Injeção Cirúrgica JIT & Fechamento Transitivo de Tipos:** Descoberta profunda de tipos em até 3 graus (BFS 3 hops), eliminando o *context rot* e economizando de **80% a 95% de tokens**.
@@ -73,10 +73,10 @@ Após a instalação, verifique o status ou inicie o planejamento:
 
 ## Documentação
 
-**Novidades no GSD Core Nexus 3.3** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
+**Novidades no GSD Core Nexus 3.4** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 3.3](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
+- [Tutorial Prático: Dominando o GSD Core Nexus 3.4](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
 - [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
 - [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
 

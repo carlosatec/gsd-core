@@ -9,10 +9,6 @@
     "open-code",
     "opencode-cli"
   ],
-  "kilo": [
-    "kilo",
-    "kilo-cli"
-  ],
   "codex": [
     "codex",
     "codex-app",
@@ -41,36 +37,15 @@
     "windsurf-next",
     "devin-desktop"
   ],
-  "augment": [
-    "augment",
-    "augment-code",
-    "augment-cli"
-  ],
-  "trae": [
-    "trae",
-    "trae-cli"
-  ],
   "qwen": [
     "qwen",
     "qwen-code",
     "qwen-cli"
   ],
-  "hermes": [
-    "hermes",
-    "hermes-agent",
-    "hermes-cli"
-  ],
-  "kimi": [
-    "kimi"
-  ],
   "kimi-code": [
     "kimi-code",
     "kimicode",
     "kimi_code"
-  ],
-  "codebuddy": [
-    "codebuddy",
-    "codebuddy-cli"
   ],
   "cline": [
     "cline",
@@ -81,6 +56,9 @@
     "deepseek",
     "dsh",
     "deepseek-cli"
+  ],
+  "vscode": [
+    "vscode",
+    "code"
   ]
 }
-

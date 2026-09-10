@@ -29,8 +29,6 @@ export const RUNTIME_DIRS: RuntimeDirEntry[] = [
   ['antigravity', '.agent'], // local Antigravity install dir legacy (#503; backward-compat with pre-#791 installs)
   ['windsurf', '.windsurf'], // local Windsurf workflow dir canonical (#1615; bin/install.js getDirName('windsurf'))
   ['windsurf', '.devin'],    // local Devin Desktop install dir legacy (#1085; backward-compat)
-  ['kilo', '.config/kilo'],
-  ['kilo', '.kilo'],
   ['codex', '.codex'],
 ];
 
@@ -85,15 +83,12 @@ export interface InferPreferredRuntimeOpts {
 // Infer the preferred runtime from preferredConfigDir config files, then env.
 export function inferPreferredRuntime({ fs, env, preferredConfigDir }: InferPreferredRuntimeOpts): string {
   if (preferredConfigDir) {
-    if (fs.exists(path.join(preferredConfigDir, 'kilo.json')) ||
-        fs.exists(path.join(preferredConfigDir, 'kilo.jsonc'))) return 'kilo';
     if (fs.exists(path.join(preferredConfigDir, 'opencode.json')) ||
         fs.exists(path.join(preferredConfigDir, 'opencode.jsonc'))) return 'opencode';
     if (fs.exists(path.join(preferredConfigDir, CODEX_CONFIG_MARKER))) return 'codex';
   }
   if (env['CODEX_HOME']) return 'codex';
   if (env['ANTIGRAVITY_CONFIG_DIR']) return 'antigravity';
-  if (env['KILO_CONFIG_DIR'] || env['KILO_CONFIG']) return 'kilo';
   if (env['OPENCODE_CONFIG_DIR'] || env['OPENCODE_CONFIG']) return 'opencode';
   if (env['CLAUDE_CONFIG_DIR']) return 'claude';
   return 'claude';
@@ -110,9 +105,6 @@ export function envRuntimeDirs({ env, home }: EnvRuntimeDirsOpts): RuntimeDirEnt
   const ex = (v: string | undefined) => expandHome(v, home);
   if (env['CLAUDE_CONFIG_DIR']) out.push(['claude', ex(env['CLAUDE_CONFIG_DIR'])]);
   if (env['ANTIGRAVITY_CONFIG_DIR']) out.push(['antigravity', ex(env['ANTIGRAVITY_CONFIG_DIR'])]);
-  if (env['KILO_CONFIG_DIR']) out.push(['kilo', ex(env['KILO_CONFIG_DIR'])]);
-  else if (env['KILO_CONFIG']) out.push(['kilo', path.dirname(ex(env['KILO_CONFIG']))]);
-  else if (env['XDG_CONFIG_HOME']) out.push(['kilo', path.join(ex(env['XDG_CONFIG_HOME']), 'kilo')]);
   if (env['OPENCODE_CONFIG_DIR']) out.push(['opencode', ex(env['OPENCODE_CONFIG_DIR'])]);
   else if (env['OPENCODE_CONFIG']) out.push(['opencode', path.dirname(ex(env['OPENCODE_CONFIG']))]);
   else if (env['XDG_CONFIG_HOME']) out.push(['opencode', path.join(ex(env['XDG_CONFIG_HOME']), 'opencode')]);

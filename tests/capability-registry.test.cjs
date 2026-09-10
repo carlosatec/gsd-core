@@ -3418,27 +3418,12 @@ describe('ADR-1016 phase 5a: sample axis value assertions', () => {
     assert.ok(rt.configHome.probe.length > 0, 'antigravity.configHome.probe must be non-empty');
   });
 
-  test('kilo: configHome.skillsHome is present', () => {
-    const { capMap } = loadAndValidate(new Set());
-    const registry = buildRegistry(capMap);
-    const rt = registry.runtimes['kilo'].runtime;
-    assert.ok(rt.configHome.skillsHome, 'kilo.configHome.skillsHome must be present');
-    assert.ok(typeof rt.configHome.skillsHome.kind === 'string', 'kilo.configHome.skillsHome.kind must be a string');
-  });
-
   test('windsurf: configHome.kind === dot-home-nested with parent .codeium', () => {
     const { capMap } = loadAndValidate(new Set());
     const registry = buildRegistry(capMap);
     const rt = registry.runtimes['windsurf'].runtime;
     assert.strictEqual(rt.configHome.kind, 'dot-home-nested', 'windsurf.configHome.kind must be "dot-home-nested"');
     assert.strictEqual(rt.configHome.parent, '.codeium', 'windsurf.configHome.parent must be ".codeium"');
-  });
-
-  test('kimi: configHome.kind === generic-agents-root', () => {
-    const { capMap } = loadAndValidate(new Set());
-    const registry = buildRegistry(capMap);
-    const rt = registry.runtimes['kimi'].runtime;
-    assert.strictEqual(rt.configHome.kind, 'generic-agents-root', 'kimi.configHome.kind must be "generic-agents-root"');
   });
 
   test('antigravity: hookEvents === gemini', () => {
@@ -3467,34 +3452,10 @@ describe('ADR-1016 phase 5a: sample axis value assertions', () => {
       'opencode declares the extension-system event subset via extensionEvents (NOT hookEvents)');
   });
 
-  test('kilo: hooksSurface === none, no hookEvents (registers zero lifecycle hooks)', () => {
+  test('copilot/windsurf/cline/opencode: hooksSurface none or copilot-inline/cline-rules, no hookEvents', () => {
     const { capMap } = loadAndValidate(new Set());
     const registry = buildRegistry(capMap);
-    const rt = registry.runtimes['kilo'].runtime;
-    assert.strictEqual(rt.hooksSurface, 'none', 'kilo.hooksSurface must be "none" (no managed lifecycle hooks)');
-    assert.ok(
-      !Object.prototype.hasOwnProperty.call(rt, 'hookEvents'),
-      'kilo.runtime must NOT have hookEvents (no lifecycle hook registration)',
-    );
-  });
-
-  test('kimi: configHome.probeExists === "skills" (probe selects first candidate with skills/ dir)', () => {
-    const { capMap } = loadAndValidate(new Set());
-    const registry = buildRegistry(capMap);
-    const rt = registry.runtimes['kimi'].runtime;
-    assert.strictEqual(
-      rt.configHome.probeExists, 'skills',
-      'kimi.configHome.probeExists must be "skills" (selects first probe candidate where <candidate>/skills exists)',
-    );
-  });
-
-  test('copilot/trae/windsurf/cline/opencode/kilo: hooksSurface none or copilot-inline/cline-rules, no hookEvents', () => {
-    const { capMap } = loadAndValidate(new Set());
-    const registry = buildRegistry(capMap);
-    // opencode and kilo register ZERO lifecycle hooks → hooksSurface none, no hookEvents
-    // #2095: kimi moved OUT of this group — it now has hooksSurface:'kimi-hooks-toml'
-    // and hookEvents:'claude' (see the dedicated kimi hooksSurface test below).
-    const noEventsRuntimes = ['trae', 'windsurf', 'opencode', 'kilo'];
+    const noEventsRuntimes = ['windsurf', 'opencode'];
     for (const id of noEventsRuntimes) {
       const rt = registry.runtimes[id].runtime;
       assert.ok(
@@ -3516,22 +3477,6 @@ describe('ADR-1016 phase 5a: sample axis value assertions', () => {
       !Object.prototype.hasOwnProperty.call(copilotRt, 'hookEvents'),
       'copilot.runtime must NOT have hookEvents',
     );
-  });
-
-  test('kimi: hooksSurface === kimi-hooks-toml, hookEvents === claude, extendedHookEvents wired (#2095)', () => {
-    const { capMap } = loadAndValidate(new Set());
-    const registry = buildRegistry(capMap);
-    const kimiRt = registry.runtimes['kimi'].runtime;
-    assert.strictEqual(kimiRt.hooksSurface, 'kimi-hooks-toml', 'kimi.hooksSurface must be "kimi-hooks-toml"');
-    assert.strictEqual(kimiRt.hookEvents, 'claude', 'kimi.hookEvents must be "claude" (Kimi\'s 13 lifecycle events include exact-name equivalents for the Claude dialect)');
-    assert.deepStrictEqual(
-      [...kimiRt.extendedHookEvents].sort(),
-      ['PreCompact', 'Stop', 'SubagentStart', 'SubagentStop'].sort(),
-      'kimi.extendedHookEvents must wire SubagentStop/Stop/PreCompact/SubagentStart',
-    );
-    // installSurface stays profile-marker-only — the native config.toml
-    // [[hooks]] write is independent of the artifact-install surface (#2095).
-    assert.strictEqual(kimiRt.installSurface, 'profile-marker-only', 'kimi.installSurface must remain "profile-marker-only"');
   });
 
   test('codex: hooksSurface === codex-hooks-json, cursor: hooksSurface === cursor-hooks-json', () => {
@@ -3557,7 +3502,7 @@ describe('ADR-1016 phase 5a: sample axis value assertions', () => {
   test('tier-2 runtimes: cursor through windsurf have supportTier === 2', () => {
     const { capMap } = loadAndValidate(new Set());
     const registry = buildRegistry(capMap);
-    const tier2 = ['cursor', 'opencode', 'kilo', 'copilot', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'kimi', 'windsurf'];
+    const tier2 = ['cursor', 'opencode', 'copilot', 'qwen', 'cline', 'windsurf', 'deepseek-harness', 'kimi-code'];
     for (const id of tier2) {
       assert.strictEqual(
         registry.runtimes[id].runtime.supportTier, 2,
@@ -3892,16 +3837,14 @@ describe('FIX 3: tightened runtime validator — skillsHome recursive validation
     );
   });
 
-  test('kilo descriptor: skillsHome passes full validation', () => {
-    // kilo has skillsHome: { kind: "dot-home", name: ".kilo", env: [] } — must pass
+  test('opencode descriptor passes full validation', () => {
     const { capMap, errors } = loadAndValidate(new Set());
     const hardErrors = errors.filter((e) => !e.includes('pending-migration'));
-    assert.deepEqual(hardErrors, [], 'No hard errors expected for kilo, got: ' + JSON.stringify(hardErrors));
-    const kiloRt = capMap.get('kilo');
-    assert.ok(kiloRt, 'kilo must be in capMap');
-    assert.ok(kiloRt.runtime.configHome.skillsHome, 'kilo.configHome.skillsHome must be present');
-    assert.strictEqual(kiloRt.runtime.configHome.skillsHome.kind, 'dot-home');
-    assert.strictEqual(kiloRt.runtime.configHome.skillsHome.name, '.kilo');
+    assert.deepEqual(hardErrors, [], 'No hard errors expected for opencode, got: ' + JSON.stringify(hardErrors));
+    const opencodeRt = capMap.get('opencode');
+    assert.ok(opencodeRt, 'opencode must be in capMap');
+    assert.strictEqual(opencodeRt.runtime.configHome.kind, 'xdg');
+    assert.strictEqual(opencodeRt.runtime.configHome.name, 'opencode');
   });
 });
 
@@ -4126,48 +4069,32 @@ describe('ADR-857 phase 5e: VALID_CONVERTER_NAMES closed enum', () => {
   // are genuinely new agent converters (not renamed/leftover), so the agent
   // count grows from 11 to 14; the 16 command/skill/workflow converters are
   // unchanged.
-  test('VALID_CONVERTER_NAMES has exactly 30 entries (16 command/skill/workflow + 14 agent converters)', () => {
+  test('VALID_CONVERTER_NAMES has exactly 18 entries (10 command/skill/workflow + 8 agent converters)', () => {
     assert.ok(VALID_CONVERTER_NAMES instanceof Set, 'VALID_CONVERTER_NAMES must be a Set');
-    assert.strictEqual(VALID_CONVERTER_NAMES.size, 30, 'VALID_CONVERTER_NAMES must have exactly 30 entries, got: ' + VALID_CONVERTER_NAMES.size);
+    assert.strictEqual(VALID_CONVERTER_NAMES.size, 18, 'VALID_CONVERTER_NAMES must have exactly 18 entries, got: ' + VALID_CONVERTER_NAMES.size);
   });
 
   test('VALID_CONVERTER_NAMES contains all expected converter names', () => {
     const expected = [
-      // command/skill converters (pre-existing)
+      // command/skill/workflow converters
       'convertClaudeCommandToAntigravitySkill',
-      'convertClaudeCommandToAugmentSkill',
       'convertClaudeCommandToClineSkill',
       'convertClaudeCommandToClaudeSkill',
-      'convertClaudeCommandToCodebuddyCommand',
-      'convertClaudeCommandToCodebuddySkill',
       'convertClaudeCommandToCodexSkill',
       'convertClaudeCommandToCopilotSkill',
       'convertClaudeCommandToCursorSkill',
-      'convertClaudeCommandToKiloSkill',
-      'convertClaudeCommandToKimiSkill',
+      'convertClaudeCommandToKimiCodeSkill',
       'convertClaudeCommandToOpencodeSkill',
-      'convertClaudeCommandToTraeSkill',
       'convertClaudeCommandToWindsurfSkill',
       'convertClaudeCommandToWindsurfWorkflow',
-      // agent converters (#1173 — descriptor-driven agent conversion wiring)
+      // agent converters
       'convertClaudeAgentToCopilotAgent',
       'convertClaudeAgentToAntigravityAgent',
       'convertClaudeAgentToCursorAgent',
       'convertClaudeAgentToWindsurfAgent',
-      'convertClaudeAgentToAugmentAgent',
-      'convertClaudeAgentToTraeAgent',
-      'convertClaudeAgentToCodebuddyAgent',
       'convertClaudeAgentToClineAgent',
       'convertClaudeAgentToCodexAgent',
-      // ADR-1239 / #2092 Phase B Upgrade 1 — native .qwen/agents/*.md subagent projection.
       'convertClaudeAgentToQwenAgent',
-      // #3384 — ZCode agent converter (strips mcp__* grants at install time).
-      'convertClaudeAgentToZcodeAgent',
-      // #2875 Part 2 (the agents-bypass closure) — data-driven Hermes branding
-      // converter, and the kilo/opencode agent converters (shared name with
-      // those runtimes' commands-kind entries).
-      'convertClaudeAgentToHermesAgent',
-      'convertClaudeToKiloFrontmatter',
       'convertClaudeToOpencodeFrontmatter',
     ];
     for (const name of expected) {
@@ -6709,10 +6636,6 @@ describe('enh-1055 descriptor-drive: ALLOWED_CONFIG_RUNTIMES completeness', () =
 describe('enh-1055 descriptor-drive: finishPermissionWriter passthrough', () => {
   test('opencode → "opencode" (descriptor permissionWriter)', () => {
     assert.strictEqual(resolveRuntimeConfigIntent('opencode').finishPermissionWriter, 'opencode');
-  });
-
-  test('kilo → "kilo" (descriptor permissionWriter)', () => {
-    assert.strictEqual(resolveRuntimeConfigIntent('kilo').finishPermissionWriter, 'kilo');
   });
 
   test('all other runtimes have finishPermissionWriter === null', () => {

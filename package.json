@@ -1,6 +1,6 @@
 {
   "name": "@opengsd/gsd-core",
-  "version": "3.3.2",
+  "version": "3.4.0",
   "description": "GSD Core Nexus is a meta-prompting, context engineering, native static analysis, and spec-driven development system for AI coding agents.",
   "main": ".opencode/plugins/gsd-core.js",
   "bin": {
@@ -29,7 +29,6 @@
     "!scripts/run-affected-tests.cjs",
     "!scripts/lint-no-adhoc-regex-escape.cjs",
     "!scripts/lint-allow-test-rule-refs.cjs",
-    "pi",
     "vscode"
   ],
   "keywords": [

@@ -41,7 +41,6 @@ function brandingRewrite(runtime, key) {
 }
 
 const QWEN_BRAND = brandingRewrite('qwen', 'Claude Code');
-const HERMES_BRAND = brandingRewrite('hermes', 'Claude Code');
 
 /**
  * Every runtime converter in src/runtime-artifact-conversion.cts that
@@ -53,9 +52,6 @@ const HERMES_BRAND = brandingRewrite('hermes', 'Claude Code');
 const BRAND_SWAP_CONVERTERS = [
   { name: 'cursor', brand: 'Cursor', convert: (content) => conv.convertClaudeToCursorMarkdown(content) },
   { name: 'windsurf', brand: 'Windsurf', convert: (content) => conv.convertClaudeToWindsurfMarkdown(content) },
-  { name: 'augment', brand: 'Augment', convert: (content) => conv.convertClaudeToAugmentMarkdown(content) },
-  { name: 'trae', brand: 'Trae', convert: (content) => conv.convertClaudeToTraeMarkdown(content) },
-  { name: 'codebuddy', brand: 'CodeBuddy', convert: (content) => conv.convertClaudeToCodebuddyMarkdown(content) },
   { name: 'cline', brand: 'Cline', convert: (content) => conv.convertClaudeToCliineMarkdown(content) },
   // Dynamic (descriptor-driven) brand converters — same protected-region
   // guard, brand value sourced from capability.json instead of a literal.
@@ -65,11 +61,6 @@ const BRAND_SWAP_CONVERTERS = [
     brand: QWEN_BRAND,
     convert: (content) => conv._applyRuntimeRewrites(content, 'qwen', '~/.qwen/', false, undefined),
   },
-  {
-    name: 'hermes-runtime-rewrites',
-    brand: HERMES_BRAND,
-    convert: (content) => conv._applyRuntimeRewrites(content, 'hermes', '~/.hermes/', false, undefined),
-  },
 ];
 
 // Floor, not an exact count (mirrors MINIMUM_MANIFEST_FAMILIES in
@@ -77,7 +68,7 @@ const BRAND_SWAP_CONVERTERS = [
 // brand-swapping converter must be added here explicitly and reviewably.
 // Lowering it is a deliberate act; this only guards it from silently
 // shrinking underneath a refactor.
-const MINIMUM_BRAND_SWAP_CONVERTER_COUNT = 9;
+const MINIMUM_BRAND_SWAP_CONVERTER_COUNT = 5;
 
 const PROTECTED_BLOCK =
   '<runtime_compatibility>\n| Runtime | Claude Code | Other |\n|---|---|---|\n| x | Claude Code native | y |\n</runtime_compatibility>';

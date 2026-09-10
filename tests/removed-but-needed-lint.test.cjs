@@ -26,6 +26,7 @@ const {
   classifyTestReference,
   findSurvivingTestReferences,
   scan,
+  MULTI_INSTANCE_BASENAMES,
 } = require(LINT_SCRIPT);
 const { cleanup } = require('./helpers.cjs');
 const { runNode } = require('./helpers/process-seam.cjs');
@@ -96,6 +97,22 @@ describe('removed-but-needed lint: findSurvivingReferences (pure)', () => {
       [{ file: 'docs/setup.md', content: 'we removed archived-config.json.old, unrelated' }],
     );
     assert.deepEqual(violations, []);
+  });
+
+  test('MULTI_INSTANCE_BASENAMES (capability.json, SKILL.md) do not trigger false positives on deletion', () => {
+    assert.ok(MULTI_INSTANCE_BASENAMES.has('capability.json'));
+    assert.ok(MULTI_INSTANCE_BASENAMES.has('SKILL.md'));
+    const docViolations = findSurvivingReferences(
+      ['capabilities/augment/capability.json'],
+      [{ file: 'docs/setup.md', content: 'read capability.json for schema details' }],
+    );
+    assert.deepEqual(docViolations, []);
+
+    const testViolations = findSurvivingTestReferences(
+      ['capabilities/augment/capability.json'],
+      [{ file: 'tests/schema.test.cjs', content: "const data = fs.readFileSync('capability.json');" }],
+    );
+    assert.deepEqual(testViolations, []);
   });
 });
 

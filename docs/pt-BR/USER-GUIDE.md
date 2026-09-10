@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 3.3
+# Guia do Usuário — GSD Core Nexus 3.4
 
-Guia prático e narrativo do GSD Core Nexus 3.3 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 3.4 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -29,7 +29,7 @@ Guia prático e narrativo do GSD Core Nexus 3.3 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 10 Comandos
 
-A partir do GSD Core Nexus 3.3, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.4, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -41,7 +41,7 @@ A partir do GSD Core Nexus 3.3, a interface pública é simplificada e consolida
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Dashboard de telemetria em tempo real multi-comando, taxa de compressão e economia JIT | `--raw`, `--history`, `gsd-tools tokens` |
-| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.3 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.4 | `--dry-run`, `--force` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
 ---
@@ -68,7 +68,7 @@ Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.m
 
 ## Inteligência de Sessão & Replay Determinístico CLI
 
-O GSD Core Nexus 3.3 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+O GSD Core Nexus 3.4 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
 
 ```bash
 # Replay da última sessão no terminal

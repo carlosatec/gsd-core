@@ -64,6 +64,11 @@ const TESTS_ROOT = 'tests';
 // never carry a meaningful basename reference, and is often large.
 const SKIP_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.zip']);
 
+// Generic basenames that exist in many directories by convention. Deleting one
+// instance of these (e.g. capabilities/foo/capability.json) does not mean the
+// concept or filename is globally retired from the repository.
+const MULTI_INSTANCE_BASENAMES = new Set(['capability.json', 'SKILL.md']);
+
 /**
  * Pure: does `content` contain a literal reference to `basename`, delimited
  * by non-identifier/non-path characters on both sides (so "foo.json" doesn't
@@ -116,6 +121,7 @@ function findSurvivingReferences(deletedFiles, corpus) {
   const violations = [];
   for (const deletedFile of deletedFiles) {
     const basename = path.basename(deletedFile);
+    if (MULTI_INSTANCE_BASENAMES.has(basename)) continue;
     for (const { file, content } of corpus) {
       if (referencesBasename(content, basename)) {
         violations.push({ deletedFile, referencedIn: file, reason: `basename '${basename}' still referenced` });
@@ -189,6 +195,7 @@ function findSurvivingTestReferences(deletedFiles, testsCorpus) {
   const violations = [];
   for (const deletedFile of deletedFiles) {
     const basename = path.basename(deletedFile);
+    if (MULTI_INSTANCE_BASENAMES.has(basename)) continue;
     const refRe = new RegExp(`(^|[^\\w.-])${escapeRegex(basename)}($|[^\\w.-])`);
     for (const { file, content } of testsCorpus) {
       for (const line of content.split(/\r?\n/)) {
@@ -315,6 +322,7 @@ module.exports = {
   SCAN_ROOTS,
   EXTRA_FILES,
   TESTS_ROOT,
+  MULTI_INSTANCE_BASENAMES,
 };
 
 if (require.main === module) runMain(main);

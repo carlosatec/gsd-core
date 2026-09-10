@@ -81,25 +81,18 @@ const RUNTIME_IDS = Object.keys(registry.runtimes);
 // from the Python `kimi` descriptor rather than sourced for Kimi Code CLI.
 // ide: vscode (1) — #2103, the first installed ide-profile host.
 const EXPECTED_PROFILES = {
-  claude:      'programmatic-cli',
-  cline:       'programmatic-cli',
-  cursor:      'programmatic-cli',
-  hermes:      'programmatic-cli',
-  kilo:        'programmatic-cli',
-  kimi:        'programmatic-cli',
-  opencode:    'programmatic-cli',
-  pi:          'programmatic-cli',
-  qwen:        'programmatic-cli',
-  trae:        'programmatic-cli',
-  antigravity: 'declarative-cli',
-  augment:     'declarative-cli',
-  codebuddy:   'declarative-cli',
-  codex:       'declarative-cli',
-  copilot:     'declarative-cli',
-  'kimi-code': 'declarative-cli',
-  windsurf:    'declarative-cli',
-  zcode:       'declarative-cli',
-  vscode:      'ide',
+  claude:             'programmatic-cli',
+  cline:              'programmatic-cli',
+  cursor:             'programmatic-cli',
+  opencode:           'programmatic-cli',
+  qwen:               'programmatic-cli',
+  antigravity:        'declarative-cli',
+  codex:              'declarative-cli',
+  copilot:            'declarative-cli',
+  'deepseek-harness': 'declarative-cli',
+  'kimi-code':        'declarative-cli',
+  windsurf:           'declarative-cli',
+  vscode:             'ide',
 };
 
 describe('ADR-1239 Phase A: hostIntegration descriptors', () => {
@@ -319,41 +312,28 @@ describe('ADR-1239 Phase A: hostIntegration descriptors', () => {
   //   - kimi-code: subagentToolkit:'built-in-only' (cannot delegate to full subagents)
   // cursor (maxDepth:2) remains the only background-capable host with a sufficient budget.
   const EXPECTED_FLATTEN = {
-    antigravity: true,
-    augment:     true,
-    claude:      true,
-    cline:       true,
-    codebuddy:   true,
-    codex:       true,
-    copilot:     true,
-    cursor:      false,
-    hermes:      true,
-    kilo:        true,
-    // #2095/#2939: Kimi CAN background a single agent (backgroundDispatch:true), BUT
-    // nested:false means a backgrounded kimi agent cannot nest the plan-checker/executor/
-    // verifier pipeline the workflows require → flatten. backgroundDispatch stays true on
-    // the descriptor (UPGRADE 2 holds); only the flatten consequence changes.
-    kimi:        true,
+    antigravity:        true,
+    claude:             true,
+    cline:              true,
+    codex:              true,
+    copilot:            true,
+    cursor:             false,
+    'deepseek-harness': true,
     // #2454/#2939: Kimi Code declares background/backgroundDispatch both true, BUT
     // subagentToolkit:'built-in-only' cannot delegate to full subagents → flatten.
-    'kimi-code': true,
+    'kimi-code':        true,
     // #2598: OpenCode's background subagents sit behind the opt-in
     // OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS flag (default false), and the
     // session loop still handles one subtask at a time (upstream #29638, OPEN).
     // #2087 read v1.15/v1.17 as default-on; that does not hold against current
     // `dev`, so dispatch.background/backgroundDispatch are false → force-flattened.
-    opencode:    true,
-    // #2102: pi's dispatch.background/backgroundDispatch are both false
-    // (undocumented background-subagent primitive) → force-flattened.
-    pi:          true,
-    qwen:        true,
-    trae:        true,
-    windsurf:    true,
-    zcode:       true,
+    opencode:           true,
+    qwen:               true,
+    windsurf:           true,
     // #2103: vscode's dispatch.backgroundDispatch is 'undocumented' (no
     // documented background-subagent primitive) → fails closed to false →
     // force-flattened, mirroring the pi (#2102) precedent above.
-    vscode:      true,
+    vscode:             true,
   };
 
   for (const id of RUNTIME_IDS) {

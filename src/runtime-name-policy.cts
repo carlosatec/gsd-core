@@ -17,21 +17,16 @@ import path from 'node:path';
 const FALLBACK_ALIASES: Readonly<Record<string, string[]>> = {
   claude: ['claude', 'claude-code', 'claude-cli'],
   opencode: ['opencode', 'open-code', 'opencode-cli'],
-  kilo: ['kilo', 'kilo-cli'],
   codex: ['codex', 'codex-app', 'codex-cli', 'codex_desktop', 'codex-desktop'],
   copilot: ['copilot', 'copilot-cli', 'github-copilot'],
   antigravity: ['antigravity', 'antigravity-cli', 'antigravity-agent'],
   cursor: ['cursor', 'cursor-cli', 'cursor-nightly'],
   windsurf: ['windsurf', 'windsurf-cli', 'windsurf-next', 'devin-desktop'],
-  augment: ['augment', 'augment-code', 'augment-cli'],
-  trae: ['trae', 'trae-cli'],
   qwen: ['qwen', 'qwen-code', 'qwen-cli'],
-  hermes: ['hermes', 'hermes-agent', 'hermes-cli'],
-  kimi: ['kimi'],
   'kimi-code': ['kimi-code', 'kimicode', 'kimi_code'],
-  codebuddy: ['codebuddy', 'codebuddy-cli'],
   cline: ['cline', 'cline-cli'],
   'deepseek-harness': ['deepseek-harness', 'deepseek', 'dsh', 'deepseek-cli'],
+  vscode: ['vscode', 'code'],
 };
 
 function normalizeRuntimeToken(value: string): string {
@@ -142,7 +137,7 @@ export function getProjectInstructionFile(runtime: unknown): string {
   };
   const declared = canonical ? runtimes[canonical]?.runtime?.hostBehaviors?.projectInstructionFile : undefined;
   if (typeof declared === 'string' && declared.length > 0) return declared;
-  // codex, opencode, kilo, kimi, AND unknown/future runtimes all default to
+  // codex, opencode, AND unknown/future runtimes all default to
   // root AGENTS.md (the safe cross-agent instruction file).
   return 'AGENTS.md';
 }
@@ -229,22 +224,14 @@ export function getDirName(runtime: string): string {
 const RUNTIME_LABELS: Readonly<Record<string, string>> = {
   claude: 'Claude Code',
   opencode: 'OpenCode',
-  kilo: 'Kilo',
   codex: 'Codex',
   copilot: 'Copilot',
   antigravity: 'Antigravity',
   cursor: 'Cursor',
   windsurf: 'Windsurf',
-  augment: 'Augment',
-  trae: 'Trae',
   qwen: 'Qwen Code',
-  hermes: 'Hermes Agent',
-  kimi: 'Kimi CLI',
   'kimi-code': 'Kimi Code',
-  codebuddy: 'CodeBuddy',
   cline: 'Cline',
-  zcode: 'ZCode',
-  pi: 'pi',
   'deepseek-harness': 'DeepSeek Harness',
   // #2103: vscode is a registered (role:runtime) capability for validator +
   // host-integration coverage, even though it is never CLI-installed (no
@@ -274,7 +261,7 @@ export function getRuntimeLabel(runtime: string): string {
  * bin/install.js (ADR-1239 Phase B / #1679, AC2 slice 2) — the add-a-host tax:
  * a new runtime meant remembering to add a branch here. Values are preserved
  * BYTE-FOR-BYTE from the prior chain; golden install parity asserts generated
- * hook output is unchanged across all 15 runtimes.
+ * hook output is unchanged across all active runtimes.
  *
  * Two runtimes are intentionally absent (handled by the caller, NOT this table):
  *   - `claude`     → the default; falls through to `DEFAULT_FRAGMENT`.
@@ -287,26 +274,13 @@ const DEFAULT_CONFIG_HOME_FRAGMENT = "'.claude'";
 const GLOBAL_CONFIG_HOME_FRAGMENTS: Readonly<Record<string, string>> = {
   copilot:   "'.copilot'",
   opencode:  "'.config', 'opencode'",
-  kilo:      "'.config', 'kilo'",
   codex:     "'.codex'",
   cursor:    "'.cursor'",
   windsurf:  "'.windsurf'",
-  augment:   "'.augment'",
-  trae:      "'.trae'",
   qwen:      "'.qwen'",
-  hermes:    "'.hermes'",
-  codebuddy: "'.codebuddy'",
   cline:     "'.cline'",
-  kimi:      "'.config', 'agents'",
   'kimi-code': "'.kimi-code'",
-  zcode:     "'.zcode'",
   'deepseek-harness': "'.dsh'",
-  // pi's global config home is ~/.pi/agent (configHome: dot-home-nested,
-  // parent '.pi', name 'agent' — capabilities/pi/capability.json), matching
-  // resolveConfigHomeFromDescriptor's `path.join(home, parent, name)` for the
-  // no-probe dot-home-nested case (src/runtime-homes.cts). Two-segment
-  // path.join args, same shape as opencode/kilo/kimi above.
-  pi:        "'.pi', 'agent'",
 };
 
 /**
@@ -328,14 +302,9 @@ export function getGlobalConfigHomeFragment(runtime: string): string {
  * function declaration block (the add-a-host tax ADR-1239 Phase B / #1679 AC2
  * removes).
  */
-// #2094: 'trae' stays here — bin/install.js's agents-converter dispatch
-// (convertClaudeAgentToTraeAgent selection) still reads isTrae directly.
-// Removing it is gated on migrating that runtime-keyed `else if` chain to a
-// cross-runtime agents-dispatch table (out of scope for #2094, which only
-// folds the shared-hooks-install skip).
 const RUNTIME_FLAG_IDS = Object.freeze([
-  'opencode', 'kilo', 'codex', 'copilot', 'antigravity', 'cursor',
-  'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'kimi', 'kimi-code', 'zcode', 'pi', 'deepseek-harness',
+  'opencode', 'codex', 'copilot', 'antigravity', 'cursor',
+  'windsurf', 'qwen', 'cline', 'kimi-code', 'deepseek-harness',
 ] as const);
 
 /**
@@ -375,7 +344,6 @@ const DEFAULT_NEW_PROJECT_COMMAND = '/gsd-status';
 const RUNTIME_NEW_PROJECT_COMMANDS: Readonly<Record<string, string>> = {
   codex: '$gsd-status',
   cursor: 'gsd-status (mention the skill name)',
-  kimi: '/skill:gsd-status',
 };
 
 export function getRuntimeNewProjectCommand(runtime: string): string {

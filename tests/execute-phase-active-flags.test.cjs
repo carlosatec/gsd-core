@@ -575,7 +575,7 @@ describe('#3177: matrix section extraction is bounded by its heading', () => {
     assert.equal(matrixField(doc, 'claude', '__definitely_not_a_field__'), null);
     assert.notEqual(
       matrixField(doc, 'claude', 'effortSurface'),
-      matrixField(doc, 'kilo', 'effortSurface'),
+      matrixField(doc, 'cursor', 'effortSurface'),
       'two hosts with different values must not resolve to the same cell',
     );
   });

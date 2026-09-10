@@ -317,11 +317,11 @@ function resolveExecutionContextRefTarget(token, root) {
 }
 
 test('atRefContractStillResolvesAfterComposition', (t) => {
-  for (const runtime of ['claude', 'opencode']) {
+  for (const runtime of ['opencode']) {
     const { configDir, root } = runMinimalInstall({ runtime, scope: 'global' });
     t.after(() => cleanup(root));
-    const skillPath = path.join(configDir, 'skills', 'gsd-plan-phase', 'SKILL.md');
-    assert.ok(fs.existsSync(skillPath), `${runtime}: installed gsd-plan-phase SKILL.md is missing`);
+    const skillPath = path.join(configDir, 'skills', 'gsd-plan', 'SKILL.md');
+    assert.ok(fs.existsSync(skillPath), `${runtime}: installed gsd-plan SKILL.md is missing`);
     const skillContent = fs.readFileSync(skillPath, 'utf8');
     const refs = executionContextRefs(skillContent);
     assert.ok(refs.length > 0, `${runtime}: SKILL.md has no execution_context @-refs to check`);

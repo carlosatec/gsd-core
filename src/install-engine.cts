@@ -569,11 +569,6 @@ function _copyStaged(stagedDir: string, destDir: string, kind: any, configDir: s
     return;
   }
 
-  if (kind.kind === 'kimi-agents') {
-    installFs().cpSync(stagedDir, destDir, { recursive: true });
-    return;
-  }
-
   // commands or agents
   const entries = installFs().readdirSync(stagedDir, { withFileTypes: true });
   // For commands: apply prefix unless the destSubpath's last segment already
@@ -625,21 +620,6 @@ function _copyStaged(stagedDir: string, destDir: string, kind: any, configDir: s
  */
 function _removeGsdEntries(destDir: string, kind: any): void {
   if (!installFs().existsSync(destDir)) return;
-  if (kind.kind === 'kimi-agents') {
-    for (const fileName of ['gsd.yaml', 'gsd.md']) {
-      installFs().rmSync(path.join(destDir, fileName), { force: true });
-    }
-    const subagentsDir = path.join(destDir, 'subagents');
-    if (installFs().existsSync(subagentsDir)) {
-      for (const entry of installFs().readdirSync(subagentsDir, { withFileTypes: true })) {
-        if (!entry.isFile()) continue;
-        if (!entry.name.startsWith('gsd-')) continue;
-        if (!entry.name.endsWith('.yaml') && !entry.name.endsWith('.md')) continue;
-        installFs().rmSync(path.join(subagentsDir, entry.name), { force: true });
-      }
-    }
-    return;
-  }
   if (kind.prefix === '') {
     // Whole-namespace removal (Hermes nested case — destSubpath is skills/gsd)
     // The directory itself is the GSD namespace, so remove it entirely.
@@ -759,25 +739,6 @@ function _runLegacyInstallMigrations(runtime: string, configDir: string, scope: 
         installFs().rmSync(legacyCommandsGsd, { recursive: true });
       }
     }
-  }
-
-  // Hermes: remove pre-#2841 flat skills/gsd-*/ entries that lived alongside
-  // the new skills/gsd/ nested layout.
-  if (runtime === 'hermes') {
-    const flatSkillsDir = path.join(configDir, 'skills');
-    if (installFs().existsSync(flatSkillsDir)) {
-      for (const entry of installFs().readdirSync(flatSkillsDir, { withFileTypes: true })) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
-          installFs().rmSync(path.join(flatSkillsDir, entry.name), { recursive: true });
-        }
-      }
-    }
-
-    // Hermes: bare-stem skills/gsd/<stem>/ cleanup is deferred to AFTER the
-    // layout-driven install loop in installRuntimeArtifacts, where the exact set
-    // of staged gsd-<stem>/ dirs is known. Removing here (before staging) would
-    // require readGsdCommandNames() which misses skills like 'dev-preferences'
-    // that are not in the commands directory. See _removeHermesBareStemDirs().
   }
 
   // Migrate dev-preferences.md content → runtime-aware SKILL.md location (#2973).
@@ -926,30 +887,6 @@ function _runLegacyUninstallCleanup(runtime: string, configDir: string, scope: s
       if (stagingRoot !== null) {
         stagedLegacyArtifacts = userArtifactStaging.stageUserArtifacts(legacyCommandsGsd, ['dev-preferences.md'], stagingRoot);
         fs.rmSync(legacyCommandsGsd, { recursive: true });
-      }
-    }
-  }
-
-  // Hermes: pre-#2841 flat skills/gsd-*/ entries
-  if (runtime === 'hermes') {
-    const flatSkillsDir = path.join(configDir, 'skills');
-    if (fs.existsSync(flatSkillsDir)) {
-      for (const entry of fs.readdirSync(flatSkillsDir, { withFileTypes: true })) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
-          fs.rmSync(path.join(flatSkillsDir, entry.name), { recursive: true });
-        }
-      }
-    }
-
-    // Hermes: pre-#947 bare-stem skills/gsd/<stem>/ entries (dirs that do NOT
-    // start with 'gsd-') — the #3664 layout used prefix='' so GSD-owned skills
-    // had bare names (e.g. skills/gsd/help/). These are stale on uninstall.
-    const nestedGsdDirForUninstall = path.join(configDir, 'skills', 'gsd');
-    if (fs.existsSync(nestedGsdDirForUninstall)) {
-      for (const entry of fs.readdirSync(nestedGsdDirForUninstall, { withFileTypes: true })) {
-        if (entry.isDirectory() && !entry.name.startsWith('gsd-')) {
-          fs.rmSync(path.join(nestedGsdDirForUninstall, entry.name), { recursive: true });
-        }
       }
     }
   }
@@ -1175,21 +1112,7 @@ function installRuntimeArtifacts(
     }
 
     // Hermes: after the install loop has written all gsd-<stem>/ dirs to
-    // skills/gsd/, remove any stale bare-stem dirs (skills/gsd/<stem>/) that
-    // correspond to the newly installed gsd-<stem> entries. This is the robust
-    // replacement for the readGsdCommandNames()-based pre-install cleanup that
-    // missed skills like 'dev-preferences' (#947 adversarial review).
-    //
-    // We run this AFTER the install loop so the installed set is authoritative:
-    // every gsd-<stem>/ present now was written this run (or was there before
-    // with the same prefix). User-owned bare dirs with no gsd-<stem> counterpart
-    // are untouched.
-    let hermesBareStemCleanup = false;
-    if (runtime === 'hermes') {
-      const nestedGsdDirForCleanup = path.join(configDir, 'skills', 'gsd');
-      _removeHermesBareStemDirs(nestedGsdDirForCleanup);
-      hermesBareStemCleanup = true;
-    }
+    const hermesBareStemCleanup = false;
 
     // Generic-branch nativePlugin staging (ADR-1239 / #2102 Stage 1): runtimes
     // outside the OpenCode/Kilo combined-family install (e.g. pi, whose
@@ -1866,23 +1789,6 @@ function uninstallRuntimeArtifacts(runtime: string, configDir: string, scope: st
       throw new Error(`Runtime artifact uninstall plan referenced unknown kind: ${item.kind}`);
     }
     _removeGsdEntries(item.destDir, kind);
-  }
-
-  // Hermes: after removing gsd-* skill dirs from skills/gsd/, also remove
-  // the GSD-managed DESCRIPTION.md and then the category dir itself if it
-  // contains no user content (#947). _removeGsdEntries removed gsd-* dirs
-  // but left the category container and DESCRIPTION.md intact.
-  if (runtime === 'hermes') {
-    const nestedGsdDir = path.join(configDir, 'skills', 'gsd');
-    if (fs.existsSync(nestedGsdDir)) {
-      // Remove GSD-owned DESCRIPTION.md (written by writeHermesCategoryDescription)
-      fs.rmSync(path.join(nestedGsdDir, 'DESCRIPTION.md'), { force: true });
-      // Remove the category dir if empty (no user content remaining)
-      const remaining = fs.readdirSync(nestedGsdDir, { withFileTypes: true });
-      if (remaining.length === 0) {
-        fs.rmSync(nestedGsdDir, { recursive: true, force: true });
-      }
-    }
   }
 
   // #2973 / Codex review (bd1f06c9): migrate dev-preferences.md to the

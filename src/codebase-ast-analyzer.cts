@@ -1467,9 +1467,6 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
   let inBlockComment = false;
   let inLineComment = false;
   let inDocstring: string | null = null;
-  let inStringSingle = false;
-  let inStringDouble = false;
-  let inTemplateLiteral = false;
   const chars = content.split('');
   const len = chars.length;
 
@@ -1511,48 +1508,6 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
       continue;
     }
 
-    if (inStringSingle) {
-      if (ch === '\\' && i + 1 < len) {
-        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
-        chars[i] = ' ';
-        i++;
-      } else if (ch === "'") {
-        inStringSingle = false;
-        chars[i] = ' ';
-      } else if (ch !== '\n') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-
-    if (inStringDouble) {
-      if (ch === '\\' && i + 1 < len) {
-        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
-        chars[i] = ' ';
-        i++;
-      } else if (ch === '"') {
-        inStringDouble = false;
-        chars[i] = ' ';
-      } else if (ch !== '\n') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-
-    if (inTemplateLiteral) {
-      if (ch === '\\' && i + 1 < len) {
-        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
-        chars[i] = ' ';
-        i++;
-      } else if (ch === '`') {
-        inTemplateLiteral = false;
-        chars[i] = ' ';
-      } else if (ch !== '\n') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-
     // Block comment /* ... */
     if (ch === '/' && next === '*') {
       inBlockComment = true;
@@ -1586,23 +1541,6 @@ function sanitizeCodePreservingLines(content: string, lang: string): string {
         i += 2;
         continue;
       }
-    }
-
-    // String literals
-    if (ch === '"') {
-      inStringDouble = true;
-      chars[i] = ' ';
-      continue;
-    }
-    if (ch === "'") {
-      inStringSingle = true;
-      chars[i] = ' ';
-      continue;
-    }
-    if (ch === '`') {
-      inTemplateLiteral = true;
-      chars[i] = ' ';
-      continue;
     }
   }
 

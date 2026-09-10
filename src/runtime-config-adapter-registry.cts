@@ -23,7 +23,6 @@
  *     true for all other runtimes.
  * - `finishPermissionWriter` names the finishInstall-phase dedicated config writer:
  *     'opencode'    → writes BOTH shared settings AND its own permissions file.
- *     'kilo'        → writes only its own permissions file.
  *     'antigravity' → writes BOTH shared settings.json permissions.allow AND a
  *                      standalone mcp_config.json MCP companion profile (#2096
  *                      Phase B Upgrades 1+2).
@@ -52,7 +51,7 @@ type ConfigInstallSurface =
   // (see the ALLOWED_CONFIG_RUNTIMES filter below, which excludes it).
   | 'none';
 
-type FinishPermissionWriter = 'opencode' | 'kilo' | 'antigravity' | null;
+type FinishPermissionWriter = 'opencode' | 'antigravity' | null;
 
 type HooksSurface =
   | 'settings-json'

@@ -721,25 +721,19 @@ function validateFeatureBody(cap) {
   return errors;
 }
 
-// ADR-857 phase 5e: Closed ConverterName enum — complete set used across 16 runtime descriptors,
+// ADR-857 phase 5e: Closed ConverterName enum — complete set used across runtime descriptors,
 // all exported by bin/install.js (commands/skills) and src/runtime-artifact-conversion.cts (agents).
 // Any ArtifactKind with a non-null converter must use one of these.
 const VALID_CONVERTER_NAMES = new Set([
   // commands / skills converters (pre-existing)
   'convertClaudeCommandToAntigravitySkill',
-  'convertClaudeCommandToAugmentSkill',
   'convertClaudeCommandToClineSkill',
   'convertClaudeCommandToClaudeSkill',
-  'convertClaudeCommandToCodebuddyCommand',
-  'convertClaudeCommandToCodebuddySkill',
   'convertClaudeCommandToCodexSkill',
   'convertClaudeCommandToCopilotSkill',
   'convertClaudeCommandToCursorSkill',
-  'convertClaudeCommandToKiloSkill',
-  'convertClaudeCommandToKimiSkill',
   'convertClaudeCommandToKimiCodeSkill',
   'convertClaudeCommandToOpencodeSkill',
-  'convertClaudeCommandToTraeSkill',
   'convertClaudeCommandToWindsurfSkill',
   'convertClaudeCommandToWindsurfWorkflow',
   // agent converters (#1173 — descriptor-driven agent conversion wiring)
@@ -747,22 +741,11 @@ const VALID_CONVERTER_NAMES = new Set([
   'convertClaudeAgentToAntigravityAgent',
   'convertClaudeAgentToCursorAgent',
   'convertClaudeAgentToWindsurfAgent',
-  'convertClaudeAgentToAugmentAgent',
-  'convertClaudeAgentToTraeAgent',
-  'convertClaudeAgentToCodebuddyAgent',
   'convertClaudeAgentToClineAgent',
   'convertClaudeAgentToCodexAgent',
   // ADR-1239 / #2092 Phase B Upgrade 1 — native .qwen/agents/*.md subagent projection.
   'convertClaudeAgentToQwenAgent',
-  // #3384 — ZCode agents are Claude-shaped but its dispatcher treats mcp__* tools
-  // grants as required MCP servers; this converter strips them at install time.
-  'convertClaudeAgentToZcodeAgent',
-  // #2875 Part 2 (the agents-bypass closure) — data-driven Hermes branding
-  // converter (reads hostBehaviors.brandingRewrites rather than a hardcode),
-  // and the kilo/opencode agent converters (shared with those runtimes'
-  // commands-kind entries, options-bag signature `(content, {isAgent, modelOverride})`).
-  'convertClaudeAgentToHermesAgent',
-  'convertClaudeToKiloFrontmatter',
+  // Shared opencode agent converter
   'convertClaudeToOpencodeFrontmatter',
 ]);
 

@@ -153,35 +153,6 @@ const claudeToOpencodeTools = {
   WebSearch: 'websearch',  // Plugin/MCP - keep for compatibility
 };
 
-// Tool name mapping from Claude/GSD agents to Kimi CLI module paths.
-// Kimi custom agent YAML requires fully-qualified module paths.
-const claudeToKimiTools = {
-  Read: 'kimi_cli.tools.file:ReadFile',
-  ReadFile: 'kimi_cli.tools.file:ReadFile',
-  Write: 'kimi_cli.tools.file:WriteFile',
-  WriteFile: 'kimi_cli.tools.file:WriteFile',
-  Edit: 'kimi_cli.tools.file:StrReplaceFile',
-  MultiEdit: 'kimi_cli.tools.file:StrReplaceFile',
-  StrReplaceFile: 'kimi_cli.tools.file:StrReplaceFile',
-  Bash: 'kimi_cli.tools.shell:Shell',
-  Shell: 'kimi_cli.tools.shell:Shell',
-  Grep: 'kimi_cli.tools.file:Grep',
-  Glob: 'kimi_cli.tools.file:Glob',
-  Agent: 'kimi_cli.tools.agent:Agent',
-  Task: 'kimi_cli.tools.agent:Agent',
-  AskUserQuestion: 'kimi_cli.tools.ask_user:AskUserQuestion',
-  TodoWrite: 'kimi_cli.tools.todo:SetTodoList',
-  SetTodoList: 'kimi_cli.tools.todo:SetTodoList',
-  WebSearch: 'kimi_cli.tools.web:SearchWeb',
-  SearchWeb: 'kimi_cli.tools.web:SearchWeb',
-  WebFetch: 'kimi_cli.tools.web:FetchURL',
-  FetchURL: 'kimi_cli.tools.web:FetchURL',
-  ReadMediaFile: 'kimi_cli.tools.file:ReadMediaFile',
-  TaskList: 'kimi_cli.tools.background:TaskList',
-  TaskOutput: 'kimi_cli.tools.background:TaskOutput',
-  TaskStop: 'kimi_cli.tools.background:TaskStop',
-};
-
 /**
  * Convert a Claude Code tool name to OpenCode format
  * - Applies special mappings (AskUserQuestion -> question, etc.)
@@ -198,125 +169,6 @@ function convertToolName(claudeTool) {
   }
   // Default: convert to lowercase
   return claudeTool.toLowerCase();
-}
-
-function createKimiToolDiagnostic(reason, tool, source = null) {
-  const isMcp = reason === 'mcp_managed';
-  return {
-    level: 'warning',
-    code: isMcp ? 'kimi_mcp_tool_excluded' : 'kimi_unsupported_tool',
-    reason,
-    message: isMcp
-      ? `MCP-managed tool '${tool}' is configured outside Kimi agent YAML.`
-      : `Tool '${tool}' is not supported by the Kimi tool mapper.`,
-    value: tool,
-    source,
-  };
-}
-
-/**
- * Convert a Claude/GSD tool name to a Kimi CLI module path.
- * @returns {string|null} Kimi module path, or null when excluded/unsupported.
- */
-function convertKimiToolName(claudeTool) {
-  const tool = String(claudeTool || '').trim();
-  if (!tool) return null;
-  if (tool.startsWith('mcp__')) return null;
-  return claudeToKimiTools[tool] || null;
-}
-
-function mapClaudeToolsToKimiTools(claudeTools, options = {}) {
-  const diagnostics = [];
-  const tools = [];
-  const seen = new Set();
-  const source = options && Object.prototype.hasOwnProperty.call(options, 'source')
-    ? options.source
-    : null;
-
-  for (const rawTool of Array.isArray(claudeTools) ? claudeTools : []) {
-    const tool = String(rawTool || '').trim();
-    if (!tool) continue;
-
-    if (tool.startsWith('mcp__')) {
-      diagnostics.push(createKimiToolDiagnostic('mcp_managed', tool, source));
-      continue;
-    }
-
-    const kimiTool = convertKimiToolName(tool);
-    if (!kimiTool) {
-      diagnostics.push(createKimiToolDiagnostic('unsupported_tool', tool, source));
-      continue;
-    }
-
-    if (!seen.has(kimiTool)) {
-      seen.add(kimiTool);
-      tools.push(kimiTool);
-    }
-  }
-
-  return { tools, diagnostics };
-}
-
-const claudeToKiloAgentPermissions = {
-  Read: 'read',
-  Write: 'edit',
-  Edit: 'edit',
-  Bash: 'bash',
-  Grep: 'grep',
-  Glob: 'glob',
-  Task: 'task',
-  WebFetch: 'webfetch',
-  WebSearch: 'websearch',
-  TodoWrite: 'todowrite',
-  AskUserQuestion: 'question',
-  SlashCommand: 'skill',
-};
-
-const kiloAgentPermissionOrder = [
-  'read',
-  'edit',
-  'bash',
-  'grep',
-  'glob',
-  'task',
-  'webfetch',
-  'websearch',
-  'skill',
-  'question',
-  'todowrite',
-  'list',
-  'codesearch',
-  'lsp',
-];
-
-function convertClaudeToKiloPermissionTool(claudeTool) {
-  return claudeToKiloAgentPermissions[claudeTool] || null;
-}
-
-function buildKiloAgentPermissionBlock(claudeTools) {
-  const allowedPermissions = new Set();
-
-  for (const tool of claudeTools) {
-    const mapped = convertClaudeToKiloPermissionTool(tool);
-    if (mapped) {
-      allowedPermissions.add(mapped);
-    }
-  }
-
-  const lines = ['permission:'];
-  for (const permission of kiloAgentPermissionOrder) {
-    lines.push(`  ${permission}: ${allowedPermissions.has(permission) ? 'allow' : 'deny'}`);
-  }
-
-  return lines;
-}
-
-function replaceRelativePathReference(content, fromPath, toPath) {
-  const escapedPath = escapeRegExp(fromPath);
-  return content.replace(
-    new RegExp(`(^|[^A-Za-z0-9_./-])${escapedPath}`, 'g'),
-    (_, prefix) => `${prefix}${toPath}`,
-  );
 }
 
 /**
@@ -628,15 +480,19 @@ function convertGsdCommandReferencesToKimiSkillInvocations(content, cmdNames) {
     .replace(hyphenPattern, (_, cmd) => `/skill:gsd-${cmd}`);
 }
 
-// DEFECT.GENERATIVE-FIX: this body is mirrored in bin/install.js's
-// convertClaudeCommandToKimiSkill (kept for bin/install.js's own
-// module-level export/test surface; dead for the live skills-install path,
-// which routes here via install-engine.cts's SKILLS_CONVERTER_REGISTRY
-// through the kimi capability descriptor's artifactLayout
-// `converter: "convertClaudeCommandToKimiSkill"`). Neither copy re-exports
-// the other — mirror any behavior change into both. Guarded by the
-// output-parity test in tests/runtime-converters.test.cjs (#2095).
-function convertClaudeCommandToKimiSkill(content, skillName, _runtime = null, cmdNames = null) {
+/**
+ * Convert a Claude command-markdown source into a Kimi Code Agent Skill.
+ *
+ * Kimi Code (Moonshot's Node CLI) uses the standard Agent Skills format —
+ * a directory containing SKILL.md with frontmatter (name/description) and
+ * body — auto-discovered from `~/.kimi-code/skills/` (per Kimi Code docs:
+ * "Agent Skills is an open format for adding specialized knowledge and
+ * workflows to AI agents"). The invocation prefix is `/skill:<name>`.
+ *
+ * Registered as `convertClaudeCommandToKimiCodeSkill` in the capabilities/
+ * kimi-code/capability.json `artifactLayout` `converter` field (#2454 PR 2).
+ */
+function convertClaudeCommandToKimiCodeSkill(content, skillName, _runtime = null, cmdNames = null) {
   const { frontmatter, body } = extractFrontmatterAndBody(content);
   const kimiSkillName = normalizeKimiSkillName(skillName);
   const names = cmdNames || readGsdCommandNames();
@@ -649,278 +505,6 @@ function convertClaudeCommandToKimiSkill(content, skillName, _runtime = null, cm
   );
 
   return `---\nname: ${kimiSkillName}\ndescription: ${yamlQuote(toSingleLine(description))}\n---\nInvoke this Kimi skill with \`/skill:${kimiSkillName}\`.\n\n${normalizedBody}`;
-}
-
-/**
- * Convert a Claude command-markdown source into a Kimi Code Agent Skill.
- *
- * Kimi Code (Moonshot's Node CLI) uses the standard Agent Skills format —
- * a directory containing SKILL.md with frontmatter (name/description) and
- * body — auto-discovered from `~/.kimi-code/skills/` (per Kimi Code docs:
- * "Agent Skills is an open format for adding specialized knowledge and
- * workflows to AI agents"). The invocation prefix is `/skill:<name>`,
- * identical to Python kimi-cli.
- *
- * Today the output is byte-identical to `convertClaudeCommandToKimiSkill`
- * (the Python kimi-cli converter) because both products consume the same
- * Agent Skills format + `/skill:` invocation. The distinct function name
- * lets a future divergence land cleanly if Kimi Code's skill format evolves
- * independently of Python kimi-cli.
- *
- * Registered as `convertClaudeCommandToKimiCodeSkill` in the capabilities/
- * kimi-code/capability.json `artifactLayout` `converter` field (#2454 PR 2).
- */
-function convertClaudeCommandToKimiCodeSkill(content, skillName, _runtime = null, cmdNames = null) {
-  return convertClaudeCommandToKimiSkill(content, skillName, _runtime, cmdNames);
-}
-
-const KIMI_CANONICAL_GSD_AGENT_RE = /^gsd-[a-z0-9-]+$/;
-
-function parseKimiAgentSource(source) {
-  if (typeof source === 'string') {
-    return {
-      path: null,
-      content: source,
-    };
-  }
-  if (!source || typeof source !== 'object' || typeof source.content !== 'string') {
-    return null;
-  }
-  return {
-    path: typeof source.path === 'string' ? source.path : null,
-    content: source.content,
-  };
-}
-
-function parseFrontmatterTools(frontmatter) {
-  if (!frontmatter) return [];
-  const lines = frontmatter.split(/\r?\n/);
-  const tools = [];
-  let collecting = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    if (collecting) {
-      if (trimmed.startsWith('- ')) {
-        tools.push(trimmed.slice(2).trim());
-        continue;
-      }
-      collecting = false;
-    }
-
-    if (trimmed === 'tools:' || trimmed === 'allowed-tools:') {
-      collecting = true;
-      continue;
-    }
-
-    if (trimmed.startsWith('tools:') || trimmed.startsWith('allowed-tools:')) {
-      const value = trimmed.slice(trimmed.indexOf(':') + 1).trim();
-      if (value) {
-        for (const tool of value.split(',')) {
-          const name = tool.trim();
-          if (name) tools.push(name);
-        }
-      } else {
-        collecting = true;
-      }
-    }
-  }
-
-  return tools;
-}
-
-function addKimiAgentDiagnostic(diagnostics, code, message, value, source = null) {
-  diagnostics.push({
-    level: 'warning',
-    code,
-    message,
-    value,
-    source,
-  });
-}
-
-function mapKimiAgentContractTools(toolNames, diagnostics, sourceName) {
-  const result = mapClaudeToolsToKimiTools(toolNames, { source: sourceName });
-  diagnostics.push(...result.diagnostics);
-  return result.tools;
-}
-
-function neutralizeKimiAgentPrompt(content) {
-  const { frontmatter, body } = extractFrontmatterAndBody(content);
-  let prompt = frontmatter ? body : content;
-  prompt = neutralizeAgentReferences(prompt, 'AGENTS.md');
-  prompt = prompt.replace(/~\/\.claude\/gsd-core\b/g, 'GSD core');
-  prompt = prompt.replace(/\$HOME\/\.claude\/gsd-core\b/g, 'GSD core');
-  return prompt.replace(/^\s*\r?\n/, '');
-}
-
-function pushKimiToolsYaml(lines, indent, tools) {
-  const prefix = ' '.repeat(indent);
-  if (!Array.isArray(tools) || tools.length === 0) {
-    lines.push(`${prefix}tools: []`);
-    return;
-  }
-  lines.push(`${prefix}tools:`);
-  for (const tool of tools) {
-    lines.push(`${prefix}  - ${yamlQuote(tool)}`);
-  }
-}
-
-function buildKimiRootAgentYaml({ description, tools, subagents }) {
-  const lines = [
-    'version: 1',
-    'agent:',
-    '  name: gsd',
-    `  description: ${yamlQuote(toSingleLine(description || 'Run GSD workflows in Kimi CLI.'))}`,
-    '  extend: default',
-    '  system_prompt_path: ./gsd.md',
-  ];
-  pushKimiToolsYaml(lines, 2, tools);
-
-  if (subagents.length > 0) {
-    lines.push('  subagents:');
-    for (const subagent of subagents) {
-      lines.push(`    ${subagent.name}:`);
-      lines.push(`      path: ./subagents/${subagent.name}.yaml`);
-      lines.push(`      description: ${yamlQuote(toSingleLine(subagent.description))}`);
-    }
-  }
-
-  return `${lines.join('\n')}\n`;
-}
-
-function buildKimiSubagentYaml({ name, description, tools }) {
-  const lines = [
-    'version: 1',
-    'agent:',
-    `  name: ${name}`,
-    `  description: ${yamlQuote(toSingleLine(description || `Run ${name}.`))}`,
-    `  system_prompt_path: ./${name}.md`,
-  ];
-  pushKimiToolsYaml(lines, 2, tools);
-  return `${lines.join('\n')}\n`;
-}
-
-// DEFECT.GENERATIVE-FIX: this body is mirrored in bin/install.js's
-// buildKimiAgentArtifacts (kept for bin/install.js's own module-level
-// export/test surface; dead for the live install path, which routes here via
-// runtime-artifact-layout.cts's kimiAgentsKind through a dynamic
-// `conversionExports['buildKimiAgentArtifacts']` lookup against this
-// compiled module). Neither copy re-exports the other — mirror any behavior
-// change into both, including the kimi_cli.tools.agent:Agent grant that
-// enables background dispatch (#2095 Upgrade 2). Guarded by the
-// output-parity test in tests/runtime-converters.test.cjs (#2095).
-function buildKimiAgentArtifacts({
-  rootAgent = '',
-  subagents = [],
-  requestedSubagents = null,
-} = {}) {
-  const diagnostics = [];
-  const rootSource = parseKimiAgentSource(rootAgent) || { path: null, content: '' };
-  const { frontmatter: rootFrontmatter } = extractFrontmatterAndBody(rootSource.content);
-  const rootDescription = rootFrontmatter
-    ? extractFrontmatterField(rootFrontmatter, 'description') || 'Run GSD workflows in Kimi CLI.'
-    : 'Run GSD workflows in Kimi CLI.';
-
-  const subagentSources = Array.isArray(subagents) ? subagents : [];
-  if (!Array.isArray(subagents)) {
-    addKimiAgentDiagnostic(
-      diagnostics,
-      'kimi_unsupported_subagents_input',
-      'Subagents input must be an array of Markdown strings or source objects.',
-      typeof subagents,
-      null
-    );
-  }
-
-  const subagentMap = new Map();
-  for (const source of subagentSources) {
-    const parsed = parseKimiAgentSource(source);
-    if (!parsed) {
-      addKimiAgentDiagnostic(
-        diagnostics,
-        'kimi_unsupported_subagent_input',
-        'Subagent source must be a Markdown string or an object with content.',
-        typeof source,
-        null
-      );
-      continue;
-    }
-
-    const { frontmatter } = extractFrontmatterAndBody(parsed.content);
-    const fallbackName = parsed.path ? path.basename(parsed.path, path.extname(parsed.path)) : null;
-    const name = frontmatter
-      ? extractFrontmatterField(frontmatter, 'name') || fallbackName
-      : fallbackName;
-    if (!name || !KIMI_CANONICAL_GSD_AGENT_RE.test(name)) {
-      addKimiAgentDiagnostic(
-        diagnostics,
-        'kimi_invalid_subagent_name',
-        'Subagent source does not use a canonical gsd-* Kimi agent name.',
-        name || '(missing)',
-        parsed.path
-      );
-      continue;
-    }
-
-    const description = frontmatter
-      ? extractFrontmatterField(frontmatter, 'description') || `Run ${name}.`
-      : `Run ${name}.`;
-    const tools = mapKimiAgentContractTools(parseFrontmatterTools(frontmatter), diagnostics, name);
-    subagentMap.set(name, {
-      name,
-      description,
-      tools,
-      prompt: neutralizeKimiAgentPrompt(parsed.content),
-    });
-  }
-
-  const requested = Array.isArray(requestedSubagents) && requestedSubagents.length > 0
-    ? requestedSubagents
-    : [...subagentMap.keys()];
-  const selectedSubagents = [];
-  for (const requestedName of requested) {
-    if (subagentMap.has(requestedName)) {
-      selectedSubagents.push(subagentMap.get(requestedName));
-      continue;
-    }
-    addKimiAgentDiagnostic(
-      diagnostics,
-      'kimi_unknown_subagent',
-      'Requested subagent was not generated and will not be emitted in Kimi YAML.',
-      requestedName,
-      null
-    );
-  }
-
-  const rootTools = mapKimiAgentContractTools(parseFrontmatterTools(rootFrontmatter), diagnostics, 'gsd');
-  if (selectedSubagents.length > 0 && !rootTools.includes('kimi_cli.tools.agent:Agent')) {
-    rootTools.push('kimi_cli.tools.agent:Agent');
-  }
-
-  return {
-    root: {
-      name: 'gsd',
-      yamlPath: 'agents/gsd.yaml',
-      promptPath: 'agents/gsd.md',
-      yaml: buildKimiRootAgentYaml({
-        description: rootDescription,
-        tools: rootTools,
-        subagents: selectedSubagents,
-      }),
-      prompt: neutralizeKimiAgentPrompt(rootSource.content),
-    },
-    subagents: selectedSubagents.map((subagent) => ({
-      name: subagent.name,
-      yamlPath: `agents/subagents/${subagent.name}.yaml`,
-      promptPath: `agents/subagents/${subagent.name}.md`,
-      yaml: buildKimiSubagentYaml(subagent),
-      prompt: subagent.prompt,
-    })),
-    diagnostics,
-  };
 }
 
 /**
@@ -1292,289 +876,11 @@ function convertClaudeCommandToWindsurfWorkflow(content, commandName) {
   // UTF-8 bytes each). Both inputs are validated/truncated above — commandName
   // is length-capped-and-thrown by WINDSURF_COMMAND_NAME_MAX, description is
   // truncated by truncateWindsurfWorkflowDescription — so this bound holds by
-  // construction, not by measurement. The 12000-byte figure itself lives in
-  // exactly one place — the cap table in tests/helpers/emitted-caps.cjs —
-  // this comment only justifies why the actual emitted size stays under it.
+  // construction, not by measurement.
   return `# ${commandName}\n\n${effectiveDescription}\n\nRead and execute the GSD command at @~/.claude/gsd-core/commands/gsd/${stem}.md end-to-end. Treat the user's message after /${commandName} as the command arguments.`;
 }
 
-// --- Augment converters ---
-// Augment uses a tool set similar to Cursor/Windsurf.
-// Config lives in .augment/ (local) and ~/.augment/ (global).
-
-function convertSlashCommandsToAugmentSkillMentions(content) {
-  return content.replace(/gsd:/gi, 'gsd-');
-}
-
-function convertClaudeToAugmentMarkdown(content) {
-  let converted = convertSlashCommandsToAugmentSkillMentions(content);
-  converted = converted.replace(/\bBash\(/g, 'launch-process(');
-  converted = converted.replace(/\bEdit\(/g, 'str-replace-editor(');
-  converted = converted.replace(/\bRead\(/g, 'view(');
-  converted = converted.replace(/\bWrite\(/g, 'save-file(');
-  converted = converted.replace(/\bTodoWrite\(/g, 'add_tasks(');
-  converted = converted.replace(/\bAskUserQuestion\b/g, 'conversational prompting');
-  // Replace subagent_type from Claude to Augment format
-  converted = converted.replace(/subagent_type="general-purpose"/g, 'subagent_type="generalPurpose"');
-  converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
-  // Replace project-level Claude conventions with Augment equivalents
-  converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`.augment/rules/`');
-  converted = converted.replace(/\.\/CLAUDE\.md/g, '.augment/rules/');
-  converted = converted.replace(/`CLAUDE\.md`/g, '`.augment/rules/`');
-  converted = converted.replace(/\bCLAUDE\.md\b/g, '.augment/rules/');
-  converted = converted.replace(/\.claude\/skills\//g, '.augment/skills/');
-  // Remove Claude Code-specific bug workarounds before brand replacement
-  converted = converted.replace(/\*\*Known Claude Code bug \(classifyHandoffIfNeeded\):\*\*[^\n]*\n/g, '');
-  converted = converted.replace(/- \*\*classifyHandoffIfNeeded false failure:\*\*[^\n]*\n/g, '');
-  // Replace "Claude Code" brand references with "Augment" — #2284(b): skips
-  // <runtime_compatibility> comparison-table content (protected region).
-  converted = applyClaudeCodeBrandSwap(converted, 'Augment');
-  return converted;
-}
-
-// #2097 (ADR-1239): command-body converters selected by descriptor
-// (runtime.hostBehaviors.commandBodyConverter) instead of a runtime-name
-// branch. Degrade-closed: unknown/absent name → no conversion.
-const COMMAND_BODY_CONVERTERS = { convertClaudeToAugmentMarkdown };
-
-function getAugmentSkillAdapterHeader(skillName) {
-  return `<augment_skill_adapter>
-## A. Skill Invocation
-- This skill is invoked when the user mentions \`${skillName}\` or describes a task matching this skill.
-- Treat all user text after the skill mention as \`{{GSD_ARGS}}\`.
-- If no arguments are present, treat \`{{GSD_ARGS}}\` as empty.
-
-## B. User Prompting
-When the workflow needs user input, prompt the user conversationally:
-- Present options as a numbered list in your response text
-- Ask the user to reply with their choice
-- For multi-select, ask for comma-separated numbers
-
-## C. Tool Usage
-Use these Augment tools when executing GSD workflows:
-- \`launch-process\` for running commands (terminal operations)
-- \`str-replace-editor\` for editing existing files
-- \`view\` for reading files and listing directories
-- \`save-file\` for creating new files
-- \`grep\` for searching code (or use MCP servers for advanced search)
-- \`web-search\`, \`web-fetch\` for web queries
-- \`add_tasks\`, \`view_tasklist\`, \`update_tasks\` for task management
-
-## D. Subagent Spawning
-When the workflow needs to spawn a subagent:
-- Use the built-in subagent spawning capability
-- Define agent prompts in \`.augment/agents/\` directory
-</augment_skill_adapter>`;
-}
-
-function convertClaudeCommandToAugmentSkill(content, skillName) {
-  const converted = convertClaudeToAugmentMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${skillName}.`;
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) {
-      description = maybeDescription;
-    }
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  const adapter = getAugmentSkillAdapterHeader(skillName);
-
-  return `---\nname: ${yamlIdentifier(skillName)}\ndescription: ${yamlQuote(shortDescription)}\n---\n\n${adapter}\n\n${body.trimStart()}`;
-}
-
-function convertSlashCommandsToTraeSkillMentions(content) {
-  return content.replace(/\/gsd:([a-z0-9-]+)/g, (_, commandName) => {
-    return `/gsd-${commandName}`;
-  });
-}
-
-function convertClaudeToTraeMarkdown(content) {
-  let converted = convertSlashCommandsToTraeSkillMentions(content);
-  converted = converted.replace(/\bBash\(/g, 'Shell(');
-  converted = converted.replace(/\bEdit\(/g, 'StrReplace(');
-  // Replace general-purpose subagent type with Trae's equivalent "general_purpose_task"
-  converted = converted.replace(/subagent_type="general-purpose"/g, 'subagent_type="general_purpose_task"');
-  converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
-  // #2658: full-path forms (with a leading dot-claude-slash prefix) MUST be
-  // replaced before the bare Claude-instruction-file pattern and before the
-  // generic dot-claude-slash rewrite below — otherwise the bare pattern
-  // consumes only the instruction-filename tail, leaving that prefix stale
-  // in place, and the generic rewrite then mutates the stale leftover too,
-  // producing a doubled trae-prefix segment ahead of the rules path instead
-  // of a single clean one. (Deliberately never spelling the instruction
-  // filename as one contiguous "CLAUDE" + dot + "md" token, and never
-  // spelling either malformed shape out as a literal contiguous string, in
-  // ANY comment in this function: this file ships verbatim into local
-  // `--trae` installs, where it is itself run through this same class of
-  // find/replace — a literal instruction-filename token sitting in a
-  // comment gets "fixed" right along with real code, and the emitted-content
-  // regression test added alongside this fix asserts neither malformed
-  // shape appears anywhere in the installed tree, comments included; this
-  // bit the fix itself twice during development.) All forms converge on the
-  // same concrete file (never a bare directory) so this stays in parity
-  // with the `trae.js` RUNTIME_CONTENT_DISPATCH entry.
-  converted = converted.replace(/`\.\/\.claude\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.\/\.claude\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  converted = converted.replace(/`\.claude\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.claude\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  // #2658 (found via the end-to-end install regression test, not the static
-  // trace above): `copyWithPathReplacement` runs a GENERIC dot-claude-slash
-  // -> runtime-config-dir rewrite on every .md file before calling this
-  // converter — for `~/.claude/`, `$HOME/.claude/`, AND `./.claude/` alike —
-  // substituting a runtime-appropriate `pathPrefix` this function is never
-  // given and cannot itself compute (it differs per install invocation: a
-  // relative `./.trae/` for a project-local install, an arbitrary absolute
-  // path for a local install rooted elsewhere, `~/.trae/` for a global one).
-  // So for source using any of those prefixed forms, the patterns above
-  // never fire here — this converter only ever sees the ALREADY-rewritten
-  // "<runtime-config-dir>/" + instruction-filename shape, with whatever
-  // prefix the install actually used. The generic pattern below preserves
-  // that prefix verbatim (via the capture group) and only fixes the
-  // filename suffix, rather than assuming a fixed `./.trae/` shape — a
-  // narrower fixed-prefix version of this pattern shipped first and still
-  // left the doubled-prefix defect live for the `$HOME/.claude/` and
-  // `~/.claude/` forms specifically (found the same way, one regression-test
-  // run later). Scoped to a `.trae/` tail so it cannot also swallow the
-  // unprefixed `./CLAUDE.md` form the very next pattern handles differently
-  // (discarding the prefix entirely, not preserving it). Must run before
-  // the bare pattern for the same consume-the-full-match-first reason.
-  converted = converted.replace(/`([^\s`]*\.trae\/)CLAUDE\.md`/g, '`$1rules/rules.md`');
-  converted = converted.replace(/([^\s`]*\.trae\/)CLAUDE\.md/g, '$1rules/rules.md');
-  converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\.\/CLAUDE\.md/g, '.trae/rules/rules.md');
-  converted = converted.replace(/`CLAUDE\.md`/g, '`.trae/rules/rules.md`');
-  converted = converted.replace(/\bCLAUDE\.md\b/g, '.trae/rules/rules.md');
-  converted = converted.replace(/\.claude\/skills\//g, '.trae/skills/');
-  converted = converted.replace(/\.\/\.claude\//g, './.trae/');
-  converted = converted.replace(/\.claude\//g, '.trae/');
-  // Bare forms (no trailing slash) — after slash forms to avoid double-rewrite.
-  // Use negative lookahead (?![\w-]) to preserve .claude-plugin and .claudeignore.
-  converted = converted.replace(/~\/\.claude(?![\w-])/g, '~/.trae');
-  converted = converted.replace(/\$HOME\/\.claude(?![\w-])/g, '$HOME/.trae');
-  // Environment variable name rewrite
-  converted = converted.replace(/\bCLAUDE_CONFIG_DIR\b/g, 'TRAE_CONFIG_DIR');
-  converted = converted.replace(/\*\*Known Claude Code bug \(classifyHandoffIfNeeded\):\*\*[^\n]*\n/g, '');
-  converted = converted.replace(/- \*\*classifyHandoffIfNeeded false failure:\*\*[^\n]*\n/g, '');
-  // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-  converted = applyClaudeCodeBrandSwap(converted, 'Trae');
-  return converted;
-}
-
-// DEFECT.GENERATIVE-FIX: this body is mirrored in bin/install.js's
-// convertClaudeCommandToTraeSkill (dead for the live skills-install path,
-// which routes here via install-engine.cts's SKILLS_CONVERTER_REGISTRY; kept
-// for bin/install.js's own module-level export/test surface). Neither copy
-// re-exports the other — mirror any behavior change into both. Guarded by
-// the output-parity test in tests/runtime-converters.test.cjs (#2094).
-function convertClaudeCommandToTraeSkill(content, skillName) {
-  const converted = convertClaudeToTraeMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${skillName}.`;
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) {
-      description = maybeDescription;
-    }
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote so YAML flow indicators (`[BETA] …`) don't break Trae's
-  // frontmatter parser.
-  let fm = `---\nname: ${yamlIdentifier(skillName)}\ndescription: ${yamlQuote(shortDescription)}\n`;
-  // #2094: emit `stage:` so Trae's SOLO agent can auto-invoke GSD skills at
-  // the corresponding stage (docs.trae.ai/ide/agent). The field name/schema
-  // is not formally documented (thin SPA docs) — descriptor-driven, single
-  // fixed GSD-side value (runtime.hostBehaviors.soloStageMetadata), inferred/
-  // best-effort.
-  const soloStage = _hostBehaviors('trae').soloStageMetadata as string | undefined;
-  if (soloStage) fm += `stage: ${soloStage}\n`;
-  fm += '---';
-  return `${fm}\n${body}`;
-}
-
-function convertSlashCommandsToCodebuddySkillMentions(content) {
-  return content.replace(/\/gsd:([a-z0-9-]+)/g, (_, commandName) => {
-    return `/gsd-${commandName}`;
-  });
-}
-
-function convertClaudeToCodebuddyMarkdown(content) {
-  let converted = convertSlashCommandsToCodebuddySkillMentions(content);
-  // CodeBuddy uses the same tool names as Claude Code (Bash, Edit, Read, Write, etc.)
-  // No tool name conversion needed
-  converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
-  converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`CODEBUDDY.md`');
-  converted = converted.replace(/\.\/CLAUDE\.md/g, 'CODEBUDDY.md');
-  converted = converted.replace(/`CLAUDE\.md`/g, '`CODEBUDDY.md`');
-  converted = converted.replace(/\bCLAUDE\.md\b/g, 'CODEBUDDY.md');
-  converted = converted.replace(/\.claude\/skills\//g, '.codebuddy/skills/');
-  converted = converted.replace(/\.\/\.claude\//g, './.codebuddy/');
-  converted = converted.replace(/\.claude\//g, '.codebuddy/');
-  converted = converted.replace(/\*\*Known Claude Code bug \(classifyHandoffIfNeeded\):\*\*[^\n]*\n/g, '');
-  converted = converted.replace(/- \*\*classifyHandoffIfNeeded false failure:\*\*[^\n]*\n/g, '');
-  // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-  converted = applyClaudeCodeBrandSwap(converted, 'CodeBuddy');
-  return converted;
-}
-
-function convertClaudeCommandToCodebuddySkill(content, skillName) {
-  const converted = convertClaudeToCodebuddyMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${skillName}.`;
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) {
-      description = maybeDescription;
-    }
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote so YAML flow indicators (`[BETA] …`) don't break
-  // CodeBuddy's frontmatter parser.
-  //
-  // #789: mark user-invocable:false so the skill is NOT shown in CodeBuddy's
-  // '/' menu (it defaults to true). The commands/ surface (#789) is the sole
-  // '/' entry point; skills remain model-invocable background knowledge,
-  // avoiding a duplicated /gsd-* entry per workflow.
-  return `---\nname: ${yamlIdentifier(skillName)}\ndescription: ${yamlQuote(shortDescription)}\nuser-invocable: false\n---\n${body}`;
-}
-
-/**
- * Convert a Claude Code slash-command (.md) to a CodeBuddy slash-command (.md).
- *
- * CodeBuddy reads user-level slash commands from ~/.codebuddy/commands/<name>.md
- * (https://www.codebuddy.ai/docs/cli/slash-commands). The filename determines the
- * command name (gsd-help.md → /gsd-help), so the Claude-specific `name: gsd:<x>`
- * frontmatter field is dropped. CodeBuddy command frontmatter supports
- * `description` and `argument-hint`; both are preserved when present. The body is
- * brand/path-converted via convertClaudeToCodebuddyMarkdown.
- *
- * @param {string} content      raw Claude command markdown
- * @param {string} commandName  installed command name (e.g. 'gsd-help')
- * @returns {string}
- */
-function convertClaudeCommandToCodebuddyCommand(content, commandName) {
-  const converted = convertClaudeToCodebuddyMarkdown(content);
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  let description = `Run GSD workflow ${commandName}.`;
-  let argumentHint = '';
-  if (frontmatter) {
-    const maybeDescription = extractFrontmatterField(frontmatter, 'description');
-    if (maybeDescription) description = maybeDescription;
-    const maybeArgHint = extractFrontmatterField(frontmatter, 'argument-hint');
-    if (maybeArgHint) argumentHint = maybeArgHint;
-  }
-  description = toSingleLine(description);
-  const shortDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
-  // #2876: quote values so YAML flow indicators (`[BETA] …`, `[name]`) don't
-  // break CodeBuddy's frontmatter parser.
-  const lines = ['---', `description: ${yamlQuote(shortDescription)}`];
-  if (argumentHint) lines.push(`argument-hint: ${yamlQuote(toSingleLine(argumentHint))}`);
-  lines.push('---', body.trimStart());
-  return lines.join('\n');
-}
+const COMMAND_BODY_CONVERTERS: Record<string, (content: string) => string> = {};
 
 // ── Cline converters ────────────────────────────────────────────────────────
 
@@ -1993,195 +1299,6 @@ function convertClaudeToOpencodeFrontmatter(content, { isAgent = false, modelOve
   return `---\n${newFrontmatter}\n---${body}`;
 }
 
-// Kilo CLI — same conversion logic as OpenCode, different config paths.
-// DEFECT.GENERATIVE-FIX: this body is mirrored in bin/install.js's
-// convertClaudeToKiloFrontmatter (used by bin/install.js's own legacy install
-// path). Neither copy re-exports the other — mirror any behavior change into
-// both. Guarded by the output-parity test in tests/runtime-converters.test.cjs
-// (#2093).
-function convertClaudeToKiloFrontmatter(content, { isAgent = false, modelOverride = null } = {}) {
-  // Replace tool name references in content (applies to all files)
-  let convertedContent = content;
-  convertedContent = convertedContent.replace(/\bAskUserQuestion\b/g, 'question');
-  convertedContent = convertedContent.replace(/\bSlashCommand\b/g, 'skill');
-  convertedContent = convertedContent.replace(/\bTodoWrite\b/g, 'todowrite');
-  // Replace /gsd-command colon variant with /gsd-command for Kilo (flat command structure)
-  convertedContent = convertedContent.replace(/\/gsd:/g, '/gsd-');
-  // Replace ~/.claude and $HOME/.claude with Kilo's config location
-  convertedContent = convertedContent.replace(/~\/\.claude\b/g, '~/.config/kilo');
-  convertedContent = convertedContent.replace(/\$HOME\/\.claude\b/g, '$HOME/.config/kilo');
-  convertedContent = convertedContent.replace(/\.\/\.claude\//g, './.kilo/');
-  // Normalize both Claude skill directory variants to Kilo's canonical skills dir.
-  convertedContent = replaceRelativePathReference(convertedContent, '.claude/skills/', '.kilo/skills/');
-  convertedContent = replaceRelativePathReference(convertedContent, '.agents/skills/', '.kilo/skills/');
-  convertedContent = replaceRelativePathReference(convertedContent, '.claude/agents/', '.kilo/agents/');
-  // Replace general-purpose subagent type with Kilo's equivalent "general"
-  convertedContent = convertedContent.replace(/subagent_type="general-purpose"/g, 'subagent_type="general"');
-  // Runtime-neutral agent name replacement (#766)
-  convertedContent = neutralizeAgentReferences(convertedContent, 'AGENTS.md');
-
-  // Check if content has frontmatter
-  if (!convertedContent.startsWith('---')) {
-    return convertedContent;
-  }
-
-  // Find the end of frontmatter
-  const endIndex = convertedContent.indexOf('---', 3);
-  if (endIndex === -1) {
-    return convertedContent;
-  }
-
-  const frontmatter = convertedContent.substring(3, endIndex).trim();
-  const body = convertedContent.substring(endIndex + 3);
-
-  // Parse frontmatter line by line (simple YAML parsing)
-  const lines = frontmatter.split('\n');
-  const newLines = [];
-  let inAllowedTools = false;
-  let inAgentTools = false;
-  let inSkippedArray = false;
-  const allowedTools = [];
-  const agentTools = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // For agents: skip commented-out lines (e.g. hooks blocks)
-    if (isAgent && trimmed.startsWith('#')) {
-      continue;
-    }
-
-    // Detect start of allowed-tools array
-    if (trimmed.startsWith('allowed-tools:')) {
-      inAllowedTools = true;
-      continue;
-    }
-
-    if (isAgent && inAgentTools) {
-      if (trimmed.startsWith('- ')) {
-        agentTools.push(trimmed.substring(2).trim());
-        continue;
-      }
-      if (trimmed && !trimmed.startsWith('-')) {
-        inAgentTools = false;
-      }
-    }
-
-    // Detect inline tools: field (comma-separated string)
-    if (trimmed.startsWith('tools:')) {
-      if (isAgent) {
-        const toolsValue = trimmed.substring(6).trim();
-        if (toolsValue) {
-          const tools = toolsValue.split(',').map(t => t.trim()).filter(t => t);
-          agentTools.push(...tools);
-        } else {
-          inAgentTools = true;
-        }
-        continue;
-      }
-      const toolsValue = trimmed.substring(6).trim();
-      if (toolsValue) {
-        // Parse comma-separated tools
-        const tools = toolsValue.split(',').map(t => t.trim()).filter(t => t);
-        allowedTools.push(...tools);
-      }
-      continue;
-    }
-
-    // For agents: strip skills:, color:, memory:, maxTurns:, permissionMode:, disallowedTools:
-    if (isAgent && /^(skills|color|memory|maxTurns|permissionMode|disallowedTools):/.test(trimmed)) {
-      inSkippedArray = true;
-      continue;
-    }
-
-    // Skip continuation lines of a stripped array/object field
-    if (inSkippedArray) {
-      if (trimmed.startsWith('- ') || trimmed.startsWith('#') || /^\s/.test(line)) {
-        continue;
-      }
-      inSkippedArray = false;
-    }
-
-    // For commands: remove name: field (Kilo uses filename for command name)
-    // For agents: keep name: (required by Kilo agents)
-    if (!isAgent && trimmed.startsWith('name:')) {
-      continue;
-    }
-
-    // Strip model: field — Kilo doesn't support Claude Code model aliases
-    // like 'haiku', 'sonnet', 'opus', or 'inherit'. Omitting lets Kilo use
-    // its configured default model.
-    if (trimmed.startsWith('model:')) {
-      continue;
-    }
-
-    // Convert color names to hex for Kilo (commands only; agents strip color above)
-    if (trimmed.startsWith('color:')) {
-      const colorValue = trimmed.substring(6).trim().toLowerCase();
-      const hexColor = colorNameToHex[colorValue];
-      if (hexColor) {
-        newLines.push(`color: "${hexColor}"`);
-      } else if (colorValue.startsWith('#')) {
-        // Validate hex color format (#RGB or #RRGGBB)
-        if (/^#[0-9a-f]{3}$|^#[0-9a-f]{6}$/i.test(colorValue)) {
-          // Already hex and valid, keep as is
-          newLines.push(line);
-        }
-        // Skip invalid hex colors
-      }
-      // Skip unknown color names
-      continue;
-    }
-
-    // Collect allowed-tools items
-    if (inAllowedTools) {
-      if (trimmed.startsWith('- ')) {
-        const tool = trimmed.substring(2).trim();
-        if (isAgent) {
-          agentTools.push(tool);
-        } else {
-          allowedTools.push(tool);
-        }
-        continue;
-      } else if (trimmed && !trimmed.startsWith('-')) {
-        // End of array, new field started
-        inAllowedTools = false;
-      }
-    }
-
-    // Keep other fields
-    if (!inAllowedTools) {
-      newLines.push(line);
-    }
-  }
-
-  // For agents: add required Kilo agent fields
-  if (isAgent) {
-    newLines.push('mode: subagent');
-    // Embed model override from ~/.gsd/defaults.json so model_overrides is
-    // respected on Kilo (which uses static agent frontmatter, not inline
-    // Task() model parameters) — mirrors convertClaudeToOpencodeFrontmatter's
-    // model emission exactly (#2093 UPGRADE 2 / ADR-1239; Kilo is an OpenCode
-    // fork with the same static-frontmatter model constraint). See #2256.
-    if (modelOverride) {
-      newLines.push(['model:', modelOverride].join(' '));
-    }
-    newLines.push(...buildKiloAgentPermissionBlock(agentTools));
-  }
-
-  // For commands: add tools object if we had allowed-tools or tools
-  if (!isAgent && allowedTools.length > 0) {
-    newLines.push('tools:');
-    for (const tool of allowedTools) {
-      newLines.push(`  ${convertToolName(tool)}: true`);
-    }
-  }
-
-  // Rebuild frontmatter (body already has tool names converted)
-  const newFrontmatter = newLines.join('\n').trim();
-  return `---\n${newFrontmatter}\n---${body}`;
-}
-
 // ── Agent converters — #1182 extraction ─────────────────────────────────────
 // These were previously only in bin/install.js. Extracted here so the module
 // is self-contained and #1173 descriptor-driven dispatch can call them without
@@ -2374,37 +1491,43 @@ function convertClaudeAgentToWindsurfAgent(content) {
   return `${cleanFrontmatter}\n${body}`;
 }
 
-/**
- * Convert Claude Code agent markdown to Augment agent format.
- * Strips frontmatter fields Augment doesn't support (color, skills),
- * converts tool references, and cleans up for Augment agents.
- */
-function convertClaudeAgentToAugmentAgent(content) {
-  const converted = convertClaudeToAugmentMarkdown(content);
+function parseFrontmatterTools(frontmatter) {
+  if (!frontmatter) return [];
+  const lines = frontmatter.split(/\r?\n/);
+  const tools = [];
+  let collecting = false;
 
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  if (!frontmatter) return converted;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-  const name = extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
+    if (collecting) {
+      if (trimmed.startsWith('- ')) {
+        tools.push(trimmed.slice(2).trim());
+        continue;
+      }
+      collecting = false;
+    }
 
-  const cleanFrontmatter = `---\nname: ${yamlIdentifier(name)}\ndescription: ${yamlQuote(toSingleLine(description))}\n---`;
+    if (trimmed === 'tools:' || trimmed === 'allowed-tools:') {
+      collecting = true;
+      continue;
+    }
 
-  return `${cleanFrontmatter}\n${body}`;
-}
+    if (trimmed.startsWith('tools:') || trimmed.startsWith('allowed-tools:')) {
+      const value = trimmed.slice(trimmed.indexOf(':') + 1).trim();
+      if (value) {
+        for (const tool of value.split(',')) {
+          const name = tool.trim();
+          if (name) tools.push(name);
+        }
+      } else {
+        collecting = true;
+      }
+    }
+  }
 
-function convertClaudeAgentToTraeAgent(content) {
-  const converted = convertClaudeToTraeMarkdown(content);
-
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  if (!frontmatter) return converted;
-
-  const name = extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
-
-  const cleanFrontmatter = `---\nname: ${yamlIdentifier(name)}\ndescription: ${yamlQuote(toSingleLine(description))}\n---`;
-
-  return `${cleanFrontmatter}\n${body}`;
+  return tools;
 }
 
 /**
@@ -2479,115 +1602,6 @@ function convertClaudeAgentToQwenAgent(content) {
   return `${fm}\n${body}`;
 }
 
-/**
- * Convert a Claude Code agent .md for ZCode (#3384).
- *
- * ZCode is Claude-shaped (same frontmatter, same named-dispatch subagents), so
- * the file is preserved verbatim EXCEPT the `tools:` grant list: ZCode's
- * dispatcher treats every `mcp__<server>__*` entry as a REQUIRED MCP server and
- * hard-fails the subagent spawn (CONFIGURATION_ERROR: "Required MCP server is
- * not connected") whenever it is not connected, whereas Claude Code treats the
- * same entries as an optional allowlist. The `mcp__*` entries are stripped at
- * install time — the same exclusion Kimi's converter applies via
- * convertKimiToolName — so subagent spawns succeed with zero MCP servers
- * configured; connected servers' tools remain reachable (auto-discovered by the
- * host, not granted by frontmatter).
- *
- * Line-surgical by design: ONLY `tools:` lines inside the frontmatter are
- * touched, so every other byte (description, color, commented-out blocks, the
- * body) survives identically. Handles both shapes GSD emits — the inline comma
- * list (`tools: A, B, C`) and the YAML block list (`tools:` + `- A` items).
- * An agent whose filtered grant list becomes empty (every grant was `mcp__*`)
- * drops the `tools:` key entirely: an absent key inherits the full toolkit,
- * which is the degrade-gracefully outcome, never a toolless subagent.
- *
- * Byte-identical for an agent with no `mcp__*` grants (the common case) and
- * for an agent with no frontmatter at all.
- */
-function convertClaudeAgentToZcodeAgent(content) {
-  // Fast path: no MCP grant token anywhere means nothing to strip. (A body
-  // mention alone is not a grant — the line scan below finds no tools-line
-  // change and returns `content` unchanged anyway; this just skips the scan.)
-  if (!content.includes('mcp__')) return content;
-
-  const lines = content.split('\n');
-  if (lines[0] !== '---') return content;
-  let fmEnd = -1;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === '---') {
-      fmEnd = i;
-      break;
-    }
-  }
-  if (fmEnd === -1) return content; // unterminated frontmatter — leave verbatim
-
-  const out = [];
-  let changed = false;
-  let i = 1;
-  while (i < fmEnd) {
-    const line = lines[i];
-    const inlineTools = /^tools:[ \t]*(.+)$/.exec(line);
-    if (inlineTools) {
-      const grants = inlineTools[1].split(',').map((tool) => tool.trim()).filter((tool) => tool !== '');
-      const kept = grants.filter((tool) => !tool.startsWith('mcp__'));
-      if (kept.length === grants.length) {
-        out.push(line); // no mcp__* grants — keep the line byte-identical
-      } else if (kept.length > 0) {
-        out.push(`tools: ${kept.join(', ')}`);
-        changed = true;
-      } else {
-        changed = true; // every grant was mcp__*: drop the tools key entirely
-      }
-      i++;
-      continue;
-    }
-    if (/^tools:[ \t]*$/.test(line)) {
-      // Block-list form: collect the following `- item` lines.
-      const items = [];
-      let j = i + 1;
-      while (j < fmEnd && /^([ \t]*)-[ \t]*(\S.*)$/.test(lines[j])) {
-        items.push(lines[j]);
-        j++;
-      }
-      const kept = items.filter((item) => {
-        const name = /^([ \t]*)-[ \t]*(\S.*)$/.exec(item)[2].trim();
-        return !name.startsWith('mcp__');
-      });
-      if (kept.length !== items.length) {
-        changed = true;
-        if (kept.length > 0) {
-          out.push(line);
-          out.push(...kept);
-        } // else: drop the tools key and all its items
-      } else {
-        out.push(line, ...items);
-      }
-      i = j;
-      continue;
-    }
-    out.push(line);
-    i++;
-  }
-  if (!changed) return content;
-  // Opening delimiter + transformed frontmatter + closing delimiter + body.
-  out.unshift(lines[0]);
-  out.push(...lines.slice(fmEnd));
-  return out.join('\n');
-}
-
-function convertClaudeAgentToCodebuddyAgent(content) {
-  const converted = convertClaudeToCodebuddyMarkdown(content);
-
-  const { frontmatter, body } = extractFrontmatterAndBody(converted);
-  if (!frontmatter) return converted;
-
-  const name = extractFrontmatterField(frontmatter, 'name') || 'unknown';
-  const description = extractFrontmatterField(frontmatter, 'description') || '';
-
-  const cleanFrontmatter = `---\nname: ${yamlIdentifier(name)}\ndescription: ${yamlQuote(toSingleLine(description))}\n---`;
-
-  return `${cleanFrontmatter}\n${body}`;
-}
 
 function convertClaudeAgentToClineAgent(content) {
   const converted = convertClaudeToCliineMarkdown(content);
@@ -2627,17 +1641,6 @@ function applyAgentBrandingRewrites(content, runtime) {
   return converted;
 }
 
-/**
- * Named branding converter for Hermes agents (#2875 Part 2 / J9-J10).
- * `convertedAgentsKind` dispatches converters by exported name, so a named
- * export is required even though the transform itself is fully generic
- * (`applyAgentBrandingRewrites`) — resolved from
- * `capabilities/hermes/capability.json`'s `hostBehaviors.brandingRewrites`,
- * never hardcoded here.
- */
-function convertClaudeAgentToHermesAgent(content) {
-  return applyAgentBrandingRewrites(content, 'hermes');
-}
 
 /**
  * Convert Claude Code agent markdown to Codex agent format.
@@ -2719,17 +1722,6 @@ function convertClaudeCommandToOpencodeSkill(content, skillName) {
   );
 }
 
-/**
- * Convert a Claude command (.md) to a Kilo skill (SKILL.md).
- * Thin wrapper over the shared OpenCode-family writer (Kilo shares the schema).
- */
-function convertClaudeCommandToKiloSkill(content, skillName) {
-  return convertClaudeCommandToOpencodeFamilySkill(
-    content,
-    skillName,
-    (c) => convertClaudeToKiloFrontmatter(c),
-  );
-}
 
 
 // ── Rewrite engine — ADR-1508 Phase 2 ───────────────────────────────────────
@@ -2996,53 +1988,6 @@ function _applyRuntimeRewrites(content, runtime, pathPrefix, isGlobal = false, a
       break;
     }
 
-    case 'augment': {
-      content = content.replace(/~\/\.claude\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.claude\//g, pathPrefix);
-      content = content.replace(/\.\/\.claude\//g, `./${dirName}/`);
-      content = content.replace(/~\/\.claude(?![\w-])/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.claude(?![\w-])/g, normalizedPathPrefix);
-      content = content.replace(/\.\/\.claude(?![\w-])/g, `./${dirName}`);
-      // #2097: dot-dir self-references (~/.augment/…) → resolved prefix,
-      // dirName-derived (no runtime literal). getDirName('augment') resolves
-      // to '.augment', so this is byte-identical to the prior hardcoded regexes.
-      const _dd = escapeRegExp(dirName);
-      content = content.replace(new RegExp('~/' + _dd + '/', 'g'), pathPrefix);
-      content = content.replace(new RegExp('\\$HOME/' + _dd + '/', 'g'), pathPrefix);
-      content = content.replace(new RegExp('~/' + _dd + '(?![\\w-])', 'g'), normalizedPathPrefix);
-      content = content.replace(new RegExp('\\$HOME/' + _dd + '(?![\\w-])', 'g'), normalizedPathPrefix);
-      content = processAttribution(content, attribution);
-      break;
-    }
-
-    case 'trae':
-      content = content.replace(/~\/\.claude\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.claude\//g, pathPrefix);
-      content = content.replace(/\.\/\.claude\//g, `./${dirName}/`);
-      content = content.replace(/~\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\.\/\.claude\b/g, `./${dirName}`);
-      // #2094: descriptor-driven — dirName resolves to '.trae' via
-      // getDirName()/localConfigDir, so this regex is built rather than
-      // hardcoded as `/~\/\.trae\//g` (byte-identical output for trae).
-      content = content.replace(new RegExp('~/' + escapeRegExp(dirName) + '/', 'g'), pathPrefix);
-      content = processAttribution(content, attribution);
-      break;
-
-    case 'codebuddy':
-      content = content.replace(/~\/\.claude\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.claude\//g, pathPrefix);
-      content = content.replace(/\.\/\.claude\//g, `./${dirName}/`);
-      content = content.replace(/~\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\.\/\.claude\b/g, `./${dirName}`);
-      content = content.replace(/~\/\.codebuddy\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.codebuddy\//g, pathPrefix);
-      content = content.replace(/~\/\.codebuddy\b/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.codebuddy\b/g, normalizedPathPrefix);
-      content = processAttribution(content, attribution);
-      break;
-
     case 'copilot':
       content = processAttribution(content, attribution);
       break;
@@ -3093,42 +2038,6 @@ function _applyRuntimeRewrites(content, runtime, pathPrefix, isGlobal = false, a
       content = processAttribution(content, attribution);
       break;
     }
-
-    case 'hermes': {
-      // Guarded (post-review #2092): see qwen case above — same degrade-closed
-      // rationale.
-      const _b = _hostBehaviors(runtime).brandingRewrites;
-      if (_b) {
-        content = content.replace(/CLAUDE\.md/g, _b['CLAUDE.md']);
-        // #2284(b): skips <runtime_compatibility> comparison-table content (protected region).
-        content = applyClaudeCodeBrandSwap(content, _b['Claude Code']);
-      }
-      content = content.replace(/~\/\.claude\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.claude\//g, pathPrefix);
-      content = content.replace(/~\/\.hermes\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.hermes\//g, pathPrefix);
-      content = content.replace(/~\/\.claude(?![\w-])/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.claude(?![\w-])/g, normalizedPathPrefix);
-      content = content.replace(/~\/\.hermes(?![\w-])/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.hermes(?![\w-])/g, normalizedPathPrefix);
-      if (_b) {
-        content = content.replace(/\.claude\//g, _b['.claude/']);
-      }
-      content = content.replace(/\.\/\.claude\//g, `./${dirName}/`);
-      content = content.replace(/\.\/\.hermes\//g, `./${dirName}/`);
-      content = processAttribution(content, attribution);
-      break;
-    }
-
-    case 'kimi':
-      content = content.replace(/~\/\.claude\//g, pathPrefix);
-      content = content.replace(/\$HOME\/\.claude\//g, pathPrefix);
-      content = content.replace(/\.\/\.claude\//g, `./${dirName}/`);
-      content = content.replace(/~\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\$HOME\/\.claude\b/g, normalizedPathPrefix);
-      content = content.replace(/\.\/\.claude\b/g, `./${dirName}`);
-      content = processAttribution(content, attribution);
-      break;
 
     default:
       // Unknown runtime — no rewrites (OpenCode/Kilo handled by their own install path).
@@ -3570,9 +2479,7 @@ export = {
   // runtime-artifact-layout.cts), never inside convertClaudeCommandToClaudeSkill
   // itself.
   resolveSpecRootReference,
-  convertClaudeCommandToKimiSkill,
   convertClaudeCommandToKimiCodeSkill,
-  buildKimiAgentArtifacts,
   convertClaudeToCursorMarkdown,
   convertClaudeCommandToCursorSkill,
   convertClaudeToWindsurfMarkdown,
@@ -3584,13 +2491,6 @@ export = {
   // above and bound from here by the remaining bin/install.js converters
   // (Cursor/Trae/CodeBuddy/Cline) that still brand-swap inline.
   applyClaudeCodeBrandSwap,
-  convertClaudeToAugmentMarkdown,
-  convertClaudeCommandToAugmentSkill,
-  convertClaudeToTraeMarkdown,
-  convertClaudeCommandToTraeSkill,
-  convertClaudeToCodebuddyMarkdown,
-  convertClaudeCommandToCodebuddySkill,
-  convertClaudeCommandToCodebuddyCommand,
   convertClaudeToCliineMarkdown,
   convertClaudeCommandToClineSkill,
   convertSlashCommandsToCodexSkillMentions,
@@ -3599,12 +2499,10 @@ export = {
   convertClaudeCommandToCodexSkill,
   neutralizeAgentReferences,
   convertClaudeCommandToOpencodeSkill,
-  convertClaudeCommandToKiloSkill,
-  // #2087 — opencode/kilo command-frontmatter converters, exported so the
+  // #2087 — opencode command-frontmatter converters, exported so the
   // layout-driven `convertedCommandsKind` can resolve them by name (routes the
-  // opencode/kilo command install through the engine instead of the bespoke path).
+  // opencode command install through the engine instead of the bespoke path).
   convertClaudeToOpencodeFrontmatter,
-  convertClaudeToKiloFrontmatter,
   readGsdCommandNames,
   transformContentToHyphen,
   // #1383: version resolver (exported for regression test of the Codex
@@ -3619,25 +2517,15 @@ export = {
   convertClaudeAgentToAntigravityAgent,
   convertClaudeAgentToCursorAgent,
   convertClaudeAgentToWindsurfAgent,
-  convertClaudeAgentToAugmentAgent,
-  convertClaudeAgentToTraeAgent,
-  convertClaudeAgentToCodebuddyAgent,
   convertClaudeAgentToClineAgent,
   convertClaudeAgentToCodexAgent,
-  // #2875 Part 2 (J10): Hermes named branding converter, generic underlying
-  // transform exported alongside it for direct reuse/testing.
-  convertClaudeAgentToHermesAgent,
   applyAgentBrandingRewrites,
   // ADR-1239 / #2092 Phase B Upgrade 1: native .qwen/agents/*.md subagent
   // projection — registered by name so convertedAgentsKind's
   // conversionExports[converterName] dispatch (runtime-artifact-layout.cts)
   // can resolve it from capabilities/qwen/capability.json's agents kind.
   convertClaudeAgentToQwenAgent,
-  // #3384: ZCode agents are Claude-shaped but its dispatcher treats mcp__*
-  // tools grants as required MCP servers — registered by name for the same
-  // conversionExports[converterName] dispatch, resolved from
-  // capabilities/zcode/capability.json's agents kind.
-  convertClaudeAgentToZcodeAgent,
+  parseFrontmatterTools,
   // #1511 ADR-1508 Phase 2: rewrite engine deep seam
   // Low-level walkers (pathPrefix + attribution pre-resolved by caller):
   applyRuntimeContentRewritesInPlace,
