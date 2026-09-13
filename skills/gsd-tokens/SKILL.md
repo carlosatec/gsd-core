@@ -1,14 +1,14 @@
 ---
 name: gsd-tokens
 description: "Display real-time token telemetry dashboard, savings breakdown, and JIT context efficiency"
-argument-hint: "[--json] [--reset]"
+argument-hint: "[--sessions] [--cost] [--all] [--web] [--open] [--json] [--reset]"
 allowed-tools:
   - Read
   - Bash
 ---
 
 <objective>
-Display real-time token telemetry metrics, including token savings percentage, multi-command usage breakdown, language-weighted in-memory consumption, and JIT efficiency dashboard.
+Display real-time token telemetry metrics, operational sessions reliability, financial cost calculations ($ USD), interactive HTML web dashboard export, and JIT context efficiency.
 </objective>
 
 <execution_context>
@@ -20,7 +20,7 @@ Arguments: $ARGUMENTS
 </context>
 
 <process>
-1. Execute `gsd_run telemetry dashboard` (or `gsd-tools telemetry summary --json` when `--json` is provided) reading `.planning/intel/telemetry.json`.
-2. Render responsive 65-column ASCII dashboard with multi-command usage, savings breakdowns, and JIT efficiency ratios.
+1. Execute `node gsd-core/bin/gsd-tools.cjs telemetry dashboard $ARGUMENTS` (or `gsd_run telemetry dashboard $ARGUMENTS`, or `gsd-tools telemetry web [--open]` for the standalone HTML 360° visual dashboard, or `gsd-tools telemetry summary --json` when `--json` is provided) reading `.planning/intel/telemetry.json` and session logs.
+2. Render responsive 65-column ASCII dashboard with multi-command usage, operational sessions, financial impacts, and JIT efficiency ratios.
 </process>
 

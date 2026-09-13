@@ -1,5 +1,5 @@
 /**
- * Visual Canvas Roadmap Exporter — GSD Core Nexus 3.4
+ * Visual Canvas Roadmap Exporter — GSD Core Nexus 3.5
  *
  * Converts `.planning/ROADMAP.md` into the open `.canvas` JSON specification
  * supported by Obsidian Canvas, VS Code Canvas extensions, and visual board viewers.

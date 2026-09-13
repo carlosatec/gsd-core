@@ -3943,6 +3943,9 @@ function createUnifiedRouter(cmdName) {
       } else {
         console.log(result.message);
       }
+      if (cmdName === 'tokens' && args && args.includes('--open') && result.data && result.data.htmlPath) {
+        openBrowserUrl(result.data.htmlPath);
+      }
     } catch (err) {
       error((err && err.message) || String(err));
     }
@@ -4077,7 +4080,28 @@ function routeTelemetry({ args, cwd, raw, error }) {
 
   if (sub === 'dashboard') {
     const dashboardMod = require('./lib/token-dashboard-renderer.cjs');
-    console.log(dashboardMod.renderTokenDashboard(planningDir));
+    const showSessions = args.includes('--sessions');
+    const showCost = args.includes('--cost');
+    const showAll = args.includes('--all');
+    console.log(dashboardMod.renderTokenDashboard(planningDir, {
+      sessions: showSessions,
+      cost: showCost,
+      all: showAll,
+    }));
+    return;
+  }
+
+  if (sub === 'web' || sub === 'html') {
+    const htmlMod = require('./lib/observability-html-dashboard.cjs');
+    const { htmlPath, snapshot } = htmlMod.exportObservabilityDashboard(planningDir);
+    if (raw) {
+      process.stdout.write(JSON.stringify({ htmlPath, snapshot }, null, 2) + '\n');
+    } else {
+      console.log(`\n⚡ GSD Observability 360° Dashboard exported: ${htmlPath}\n`);
+    }
+    if (args.includes('--open')) {
+      openBrowserUrl(htmlPath);
+    }
     return;
   }
 
@@ -4290,15 +4314,15 @@ function runWithTimeout(argv) {
 // independently hand-maintained sites and nothing previously caught them
 // drifting apart when a query command was added to only one or two.
 const TOP_LEVEL_USAGE = 'Usage: gsd-tools <command> [args] [--raw] [--pick <field>] [--cwd <path>] [--ws <name>] [--json-errors]\n' +
-  'Commands: agent, agent-skills, assumption-delta, audit-open, audit-uat, check, check-commit, commit, commit-docs-guard, commit-to-subrepo, pr-subrepo, ' +
+  'Commands: agent, agent-skills, assumption-delta, audit-open, audit-uat, auto, check, check-commit, commit, commit-docs-guard, commit-to-subrepo, pr-subrepo, ' +
   'config-ensure-section, config-get, config-new-project, config-path, config-set, migrate-config, normalize-test-command, ' +
-  'context-predicates, current-timestamp, detect-custom-files, docs-init, drift-guard, effort, extract-messages, find-phase, ' +
+  'context-predicates, current-timestamp, detect-custom-files, docs-init, drift-guard, effort, exec, extract-messages, find-phase, ' +
   'from-gsd2, frontmatter, gap-analysis, generate-claude-md, generate-claude-profile, ' +
-  'generate-dev-preferences, generate-slug, graphify, history-digest, init, intel, ' +
-  'capability, classify-confidence, git, learnings, list-seeds, list-todos, loop, milestone, package-legitimacy, phase, phase-plan-index, phases, profile-questionnaire, ' +
-  'profile-sample, progress, project-instruction-file, prompt-budget, quick-tasks-append, requirements, research-plan, research-store, resolve-granularity, resolve-model, restore-custom-files, roadmap, scaffold, smart-entry, state, ' +
+  'generate-dev-preferences, generate-slug, graph, graphify, help, history-digest, init, intel, ' +
+  'capability, classify-confidence, git, learnings, list-seeds, list-todos, loop, migrate, milestone, package-legitimacy, phase, phase-plan-index, phases, plan, profile-questionnaire, ' +
+  'profile-sample, progress, project-instruction-file, prompt-budget, quick-tasks-append, requirements, research-plan, research-store, resolve-granularity, resolve-model, restore-custom-files, review, roadmap, scaffold, ship, smart-entry, state, status, ' +
   'config-set-model-profile, dispatch-isolation, dispatch-should-flatten, inspect-dispatch-isolation, record-dispatch-isolation, estimate-calibrate, estimate-calibration, estimate-check, resolve-agent, resolve-dispatch-type, ' +
-  'resolve-execution, review-lane, session, skill-manifest, skills-root, state-snapshot, stats, summary-extract, teams-status, todo, uat, update-context, verification, websearch, windows, ' +
+  'resolve-execution, review-lane, session, skill-manifest, skills-root, state-snapshot, stats, summary-extract, teams-status, telemetry, todo, tokens, uat, update-context, verification, websearch, windows, ' +
   'task, template, user-story, validate, verify, verify-path-exists, verify-summary, eval, workstream, worktree\n\n' +
   'Global flags:\n' +
   '  --raw              Emit raw output without post-processing\n' +

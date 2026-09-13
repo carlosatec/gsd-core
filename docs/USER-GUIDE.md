@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 3.4 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 3.5 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -29,7 +29,7 @@ A narrative companion guide to GSD Core Nexus 3.4 — orient yourself here, then
 
 ## The Unified 10-Command Surface
 
-Starting with GSD Core Nexus 3.4, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 3.5, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -40,8 +40,8 @@ Starting with GSD Core Nexus 3.4, the public command surface is streamlined into
 | `/gsd-verify` | Conversational UAT and validation against phase success criteria | `[phase]`, `--strict` |
 | `/gsd-ship` | Complete milestone, open PR, tag release, and archive state | `--draft`, `--tag <version>` |
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
-| `/gsd-tokens` | Real-time multi-command token telemetry dashboard, graph compression ratio, and savings breakdown | `--raw`, `--history`, `gsd-tools tokens` |
-| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.4 | `--dry-run`, `--force` |
+| `/gsd-tokens` | Real-time multi-command token telemetry dashboard, operational sessions, financial estimation, and web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
+| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.5 | `--dry-run`, `--force` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
 ---
@@ -68,7 +68,7 @@ For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS
 
 ## Session Intelligence & Deterministic Replay CLI
 
-GSD Core Nexus 3.4 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+GSD Core Nexus 3.5 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
 
 ```bash
 # Replay the latest session in the terminal
@@ -241,22 +241,26 @@ Validate technical feasibility and explore visual direction prior to locking pla
 
 ---
 
-## Token Telemetry & Context Economy
+## Token Telemetry & Observability 360°
 
-GSD Nexus includes built-in pure technical observability for surgical JIT context injection, token avoidance, and graph compression (zero financial or cost metrics):
+GSD Nexus includes built-in Observability 360° for surgical JIT context injection, operational session reliability, adaptive financial cost calculations, and interactive visual dashboards:
 
 ```bash
-/gsd-tokens
+/gsd-tokens               # Unified 65-column ASCII telemetry dashboard
+/gsd-tokens --sessions    # Agent session duration, tool calls, and success rates
+/gsd-tokens --cost        # Financial spend & savings estimation ($ USD across providers)
+/gsd-tokens --all         # Complete all-in-one terminal dashboard
+/gsd-tokens --web --open  # Export & launch 100% offline HTML dashboard (.planning/intel/dashboard.html)
 ```
 
-Renders a responsive 65-column ASCII dashboard displaying:
-- **Multi-Command Lifecycle Observability:** Tracks real token consumption and avoidance across `plan`, `exec`, and `review` workflows.
-- **JIT Tokens Used vs Monolithic Avoided:** Compares surgical AST context against full-repo token weight.
-- **Graph Compression Reduction Factor:** Real-time ratio ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrating context compaction (e.g. `10895.2x`).
-- **Transactional Cooperative Locking:** Backed by `withFileLockSync` with stale-lock auto-eviction, preventing data loss under concurrent multi-agent executions.
-- **Pre-Exec Lifecycle Diagnostics:** Displays contextual guidance if planning/review is active before execution starts.
-- **Dual-Mode Metric Transparency:** Accurately distinguishes surgical phase reviews (`targeted`, 80-95% saved) from whole-repo audits (`full-repo`, `tokensSaved = 0` and `review (full-repo)` badge).
-- **CLI Subcommands & Seam:** `gsd-tools tokens`, `gsd-tools telemetry summary`, and `gsd-tools telemetry record`.
+Key capabilities:
+- **Operational Sessions Reliability:** Tracks runtime latency, tool calls, file writes, and success/failure rates across sessions (`.planning/intel/sessions/`).
+- **Adaptive Financial Estimation:** Calculates actual API spend and gross dollar savings ($ USD) across Claude 3.7/3.5 Sonnet, GPT-4o, Gemini 2.0 Pro, DeepSeek, and Local models, with custom model rates supported via `.planning/config.json`.
+- **Standalone Offline HTML Dashboard:** Produces `.planning/intel/dashboard.html` with zero external CDN dependencies, pure SVG distribution charts, PageRank hub tables, and client-side interactive cost recalculation.
+- **Zero-Touch Lifecycle Hooks:** Automatically captures telemetry across `plan`, `exec`, `review`, and `verify` with correlation deduplication (`invocationId`).
+- **Graph Compression Reduction Factor:** Real-time ratio ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrating context compaction (e.g. `4.0x` - `10895.2x`).
+- **Transactional Cooperative Locking:** Backed by `withFileLockSync` with stale-lock auto-eviction, preventing data corruption under concurrent executions.
+- **CLI Subcommands & NPM Scripts:** Direct access via `gsd-tools tokens`, `gsd-tools telemetry dashboard`, `npm run tokens`, `npm run tokens:cost`, and `npm run dashboard`.
 
 ---
 

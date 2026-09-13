@@ -48,4 +48,5 @@ Arguments: $ARGUMENTS
 2. Inject surgical JIT context for affected files.
 3. Structure tasks into atomic, parallelizable waves with explicit verification steps.
 4. Write the plan file and update STATE.md.
+5. Record plan telemetry via `node gsd-core/bin/gsd-tools.cjs telemetry record --command plan` (forwarding `--phase` and target files).
 </process>

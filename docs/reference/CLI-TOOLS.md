@@ -76,6 +76,21 @@ Inspect and record context economy metrics stored in `.planning/intel/telemetry.
 node gsd-tools.cjs tokens
 node gsd-tools.cjs telemetry dashboard
 
+# Specialized view modes (sessions, financial cost, all)
+node gsd-tools.cjs telemetry dashboard --sessions
+node gsd-tools.cjs telemetry dashboard --cost
+node gsd-tools.cjs telemetry dashboard --all
+
+# Export & open 100% offline standalone HTML dashboard
+node gsd-tools.cjs telemetry web [--open]
+
+# Convenient npm shortcuts
+npm run tokens
+npm run tokens:sessions
+npm run tokens:cost
+npm run tokens:all
+npm run dashboard
+
 # Output high-level JSON summary of tokens used, avoided, saved, and compression ratio
 node gsd-tools.cjs telemetry summary --raw
 

@@ -42,6 +42,7 @@
   "gsd-core/bin/ensure-runtime-build.cjs",
   "gsd-core/bin/gsd-tools.cjs",
   "gsd-core/bin/gsd_run",
+  "gsd-core/bin/gsd_run.cmd",
   "gsd-core/bin/shared/config-defaults.manifest.json",
   "gsd-core/bin/shared/config-schema.manifest.json",
   "gsd-core/bin/shared/model-catalog.json",

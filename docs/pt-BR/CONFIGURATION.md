@@ -126,6 +126,10 @@ O GSD armazena as configurações do projeto em `.planning/config.json`. Criado 
   "intel": {
     "enabled": false
   },
+  "observability": {
+    "pricing_model": "claude-3-7-sonnet",
+    "custom_rates": {}
+  },
   "claude_md_path": "./CLAUDE.md"
 }
 ```
@@ -148,6 +152,8 @@ O GSD armazena as configurações do projeto em `.planning/config.json`. Criado 
 | `model_policy.low` | string | ID do modelo | (nenhum) | ID do modelo de nível de custo baixo para provedor `generic`/`custom`. Adicionado na v1.42 ([#49](https://github.com/open-gsd/gsd-core/issues/49)) |
 | `model_policy.runtime_tiers.<runtime>.<tier>` | object | `{ model, reasoning_effort? }` | (nenhum) | Entrada de modelo explícita por runtime e por nível. `tier` é um de `opus`, `sonnet`, `haiku` (correspondendo aos nomes de nível de perfil existentes). `reasoning_effort` é encaminhado apenas para runtimes que o suportam; runtimes sem suporte nunca recebem o campo. Tem precedência sobre `model_profile_overrides`. Adicionado na v1.42 ([#49](https://github.com/open-gsd/gsd-core/issues/49)) |
 | `models.<phase_type>` | enum | `opus`, `sonnet`, `haiku`, `inherit` | (nenhum) | Nível de modelo por tipo de fase. Seis slots aceitos: `planning`, `discuss`, `research`, `execution`, `verification`, `completion`. Permite ajuste no nível de fase ("Opus para planejamento, Sonnet para o restante") sem precisar conhecer os nomes dos agentes. Resolve entre `model_overrides` (maior) e `model_profile` (menor); consulte [Modelos Por Tipo de Fase](#per-phase-type-models-models--added-in-v140). Adicionado na v1.40 ([#3023](https://github.com/open-gsd/gsd-core/pull/3030)) |
+| `observability.pricing_model` | enum | `claude-3-7-sonnet`, `claude-3-5-sonnet`, `gpt-4o`, `gpt-4o-mini`, `gemini-2.0-pro`, `deepseek-chat`, `deepseek-reasoner`, `local` | `claude-3-7-sonnet` | Nível padrão de precificação para cálculo de gastos e economia de tokens em `/gsd-tokens --cost` e `dashboard.html`. Adicionado na v3.5 |
+| `observability.custom_rates` | object | `{ <modelo>: { inputCostPerM, outputCostPerM } }` | `{}` | Taxas de custo personalizadas ($ USD por milhão de tokens) para modelos locais ou gateways corporativos. Adicionado na v3.5 |
 | `dynamic_routing.enabled` | boolean | `true`, `false` | `false` | Chave mestra para [roteamento dinâmico com escalada por nível em falha](#dynamic-routing-with-failure-tier-escalation-dynamic_routing--added-in-v140). Quando `true`, os agentes resolvem para `tier_models[default_tier]` e escalam um nível acima em falha soft detectada pelo orquestrador. Adicionado na v1.40 ([#3024](https://github.com/open-gsd/gsd-core/pull/3031)) |
 | `dynamic_routing.tier_models.<tier>` | enum | `opus`, `sonnet`, `haiku` | (nenhum) | Alias de nível para `light`, `standard` ou `heavy`. Usado quando `dynamic_routing.enabled: true`. Adicionado na v1.40 |
 | `dynamic_routing.escalate_on_failure` | boolean | `true`, `false` | `true` | Quando `false`, a escalada é desabilitada mesmo se `enabled: true` — cada tentativa usa o nível padrão. Adicionado na v1.40 |

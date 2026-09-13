@@ -159,6 +159,29 @@ function updateDocumentationFiles(root, version, majorMinor, dryRun = false) {
     }
   }
 
+  // 4. Planning files (.planning/ROADMAP.md, .planning/PROJECT.md)
+  const roadmapPath = path.join(root, '.planning', 'ROADMAP.md');
+  if (fs.existsSync(roadmapPath)) {
+    let content = fs.readFileSync(roadmapPath, 'utf8');
+    const prev = content;
+    content = content.replace(/# Roadmap: GSD Core Nexus \d+\.\d+(\.\d+)?/g, `# Roadmap: GSD Core Nexus ${version}`);
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(roadmapPath, content, 'utf8');
+      changed.push('.planning/ROADMAP.md');
+    }
+  }
+
+  const projectPath = path.join(root, '.planning', 'PROJECT.md');
+  if (fs.existsSync(projectPath)) {
+    let content = fs.readFileSync(projectPath, 'utf8');
+    const prev = content;
+    content = content.replace(/# GSD Core Nexus \d+\.\d+/g, `# GSD Core Nexus ${majorMinor}`);
+    if (content !== prev) {
+      if (!dryRun) fs.writeFileSync(projectPath, content, 'utf8');
+      changed.push('.planning/PROJECT.md');
+    }
+  }
+
   return changed;
 }
 
@@ -328,6 +351,16 @@ function checkRepositoryVersionSync(opts = {}) {
       if (m && m[1] !== majorMinor) {
         drift.push({ manifest: rel, found: m[1], expected: majorMinor });
       }
+    }
+  }
+
+  // Check .planning/ROADMAP.md
+  const roadmapPath = path.join(root, '.planning', 'ROADMAP.md');
+  if (fs.existsSync(roadmapPath)) {
+    const content = fs.readFileSync(roadmapPath, 'utf8');
+    const m = content.match(/# Roadmap: GSD Core Nexus (\d+\.\d+(?:\.\d+)?)/);
+    if (m && m[1] !== version) {
+      drift.push({ manifest: '.planning/ROADMAP.md', found: m[1], expected: version });
     }
   }
 

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.4.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.5.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -43,6 +43,8 @@ const sessionLoggerMod = require("./session-logger.cjs");
 const visualGraphMod = require("./visual-graph-exporter.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const canvasGenMod = require("./canvas-roadmap-generator.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const observabilityHtmlMod = require("./observability-html-dashboard.cjs");
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles } = codebaseAst;
@@ -343,7 +345,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD Core Nexus 3.4 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core Nexus 3.5 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
@@ -355,7 +357,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
                 data: { telemetry },
-                message: `GSD Core Nexus 3.4 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                message: `GSD Core Nexus 3.5 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
         case 'plan': {
@@ -426,6 +428,39 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             catch {
                 // Non-blocking in mock environments
             }
+            // Auto-record telemetry for exec (Wave 4, D-112)
+            try {
+                let execChars = 0;
+                const targetFiles = filesToModify.length > 0 ? filesToModify : ['<active-phase>'];
+                for (const tf of filesToModify) {
+                    const fullP = node_path_1.default.isAbsolute(tf) ? tf : node_path_1.default.join(cwd, tf);
+                    if (node_fs_1.default.existsSync(fullP)) {
+                        try {
+                            execChars += node_fs_1.default.readFileSync(fullP, 'utf8').length;
+                        }
+                        catch {
+                            execChars += 1000;
+                        }
+                    }
+                    else {
+                        execChars += 500;
+                    }
+                }
+                const execTokens = Math.max(100, Math.ceil(execChars / 4));
+                const graph = loadCodebaseGraph(planningDir) || buildCodebaseGraph(cwd);
+                let repoChars = 0;
+                if (graph && graph.files) {
+                    for (const f of Object.values(graph.files)) {
+                        const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
+                        repoChars += (f.linesCount || 10) * weight;
+                    }
+                }
+                const fullRepoBaseline = Math.max(5000, Math.ceil(repoChars / 4), execTokens * 5);
+                recordJitInvocation(planningDir, targetFiles, execTokens, fullRepoBaseline, 'exec', phaseId, `exec_${phaseId || 'active'}_${Date.now()}`);
+            }
+            catch {
+                // Non-blocking telemetry
+            }
             return {
                 command: 'exec',
                 action: 'EXECUTE_PHASE',
@@ -488,6 +523,35 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             catch {
                 // Non-blocking
             }
+            // Auto-record telemetry for verify (Wave 4, D-112)
+            try {
+                const summaryPath = node_path_1.default.join(planningDir, 'phases', `${phaseId}-SUMMARY.md`);
+                const targetFiles = [];
+                let verifyChars = 0;
+                if (node_fs_1.default.existsSync(summaryPath)) {
+                    targetFiles.push(node_path_1.default.relative(cwd, summaryPath));
+                    try {
+                        verifyChars += node_fs_1.default.readFileSync(summaryPath, 'utf8').length;
+                    }
+                    catch {
+                        verifyChars += 1000;
+                    }
+                }
+                const verifyTokens = Math.max(100, Math.ceil(verifyChars / 4));
+                const graph = loadCodebaseGraph(planningDir) || buildCodebaseGraph(cwd);
+                let repoChars = 0;
+                if (graph && graph.files) {
+                    for (const f of Object.values(graph.files)) {
+                        const weight = (f.language && LANGUAGE_CHAR_WEIGHTS[f.language.toLowerCase()]) || 45;
+                        repoChars += (f.linesCount || 10) * weight;
+                    }
+                }
+                const fullRepoBaseline = Math.max(5000, Math.ceil(repoChars / 4), verifyTokens * 5);
+                recordJitInvocation(planningDir, targetFiles.length > 0 ? targetFiles : ['<verification-summary>'], verifyTokens, fullRepoBaseline, 'verify', phaseId, `verify_${phaseId || 'active'}_${Date.now()}`);
+            }
+            catch {
+                // Non-blocking telemetry
+            }
             return {
                 command: 'verify',
                 action: 'VERIFY_WORK',
@@ -521,7 +585,23 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         }
         case 'tokens': {
-            const dashboard = renderTokenDashboard(planningDir);
+            const isWeb = Boolean(options.args.includes('--web') ||
+                options.args.includes('--html') ||
+                options.flags?.['web'] ||
+                options.flags?.['html']);
+            if (isWeb) {
+                const { htmlPath, snapshot } = observabilityHtmlMod.exportObservabilityDashboard(planningDir);
+                return {
+                    command: 'tokens',
+                    action: 'EXPORT_OBSERVABILITY_DASHBOARD',
+                    nextStep: 'open .planning/intel/dashboard.html in browser to view visual telemetry',
+                    data: snapshot,
+                    message: `Observability 360° visual dashboard exported to ${htmlPath}. Open in your browser to inspect interactive graphs and dynamic cost simulator.`,
+                };
+            }
+            const viewOption = options.args.find(a => a === '--sessions' || a === '--cost' || a === '--all')
+                || (options.flags?.['sessions'] ? '--sessions' : (options.flags?.['cost'] ? '--cost' : (options.flags?.['all'] ? '--all' : undefined)));
+            const dashboard = renderTokenDashboard(planningDir, viewOption);
             const telemetry = getTelemetrySummary(planningDir);
             return {
                 command: 'tokens',
@@ -552,7 +632,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'help',
                 action: 'DISPLAY_HELP',
                 nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-                message: 'GSD Core Nexus 3.4 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
+                message: 'GSD Core Nexus 3.5 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
             };
     }
 }

@@ -76,6 +76,21 @@ Inspeciona e registra métricas de economia de contexto gravadas em `.planning/i
 node gsd-tools.cjs tokens
 node gsd-tools.cjs telemetry dashboard
 
+# Modos de visão especializados (sessões operacionais, custos financeiros, tudo)
+node gsd-tools.cjs telemetry dashboard --sessions
+node gsd-tools.cjs telemetry dashboard --cost
+node gsd-tools.cjs telemetry dashboard --all
+
+# Exportar e abrir dashboard HTML 100% offline no navegador
+node gsd-tools.cjs telemetry web [--open]
+
+# Atalhos NPM convenientes
+npm run tokens
+npm run tokens:sessions
+npm run tokens:cost
+npm run tokens:all
+npm run dashboard
+
 # Emite resumo JSON de alto nível com tokens usados, evitados, poupados e compressão
 node gsd-tools.cjs telemetry summary --raw
 

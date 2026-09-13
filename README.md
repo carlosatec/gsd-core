@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-3.4.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.5.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,15 +35,15 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 3.4 Highlights
+## GSD Core Nexus 3.5 Highlights
 
-GSD Core Nexus 3.4 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
+GSD Core Nexus 3.5 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
 1. **Universal 360° AST & Native Knowledge Graph (Zero Python):** Native static code analysis in pure TypeScript across 35+ extensions with full **Mobile 360°** support (iOS Swift/SwiftUI, Android Kotlin/Compose) and PageRank architectural ranking.
 2. **Quality-First JIT & Transitive Type Closure:** Deep recursive type discovery up to 3 degrees (BFS 3 hops), eliminating context rot and saving **80% to 95% of tokens**.
 3. **Strict 11 Canonical Unified Commands:** Streamlined public surface (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `graph`, `help`) with fail-closed dispatch and zero confusing duplicates across all AI runtimes.
 4. **Causal Session Intelligence & Deterministic Replay CLI (`gsd-tools session`):** Append-only JSONL execution logging with 32 KB smart trimming, secret sanitization, ring buffer (50 sessions / 30 days), and terminal timeline replay.
-5. **Holistic Multi-Command Token Telemetry (65-Column Dashboard):** Real-time context observability backed by transactional file locking (`withFileLockSync`) across `plan`, `exec`, `review`, and `auto`.
+5. **Observability 360° & Real-Time Token Dashboard:** Operational session telemetry (reliability, latency, tool calls), adaptive financial modeling ($ USD spend across Claude, GPT-4o, Gemini, DeepSeek, and local LLMs), 65-column adaptive terminal UI (`/gsd-tokens`), and 100% offline standalone HTML/SVG web dashboard (`npm run dashboard`).
 6. **Dual-Mode Code Review with Autonomous Repair (`--fix`):** Surgical targeted reviews saving 80–95% tokens via JIT, alongside zero-cost whole-repository AST audits (`--full` / `--repo`).
 7. **1st-Class DeepSeek Harness Support (`@deepseek-ai/dsh`):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution.
 
@@ -73,10 +73,10 @@ New here? Check the [Complete Practical GSD Tutorial](docs/tutorials/practical-t
 
 ## Documentation
 
-**What's new in GSD Core Nexus 3.4** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 3.5** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 3.4](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 3.5](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 

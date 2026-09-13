@@ -13,9 +13,9 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (GSD 3.4)
+## Interface Canônica Unificada (GSD 3.5)
 
-A partir do GSD 3.4, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 3.5, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
@@ -50,17 +50,36 @@ O GSD 3.3 introduz uma distinção explícita entre revisões seletivas focadas 
 
 ---
 
-### CLI de Telemetria Holística de Tokens (`/gsd-tokens` & `gsd-tools tokens`)
+### CLI de Telemetria Holística & Observabilidade 360° (`/gsd-tokens` & `gsd-tools tokens`)
 
-A telemetria de tokens no GSD 3.3 monitora o consumo em **todas** as etapas operacionais — incluindo `plan`, `exec` e `review`. As gravações são protegidas por lock atômico cooperativo (`withFileLockSync`) e deduplicação (`invocationId`).
+A telemetria de tokens no GSD 3.5 monitora o consumo de contexto e operações de agentes em **todas** as etapas — incluindo `plan`, `exec`, `review` e `verify`. As gravações são protegidas por lock atômico cooperativo (`withFileLockSync`) e deduplicação (`invocationId`).
+
+A suíte de Observabilidade 360° disponibiliza métricas operacionais (sessões, latência, taxa de sucesso), cálculo financeiro adaptativo ($ USD nos modelos Claude, GPT, Gemini, DeepSeek e Locais) e um dashboard HTML interativo 100% offline:
 
 ```bash
 # Exibe o painel ASCII de 65 colunas responsivo
 /gsd-tokens
 
+# Sub-paineis granulares (sessões operacionais, custos financeiros, tudo)
+/gsd-tokens --sessions
+/gsd-tokens --cost
+/gsd-tokens --all
+
+# Exportar e abrir dashboard HTML 100% offline no navegador (.planning/intel/dashboard.html)
+/gsd-tokens --web --open
+
 # Execução direta via CLI pelo gsd-tools
-node gsd-core/bin/gsd-tools.cjs tokens
+node gsd-core/bin/gsd-tools.cjs tokens [--sessions|--cost|--all|--web]
+node gsd-core/bin/gsd-tools.cjs telemetry dashboard [--sessions|--cost|--all]
+node gsd-core/bin/gsd-tools.cjs telemetry web [--open]
 node gsd-core/bin/gsd-tools.cjs telemetry summary --raw
+
+# Scripts NPM integrados
+npm run tokens
+npm run tokens:sessions
+npm run tokens:cost
+npm run tokens:all
+npm run dashboard
 
 # Gravação manual com estimativa automática a partir de arquivos físicos
 node gsd-core/bin/gsd-tools.cjs telemetry record --command review --from-files src/app.ts,src/utils.ts

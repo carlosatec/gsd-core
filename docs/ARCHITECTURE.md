@@ -37,20 +37,20 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
                                                              │
 ┌────────────────────────────────────────────────────────────▼────────────────────────────────────────────────────────────┐
 │                                 NEXUS UNIFIED WORKFLOW HUB (Fases 4 e 12 — D-41)                                        │
-│   src/unified-workflow-hub.cts ── Super-Hub dos 10 Comandos Canônicos:                                                 │
+│   src/unified-workflow-hub.cts ── Super-Hub dos 11 Comandos Canônicos:                                                 │
 │   /gsd-status · /gsd-plan · /gsd-exec · /gsd-review · /gsd-verify · /gsd-ship                                           │
-│   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-help                                                                    │
+│   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-graph · /gsd-help                                                       │
 └──────┬─────────────────────────────┬─────────────────────────────┬─────────────────────────────┬────────────────────────┘
        │                             │                             │                             │
        │ (Despacho com JIT)          │ (Despacho com Guardrails)   │ (Auto-Upgrade & Telemetria) │ (Logs & Replay — Fase 14)
 ┌──────▼──────────────────────┐ ┌────▼──────────────────────┐ ┌────▼────────────────────────┐ ┌────▼────────────────────────┐
 │  NEXUS JIT CONTEXT INJECTOR │ │ PRE-FLIGHT GUARDRAILS &   │ │ NEXUS TELEMETRY &          │ │ NEXUS SESSION INTELLIGENCE │
-│(Fases 2,8,9,20 — D-03,D-99) │ │ SELF-HEALING (Fases 3,20) │ │ OBSERVABILITY (Fases 5, 7) │ │ & DETERMINISTIC REPLAY     │
+│(Fases 2,8,9,20 — D-03,D-99) │ │ SELF-HEALING (Fases 3,20) │ │ OBSERVABILITY (5, 7, 25)   │ │ & DETERMINISTIC REPLAY     │
 │ src/jit-context-injector.cts│ │ src/preflight-guardrails  │ │ src/jit-telemetry.cts      │ │ (Fase 14 — D-54, D-55, D-56│
-│ - Quality-First Type Closure│ │ - inMemoryPathSet O(1)<15m│ │ src/token-dashboard-render │ │ src/session-logger.cts     │
-│ - BFS 3-Hops / 50 Tipos Cap │ │ - SIGNATURE_DRIFT Warning │ │ - Dashboard ASCII 65 col   │ │ src/session-replay.cts     │
-│ - Orçamento elástico por LLM│ │ - CO_EVOLVE_CALLERS Action│ │ - Schema v2.0 multidimens. │ │ - Smart Trimming (32 KB)   │
-│ - Fast path dryRun (S-02)   │ │ - EMPTY_FILE_GUARD / Trunc│ │ - Rastreio Peak Burst      │ │ - Ring Buffer (50/30d)     │
+│ - Quality-First Type Closure│ │ - inMemoryPathSet O(1)<15m│ │ src/observability-aggregat │ │ src/session-logger.cts     │
+│ - BFS 3-Hops / 50 Tipos Cap │ │ - SIGNATURE_DRIFT Warning │ │ src/observability-html-dash│ │ src/session-replay.cts     │
+│ - Orçamento elástico por LLM│ │ - CO_EVOLVE_CALLERS Action│ │ - 360 ASCII & Offline HTML │ │ - Smart Trimming (32 KB)   │
+│ - Fast path dryRun (S-02)   │ │ - EMPTY_FILE_GUARD / Trunc│ │ - Financial ($ USD) & Sess │ │ - Ring Buffer (50/30d)     │
 └──────┬──────────────────────┘ └────┬──────────────────────┘ └────┬───────────────────────┘ │ - Sanitização de Segredos  │
        │                             │                             │                         │ - Alimentação Anti-Patterns│
        │                             │                             │                         └────┬───────────────────────┘
@@ -378,6 +378,26 @@ The Session Intelligence subsystem provides causal observability and determinist
 
 3. **Unified Version Management & Release System (`scripts/bump-version.cjs` — D-58):**
    - Orchestrates atomic, 1-step SemVer bumps (`npm run version:bump <version>`) across `package.json`, 49 capability manifests, core TypeScript modules, badges, and derived artifact pipelines (`npm run version:check`).
+
+### Observability 360° & Telemetry Aggregator Subsystem (`src/observability-aggregator.cts`, `src/token-dashboard-renderer.cts`, `src/observability-html-dashboard.cts`, Phase 25 — D-146 to D-152)
+
+The Observability 360° subsystem delivers end-to-end operational, financial, and web-based telemetry across all GSD Core Nexus workflow phases:
+
+1. **Pure TypeScript Metric Aggregator (`src/observability-aggregator.cts`):**
+   - Ingests append-only telemetry events (`.planning/intel/telemetry.json`) and session execution logs (`.planning/intel/sessions/`).
+   - Aggregates operational sessions: computes total runtime duration, session success/failure ratios, file mutation volume, and tool invocation distribution.
+   - Computes adaptive financial spend and gross dollar savings ($ USD) across major model families (Claude 3.7/3.5 Sonnet, GPT-4o, Gemini 2.0 Pro, DeepSeek, and Local models) with configurable pricing overrides in `.planning/config.json`.
+   - Generates structured operational, financial, and combined summaries with zero external runtime dependencies.
+
+2. **Adaptive 65-Column Terminal Dashboard (`src/token-dashboard-renderer.cts`):**
+   - Renders formatted terminal dashboards matching the GSD standard 65-column layout.
+   - Supports 4 visual view modes: `compact` (token savings & compression ratio), `detailed` (full operational & financial cards), `financial` (dollar spend & provider breakdown), and `operations` (session latency & tool calls).
+   - Features ASCII and UTF-8 Unicode box-drawing fallback for cross-platform compatibility across CI, Windows PowerShell, and macOS/Linux.
+
+3. **Standalone Offline HTML/SVG Web Dashboard (`src/observability-html-dashboard.cts`):**
+   - Generates `.planning/intel/dashboard.html` with zero CDN dependencies and 100% offline self-containment.
+   - Pure SVG visualizations for token compression gauges, cost distribution, and PageRank architectural hubs.
+   - Compliant with GSD UI design token heuristics (CSS variables `--primary`, `--accent`, `--success`, `--warning`, and `rgb(...)` definitions).
 
 ### Context Predicate Fact-Store (`src/context-predicates.cts`, ADR-1671)
 

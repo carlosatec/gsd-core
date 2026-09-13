@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 3.4
+# Guia do Usuário — GSD Core Nexus 3.5
 
-Guia prático e narrativo do GSD Core Nexus 3.4 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 3.5 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -29,7 +29,7 @@ Guia prático e narrativo do GSD Core Nexus 3.4 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 10 Comandos
 
-A partir do GSD Core Nexus 3.4, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.5, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -40,8 +40,8 @@ A partir do GSD Core Nexus 3.4, a interface pública é simplificada e consolida
 | `/gsd-verify` | UAT conversacional e validação dos critérios de aceitação | `[fase]`, `--strict` |
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
-| `/gsd-tokens` | Dashboard de telemetria em tempo real multi-comando, taxa de compressão e economia JIT | `--raw`, `--history`, `gsd-tools tokens` |
-| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.4 | `--dry-run`, `--force` |
+| `/gsd-tokens` | Painel de telemetria multi-comando em tempo real, sessões operacionais, cálculo financeiro e web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
+| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.5 | `--dry-run`, `--force` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
 ---
@@ -68,7 +68,7 @@ Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.m
 
 ## Inteligência de Sessão & Replay Determinístico CLI
 
-O GSD Core Nexus 3.4 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+O GSD Core Nexus 3.5 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
 
 ```bash
 # Replay da última sessão no terminal
@@ -199,22 +199,26 @@ Aplicações front-end mantêm consistência visual através de contratos de des
 
 ---
 
-## Telemetria de Tokens e Economia de Contexto
+## Telemetria de Tokens & Observabilidade 360°
 
-O GSD Nexus inclui observabilidade técnica pura sobre a injeção cirúrgica de contexto JIT, economia de tokens e compressão de grafo (sem métricas financeiras ou suposições de custo):
+O GSD Nexus inclui uma suíte de Observabilidade 360° para injeção cirúrgica de contexto JIT, confiabilidade operacional de agentes, cálculos financeiros adaptativos e painéis visuais interativos:
 
 ```bash
-/gsd-tokens
+/gsd-tokens               # Painel unificado responsivo em ASCII de 65 colunas
+/gsd-tokens --sessions    # Métricas de sessões (duração, tool calls, taxa de sucesso)
+/gsd-tokens --cost        # Estimativa de custos e economia em dólar ($ USD por provedor)
+/gsd-tokens --all         # Painel completo tudo-em-um no terminal
+/gsd-tokens --web --open  # Exporta e abre dashboard HTML 100% offline (.planning/intel/dashboard.html)
 ```
 
-Exibe um painel responsivo em ASCII de 65 colunas contendo:
-- **Observabilidade Multi-Comando no Ciclo de Vida:** Rastreamento real de consumo e economia de tokens em `plan`, `exec` e `review`.
-- **Tokens JIT Utilizados vs Evitados:** Compara o contexto cirúrgico do grafo AST contra o peso monolítico total do repositório.
-- **Fator de Redução / Compressão de Grafo:** Taxa em tempo real ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrando o ganho de densidade (ex: `10895.2x`).
-- **Lock Cooperativo Transacional:** Protegido por `withFileLockSync` com descarte de locks expirados, evitando perdas de dados sob concorrência paralela de subagentes.
-- **Diagnóstico Pré-Execução no Ciclo de Vida:** Exibe nota orientadora se houver planos/reviews ativos antes do disparo da execução.
-- **Transparência em Modo Duplo:** Diferencia com precisão revisões cirúrgicas de fase (`targeted`, 80-95% poupados) de auditorias globais (`full-repo`, com `tokensSaved = 0` e badge `review (full-repo)`).
-- **Subcomandos CLI & Seam:** `gsd-tools tokens`, `gsd-tools telemetry summary` e `gsd-tools telemetry record`.
+Principais recursos:
+- **Confiabilidade Operacional de Sessões:** Rastreia latência de execução, chamadas de ferramentas, gravações de arquivos e taxas de sucesso em `.planning/intel/sessions/`.
+- **Cálculo Financeiro Adaptativo:** Calcula o gasto real de API e a economia bruta em dólares ($ USD) para Claude 3.7/3.5 Sonnet, GPT-4o, Gemini 2.0 Pro, DeepSeek e Modelos Locais, com suporte a preços customizados em `.planning/config.json`.
+- **Dashboard HTML Standalone 100% Offline:** Gera `.planning/intel/dashboard.html` sem qualquer dependência de CDNs externas, com gráficos SVG puros, tabelas de hubs PageRank e simulador dinâmico de custos.
+- **Hooks Zero-Touch no Ciclo de Vida:** Captura automaticamente telemetria em `plan`, `exec`, `review` e `verify` com deduplicação por ID de correlação (`invocationId`).
+- **Fator de Redução / Compressão de Grafo:** Taxa em tempo real ($R = \max(1.0, \text{monolithicTokens} / \text{jitTokens})$) demonstrando o ganho de densidade (ex: `4.0x` a `10895.2x`).
+- **Lock Cooperativo Transacional:** Protegido por `withFileLockSync` com descarte de locks expirados, evitando perdas de dados sob concorrência paralela.
+- **Subcomandos CLI & Scripts NPM:** Acesso direto via `gsd-tools tokens`, `gsd-tools telemetry dashboard`, `npm run tokens`, `npm run tokens:cost` e `npm run dashboard`.
 
 ---
 

@@ -383,6 +383,8 @@
       "model-profiles.cjs",
       "model-resolver.cjs",
       "normalize-test-command.cjs",
+      "observability-aggregator.cjs",
+      "observability-html-dashboard.cjs",
       "observability/event.cjs",
       "observability/logger.cjs",
       "observability/redaction.cjs",

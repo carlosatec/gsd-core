@@ -41,7 +41,12 @@ const testFiles = [
   'tests/bump-version.test.cjs',
   'tests/uninstall-self-repo-guard.test.cjs',
   'tests/telemetry-multi-command.test.cjs',
-  'tests/mcp-server-security.test.cjs'
+  'tests/mcp-server-security.test.cjs',
+  'tests/holistic-token-telemetry.test.cjs',
+  'tests/observability-aggregator.test.cjs',
+  'tests/token-dashboard-renderer.test.cjs',
+  'tests/observability-html-dashboard.test.cjs',
+  'tests/unified-workflow-hub-observability.test.cjs'
 ];
 
 const concurrency = Math.max(1, Math.min(os.cpus()?.length || 2, 4));

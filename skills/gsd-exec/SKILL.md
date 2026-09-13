@@ -36,5 +36,5 @@ Arguments: $ARGUMENTS
 1. Run pre-flight static verification against AST contracts and export signatures.
 2. Execute tasks per wave, running test suites after each task.
 3. If tests fail, run automated self-healing loop to diagnose and repair.
-4. Generate SUMMARY.md and record token telemetry.
+4. Generate SUMMARY.md and record token telemetry via `node gsd-core/bin/gsd-tools.cjs telemetry record --command exec` (or `gsd_run telemetry record --command exec`, forwarding `--phase`).
 </process>

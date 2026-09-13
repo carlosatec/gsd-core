@@ -40,7 +40,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'en'),
-      'Upgrade legacy project to GSD Core Nexus 3.4 architecture'
+      'Upgrade legacy project to GSD Core Nexus 3.5 architecture'
     );
   });
 
@@ -59,7 +59,7 @@ describe('i18n-descriptions', () => {
     );
     assert.strictEqual(
       getCommandDescription('migrate', 'pt-br'),
-      'Modernizar projeto legado para a arquitetura GSD Core Nexus 3.4'
+      'Modernizar projeto legado para a arquitetura GSD Core Nexus 3.5'
     );
     assert.strictEqual(
       getCommandDescription('review', 'pt-br'),

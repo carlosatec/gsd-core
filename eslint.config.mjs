@@ -140,6 +140,8 @@ export default tseslint.config(
       'gsd-core/bin/lib/runtime-name-policy.cjs',
       'gsd-core/bin/lib/runtime-slash.cjs',
       'gsd-core/bin/lib/observability/event.cjs',
+      'gsd-core/bin/lib/observability-aggregator.cjs',
+      'gsd-core/bin/lib/observability-html-dashboard.cjs',
       'gsd-core/bin/lib/workstream-inventory-builder.cjs',
       'gsd-core/bin/lib/plan-scan.cjs',
       'gsd-core/bin/lib/fallow-runner.cjs',
