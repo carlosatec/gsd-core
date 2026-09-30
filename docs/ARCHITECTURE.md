@@ -1075,6 +1075,27 @@ Introduced in Phase 22 to extend telemetry beyond execution waves across the ent
 - **Root-Anchored Guardrails (D-119):** Anchors all filesystem existence checks in `checkPathExists` to `path.resolve(root, p)`, completely eliminating working directory drift.
 - **Deterministic 65-Column ASCII Terminal Dashboard (D-116):** Standardized box-drawing layout (`INNER_WIDTH = 63`), canonical command ordering (`plan` → `review` → `exec`), badge labeling, and pre-exec lifecycle diagnostic notes.
 
+### 6. AST Semantic Engine & Resilience (Phase 27 / D-148)
+Introduced in Phase 27 to evolve GSD's AST engine from structural topology into deep semantic intelligence and graph resilience:
+- **Route Security Guards & Data Access Heuristics:**
+  - `inspectRouteSecurityGuards`: Detects rate limiting (`checkRateLimit`, `throttle`), authentication guards (`headers.get('authorization')`, `CRON_SECRET`), webhook signature validation (`verifySignature`, `stripe-signature`), and flags unauthenticated public endpoints.
+  - `inspectRouteDataAccess`: Classifies ORM queries vs mutations (`readsDb`, `writesDb`, `mutatesDb`) and external HTTP fetch calls, tracking touched models and sensitive fields.
+  - Next.js App Router HTTP handlers (`GET`, `POST`, `DELETE`, etc.) and Server Actions (`"use server"`) extracted and analyzed automatically.
+- **Intra-File Call Graph & Zombie Imports (`unusedImports`):**
+  - Scans identifier references across file bodies outside import declarations to identify unreferenced dependencies.
+  - Maintains strict backwards compatibility: declared dependencies remain in `externalDeps`/`localDeps` while zombie imports are surfaced as warnings during review.
+- **Toolchain & Infrastructure Entrypoint Allowlist:**
+  - 18 core toolchain files (`next.config.*`, `tailwind.config.*`, `vite.config.*`, `tsconfig.json`, `eslint.config.*`, `docker-compose.yml`, etc.) are assigned role `infrastructure-root` and exempt from orphan flagging.
+  - Visual Knowledge Graph displays infrastructure nodes with distinct slate grey styling (`#64748b`) and `[INFRA]` labels.
+- **Causal Circular Dependency Tracing:**
+  - `findCircularDependencyPath`: Graph traversal tracing the exact causal cycle path (e.g. `a.ts -> b.ts -> c.ts -> a.ts`), integrated directly into preflight guardrails warning messages.
+- **Transitive Blast Radius (`calculateBlastRadius`):**
+  - Traverses reverse dependencies up to 3 hops, returning direct dependents, transitive dependents, impacted HTTP routes, PageRank weight, and composite `impactScore`.
+- **Duplicate Symbol Divergence Comparator (`compareDuplicateSymbols`):**
+  - Compares duplicate symbol signatures, kinds, and export visibility across files, identifying subtle implementation divergence.
+- **God Object Coupling Ratio (`isGodObject`):**
+  - Computes `couplingRatio = linesCount / max(exports, 1)`. Identifies monolithic files (>800 lines, $\le$2 exports) and flags them in `/gsd-review`.
+
 ---
 
 ## Related

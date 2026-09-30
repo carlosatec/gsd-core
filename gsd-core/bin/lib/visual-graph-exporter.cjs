@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Visual Knowledge Graph Exporter — GSD Core Nexus 3.5
+ * Visual Knowledge Graph Exporter — GSD Core Nexus 3.6
  *
  * Generates an interactive, standalone, zero-dependency HTML/Canvas 2D visualization
  * of the repository knowledge graph stored in `.planning/intel/codebase-graph.json`.
@@ -34,6 +34,7 @@ const PALETTE = {
     test: '#facc15', // Amber Yellow
     alert: '#f43f5e', // Rose/Red
     route: '#60a5fa', // Light Blue
+    infrastructure: '#64748b', // Slate / Steel Grey
 };
 // ─── Graph Extraction Engine ──────────────────────────────────────────────────
 /**
@@ -56,16 +57,17 @@ function buildVisualGraphPayload(planningDir, rootDir) {
     // 1. Process Code Files & Tests from CodebaseGraph
     const pageRankScores = graph.pageRankScores || {};
     for (const [fileRel, fileData] of Object.entries(graph.files)) {
+        const isInfra = fileData.role === 'infrastructure-root';
         const isTest = fileRel.includes('test') || fileRel.includes('spec') ||
             fileRel.endsWith('.test.cjs') || fileRel.endsWith('.test.js') || fileRel.endsWith('.test.ts') || fileRel.endsWith('.test.cts') ||
             fileRel.endsWith('_test.go') || fileRel.endsWith('_test.py') || fileRel.endsWith('_test.dart') ||
             fileRel.includes('Test.kt') || fileRel.includes('Spec.kt');
-        const type = isTest ? 'test' : 'code';
+        const type = isInfra ? 'infrastructure' : (isTest ? 'test' : 'code');
         const prScore = pageRankScores[fileRel] || 0.01;
         const radius = Math.min(22, Math.max(5, Math.round(prScore * 45 + 5)));
         addNode({
             id: fileRel,
-            label: node_path_1.default.basename(fileRel),
+            label: (isInfra ? '[INFRA] ' : '') + node_path_1.default.basename(fileRel),
             type,
             pageRank: Number(prScore.toFixed(4)),
             radius,
@@ -76,6 +78,10 @@ function buildVisualGraphPayload(planningDir, rootDir) {
             details: {
                 language: fileData.language || 'generic',
                 linesCount: fileData.linesCount || 0,
+                role: fileData.role || (isTest ? 'test' : 'module'),
+                isOrphan: fileData.isOrphan ?? false,
+                couplingRatio: fileData.couplingRatio ?? 0,
+                isGodObject: fileData.isGodObject ?? false,
             },
         });
         // Add import links
@@ -412,6 +418,7 @@ function generateVisualGraphHtml(payload) {
           <span class="pill" style="background:#34d39922; color:#34d399; border-color:#34d399;" onclick="toggleFilter('code', this)">Code</span>
           <span class="pill" style="background:#facc1522; color:#facc15; border-color:#facc15;" onclick="toggleFilter('test', this)">Tests</span>
           <span class="pill" style="background:#60a5fa22; color:#60a5fa; border-color:#60a5fa;" onclick="toggleFilter('route', this)">Routes</span>
+          <span class="pill" style="background:#64748b22; color:#94a3b8; border-color:#64748b;" onclick="toggleFilter('infrastructure', this)">Infra</span>
           <span class="pill" style="background:#f43f5e22; color:#f43f5e; border-color:#f43f5e;" onclick="toggleFilter('alert', this)">Alerts</span>
         </div>
       </div>
@@ -437,6 +444,7 @@ function generateVisualGraphHtml(payload) {
       <div class="legend-item"><span class="dot" style="background:#38bdf8;"></span> Phases (${payload.stats.totalPhases})</div>
       <div class="legend-item"><span class="dot" style="background:#34d399;"></span> Code (${payload.stats.totalFiles})</div>
       <div class="legend-item"><span class="dot" style="background:#facc15;"></span> Tests</div>
+      <div class="legend-item"><span class="dot" style="background:#64748b;"></span> Infra</div>
       <div class="legend-item" style="margin-left:16px;">Total Nodes: ${payload.stats.totalNodes} | Links: ${payload.stats.totalLinks}</div>
     </div>
 

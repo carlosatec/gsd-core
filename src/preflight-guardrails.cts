@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
-const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph, findCircularDependencyPath } = codebaseAst;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -348,8 +348,18 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
           });
         }
       }
+    }
 
-      // Check 3: Circular Dependency Detection
+    // Check 3: Circular Dependency Detection (runs for all target files)
+    const cyclePath = typeof findCircularDependencyPath === 'function' ? findCircularDependencyPath(activeGraph, normalized) : null;
+    if (cyclePath && cyclePath.length > 0) {
+      violations.push({
+        rule: 'CIRCULAR_DEPENDENCY',
+        severity: 'warning',
+        file: normalized,
+        message: `Circular dependency detected: ${cyclePath.join(' -> ')}`,
+      });
+    } else {
       const hasCycle = detectCycleInGraph(activeGraph, normalized, (deepNode) => {
         violations.push({
           rule: 'CIRCULAR_DEPENDENCY',

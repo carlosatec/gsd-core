@@ -37,6 +37,16 @@ const DEFAULT_EXTENSIONS = new Set([
     // DevOps & Shell
     '.sh', '.bash', '.zsh', '.yaml', '.yml'
 ]);
+const INFRASTRUCTURE_ENTRYPOINTS = new Set([
+    'next.config.ts', 'next.config.js', 'next.config.mjs',
+    'docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml', 'dockerfile',
+    'eslint.config.mjs', 'eslint.config.js', 'eslint.config.cjs',
+    'postcss.config.mjs', 'postcss.config.js', 'postcss.config.cjs',
+    'tailwind.config.ts', 'tailwind.config.js', 'tailwind.config.mjs',
+    'prisma.config.ts', 'vite.config.ts', 'vite.config.js',
+    'vitest.config.ts', 'vitest.config.js',
+    'tsconfig.json', 'tsconfig.build.json'
+]);
 const SPECIAL_FILENAMES = new Set([
     'dockerfile',
     'docker-compose.yml',
@@ -55,7 +65,16 @@ const SPECIAL_FILENAMES = new Set([
     'go.mod',
     'pyproject.toml',
     'requirements.txt',
-    'pubspec.yaml'
+    'pubspec.yaml',
+    'next.config.ts',
+    'next.config.js',
+    'next.config.mjs',
+    'eslint.config.mjs',
+    'postcss.config.mjs',
+    'tailwind.config.ts',
+    'prisma.config.ts',
+    'vite.config.ts',
+    'tsconfig.json'
 ]);
 const DEFAULT_EXCLUDES = [
     'node_modules',
@@ -84,6 +103,258 @@ const DEFAULT_EXCLUDES = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toPosixPath(filePath) {
     return filePath.replace(/\\/g, '/');
+}
+// ─── Semantic Security & Topology Helpers ─────────────────────────────────────
+const SECURITY_PATTERNS = {
+    rateLimit: [
+        /checkratelimit/i,
+        /ratelimit/i,
+        /ratelimiter/i,
+        /throttle/i,
+        /limiter\.consume/i,
+        /rate-limit/i,
+    ],
+    authGuard: [
+        /\bauth\b/i,
+        /getsession/i,
+        /verifytoken/i,
+        /cron_secret/i,
+        /headers\.get\(['"]authorization['"]\)/i,
+        /headers\.get\(['"]x-cron-secret['"]\)/i,
+        /requireuser/i,
+        /validatesession/i,
+    ],
+};
+function inspectRouteSecurityGuards(codeBlock) {
+    const detectedPatterns = [];
+    const hasRateLimit = SECURITY_PATTERNS.rateLimit.some(p => {
+        const m = p.test(codeBlock);
+        if (m)
+            detectedPatterns.push(p.source);
+        return m;
+    });
+    const hasAuthGuard = SECURITY_PATTERNS.authGuard.some(p => {
+        const m = p.test(codeBlock);
+        if (m)
+            detectedPatterns.push(p.source);
+        return m;
+    });
+    const hasSignatureValidation = /verifySignature|signature|webhook_secret|stripe-signature/i.test(codeBlock);
+    if (hasSignatureValidation)
+        detectedPatterns.push('signature_validation');
+    const hasGuards = hasRateLimit || hasAuthGuard || hasSignatureValidation;
+    const isPublic = !hasGuards;
+    return {
+        hasGuards,
+        hasRateLimit,
+        hasAuthGuard,
+        hasAuthCheck: hasAuthGuard,
+        hasSignatureValidation,
+        isPublic,
+        detectedPatterns,
+    };
+}
+const SENSITIVE_PATTERNS = [
+    /\b(?:password|hash|salt|secret|token|apiKey|api_key|credit_card|creditCard|cardNumber|cvv|cpf|ssn)\b/i,
+];
+function inspectRouteDataAccess(codeBlock) {
+    const modelsAccessed = [];
+    const sensitiveFields = [];
+    const modelMatches = codeBlock.matchAll(/(?:prisma|db|models|repository)\.([a-zA-Z0-9_$]+)\.(?:find|create|update|delete|upsert)/gi);
+    for (const m of modelMatches) {
+        if (m[1] && !modelsAccessed.includes(m[1])) {
+            modelsAccessed.push(m[1]);
+        }
+    }
+    const readsDb = /\b(?:findUnique|findFirst|findMany|query|select|get)\b/i.test(codeBlock) || modelsAccessed.length > 0;
+    const writesDb = /\b(?:create|update|delete|upsert|insert|drop|truncate|mutate)\b/i.test(codeBlock);
+    const isMutation = writesDb;
+    const hasExternalFetch = /\b(?:fetch\(|axios\.|ky\.|got\(|request\()/i.test(codeBlock);
+    for (const p of SENSITIVE_PATTERNS) {
+        const match = codeBlock.match(p);
+        if (match && !sensitiveFields.includes(match[0].toLowerCase())) {
+            sensitiveFields.push(match[0].toLowerCase());
+        }
+    }
+    return {
+        modelsAccessed,
+        isMutation,
+        mutatesDb: isMutation,
+        readsDb,
+        writesDb,
+        hasExternalFetch,
+        sensitiveFields,
+    };
+}
+function compareDuplicateSymbols(arg1, arg2, arg3, arg4, arg5) {
+    // If called with two ExtractedSymbol objects: compareDuplicateSymbols(symA, symB)
+    if (typeof arg1 === 'object' && typeof arg2 === 'object') {
+        const symA = arg1;
+        const symB = arg2;
+        const divergenceTypes = [];
+        const kindMatch = symA.kind === symB.kind;
+        if (!kindMatch)
+            divergenceTypes.push('kind_mismatch');
+        const sigA = (symA.meta && typeof symA.meta.signature === 'string') ? symA.meta.signature : '';
+        const sigB = (symB.meta && typeof symB.meta.signature === 'string') ? symB.meta.signature : '';
+        const signatureMatch = sigA === sigB;
+        if (!signatureMatch)
+            divergenceTypes.push('signature_divergence');
+        const exportMatch = Boolean(symA.exported) === Boolean(symB.exported);
+        if (!exportMatch)
+            divergenceTypes.push('export_visibility_mismatch');
+        const divergent = divergenceTypes.length > 0;
+        return {
+            symbolName: symA.name || symB.name || '',
+            files: [],
+            divergent,
+            kindMatch,
+            signatureMatch,
+            exportMatch,
+            divergenceTypes,
+            reason: divergent ? `Divergência detectada no símbolo '${symA.name}': ${divergenceTypes.join(', ')}.` : undefined,
+        };
+    }
+    // String signature: compareDuplicateSymbols(symbolName, fileA, contentA, fileB, contentB)
+    const symbolName = typeof arg1 === 'string' ? arg1 : (arg1.name || '');
+    const _fileA = typeof arg2 === 'string' ? arg2 : '';
+    const contentA = String(arg3 || '');
+    const _fileB = String(arg4 || '');
+    const contentB = String(arg5 || '');
+    const findFuncRegex = new RegExp(`(?:async\\s+)?function\\s+${symbolName}\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\}`, 'i');
+    const bodyA = (contentA.match(findFuncRegex) || [])[1] || '';
+    const bodyB = (contentB.match(findFuncRegex) || [])[1] || '';
+    const cryptoKeywords = ['salt', 'round', 'rounds', 'randombytes', 'pbkdf2', 'bcrypt', 'argon', 'sha', 'digest'];
+    const hasCryptoA = cryptoKeywords.filter(k => new RegExp(`\\b${k}\\b`, 'i').test(bodyA));
+    const hasCryptoB = cryptoKeywords.filter(k => new RegExp(`\\b${k}\\b`, 'i').test(bodyB));
+    const diffCrypto = hasCryptoA.filter(k => !hasCryptoB.includes(k)).concat(hasCryptoB.filter(k => !hasCryptoA.includes(k)));
+    if (diffCrypto.length > 0) {
+        return {
+            symbolName,
+            files: [_fileA, _fileB],
+            divergent: true,
+            reason: `Implementações de '${symbolName}' diferem no uso de constantes/algoritmos criptográficos: [${diffCrypto.join(', ')}].`,
+        };
+    }
+    const linesA = bodyA.split('\n').filter(l => l.trim().length > 0).length;
+    const linesB = bodyB.split('\n').filter(l => l.trim().length > 0).length;
+    if (Math.abs(linesA - linesB) > 5) {
+        return {
+            symbolName,
+            files: [_fileA, _fileB],
+            divergent: true,
+            reason: `Implementações de '${symbolName}' possuem complexidade e tamanhos substancialmente divergentes (${linesA} vs ${linesB} LOC).`,
+        };
+    }
+    return {
+        symbolName,
+        files: [_fileA, _fileB],
+        divergent: false,
+    };
+}
+function findCircularDependencyPath(graph, startNode) {
+    const visited = new Set();
+    const stack = [];
+    const stackSet = new Set();
+    function dfs(curr) {
+        visited.add(curr);
+        stack.push(curr);
+        stackSet.add(curr);
+        // Prefer forward dependencies if available, fallback to reverseDependencies
+        const forward = graph.dependencies && graph.dependencies[curr];
+        const nextNodes = (forward && forward.length > 0) ? forward : (graph.reverseDependencies[curr] || []);
+        for (const next of nextNodes) {
+            if (stackSet.has(next)) {
+                const cycleStartIndex = stack.indexOf(next);
+                const cycle = [...stack.slice(cycleStartIndex), next];
+                if (cycle.includes(startNode)) {
+                    return cycle;
+                }
+            }
+            if (!visited.has(next)) {
+                const found = dfs(next);
+                if (found)
+                    return found;
+            }
+        }
+        stack.pop();
+        stackSet.delete(curr);
+        return null;
+    }
+    return dfs(startNode);
+}
+function calculateBlastRadius(graph, targetFiles, maxHops = 3) {
+    const directDependents = new Set();
+    const transitiveDependents = new Set();
+    const visited = new Set();
+    const normalizedTargets = targetFiles.map(toPosixPath);
+    for (const t of normalizedTargets) {
+        visited.add(t);
+    }
+    let currentLevel = [...normalizedTargets];
+    for (let hop = 1; hop <= maxHops; hop++) {
+        const nextLevel = [];
+        for (const file of currentLevel) {
+            const callers = graph.reverseDependencies[file] || [];
+            for (const caller of callers) {
+                if (!visited.has(caller)) {
+                    visited.add(caller);
+                    if (hop === 1) {
+                        directDependents.add(caller);
+                    }
+                    else {
+                        transitiveDependents.add(caller);
+                    }
+                    nextLevel.push(caller);
+                }
+            }
+        }
+        currentLevel = nextLevel;
+        if (currentLevel.length === 0)
+            break;
+    }
+    const allImpactedFiles = Array.from(visited).filter(f => !normalizedTargets.includes(f));
+    const impactedRoutes = [];
+    if (graph.routes) {
+        for (const r of graph.routes) {
+            for (const impacted of allImpactedFiles) {
+                if (graph.files[impacted]?.routes?.some(fr => fr.path === r.path && fr.method === r.method)) {
+                    if (!impactedRoutes.some(ir => ir.path === r.path && ir.method === r.method)) {
+                        impactedRoutes.push(r);
+                    }
+                }
+            }
+        }
+    }
+    let totalPageRankWeight = 0;
+    for (const f of allImpactedFiles) {
+        totalPageRankWeight += (graph.pageRankScores && graph.pageRankScores[f]) || 0;
+    }
+    let riskLevel = 'LOW';
+    const count = allImpactedFiles.length;
+    if (count >= 20 || impactedRoutes.length >= 10 || totalPageRankWeight > 0.15) {
+        riskLevel = 'CRITICAL';
+    }
+    else if (count >= 8 || impactedRoutes.length >= 3 || totalPageRankWeight > 0.05) {
+        riskLevel = 'HIGH';
+    }
+    else if (count >= 2) {
+        riskLevel = 'MEDIUM';
+    }
+    // Weighted impact score: direct dependents are intentionally double-weighted (2+3=5)
+    // vs transitive (2) because immediate consumers bear the highest breakage risk.
+    const impactScore = count * 2 + directDependents.size * 3 + impactedRoutes.length * 5;
+    return {
+        targetFiles: normalizedTargets,
+        directDependents: Array.from(directDependents),
+        transitiveDependents: Array.from(transitiveDependents),
+        impactedRoutes,
+        totalImpactedFiles: count,
+        totalAffectedFiles: count,
+        impactScore,
+        impactedPageRankWeight: Number(totalPageRankWeight.toFixed(6)),
+        riskLevel,
+    };
 }
 // ─── Specialized Language Analyzers ───────────────────────────────────────────
 /**
@@ -1368,18 +1639,9 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
         const routes = [];
         const externalDepsSet = new Set();
         const localDepsSet = new Set();
+        const rawImports = [];
         function addImport(rawSource, specifiers, isTypeOnly) {
-            const resolvedAlias = resolvePathAlias(rawSource, rootDir, aliases);
-            const source = resolvedAlias || rawSource;
-            const isRelative = source.startsWith('.') || source.startsWith('/');
-            imports.push({ source, specifiers, isTypeOnly, isRelative });
-            if (isRelative)
-                localDepsSet.add(source);
-            else {
-                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
-                if (!pkgName.startsWith('node:'))
-                    externalDepsSet.add(pkgName);
-            }
+            rawImports.push({ rawSource, specifiers, isTypeOnly });
         }
         function getLine(pos) {
             return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
@@ -1389,10 +1651,47 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
                 return false;
             return node.modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
         }
+        const normalizedFilePath = toPosixPath(filePath);
+        const isAppRouterRoute = /(?:^|\/)(?:app|pages\/api)\/(.+)\/route\.(?:ts|tsx|js|jsx)$/i.test(normalizedFilePath) ||
+            normalizedFilePath.endsWith('/route.ts') || normalizedFilePath.endsWith('/route.js') ||
+            normalizedFilePath.endsWith('/route.tsx') || normalizedFilePath.endsWith('/route.jsx');
+        let derivedRoutePath = '';
+        if (isAppRouterRoute) {
+            const match = normalizedFilePath.match(/(?:app|pages\/api)\/(.+)\/route\.[a-zA-Z0-9]+$/i);
+            if (match) {
+                derivedRoutePath = '/' + match[1].replace(/\\/g, '/');
+            }
+            else {
+                const dir = node_path_1.default.dirname(normalizedFilePath);
+                derivedRoutePath = '/' + node_path_1.default.basename(dir);
+            }
+        }
+        const isServerActionFile = /^\s*['"]use server['"]/m.test(content) || content.includes('"use server"') || content.includes("'use server'");
         // Walk statements
         for (const statement of sourceFile.statements) {
             const isExported = hasExportModifier(statement);
             const lineNum = getLine(statement.getStart(sourceFile));
+            // Check Decorators on classes/methods (@Get, @Post, @Controller, etc.)
+            if (statement.modifiers) {
+                for (const mod of statement.modifiers) {
+                    if (ts.isDecorator && ts.isDecorator(mod)) {
+                        const decText = mod.getText(sourceFile);
+                        const decMatch = decText.match(/@(Get|Post|Put|Delete|Patch)\s*\(\s*['"]?([^'")\s]*)['"]?/i);
+                        if (decMatch) {
+                            const method = decMatch[1].toUpperCase();
+                            const subPath = decMatch[2] ? (decMatch[2].startsWith('/') ? decMatch[2] : '/' + decMatch[2]) : '/';
+                            const fnBody = statement.getText(sourceFile);
+                            routes.push({
+                                method,
+                                path: subPath,
+                                line: lineNum,
+                                security: inspectRouteSecurityGuards(fnBody),
+                                dataAccess: inspectRouteDataAccess(fnBody),
+                            });
+                        }
+                    }
+                }
+            }
             // 1. ImportDeclaration: import ... from '...'
             if (ts.isImportDeclaration(statement)) {
                 const rawSource = statement.moduleSpecifier.text || '';
@@ -1423,6 +1722,30 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
                 symbols.push({ name, kind: 'function', line: lineNum, exported: isExported, meta: { signature: sig } });
                 if (isExported)
                     exports.push({ name, kind: 'function', isTypeOnly: false });
+                // Next.js App Router route handler inspection
+                if (isAppRouterRoute && isExported) {
+                    const upperMethod = name.toUpperCase();
+                    if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'].includes(upperMethod)) {
+                        const fnBody = statement.getText(sourceFile);
+                        routes.push({
+                            method: upperMethod,
+                            path: derivedRoutePath || `/${node_path_1.default.basename(node_path_1.default.dirname(normalizedFilePath))}`,
+                            line: lineNum,
+                            security: inspectRouteSecurityGuards(fnBody),
+                            dataAccess: inspectRouteDataAccess(fnBody),
+                        });
+                    }
+                }
+                if (isExported && isServerActionFile) {
+                    const fnBody = statement.getText(sourceFile);
+                    routes.push({
+                        method: 'ACTION',
+                        path: `${normalizedFilePath}#${name}`,
+                        line: lineNum,
+                        security: inspectRouteSecurityGuards(fnBody),
+                        dataAccess: inspectRouteDataAccess(fnBody),
+                    });
+                }
             }
             // 3. ClassDeclaration
             else if (ts.isClassDeclaration(statement) && statement.name) {
@@ -1566,17 +1889,52 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
                 }
             }
         }
-        // Extract HTTP Routes
-        const routeRegex = /(?:app|router|server|api)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/gi;
+        // Extract HTTP Routes (Express / Fastify / Hono)
+        const routeRegex = /(?:app|router|server|api|fastify|hono)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/gi;
         let rMatch;
         while ((rMatch = routeRegex.exec(content)) !== null) {
             if (rMatch[2].startsWith('/')) {
                 const lineNum = content.slice(0, rMatch.index).split('\n').length;
+                const handlerSnippet = content.slice(rMatch.index, rMatch.index + 800);
                 routes.push({
                     method: rMatch[1].toUpperCase(),
                     path: rMatch[2],
                     line: lineNum,
+                    security: inspectRouteSecurityGuards(handlerSnippet),
+                    dataAccess: inspectRouteDataAccess(handlerSnippet),
                 });
+            }
+        }
+        // Intra-file Call Graph: collect all referenced identifiers outside import statements
+        const referencedIdentifiers = new Set();
+        function collectIdentifiers(node) {
+            if (ts.isImportDeclaration(node))
+                return;
+            if (ts.isIdentifier(node)) {
+                referencedIdentifiers.add(node.text);
+            }
+            ts.forEachChild(node, collectIdentifiers);
+        }
+        collectIdentifiers(sourceFile);
+        const unusedImports = [];
+        for (const imp of rawImports) {
+            const resolvedAlias = resolvePathAlias(imp.rawSource, rootDir, aliases);
+            const source = resolvedAlias || imp.rawSource;
+            const isRelative = source.startsWith('.') || source.startsWith('/');
+            imports.push({ source, specifiers: imp.specifiers, isTypeOnly: imp.isTypeOnly, isRelative });
+            if (isRelative) {
+                localDepsSet.add(source);
+            }
+            else {
+                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+                if (!pkgName.startsWith('node:'))
+                    externalDepsSet.add(pkgName);
+            }
+            if (imp.specifiers.length > 0) {
+                const isUsed = imp.specifiers.some(s => referencedIdentifiers.has(s));
+                if (!isUsed) {
+                    unusedImports.push(source);
+                }
             }
         }
         return {
@@ -1589,6 +1947,7 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
             localDeps: Array.from(localDepsSet),
             linesCount: content.split('\n').length,
             language: 'typescript',
+            unusedImports: Array.from(new Set(unusedImports)),
         };
     }
     catch {
@@ -1685,6 +2044,23 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
     const routes = [];
     const externalDepsSet = new Set();
     const localDepsSet = new Set();
+    const rawImports = [];
+    const normalizedFilePath = toPosixPath(filePath);
+    const isAppRouterRoute = /(?:^|\/)(?:app|pages\/api)\/(.+)\/route\.(?:ts|tsx|js|jsx)$/i.test(normalizedFilePath) ||
+        normalizedFilePath.endsWith('/route.ts') || normalizedFilePath.endsWith('/route.js') ||
+        normalizedFilePath.endsWith('/route.tsx') || normalizedFilePath.endsWith('/route.jsx');
+    let derivedRoutePath = '';
+    if (isAppRouterRoute) {
+        const match = normalizedFilePath.match(/(?:app|pages\/api)\/(.+)\/route\.[a-zA-Z0-9]+$/i);
+        if (match) {
+            derivedRoutePath = '/' + match[1].replace(/\\/g, '/');
+        }
+        else {
+            const dir = node_path_1.default.dirname(normalizedFilePath);
+            derivedRoutePath = '/' + node_path_1.default.basename(dir);
+        }
+    }
+    const isServerActionFile = /^\s*['"]use server['"]/m.test(content) || content.includes('"use server"') || content.includes("'use server'");
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const lineNum = i + 1;
@@ -1699,9 +2075,6 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             const nsSpec = importMatch[3];
             const standaloneDefault = importMatch[4];
             const rawSource = importMatch[5];
-            const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
-            const source = resolvedAlias || rawSource;
-            const isRelative = source.startsWith('.') || source.startsWith('/');
             const isTypeOnly = trimmed.startsWith('import type');
             const specifiers = [];
             if (defaultPrefix)
@@ -1717,14 +2090,7 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
                         specifiers.push(spec);
                 }
             }
-            imports.push({ source, specifiers, isTypeOnly, isRelative });
-            if (isRelative)
-                localDepsSet.add(source);
-            else {
-                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
-                if (!pkgName.startsWith('node:'))
-                    externalDepsSet.add(pkgName);
-            }
+            rawImports.push({ rawSource, specifiers, isTypeOnly, lineIdx: i });
         }
         // 2. CommonJS require: const ... = require('...')
         const requireMatch = trimmed.match(/(?:const|let|var)\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/);
@@ -1732,9 +2098,6 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             const namedSpecs = requireMatch[1];
             const defaultSpec = requireMatch[2];
             const rawSource = requireMatch[3];
-            const resolvedAlias = resolvePathAlias(rawSource, rootDir, tsConfigAliases);
-            const source = resolvedAlias || rawSource;
-            const isRelative = source.startsWith('.') || source.startsWith('/');
             const specifiers = [];
             if (defaultSpec)
                 specifiers.push(defaultSpec.trim());
@@ -1745,14 +2108,7 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
                         specifiers.push(spec);
                 }
             }
-            imports.push({ source, specifiers, isTypeOnly: false, isRelative });
-            if (isRelative)
-                localDepsSet.add(source);
-            else {
-                const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
-                if (!pkgName.startsWith('node:'))
-                    externalDepsSet.add(pkgName);
-            }
+            rawImports.push({ rawSource, specifiers, isTypeOnly: false, lineIdx: i });
         }
         // 3. Functions
         const funcMatch = trimmed.match(/^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*(\([^)]*\))?/);
@@ -1763,6 +2119,29 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             symbols.push({ name, kind: 'function', line: lineNum, exported: isExported, meta: sig ? { signature: sig } : undefined });
             if (isExported)
                 exports.push({ name, kind: 'function', isTypeOnly: false });
+            if (isAppRouterRoute && isExported) {
+                const upper = name.toUpperCase();
+                if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'].includes(upper)) {
+                    const snippet = lines.slice(i, i + 50).join('\n');
+                    routes.push({
+                        method: upper,
+                        path: derivedRoutePath || `/${node_path_1.default.basename(node_path_1.default.dirname(normalizedFilePath))}`,
+                        line: lineNum,
+                        security: inspectRouteSecurityGuards(snippet),
+                        dataAccess: inspectRouteDataAccess(snippet),
+                    });
+                }
+            }
+            if (isExported && isServerActionFile) {
+                const snippet = lines.slice(i, i + 50).join('\n');
+                routes.push({
+                    method: 'ACTION',
+                    path: `${normalizedFilePath}#${name}`,
+                    line: lineNum,
+                    security: inspectRouteSecurityGuards(snippet),
+                    dataAccess: inspectRouteDataAccess(snippet),
+                });
+            }
         }
         // 4. Classes
         const classMatch = trimmed.match(/^(?:export\s+)?(?:abstract\s+)?class\s+([a-zA-Z0-9_$]+)/);
@@ -1861,10 +2240,55 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             exports.push({ name: cjsExportMatch[1], kind: 'variable', isTypeOnly: false });
         }
         // 12. HTTP Routes: app.get('/...'), router.post('/...'), server.put('/...')
-        const routeMatch = trimmed.match(/(?:app|router|server|api)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/i);
+        const routeMatch = trimmed.match(/(?:app|router|server|api|fastify|hono)\.(get|post|put|delete|patch|use|all)\(\s*['"]([^'"]+)['"]/i);
         if (routeMatch && routeMatch[2].startsWith('/')) {
             const method = routeMatch[1].toUpperCase();
-            routes.push({ method, path: routeMatch[2], line: lineNum });
+            const snippet = lines.slice(i, i + 50).join('\n');
+            routes.push({
+                method,
+                path: routeMatch[2],
+                line: lineNum,
+                security: inspectRouteSecurityGuards(snippet),
+                dataAccess: inspectRouteDataAccess(snippet),
+            });
+        }
+    }
+    // Intra-file call graph: resolve unused imports
+    const unusedImports = [];
+    for (const imp of rawImports) {
+        const resolvedAlias = resolvePathAlias(imp.rawSource, rootDir, tsConfigAliases);
+        const source = resolvedAlias || imp.rawSource;
+        const isRelative = source.startsWith('.') || source.startsWith('/');
+        imports.push({ source, specifiers: imp.specifiers, isTypeOnly: imp.isTypeOnly, isRelative });
+        if (isRelative) {
+            localDepsSet.add(source);
+        }
+        else {
+            const pkgName = source.startsWith('@') ? source.split('/').slice(0, 2).join('/') : source.split('/')[0];
+            if (!pkgName.startsWith('node:'))
+                externalDepsSet.add(pkgName);
+        }
+        if (imp.specifiers.length > 0) {
+            let isUsed = false;
+            for (const spec of imp.specifiers) {
+                const specRegex = new RegExp(`\\b${spec}\\b`);
+                for (let j = 0; j < lines.length; j++) {
+                    if (j === imp.lineIdx)
+                        continue;
+                    const l = lines[j].trim();
+                    if (!l || l.startsWith('//') || l.startsWith('/*') || l.startsWith('*'))
+                        continue;
+                    if (specRegex.test(l)) {
+                        isUsed = true;
+                        break;
+                    }
+                }
+                if (isUsed)
+                    break;
+            }
+            if (!isUsed) {
+                unusedImports.push(source);
+            }
         }
     }
     return {
@@ -1876,7 +2300,8 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
         externalDeps: Array.from(externalDepsSet),
         localDeps: Array.from(localDepsSet),
         linesCount: lines.length,
-        language: 'typescript'
+        language: 'typescript',
+        unusedImports: Array.from(new Set(unusedImports)),
     };
 }
 // ─── Graph Construction & Traversal ──────────────────────────────────────────
@@ -1988,8 +2413,10 @@ function buildCodebaseGraph(rootDir, options = {}) {
         }
     }
     scanDir(rootDir);
-    // Compute reverse dependencies (importedBy)
+    // Compute reverse and forward dependencies
+    const dependencies = Object.create(null);
     for (const [filePath, fileData] of Object.entries(filesMap)) {
+        dependencies[filePath] = [];
         const fileDir = node_path_1.default.dirname(filePath);
         for (const localDep of fileData.localDeps) {
             const resolved = toPosixPath(node_path_1.default.normalize(node_path_1.default.join(fileDir, localDep)));
@@ -2030,10 +2457,34 @@ function buildCodebaseGraph(rootDir, options = {}) {
                     if (!reverseDependencies[cand].includes(filePath)) {
                         reverseDependencies[cand].push(filePath);
                     }
+                    if (!dependencies[filePath].includes(cand)) {
+                        dependencies[filePath].push(cand);
+                    }
                     break;
                 }
             }
         }
+    }
+    // Classify infrastructure nodes, dead code (isOrphan), and God Objects
+    for (const [k, fData] of Object.entries(filesMap)) {
+        const inDegree = (reverseDependencies[k] || []).length;
+        const baseLower = node_path_1.default.basename(k).toLowerCase();
+        const isInfra = INFRASTRUCTURE_ENTRYPOINTS.has(baseLower);
+        if (isInfra) {
+            fData.role = 'infrastructure-root';
+            fData.isOrphan = false;
+        }
+        else if (inDegree === 0) {
+            const isEntrypoint = /^(?:index|main|app|page|route)\.[a-zA-Z0-9]+$/i.test(baseLower);
+            fData.isOrphan = !isEntrypoint;
+        }
+        else {
+            fData.isOrphan = false;
+        }
+        const exportCount = fData.exports ? fData.exports.length : 0;
+        const couplingRatio = Number(((fData.linesCount || 0) / Math.max(exportCount, 1)).toFixed(2));
+        fData.couplingRatio = couplingRatio;
+        fData.isGodObject = (fData.linesCount || 0) > 800 && exportCount <= 2;
     }
     // Compute PageRank scores
     const pageRankScores = Object.create(null);
@@ -2098,6 +2549,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
         files: filesMap,
         symbolIndex,
         reverseDependencies,
+        dependencies,
         pageRankScores,
         routes: allRoutes,
     };
@@ -2162,4 +2614,11 @@ module.exports = {
     queryTopCentralFiles,
     saveCodebaseGraph,
     loadCodebaseGraph,
+    inspectRouteSecurityGuards,
+    inspectRouteDataAccess,
+    compareDuplicateSymbols,
+    findCircularDependencyPath,
+    calculateBlastRadius,
+    INFRASTRUCTURE_ENTRYPOINTS,
+    SECURITY_PATTERNS,
 };

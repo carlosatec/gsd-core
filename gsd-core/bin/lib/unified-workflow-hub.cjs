@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.5.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.6.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -47,7 +47,7 @@ const canvasGenMod = require("./canvas-roadmap-generator.cjs");
 const observabilityHtmlMod = require("./observability-html-dashboard.cjs");
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
-const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles } = codebaseAst;
+const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
 const { getTelemetrySummary, recordJitInvocation, LANGUAGE_CHAR_WEIGHTS } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
@@ -174,6 +174,16 @@ function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, ful
                         warnings.push(`[UI-Token] ${relPath} contains ${hardcodedColors.length} hardcoded hex colors. Use design tokens.`);
                     }
                 }
+                // AST Semantic Resilience: God-Object and Zombie-Import checks
+                if (graph && graph.files && graph.files[relPath]) {
+                    const fileData = graph.files[relPath];
+                    if (fileData.isGodObject) {
+                        warnings.push(`[God-Object] ${relPath} (${fileData.linesCount || 0} lines, ${fileData.exports?.length || 0} exports, coupling ratio ${fileData.couplingRatio}) exceeds maintainability limits.`);
+                    }
+                    if (fileData.unusedImports && fileData.unusedImports.length > 0) {
+                        warnings.push(`[Zombie-Import] ${relPath} contains unused imports: ${fileData.unusedImports.join(', ')}`);
+                    }
+                }
             }
         }
     }
@@ -228,6 +238,20 @@ function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, ful
     catch {
         // Non-blocking telemetry
     }
+    // 7. Blast Radius & Centrality Hub Calculation
+    let blastReport = undefined;
+    if (typeof calculateBlastRadius === 'function' && graph && filesToReview.length > 0) {
+        try {
+            blastReport = calculateBlastRadius(graph, filesToReview);
+            if (blastReport && (blastReport.impactScore ?? 0) > 20) {
+                warnings.push(`[Blast-Radius] Modified files have high blast radius (impact score ${blastReport.impactScore ?? 0}, ${blastReport.directDependents.length} direct / ${blastReport.transitiveDependents.length} transitive dependents).`);
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
+    const topCentral = typeof queryTopCentralFiles === 'function' && graph ? queryTopCentralFiles(graph, 5) : [];
     return {
         filesReviewed,
         criticalIssues,
@@ -235,6 +259,8 @@ function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, ful
         fixed,
         passed: criticalIssues.length === 0,
         telemetry: recordedTelemetry,
+        blastRadius: blastReport,
+        topCentralFiles: topCentral,
     };
 }
 /**
@@ -345,7 +371,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD Core Nexus 3.5 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core Nexus 3.6 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
@@ -357,7 +383,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
                 data: { telemetry },
-                message: `GSD Core Nexus 3.5 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                message: `GSD Core Nexus 3.6 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
             };
         }
         case 'plan': {
@@ -632,7 +658,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'help',
                 action: 'DISPLAY_HELP',
                 nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-                message: 'GSD Core Nexus 3.5 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
+                message: 'GSD Core Nexus 3.6 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
             };
     }
 }

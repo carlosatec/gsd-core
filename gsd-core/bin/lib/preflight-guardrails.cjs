@@ -12,7 +12,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
-const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph } = codebaseAst;
+const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph, findCircularDependencyPath } = codebaseAst;
 // ─── Cycle Detection Helper ──────────────────────────────────────────────────
 function detectCycleInGraph(graph, startNode, onDeepRecursion) {
     const visited = new Set();
@@ -286,7 +286,18 @@ function runPreFlightChecks(ctx) {
                     });
                 }
             }
-            // Check 3: Circular Dependency Detection
+        }
+        // Check 3: Circular Dependency Detection (runs for all target files)
+        const cyclePath = typeof findCircularDependencyPath === 'function' ? findCircularDependencyPath(activeGraph, normalized) : null;
+        if (cyclePath && cyclePath.length > 0) {
+            violations.push({
+                rule: 'CIRCULAR_DEPENDENCY',
+                severity: 'warning',
+                file: normalized,
+                message: `Circular dependency detected: ${cyclePath.join(' -> ')}`,
+            });
+        }
+        else {
             const hasCycle = detectCycleInGraph(activeGraph, normalized, (deepNode) => {
                 violations.push({
                     rule: 'CIRCULAR_DEPENDENCY',
