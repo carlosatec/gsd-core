@@ -2745,14 +2745,18 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
     for (const localDep of fileData.localDeps) {
       const resolved = toPosixPath(path.normalize(path.join(fileDir, localDep)));
       let candidates: string[];
-      if (resolved.endsWith('.js')) {
-        const withoutExt = resolved.slice(0, -3);
+      const jsExtMatch = resolved.match(/\.(c|m)?js$/i);
+      if (jsExtMatch) {
+        const withoutExt = resolved.slice(0, -jsExtMatch[0].length);
         candidates = [
           withoutExt + '.ts',
           withoutExt + '.tsx',
           withoutExt + '.cts',
           withoutExt + '.mts',
           resolved,
+          withoutExt + '.js',
+          withoutExt + '.cjs',
+          withoutExt + '.mjs',
         ];
       } else {
         candidates = [

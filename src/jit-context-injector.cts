@@ -29,6 +29,9 @@ const { findCanonicalExample } = canonicalMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import modelCatalogMod = require('./model-catalog.cjs');
 const { getContextWindowLimit } = modelCatalogMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import systemOneMod = require('./system-one-engine.cjs');
+const { reRankForJit } = systemOneMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +56,7 @@ interface NeighborSymbolInfo {
   relation: 'import' | 'imported_by';
   exports: Array<{ name: string; kind: string; signature?: string }>;
   pageRank?: number;
+  [key: string]: unknown;
 }
 
 interface JitContextPackage {
@@ -63,6 +67,7 @@ interface JitContextPackage {
   applicableDecisions: string[];
   canonicalExample?: { file: string; content: string; reason: string } | null;
   markdownBlock: string;
+  relevanceScore?: number;
 }
 
 interface AssembleJitContextOptions {
@@ -80,6 +85,7 @@ interface AssembleJitContextOptions {
   query?: string;
   command?: string;
   phaseId?: string;
+  mode?: 'quality' | 'budget';
 }
 
 
@@ -323,7 +329,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     graph = buildCodebaseGraph(root);
   }
 
-  const allNeighbors: NeighborSymbolInfo[] = [];
+  let allNeighbors: NeighborSymbolInfo[] = [];
   const applicableTypes: string[] = [];
   const applicableDecisions: string[] = [];
 
@@ -336,9 +342,24 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
+  // Re-rank neighbors and evaluate semantic relevance (Wave 5: Modo B — Qualidade Máxima)
+  let relevanceScore = 95.0;
+  if (allNeighbors.length > 0) {
+    try {
+      const ranked = reRankForJit(allNeighbors, targetFiles, {
+        planningDir: resolvedPlanningDir,
+        rootDir: root,
+      });
+      allNeighbors = ranked.items;
+      relevanceScore = ranked.averageRelevance;
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
   // Transitive Type Closure (Quality-First: D-69, Q1)
   const maxClosureDepth = options.maxTypeClosureDepth ?? 3;
-  const maxUniqueTypes = options.maxUniqueTypes ?? 50;
+  const maxUniqueTypes = options.maxUniqueTypes ?? (options.mode === 'budget' ? 50 : 100);
 
   const TARGET_TYPE_KINDS = new Set([
     'interface',
@@ -581,15 +602,16 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
 
   lines.push('</jit_context>');
 
-  // Enforce token budget with line-aware truncation
+  // Enforce token budget with line-aware truncation (Quality-First: D-149 Modo B)
   const outputLines: string[] = [];
   let currentTokens = 0;
-  const maxCharBudget = maxTokens * 4;
+  const isBudgetMode = options.mode === 'budget';
+  const effectiveMaxCharBudget = isBudgetMode ? maxTokens * 4 : Math.max(maxTokens * 4, windowLimit * 2);
   let isTruncated = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (currentTokens + line.length > maxCharBudget && i > 3 && i < lines.length - 1) {
+    if (currentTokens + line.length > effectiveMaxCharBudget && i > 3 && i < lines.length - 1) {
       isTruncated = true;
       break;
     }
@@ -613,7 +635,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   }
   const fullRepoTokens = Math.max(Math.ceil(totalRepoChars / 4), estimatedTokensCount * 5);
 
-  // Record Telemetry (Schema v2.0)
+  // Record Telemetry (Schema v2.1 with relevanceScore & confidence)
   try {
     recordJitInvocation(
       resolvedPlanningDir,
@@ -621,7 +643,12 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
       estimatedTokensCount,
       fullRepoTokens,
       options.command || 'other',
-      options.phaseId
+      options.phaseId,
+      undefined,
+      undefined,
+      undefined,
+      relevanceScore,
+      'high'
     );
   } catch {
     // Non-blocking telemetry
@@ -635,6 +662,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     applicableDecisions,
     canonicalExample,
     markdownBlock,
+    relevanceScore,
   };
 }
 

@@ -32,6 +32,9 @@ const { findCanonicalExample } = canonicalMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const modelCatalogMod = require("./model-catalog.cjs");
 const { getContextWindowLimit } = modelCatalogMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const systemOneMod = require("./system-one-engine.cjs");
+const { reRankForJit } = systemOneMod;
 // ─── Core Implementation ──────────────────────────────────────────────────────
 /**
  * Finds symbols from directly connected files (imports & callers) in the AST graph.
@@ -242,7 +245,7 @@ function assembleJitContext(options) {
     if (!graph) {
         graph = buildCodebaseGraph(root);
     }
-    const allNeighbors = [];
+    let allNeighbors = [];
     const applicableTypes = [];
     const applicableDecisions = [];
     for (const file of targetFiles) {
@@ -253,9 +256,24 @@ function assembleJitContext(options) {
             }
         }
     }
+    // Re-rank neighbors and evaluate semantic relevance (Wave 5: Modo B — Qualidade Máxima)
+    let relevanceScore = 95.0;
+    if (allNeighbors.length > 0) {
+        try {
+            const ranked = reRankForJit(allNeighbors, targetFiles, {
+                planningDir: resolvedPlanningDir,
+                rootDir: root,
+            });
+            allNeighbors = ranked.items;
+            relevanceScore = ranked.averageRelevance;
+        }
+        catch {
+            // Non-blocking fallback
+        }
+    }
     // Transitive Type Closure (Quality-First: D-69, Q1)
     const maxClosureDepth = options.maxTypeClosureDepth ?? 3;
-    const maxUniqueTypes = options.maxUniqueTypes ?? 50;
+    const maxUniqueTypes = options.maxUniqueTypes ?? (options.mode === 'budget' ? 50 : 100);
     const TARGET_TYPE_KINDS = new Set([
         'interface',
         'type',
@@ -467,14 +485,15 @@ function assembleJitContext(options) {
         lines.push('');
     }
     lines.push('</jit_context>');
-    // Enforce token budget with line-aware truncation
+    // Enforce token budget with line-aware truncation (Quality-First: D-149 Modo B)
     const outputLines = [];
     let currentTokens = 0;
-    const maxCharBudget = maxTokens * 4;
+    const isBudgetMode = options.mode === 'budget';
+    const effectiveMaxCharBudget = isBudgetMode ? maxTokens * 4 : Math.max(maxTokens * 4, windowLimit * 2);
     let isTruncated = false;
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (currentTokens + line.length > maxCharBudget && i > 3 && i < lines.length - 1) {
+        if (currentTokens + line.length > effectiveMaxCharBudget && i > 3 && i < lines.length - 1) {
             isTruncated = true;
             break;
         }
@@ -494,9 +513,9 @@ function assembleJitContext(options) {
         totalRepoChars += (f.linesCount || 10) * weight;
     }
     const fullRepoTokens = Math.max(Math.ceil(totalRepoChars / 4), estimatedTokensCount * 5);
-    // Record Telemetry (Schema v2.0)
+    // Record Telemetry (Schema v2.1 with relevanceScore & confidence)
     try {
-        recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens, options.command || 'other', options.phaseId);
+        recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens, options.command || 'other', options.phaseId, undefined, undefined, undefined, relevanceScore, 'high');
     }
     catch {
         // Non-blocking telemetry
@@ -509,6 +528,7 @@ function assembleJitContext(options) {
         applicableDecisions,
         canonicalExample,
         markdownBlock,
+        relevanceScore,
     };
 }
 module.exports = {

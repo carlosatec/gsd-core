@@ -61,10 +61,16 @@ function loadTelemetry(planningDir) {
             fullRepoTokens: r.fullRepoTokens || 0,
             tokensSaved: r.tokensSaved || 0,
             efficiencyPct: r.efficiencyPct || 0,
+            relevanceScore: typeof r.relevanceScore === 'number' ? r.relevanceScore : undefined,
+            systemOneConfidence: r.systemOneConfidence,
             compressionRatio: r.compressionRatio,
             invocationId: r.invocationId,
             scopeMode: r.scopeMode,
         }));
+        const scoredRecords = records.filter(r => typeof r.relevanceScore === 'number' && !isNaN(r.relevanceScore));
+        const averageRelevanceScore = scoredRecords.length > 0
+            ? Number((scoredRecords.reduce((acc, r) => acc + (r.relevanceScore || 0), 0) / scoredRecords.length).toFixed(1))
+            : parsed.averageRelevanceScore;
         const compressionRatio = parsed.averageCompressionRatio ||
             (parsed.totalJitTokensUsed && parsed.totalJitTokensUsed > 0 && parsed.totalMonolithicTokensAvoided
                 ? Number(Math.max(1.0, parsed.totalMonolithicTokensAvoided / parsed.totalJitTokensUsed).toFixed(1))
@@ -76,6 +82,7 @@ function loadTelemetry(planningDir) {
             totalJitTokensUsed: parsed.totalJitTokensUsed || 0,
             totalMonolithicTokensAvoided: parsed.totalMonolithicTokensAvoided || 0,
             averageEfficiencyPct: parsed.averageEfficiencyPct || 0,
+            averageRelevanceScore,
             averageCompressionRatio: compressionRatio,
             peakInvocationTokens: parsed.peakInvocationTokens || 0,
             commandBreakdown: parsed.commandBreakdown || {},
@@ -114,7 +121,7 @@ function saveTelemetry(planningDir, data) {
  * Parameters command, phaseId, invocationId, and scopeMode are optional to preserve 100% backward compatibility.
  * All mutations are wrapped in an atomic cooperative file lock (withFileLockSync).
  */
-function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode, workflowContext) {
+function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode, workflowContext, relevanceScore, systemOneConfidence) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     const telemetryPath = node_path_1.default.join(intelDir, 'telemetry.json');
     return (0, shell_command_projection_cjs_1.withFileLockSync)(telemetryPath, () => {
@@ -130,6 +137,9 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
         const sanitizedCmd = normalizeTelemetryCommand(command);
         const sanitizedJit = Math.max(0, Math.floor(Number(jitTokens) || 0));
         const sanitizedFull = Math.max(0, Math.floor(Number(fullRepoTokens) || 0));
+        const sanitizedRelevance = typeof relevanceScore === 'number' && !isNaN(relevanceScore)
+            ? Math.max(0, Math.min(100, Number(relevanceScore.toFixed(1))))
+            : undefined;
         let effectiveFull;
         let tokensSaved;
         let efficiencyPct;
@@ -157,6 +167,8 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
             fullRepoTokens: effectiveFull,
             tokensSaved,
             efficiencyPct,
+            relevanceScore: sanitizedRelevance,
+            systemOneConfidence,
             compressionRatio,
             invocationId,
             scopeMode: resolvedScopeMode,
@@ -232,6 +244,7 @@ function getTelemetrySummary(planningDir) {
         totalJitTokensUsed: data.totalJitTokensUsed,
         totalMonolithicTokensAvoided: data.totalMonolithicTokensAvoided,
         averageEfficiencyPct: data.averageEfficiencyPct,
+        averageRelevanceScore: data.averageRelevanceScore,
         averageCompressionRatio: data.averageCompressionRatio || (data.totalJitTokensUsed > 0 ? Number(Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)) : 1.0),
         peakInvocationTokens: data.peakInvocationTokens,
         commandBreakdown: data.commandBreakdown,

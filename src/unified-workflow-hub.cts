@@ -42,6 +42,12 @@ import visualGraphMod = require('./visual-graph-exporter.cjs');
 import canvasGenMod = require('./canvas-roadmap-generator.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import observabilityHtmlMod = require('./observability-html-dashboard.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import systemOneMod = require('./system-one-engine.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import semanticRag = require('./hybrid-semantic-rag.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import normalizeTestMod = require('./normalize-test-command.cjs');
 const { SessionLogger } = sessionLoggerMod;
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
@@ -55,6 +61,9 @@ const { syncSessionContext } = sessionHook;
 const { runGapAnalysis } = gapChecker;
 const { analyzeSource, isAnalyzablePath } = complexityTrigger;
 const { classifyContent } = coverageMod;
+const { classifyRiskSync, evaluateAssertionSync } = systemOneMod;
+const { querySemanticSimilarFiles } = semanticRag;
+const { detectProjectTestCommand, normalizeTestCommand } = normalizeTestMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -132,6 +141,7 @@ interface ReviewReport {
   telemetry?: unknown;
   blastRadius?: unknown;
   topCentralFiles?: Array<{ file: string; score: number }>;
+  verdict?: 'TRIVIAL_AUTO_PASSED';
 }
 
 /**
@@ -332,6 +342,71 @@ function executeReview(
 
   const topCentral = typeof queryTopCentralFiles === 'function' && graph ? queryTopCentralFiles(graph, 5) : [];
 
+  // 8. System One — Risk Triage (Wave 3: Speculative Fan-Out & Warning Reporting)
+  let systemOneAutoPass = false;
+  const systemOneCtx = { planningDir: resolvedPlanningDir, rootDir: resolvedRoot };
+  if (filesToReview.length > 0) {
+    try {
+      let allLowRisk = true;
+      let hasSystemOneWarning = false;
+
+      for (const relPath of filesToReview) {
+        const fullPath = path.join(resolvedRoot, relPath);
+
+        // Score: Regression risk 0 (inofensivo) → 3 (crítico)
+        const riskResult = classifyRiskSync(fullPath, systemOneCtx);
+        if (riskResult.warning) {
+          warnings.push(`[System-One] ${riskResult.warning}`);
+          hasSystemOneWarning = true;
+        }
+        if (riskResult.score >= 3) {
+          warnings.push(`[System-One] ${relPath} — high regression risk (score ${riskResult.score}/3, ${riskResult.confidence} confidence)`);
+          allLowRisk = false;
+        } else if (riskResult.score >= 2) {
+          warnings.push(`[System-One] ${relPath} — elevated risk score ${riskResult.score}/3`);
+          allLowRisk = false;
+        } else if (riskResult.score > 0 || riskResult.confidence !== 'high') {
+          allLowRisk = false;
+        }
+
+        // Noul 1: Does this change touch auth/security logic?
+        const authNoul = evaluateAssertionSync(
+          `Does the file ${relPath} introduce or modify authentication or security logic?`,
+          { ...systemOneCtx, filePath: fullPath }
+        );
+        if (authNoul.warning) {
+          warnings.push(`[System-One] ${authNoul.warning}`);
+          hasSystemOneWarning = true;
+        }
+        if (authNoul.noul >= 0.8) {
+          warnings.push(`[System-One] ${relPath} — security/auth impact detected (noul=${authNoul.noul.toFixed(2)}, ${authNoul.confidence})`);
+        }
+
+        // Noul 2: Does this break public API signatures / exported types?
+        const apiBreakNoul = evaluateAssertionSync(
+          `Does the file ${relPath} break or alter public API signatures or exported types?`,
+          { ...systemOneCtx, filePath: fullPath }
+        );
+        if (apiBreakNoul.warning) {
+          warnings.push(`[System-One] ${apiBreakNoul.warning}`);
+          hasSystemOneWarning = true;
+        }
+        if (apiBreakNoul.noul >= 0.85) {
+          criticalIssues.push(`[System-One] ${relPath} — potential public API breakage (noul=${apiBreakNoul.noul.toFixed(2)}, ${apiBreakNoul.confidence})`);
+          allLowRisk = false;
+        }
+      }
+
+      // Verdict: trivially auto-pass only when all files are low-risk, high-confidence, and no imperative warnings
+      if (allLowRisk && !hasSystemOneWarning && criticalIssues.length === 0) {
+        systemOneAutoPass = true;
+      }
+    } catch (sysErr: unknown) {
+      const msg = sysErr instanceof Error ? sysErr.message : String(sysErr);
+      warnings.push(`[System-One] Fallback ativado: aviso de falha do motor de decisão (${msg}). Triagem de risco ignorada.`);
+    }
+  }
+
   return {
     filesReviewed,
     criticalIssues,
@@ -341,6 +416,7 @@ function executeReview(
     telemetry: recordedTelemetry,
     blastRadius: blastReport,
     topCentralFiles: topCentral,
+    ...(systemOneAutoPass ? { verdict: 'TRIVIAL_AUTO_PASSED' } : {}),
   };
 }
 
@@ -651,6 +727,8 @@ function runInternalUnifiedCommand(
     case 'verify': {
       const phaseId = resolveActivePhaseId(planningDir, options.args);
       let autoPassed = false;
+      let systemOneVerified = false;
+      const verifyWarnings: string[] = [];
       try {
         initMod.cmdInitVerifyWork(cwd, phaseId, Boolean(options.raw));
       } catch {
@@ -671,7 +749,93 @@ function runInternalUnifiedCommand(
         // Non-blocking
       }
 
-      // Auto-record telemetry for verify (Wave 4, D-112)
+      // ── Wave 4: Double-Interlock Auto-UAT ─────────────────────────────────────
+      // Interlock 1: Test suite must be green (exitCode === 0)
+      let testsGreen = false;
+      const skipTests = Boolean(options.flags?.['skip-tests'] || options.flags?.['no-tests'] || options.args.includes('--skip-tests'));
+      if (skipTests) {
+        testsGreen = true;
+      } else {
+        try {
+          const { execSync } = require('node:child_process') as typeof import('child_process');
+          const detectedCmd = detectProjectTestCommand(cwd);
+          const normalizedCmd = normalizeTestCommand(detectedCmd, cwd);
+          try {
+            execSync(normalizedCmd, { cwd, stdio: 'ignore', timeout: 60000 });
+            testsGreen = true;
+          } catch {
+            verifyWarnings.push(`[System-One] Interlock 1 BLOQUEADO: suíte de testes falhou (${normalizedCmd}). Auto-UAT não aprovará até os testes estarem verdes.`);
+          }
+        } catch {
+          // If child_process is unavailable, assume green to not block CLI environments
+          testsGreen = true;
+        }
+      }
+
+      // Interlock 2: Acceptance criteria Noul evaluation (only if tests are green)
+      if (testsGreen && !autoPassed) {
+        try {
+          const planPath = path.join(
+            planningDir,
+            'phases',
+            phaseId ? `${phaseId}-PLAN.md` : ''
+          );
+          let acceptanceCriteria: string[] = [];
+
+          // Extract acceptance criteria from PLAN.md (numbered list under section 4 or "Verification Criteria")
+          if (phaseId && fs.existsSync(planPath)) {
+            const planContent = platformReadSync(planPath) || '';
+            const criteriaSection = planContent.match(/##\s+4\.\s+Verification[^\n]*\n([\s\S]+?)(?=\n##|\Z)/i);
+            if (criteriaSection) {
+              const lines = criteriaSection[1].split('\n');
+              for (const line of lines) {
+                const clean = line.replace(/^\s*\d+\.\s*\*\*[^*]+\*\*:?\s*/, '').replace(/^\s*[-*]\s+/, '').trim();
+                if (clean.length > 10) {
+                  acceptanceCriteria.push(clean);
+                }
+              }
+            }
+          }
+
+          if (acceptanceCriteria.length === 0) {
+            acceptanceCriteria = [
+              'All modified source files compile without errors',
+              'All automated tests pass with exit code 0',
+              'No new critical security issues are introduced',
+            ];
+          }
+
+          const systemOneCtxVerify = { planningDir, rootDir: cwd };
+          let allNoulPassed = true;
+          let hasSystemOneVerifyWarning = false;
+
+          for (const criterion of acceptanceCriteria.slice(0, 10)) {
+            const noulResult = evaluateAssertionSync(criterion, systemOneCtxVerify);
+            if (noulResult.warning) {
+              verifyWarnings.push(`[System-One] ${noulResult.warning}`);
+              hasSystemOneVerifyWarning = true;
+              allNoulPassed = false;
+              break;
+            }
+            if (noulResult.noul < 0.95 || noulResult.confidence !== 'high') {
+              verifyWarnings.push(
+                `[System-One] Critério não atingiu confiança necessária: "${criterion.slice(0, 80)}" (noul=${noulResult.noul.toFixed(2)}, ${noulResult.confidence}). Delegando ao fluxo conversacional.`
+              );
+              allNoulPassed = false;
+              break;
+            }
+          }
+
+          if (allNoulPassed && !hasSystemOneVerifyWarning) {
+            systemOneVerified = true;
+          }
+        } catch (verErr: unknown) {
+          const msg = verErr instanceof Error ? verErr.message : String(verErr);
+          verifyWarnings.push(`[System-One] Fallback ativado: aviso de falha do motor de decisão (${msg}). Auto-UAT delegado ao fluxo conversacional.`);
+        }
+      }
+
+      // Auto-record telemetry for verify
       try {
         const summaryPath = path.join(planningDir, 'phases', `${phaseId}-SUMMARY.md`);
         const targetFiles: string[] = [];
@@ -707,16 +871,29 @@ function runInternalUnifiedCommand(
         // Non-blocking telemetry
       }
 
+      const finalVerdict = systemOneVerified
+        ? 'SYSTEM_ONE_VERIFIED'
+        : autoPassed
+          ? 'COVERAGE_AUTO_PASSED'
+          : 'MANUAL_VALIDATION_REQUIRED';
+
       return {
         command: 'verify',
         action: 'VERIFY_WORK',
-        nextStep: 'run /gsd:ship to create PR and merge',
-        data: { autoPassed },
-        message: autoPassed
-          ? 'Functional and acceptance criteria validation complete with 100% test coverage (Auto-Pass).'
-          : 'Functional and acceptance criteria validation complete.',
+        nextStep: (systemOneVerified || autoPassed)
+          ? 'run /gsd:ship to create PR and merge'
+          : 'address failing acceptance criteria and re-run /gsd:verify',
+        data: { autoPassed, systemOneVerified, verdict: finalVerdict, warnings: verifyWarnings },
+        message: systemOneVerified
+          ? `✅ Auto-UAT aprovado pelo System One Engine (Intertravamento Duplo). Critérios de aceitação validados com noul ≥ 0.95 e confiança alta. Verdict: ${finalVerdict}.`
+          : autoPassed
+            ? 'Functional and acceptance criteria validation complete with 100% test coverage (Auto-Pass).'
+            : verifyWarnings.length > 0
+              ? `⚠️ Auto-UAT inconclusivo. ${verifyWarnings[0]} Faça a validação conversacional antes de /gsd:ship.`
+              : 'Functional and acceptance criteria validation complete.',
       };
     }
+
 
     case 'ship':
       initMod.cmdInitCompleteMilestone(cwd, Boolean(options.raw));

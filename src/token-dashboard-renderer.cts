@@ -239,6 +239,10 @@ function renderTokenDashboard(planningDir: string, options?: string | DashboardR
     return lines.join('\n');
   }
 
+  if (typeof summary.averageRelevanceScore === 'number') {
+    const relBar = makeProgressBar(summary.averageRelevanceScore, 12);
+    lines.push(formatBoxLine(` • Context Relevance:    [${relBar}] ${summary.averageRelevanceScore.toFixed(1)}% (Quality)`));
+  }
   lines.push(formatBoxLine(` • Total Invocations:     ${formatNumber(summary.totalInvocations).padEnd(6)} executions`));
   lines.push(formatBoxLine(` • Tokens Used (JIT):     ${formatNumber(summary.totalJitTokensUsed).padEnd(10)} tokens`));
   lines.push(formatBoxLine(` • Monolithic Avoided:    ${formatNumber(summary.totalMonolithicTokensAvoided).padEnd(10)} tokens`));
@@ -313,9 +317,16 @@ function renderTokenDashboard(planningDir: string, options?: string | DashboardR
     const targetPreview = last.targetFiles.slice(0, 2).join(', ');
     const targetStr = targetPreview.length > 28 ? targetPreview.slice(0, 25) + '...' : targetPreview;
     lines.push(formatBoxLine(` 🕒 Last Run (${cmdLabel}): ${targetStr}`));
-    lines.push(
-      formatBoxLine(`    Used: ${formatNumber(last.jitTokens)} tok | Avoided: ${formatNumber(last.fullRepoTokens)} tok | Saved: ${last.efficiencyPct}%`)
-    );
+    if (typeof last.relevanceScore === 'number') {
+      const confTag = last.systemOneConfidence ? ` | ${last.systemOneConfidence.toUpperCase()}` : '';
+      lines.push(
+        formatBoxLine(`    Used: ${formatNumber(last.jitTokens)} tok | Relevance: ${last.relevanceScore.toFixed(0)}%${confTag} | Saved: ${last.efficiencyPct}%`)
+      );
+    } else {
+      lines.push(
+        formatBoxLine(`    Used: ${formatNumber(last.jitTokens)} tok | Avoided: ${formatNumber(last.fullRepoTokens)} tok | Saved: ${last.efficiencyPct}%`)
+      );
+    }
   }
 
   const execInvocations = summary.commandBreakdown['exec'] ? summary.commandBreakdown['exec'].invocations : 0;

@@ -55,6 +55,8 @@ interface JitTelemetryRecord {
   fullRepoTokens: number;
   tokensSaved: number;
   efficiencyPct: number;
+  relevanceScore?: number;
+  systemOneConfidence?: 'low' | 'med' | 'high';
   compressionRatio?: number;
   invocationId?: string;
   scopeMode?: 'targeted' | 'full-repo';
@@ -80,6 +82,7 @@ interface JitTelemetryData {
   totalJitTokensUsed: number;
   totalMonolithicTokensAvoided: number;
   averageEfficiencyPct: number;
+  averageRelevanceScore?: number;
   averageCompressionRatio?: number;
   peakInvocationTokens: number;
   commandBreakdown: Record<string, CommandUsageStat>;
@@ -93,6 +96,7 @@ interface JitTelemetrySummary {
   totalJitTokensUsed: number;
   totalMonolithicTokensAvoided: number;
   averageEfficiencyPct: number;
+  averageRelevanceScore?: number;
   averageCompressionRatio?: number;
   peakInvocationTokens: number;
   commandBreakdown: Record<string, CommandUsageStat>;
@@ -121,10 +125,17 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       fullRepoTokens: r.fullRepoTokens || 0,
       tokensSaved: r.tokensSaved || 0,
       efficiencyPct: r.efficiencyPct || 0,
+      relevanceScore: typeof r.relevanceScore === 'number' ? r.relevanceScore : undefined,
+      systemOneConfidence: r.systemOneConfidence,
       compressionRatio: r.compressionRatio,
       invocationId: r.invocationId,
       scopeMode: r.scopeMode,
     }));
+
+    const scoredRecords = records.filter(r => typeof r.relevanceScore === 'number' && !isNaN(r.relevanceScore));
+    const averageRelevanceScore = scoredRecords.length > 0
+      ? Number((scoredRecords.reduce((acc, r) => acc + (r.relevanceScore || 0), 0) / scoredRecords.length).toFixed(1))
+      : parsed.averageRelevanceScore;
 
     const compressionRatio = parsed.averageCompressionRatio ||
       (parsed.totalJitTokensUsed && parsed.totalJitTokensUsed > 0 && parsed.totalMonolithicTokensAvoided
@@ -138,6 +149,7 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       totalJitTokensUsed: parsed.totalJitTokensUsed || 0,
       totalMonolithicTokensAvoided: parsed.totalMonolithicTokensAvoided || 0,
       averageEfficiencyPct: parsed.averageEfficiencyPct || 0,
+      averageRelevanceScore,
       averageCompressionRatio: compressionRatio,
       peakInvocationTokens: parsed.peakInvocationTokens || 0,
       commandBreakdown: parsed.commandBreakdown || {},
@@ -186,7 +198,9 @@ function recordJitInvocation(
   phaseId?: string,
   invocationId?: string,
   scopeMode?: 'targeted' | 'full-repo',
-  workflowContext?: string
+  workflowContext?: string,
+  relevanceScore?: number,
+  systemOneConfidence?: 'low' | 'med' | 'high'
 ): JitTelemetryRecord {
   const intelDir = path.join(planningDir, 'intel');
   const telemetryPath = path.join(intelDir, 'telemetry.json');
@@ -206,6 +220,9 @@ function recordJitInvocation(
     const sanitizedCmd = normalizeTelemetryCommand(command);
     const sanitizedJit = Math.max(0, Math.floor(Number(jitTokens) || 0));
     const sanitizedFull = Math.max(0, Math.floor(Number(fullRepoTokens) || 0));
+    const sanitizedRelevance = typeof relevanceScore === 'number' && !isNaN(relevanceScore)
+      ? Math.max(0, Math.min(100, Number(relevanceScore.toFixed(1))))
+      : undefined;
 
     let effectiveFull: number;
     let tokensSaved: number;
@@ -236,6 +253,8 @@ function recordJitInvocation(
       fullRepoTokens: effectiveFull,
       tokensSaved,
       efficiencyPct,
+      relevanceScore: sanitizedRelevance,
+      systemOneConfidence,
       compressionRatio,
       invocationId,
       scopeMode: resolvedScopeMode,
@@ -326,6 +345,7 @@ function getTelemetrySummary(planningDir: string): JitTelemetrySummary {
     totalJitTokensUsed: data.totalJitTokensUsed,
     totalMonolithicTokensAvoided: data.totalMonolithicTokensAvoided,
     averageEfficiencyPct: data.averageEfficiencyPct,
+    averageRelevanceScore: data.averageRelevanceScore,
     averageCompressionRatio: data.averageCompressionRatio || (data.totalJitTokensUsed > 0 ? Number(Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)) : 1.0),
     peakInvocationTokens: data.peakInvocationTokens,
     commandBreakdown: data.commandBreakdown,
