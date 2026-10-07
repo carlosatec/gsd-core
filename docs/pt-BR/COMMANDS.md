@@ -108,7 +108,7 @@ node gsd-core/bin/gsd-tools.cjs tokens
 
 ### Inteligência de Sessão & CLI de Replay Determinístico
 
-O GSD 3.3 grava automaticamente eventos append-only de execução para todos os 10 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
+O GSD 3.6 grava automaticamente eventos append-only de execução para todos os 11 comandos em `.planning/intel/sessions/`. Você pode inspecionar, reproduzir e exportar sessões via `gsd-tools`:
 
 ```bash
 # Replay da última sessão no terminal

@@ -360,7 +360,7 @@ Agents always return a `RESEARCH.md` path, never raw fetched content. Context di
 
 ### Session Intelligence & Deterministic Replay Engine (`src/session-logger.cts`, `src/session-replay.cts`, Phase 14 — D-54, D-55, D-56, D-58)
 
-The Session Intelligence subsystem provides causal observability and deterministic reproduction of AI coding agent runs across all 10 canonical commands:
+The Session Intelligence subsystem provides causal observability and deterministic reproduction of AI coding agent runs across all 11 canonical commands:
 
 1. **Append-Only JSON Lines Stream (`src/session-logger.cts`):**
    - Emits structured events to `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.

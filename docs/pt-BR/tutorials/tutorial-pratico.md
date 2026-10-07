@@ -11,7 +11,7 @@
 1. [O que é o GSD Core Nexus](#1-o-que-é-o-gsd-core-nexus)
 2. [Instalação e Configuração](#2-instalação-e-configuração)
 3. [Iniciando um Projeto (Greenfield vs. Brownfield)](#3-iniciando-um-projeto)
-4. [A Interface Canônica dos 10 Comandos Unificados](#4-a-interface-canônica-dos-10-comandos-unificados)
+4. [A Interface Canônica dos 11 Comandos Unificados](#4-a-interface-canônica-dos-11-comandos-unificados)
 5. [O Ciclo de Desenvolvimento em 5 Etapas](#5-o-ciclo-de-desenvolvimento-em-5-etapas)
 6. [Inteligência de Código: AST Universal 360°, Mobile & Living Docs](#6-inteligência-de-código-ast-universal-360-mobile--living-docs)
 7. [Injeção Cirúrgica de Contexto (JIT) & RAG Semântico Okapi BM25](#7-injeção-cirúrgica-de-contexto-jit--rag-semântico-okapi-bm25)
@@ -31,7 +31,7 @@ O **GSD Core Nexus** é um framework de engenharia de contexto, análise estáti
 * **Subagentes com Contexto Limpo:** Cada plano de execução roda em uma janela isolada de 200k tokens.
 * **Estado Persistente em Arquivo:** O diretório `.planning/` é a única fonte da verdade — todo o progresso, decisões técnicas e planos ficam versionados no Git.
 * **Injeção Cirúrgica (JIT):** Em vez de enviar o repositório inteiro para o modelo, o GSD envia apenas os contratos e arquivos relevantes, reduzindo o consumo de tokens em **80% a 90%**.
-* **Superfície Pública Estrita:** Sem confusão com dezenas de aliases legados — 10 comandos canônicos claros e objetivos.
+* **Superfície Pública Estrita:** Sem confusão com dezenas de aliases legados — 11 comandos canônicos claros e objetivos.
 * **Inteligência de Sessão & Replay Determinístico:** Toda a execução de comandos é registrada em eventos append-only JSONL com smart trimming e replay interativo no terminal.
 
 ---
@@ -96,9 +96,9 @@ Atualiza a estrutura e schemas para o padrão GSD Core Nexus 3.6 de forma 100% n
 
 ---
 
-## 4. A Interface Canônica dos 10 Comandos Unificados
+## 4. A Interface Canônica dos 11 Comandos Unificados
 
-No GSD 3.3, a superfície de comandos é estritamente consolidada em **10 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
+No GSD 3.6, a superfície de comandos é estritamente consolidada em **11 comandos canônicos oficiais**, com todos os playbooks operacionais internos carregados sob demanda via contexto de execução:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -115,6 +115,7 @@ No GSD 3.3, a superfície de comandos é estritamente consolidada em **10 comand
 │ /gsd-auto  │ Piloto automático (discuss → plan → exec loop) │
 │ /gsd-tokens│ Painel visual de economia e uso de tokens      │
 │ /gsd-migrate│ Modernização de projetos legados e grafo AST   │
+│ /gsd-graph │ Exportação do grafo HTML e canvas do Obsidian  │
 │ /gsd-help  │ Guia completo de uso e consulta de comandos    │
 └────────────┴────────────────────────────────────────────────┘
 ```
@@ -160,11 +161,15 @@ No GSD 3.3, a superfície de comandos é estritamente consolidada em **10 comand
    - **O que faz:** Faz backup seguro de versões antigas do GSD, converte schemas e roadmaps legados para o formato moderno de ondas, roda o analisador Universal 360° AST e gera a pasta `.planning/intel/` com o grafo de dependências e documentação viva (`ARCHITECTURE.md` e `APIS.md`).
    - **Quando usar:** Ao trazer para o GSD Core Nexus 3.6 um projeto que usava versões antigas do GSD ou que estava sem a estrutura `intel/`.
 
-10. **`/gsd-help` — Guia Interativo de Ajuda:**
-    - **O que faz:** Lista os 10 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
+10. **`/gsd-graph` — Exportador do Grafo Visual de Conhecimento:**
+    - **O que faz:** Exporta um grafo HTML/Canvas 2D interativo 100% offline (hubs PageRank, tipos de aresta, filtros, snapshot PNG) e um `.planning/ROADMAP.canvas` compatível com o Obsidian.
+    - **Quando usar:** Para explorar a arquitetura visualmente ou compartilhar um mapa da base de código.
+
+11. **`/gsd-help` — Guia Interativo de Ajuda:**
+    - **O que faz:** Lista os 11 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
     - **Quando usar:** Sempre que precisar consultar parâmetros ou atalhos de sintaxe.
 
-> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd-plan`, `/gsd-plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 10 oficiais são rejeitados de forma segura e orientadora.
+> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd-plan`, `/gsd:plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 11 oficiais são rejeitados de forma segura e orientadora.
 
 ---
 
@@ -272,7 +277,7 @@ Acompanhe a economia de tokens e uso de contexto em tempo real:
 
 ## 10. Inteligência de Sessão & CLI de Replay Determinístico
 
-O GSD 2.6 grava automaticamente eventos append-only de execução para todos os 10 comandos canônicos em `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
+O GSD 3.6 grava automaticamente eventos append-only de execução para todos os 11 comandos canônicos em `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
 
 ### Recursos Principais:
 - **Smart Trimming de 32 KB:** Saídas longas de comandos e stack traces preservam o início (16 KB) e o fim (16 KB) com marcadores informativos `... [truncated N bytes] ...`, eliminando estouro de disco sem perder a causa-raiz de falhas.

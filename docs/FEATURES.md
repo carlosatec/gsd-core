@@ -3428,7 +3428,7 @@ See [Archiving quick tasks](how-to/handle-quick-and-fast-tasks.md#archiving-quic
 4. **Dual-Mode Code Review (D-113, D-121):**
    - *Targeted Mode (`targeted` — default):* Audits phase-scoped or explicit files (`--files=...`), computing language-weighted JIT savings (80% to 95%).
    - *Whole-Repository Mode (`full-repo` — `--full` / `--repo`):* Audits the entire codebase AST topology at cost zero, guides attention to PageRank centrality hubs, and reports transparent metrics (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`).
-5. **Unified CLI Seam (D-117):** Direct router integration in `gsd-tools.cjs` for all 10 canonical commands (`node gsd-tools.cjs <command>`).
+5. **Unified CLI Seam (D-117):** Direct router integration in `gsd-tools.cjs` for all 11 canonical commands (`node gsd-tools.cjs <command>`).
 6. **Physical File Auto-Estimator (D-114):** Inspects actual files on disk and phase plan markdown rather than relying on unexpanded shell variables.
 7. **Root-Anchored Guardrails (D-119):** Anchors `checkPathExists` to `path.resolve(root, p)`, eliminating working directory drift.
 8. **Deterministic 65-Column Dashboard (D-116):** Standardized ASCII box layout, canonical command ordering (`plan` → `review` → `exec`), `review (full-repo)` badge, and pre-exec lifecycle diagnostic notes.

@@ -9,10 +9,11 @@ A narrative companion guide to GSD Core Nexus 3.6 — orient yourself here, then
 
 ## Table of Contents
 
-- [The Unified 10-Command Surface](#the-unified-10-command-surface)
+- [The Unified 11-Command Surface](#the-unified-11-command-surface)
 - [Project Lifecycle Overview](#project-lifecycle-overview)
 - [Session Intelligence & Deterministic Replay CLI](#session-intelligence--deterministic-replay-cli)
 - [Knowledge Graph & Obsidian Canvas](#knowledge-graph--obsidian-canvas)
+- [System One Engine & Intel Freshness](#system-one-engine--intel-freshness)
 - [DeepSeek Harness & Multi-Runtime Support](#deepseek-harness--multi-runtime-support)
 - [Workflow Diagrams](#workflow-diagrams)
 - [Validation & Quality Architecture](#validation--quality-architecture)
@@ -27,9 +28,9 @@ A narrative companion guide to GSD Core Nexus 3.6 — orient yourself here, then
 
 ---
 
-## The Unified 10-Command Surface
+## The Unified 11-Command Surface
 
-Starting with GSD Core Nexus 3.6, the public command surface is streamlined into **10 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 3.6, the public command surface is streamlined into **11 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -42,6 +43,7 @@ Starting with GSD Core Nexus 3.6, the public command surface is streamlined into
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Real-time multi-command token telemetry dashboard, operational sessions, financial estimation, and web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
 | `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.6 | `--dry-run`, `--force` |
+| `/gsd-graph` | Export the interactive HTML knowledge graph and Obsidian canvas | `--no-open` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
 ---
@@ -91,12 +93,26 @@ GSD Core Nexus natively generates visual knowledge artifacts directly from the c
 - **Obsidian Open Canvas:** `.planning/ROADMAP.canvas` — visual node layout with color-coded phases, decisions, and modules.
 - **Wikilinks & Backlinks Index:** `.planning/intel/backlinks.json` — bidirectional linkage index with inline code filtering (`stripInlineCode`) for Obsidian Vault navigation.
 - **Interactive Visual Graph (HTML):** `/gsd-graph` command exports a standalone HTML/Canvas 2D visualization with PageRank physics, Fermat radial spiral distribution, thermal alpha cooling stabilization, and PNG snapshot export.
+- **Single Source of Truth:** The AST graph lives only in `.planning/intel/codebase-graph.json`, pinned to the Git commit SHA (`graph.stats.gitCommitSha`). The legacy `.planning/graphs/graph.json` is read as a fallback only.
+- **Semantic Edge Typing:** Every dependency edge is labelled `runtime`, `type_only`, or `infra`. Blast radius is damped by 0.2 when all dependents only consume types.
+- **Polyglot Coverage:** TypeScript/JavaScript, Python, Go, Rust (including `mod` resolution), Zig, Astro, Protobuf, Vue/Svelte SFCs, mobile (Swift/Kotlin/Dart), SQL, and DevOps files.
+
+---
+
+## System One Engine & Intel Freshness
+
+The **System One Engine** is a local, API-free decision layer that triages risk and confidence for `/gsd-review`, `/gsd-verify`, and JIT context ranking:
+
+- **Multi-Head Evaluation:** `SecurityHead`, `ArchitectureHead`, and `QualityHead` produce calibrated scores with Shannon-entropy uncertainty.
+- **Hybrid Re-Ranking:** BM25 lexical retrieval and PageRank topology are fused via Reciprocal Rank Fusion (k=60).
+- **Closed-Loop Learning:** Lessons stored in `.planning/intel/anti-patterns.json` raise the risk score of files with a regression history; changed production code without matching tests blocks the trivial auto-pass.
+- **Intel Freshness in `/gsd-status`:** The status output ends with `Intel AST: Fresh (...)` or `Intel AST: Stale (graph-sha vs head-sha)`. When stale, rebuild the graph with `node gsd-core/bin/gsd-tools.cjs intel graph`.
 
 ---
 
 ## DeepSeek Harness & Multi-Runtime Support
 
-GSD 2.9 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
+GSD Core Nexus 3.6 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
 
 ---
 
@@ -314,7 +330,8 @@ Key capabilities:
 | Broken implementation | Run `/gsd-review --fix` or `git revert` last phase commit |
 | STATE.md out of sync | Run `gsd-tools state sync` to reconstruct state |
 | High token consumption | Check `/gsd-tokens` and set `model_profile: "budget"` in config |
-| Legacy project upgrade | Run `/gsd-migrate` to update structure to 2.5.0 format |
+| Legacy project upgrade | Run `/gsd-migrate` to update the structure to the GSD Core Nexus 3.6 format |
+| `Intel AST: Stale` in status | Run `node gsd-core/bin/gsd-tools.cjs intel graph` so the graph re-anchors to the current Git HEAD |
 
 ---
 

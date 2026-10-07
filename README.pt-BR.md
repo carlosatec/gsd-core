@@ -46,6 +46,9 @@ O GSD Core Nexus 3.6 transforma agentes de codificação em uma engenharia autô
 5. **Observabilidade 360° & Painel de Tokens em Tempo Real:** Telemetria operacional de sessões (confiabilidade, latência, chamadas de ferramentas), modelo financeiro adaptativo (gastos e economia em $ USD para Claude, GPT-4o, Gemini, DeepSeek e LLMs locais), terminal adaptativo de 65 colunas (`/gsd-tokens`) e dashboard web HTML/SVG 100% offline (`npm run dashboard`).
 6. **Code Review em Modo Duplo com Auto-Reparo (`--fix`):** Revisão seletiva cirúrgica via JIT versus auditoria estática global de todo o repositório a custo zero (`--full` / `--repo`).
 7. **Suporte Nativo ao DeepSeek Harness (`@deepseek-ai/dsh`):** Integração declarativa via micro-kernel Cordis, transporte MCP e resolução transparente de aliases de CLI.
+8. **System One Engine — Inteligência de Decisão Soberana Multi-Head:** Triagem de risco local e sem APIs externas (`SecurityHead`, `ArchitectureHead`, `QualityHead`) com confiança calibrada, incerteza por Entropia de Shannon, re-ranking híbrido RRF (BM25 + PageRank), store de aprendizado persistente e auto-ingestão de `anti-patterns.json` no cálculo de risco.
+9. **SSOT Unificado do Grafo & Frescor do Intel:** `.planning/intel/codebase-graph.json` é a Fonte Única da Verdade, ancorada no Git commit SHA (sem a duplicata de ~5.4 MB). O `/gsd-status` informa se o grafo AST está `Fresh` ou `Stale` em relação ao `HEAD` em O(1).
+10. **Tipagem Semântica de Arestas & AST Poliglota Expandido:** Arestas rotuladas como `runtime`, `type_only` ou `infra` (blast radius de tipos puros amortecido em 80%), com suporte nativo a Zig, Astro, Protobuf e resolução de `mod` em Rust.
 
 ---
 

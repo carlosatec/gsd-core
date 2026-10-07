@@ -283,7 +283,7 @@ Os roteadores de família de comandos CJS despacham através do `CommandRoutingH
 
 ### Inteligência de Sessão & Motor de Replay Determinístico (`src/session-logger.cts`, `src/session-replay.cts`, Fase 14 — D-54, D-55, D-56, D-58)
 
-O subsistema de Inteligência de Sessão provê observabilidade causal e reconstituição determinística de execuções de IA em todos os 10 comandos canônicos:
+O subsistema de Inteligência de Sessão provê observabilidade causal e reconstituição determinística de execuções de IA em todos os 11 comandos canônicos:
 
 1. **Gravação Append-Only em JSON Lines (`src/session-logger.cts`):**
    - Emite eventos estruturados para `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
@@ -291,7 +291,7 @@ O subsistema de Inteligência de Sessão provê observabilidade causal e reconst
    - **Smart Trimming de 32 KB:** Preserva o cabeçalho (16 KB) e o rodapé (16 KB) de outputs longos e stack traces com marcadores `[truncated N bytes]`, eliminando estouro de disco sem perder a causa-raiz de exceções.
    - **Sanitização de Segredos:** Regex automática mascarando chaves sensíveis (`sk-ant-*`, `sk-*`, `ghp_*`, `Bearer *`, etc.) antes da gravação em disco.
    - **Ring Buffer (50/30d):** Retenção local delimitada em 50 sessões / 30 dias (~25-40 MB gitignored) com tratamento resiliente contra bloqueios de arquivos no Windows (`EPERM`/`EBUSY`).
-   - **Hook Transparente no Hub:** Integrado em `src/unified-workflow-hub.cts` cobrindo automaticamente qualquer invocação dos 10 comandos canônicos.
+   - **Hook Transparente no Hub:** Integrado em `src/unified-workflow-hub.cts` cobrindo automaticamente qualquer invocação dos 11 comandos canônicos.
 
 2. **Núcleo de Replay Determinístico (`src/session-replay.cts`):**
    - Reconstitui linhas do tempo no terminal com cores ANSI e filtros (`--summary`, `--errors-only`, `--diffs`, `--no-color`).

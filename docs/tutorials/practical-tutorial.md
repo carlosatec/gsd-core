@@ -11,7 +11,7 @@
 1. [What is GSD Core Nexus](#1-what-is-gsd-core-nexus)
 2. [Installation and Setup](#2-installation-and-setup)
 3. [Starting a Project (Greenfield vs. Brownfield)](#3-starting-a-project)
-4. [The 10 Canonical Unified Commands Surface](#4-the-10-canonical-unified-commands-surface)
+4. [The 11 Canonical Unified Commands Surface](#4-the-11-canonical-unified-commands-surface)
 5. [The 5-Stage Development Lifecycle](#5-the-5-stage-development-lifecycle)
 6. [Codebase Intelligence: Universal 360° AST, Mobile & Living Docs](#6-codebase-intelligence-universal-360-ast-mobile--living-docs)
 7. [Surgical Context Injection (JIT) & Okapi BM25 Semantic RAG](#7-surgical-context-injection-jit--okapi-bm25-semantic-rag)
@@ -96,9 +96,9 @@ Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 3.6
 
 ---
 
-## 4. The 10 Canonical Unified Commands Surface
+## 4. The 11 Canonical Unified Commands Surface
 
-In GSD 3.3, the user-facing command surface is strictly consolidated into **10 canonical commands**, while all operational playbooks are dynamically loaded on-demand via execution context:
+In GSD 3.6, the user-facing command surface is strictly consolidated into **11 canonical commands**, while all operational playbooks are dynamically loaded on-demand via execution context:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -115,6 +115,7 @@ In GSD 3.3, the user-facing command surface is strictly consolidated into **10 c
 │ /gsd-auto  │ Autonomous autopilot (discuss → plan → exec)   │
 │ /gsd-tokens│ Real-time token telemetry and savings dashboard│
 │ /gsd-migrate│ Non-destructive legacy migration & AST rebuild │
+│ /gsd-graph │ Interactive HTML graph & Obsidian canvas export │
 │ /gsd-help  │ Complete help and command reference guide      │
 └────────────┴────────────────────────────────────────────────┘
 ```
@@ -160,11 +161,15 @@ In GSD 3.3, the user-facing command surface is strictly consolidated into **10 c
    - **What it does:** Safely snapshots legacy GSD directories, converts older schemas and roadmaps to wave execution, runs the Universal 360° AST analyzer, and generates `.planning/intel/` (`codebase-graph.json`, `ARCHITECTURE.md`, `APIS.md`).
    - **When to use:** When bringing an existing project from older GSD versions to GSD Core Nexus 3.6.
 
-10. **`/gsd-help` — Interactive Reference Guide:**
-    - **What it does:** Displays all 10 canonical commands, accepted runtime syntax variants, and CLI flags.
+10. **`/gsd-graph` — Visual Knowledge Graph Exporter:**
+    - **What it does:** Exports a 100% offline interactive HTML/Canvas 2D graph (PageRank hubs, edge types, filters, PNG snapshot) and an Obsidian-compatible `.planning/ROADMAP.canvas`.
+    - **When to use:** To explore architecture visually or share a map of the codebase.
+
+11. **`/gsd-help` — Interactive Reference Guide:**
+    - **What it does:** Displays all 11 canonical commands, accepted runtime syntax variants, and CLI flags.
     - **When to use:** Whenever you need a quick syntax lookup or options reference.
 
-> **Syntax Compatibility:** GSD natively supports your runtime's slash command formatting: `/gsd-plan`, `/gsd-plan`, `$gsd-plan`, or `gsd plan`. Legacy retired commands fail closed safely with guidance pointing to the canonical 10.
+> **Syntax Compatibility:** GSD natively supports your runtime's slash command formatting: `/gsd-plan`, `/gsd:plan`, `$gsd-plan`, or `gsd plan`. Legacy retired commands fail closed safely with guidance pointing to the canonical 11.
 
 ---
 

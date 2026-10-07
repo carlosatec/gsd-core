@@ -94,5 +94,5 @@ Execute the planned tasks in parallel waves and run conversational verification:
 ## Related
 
 - [Your first project](your-first-project.md) — the full greenfield loop from install to PR
-- [Commands](../COMMANDS.md) — complete reference of the 10 canonical commands
+- [Commands](../COMMANDS.md) — complete reference of the 11 canonical commands
 - [Documentation index](../README.md)

@@ -43,7 +43,7 @@ Para catálogo completo e detalhamento exaustivo, consulte [FEATURES.md em ingl�
 
 - **Telemetria Holística de Tokens Multi-Comando (D-111 a D-121):** Monitoramento de tokens em `plan`, `exec` e `review` com lock transacional (`withFileLockSync`), deduplicação de `invocationId`, auto-estimador por arquivos físicos e dashboard em 65 colunas.
 - **Review em Modo Duplo:** Suporte a `--full` / `--repo` para auditoria estática global de todo o repositório a custo zero de tokens com nós centrais de PageRank, ao lado da revisão seletiva cirúrgica via JIT (80-95% poupados).
-- **Roteamento Unificado de CLI:** Execução direta de todos os 10 comandos canônicos via `node gsd-tools.cjs <comando>` (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`).
+- **Roteamento Unificado de CLI:** Execução direta de todos os 11 comandos canônicos via `node gsd-tools.cjs <comando>` (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `graph`, `help`).
 - **Guardrails Ancorados na Raiz:** Ancoragem de verificações em `path.resolve(root, p)`, imune a variações do diretório de trabalho.
 - **Log Estruturado e Replay Determinístico de Sessão:** Replay de execuções com filtros (`--errors-only`, `--diffs`) e retenção segura em disco.
 - **Suporte Nativo ao DeepSeek Harness:** Integração micro-kernel Cordis e MCP para modelos DeepSeek.

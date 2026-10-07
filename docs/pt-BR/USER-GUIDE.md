@@ -9,10 +9,11 @@ Guia prático e narrativo do GSD Core Nexus 3.6 — oriente-se aqui e siga os li
 
 ## Índice
 
-- [A Superfície Unificada de 10 Comandos](#a-superfície-unificada-de-10-comandos)
+- [A Superfície Unificada de 11 Comandos](#a-superfície-unificada-de-11-comandos)
 - [Visão Geral do Ciclo de Vida do Projeto](#visão-geral-do-ciclo-de-vida-do-projeto)
 - [Inteligência de Sessão & Replay Determinístico CLI](#inteligência-de-sessão--replay-determinístico-cli)
 - [Grafo de Conhecimento & Obsidian Canvas](#grafo-de-conhecimento--obsidian-canvas)
+- [System One Engine & Frescor do Intel](#system-one-engine--frescor-do-intel)
 - [DeepSeek Harness & Suporte Multi-Runtime](#deepseek-harness--suporte-multi-runtime)
 - [Diagramas de Fluxo de Trabalho](#diagramas-de-fluxo-de-trabalho)
 - [Arquitetura de Validação & Qualidade](#arquitetura-de-validação--qualidade)
@@ -27,9 +28,9 @@ Guia prático e narrativo do GSD Core Nexus 3.6 — oriente-se aqui e siga os li
 
 ---
 
-## A Superfície Unificada de 10 Comandos
+## A Superfície Unificada de 11 Comandos
 
-A partir do GSD Core Nexus 3.6, a interface pública é simplificada e consolidada em **10 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.6, a interface pública é simplificada e consolidada em **11 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -42,6 +43,7 @@ A partir do GSD Core Nexus 3.6, a interface pública é simplificada e consolida
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Painel de telemetria multi-comando em tempo real, sessões operacionais, cálculo financeiro e web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.6 | `--dry-run`, `--force` |
+| `/gsd-graph` | Exporta o grafo de conhecimento HTML interativo e o canvas do Obsidian | `--no-open` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
 ---
@@ -91,12 +93,26 @@ O GSD Core Nexus gera nativamente artefatos visuais de conhecimento a partir do 
 - **Obsidian Open Canvas:** `.planning/ROADMAP.canvas` — layout de nós visuais coloridos por fases, decisões e módulos.
 - **Índice de Wikilinks & Backlinks:** `.planning/intel/backlinks.json` — índice de ligações bidirecionais com filtro de inline code (`stripInlineCode`) para navegação no Obsidian Vault.
 - **Grafo Visual Interativo (HTML):** O comando `/gsd-graph` exporta um visualizador HTML/Canvas 2D autônomo com distribuição em espiral de Fermat, estabilização de física por decaimento térmico $\alpha$ e exportação de snapshot PNG.
+- **Fonte Única da Verdade:** O grafo AST vive apenas em `.planning/intel/codebase-graph.json`, ancorado no Git commit SHA (`graph.stats.gitCommitSha`). O legado `.planning/graphs/graph.json` é lido somente como fallback.
+- **Tipagem Semântica de Arestas:** Cada aresta de dependência é rotulada como `runtime`, `type_only` ou `infra`. O blast radius é amortecido por 0.2 quando todos os dependentes consomem apenas tipos.
+- **Cobertura Poliglota:** TypeScript/JavaScript, Python, Go, Rust (incluindo resolução de `mod`), Zig, Astro, Protobuf, SFCs Vue/Svelte, mobile (Swift/Kotlin/Dart), SQL e arquivos DevOps.
+
+---
+
+## System One Engine & Frescor do Intel
+
+O **System One Engine** é uma camada de decisão local, sem APIs externas, que faz a triagem de risco e confiança para `/gsd-review`, `/gsd-verify` e o ranking de contexto JIT:
+
+- **Avaliação Multi-Head:** `SecurityHead`, `ArchitectureHead` e `QualityHead` produzem scores calibrados com incerteza por Entropia de Shannon.
+- **Re-Ranking Híbrido:** Recuperação léxica BM25 e topologia PageRank são fundidas via Reciprocal Rank Fusion (k=60).
+- **Aprendizado em Ciclo Fechado:** Lições em `.planning/intel/anti-patterns.json` elevam o score de risco de arquivos com histórico de regressão; código de produção alterado sem testes correspondentes bloqueia o auto-pass trivial.
+- **Frescor do Intel no `/gsd-status`:** A saída termina com `Intel AST: Fresh (...)` ou `Intel AST: Stale (sha-do-grafo vs sha-do-head)`. Se estiver defasado, reconstrua o grafo com `node gsd-core/bin/gsd-tools.cjs intel graph`.
 
 ---
 
 ## DeepSeek Harness & Suporte Multi-Runtime
 
-O GSD 2.9 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
+O GSD Core Nexus 3.6 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
 
 ---
 
@@ -266,7 +282,8 @@ Principais recursos:
 | Código quebrado ou instável | Execute `/gsd-review --fix` ou desfaça o commit da fase |
 | STATE.md fora de sincronia | Execute `gsd-tools state sync` para reconstruir o estado |
 | Consumo elevado de tokens | Verifique `/gsd-tokens` e ajuste `model_profile: "budget"` |
-| Upgrade de projeto antigo | Execute `/gsd-migrate` para atualizar a estrutura para a v2.5 |
+| Upgrade de projeto antigo | Execute `/gsd-migrate` para atualizar a estrutura para o formato do GSD Core Nexus 3.6 |
+| `Intel AST: Stale` no status | Execute `node gsd-core/bin/gsd-tools.cjs intel graph` para reancorar o grafo no Git HEAD atual |
 
 ---
 

@@ -46,6 +46,9 @@ GSD Core Nexus 3.6 elevates AI coding agents with deep execution observability, 
 5. **Observability 360° & Real-Time Token Dashboard:** Operational session telemetry (reliability, latency, tool calls), adaptive financial modeling ($ USD spend across Claude, GPT-4o, Gemini, DeepSeek, and local LLMs), 65-column adaptive terminal UI (`/gsd-tokens`), and 100% offline standalone HTML/SVG web dashboard (`npm run dashboard`).
 6. **Dual-Mode Code Review with Autonomous Repair (`--fix`):** Surgical targeted reviews saving 80–95% tokens via JIT, alongside zero-cost whole-repository AST audits (`--full` / `--repo`).
 7. **1st-Class DeepSeek Harness Support (`@deepseek-ai/dsh`):** Full declarative host adapter with Cordis micro-kernel integration, Model Context Protocol (MCP) transport, and seamless CLI alias resolution.
+8. **System One Engine — Sovereign, Multi-Head Decision Intelligence:** Local, API-free risk triage (`SecurityHead`, `ArchitectureHead`, `QualityHead`) with calibrated confidence, Shannon-entropy uncertainty, hybrid BM25 + PageRank RRF re-ranking, a persistent learning store, and closed-loop ingestion of `anti-patterns.json` into risk scoring.
+9. **Unified Graph SSOT & Intel Freshness:** `.planning/intel/codebase-graph.json` is the single source of truth, pinned to the Git commit SHA (no more ~5.4 MB duplicate graph). `/gsd-status` reports whether the AST graph is `Fresh` or `Stale` against `HEAD` in O(1).
+10. **Semantic Edge Typing & Expanded Polyglot AST:** Dependency edges are labelled `runtime`, `type_only`, or `infra` (type-only blast radius damped by 80%), with native support for Zig, Astro, Protobuf, and Rust `mod` resolution.
 
 ---
 
