@@ -10,7 +10,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const node_child_process_1 = require("node:child_process");
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const markdown_sectionizer_cjs_1 = require("./markdown-sectionizer.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const livingDocs = require("./living-docs-engine.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -48,9 +50,10 @@ const observabilityHtmlMod = require("./observability-html-dashboard.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const systemOneMod = require("./system-one-engine.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const semanticRag = require("./hybrid-semantic-rag.cjs");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const normalizeTestMod = require("./normalize-test-command.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const intelMod = require("./intel.cjs");
+const { checkIntelHealth } = intelMod;
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
@@ -63,8 +66,7 @@ const { syncSessionContext } = sessionHook;
 const { runGapAnalysis } = gapChecker;
 const { analyzeSource, isAnalyzablePath } = complexityTrigger;
 const { classifyContent } = coverageMod;
-const { classifyRiskSync, evaluateAssertionSync } = systemOneMod;
-const { querySemanticSimilarFiles } = semanticRag;
+const { classifyRiskSync, evaluateAssertionSync, recordUserOverride, choose } = systemOneMod;
 const { detectProjectTestCommand, normalizeTestCommand } = normalizeTestMod;
 // ─── Strict Canonical Command Normalizer (D-41 / D-42) ────────────────────────
 const CANONICAL_COMMAND_SET = new Set([
@@ -261,13 +263,20 @@ function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, ful
         }
     }
     const topCentral = typeof queryTopCentralFiles === 'function' && graph ? queryTopCentralFiles(graph, 5) : [];
-    // 8. System One — Risk Triage (Wave 3: Speculative Fan-Out & Warning Reporting)
     let systemOneAutoPass = false;
     const systemOneCtx = { planningDir: resolvedPlanningDir, rootDir: resolvedRoot };
     if (filesToReview.length > 0) {
         try {
             let allLowRisk = true;
             let hasSystemOneWarning = false;
+            // Test co-evolution guard (Phase 31 Wave 3)
+            const hasTestFiles = filesToReview.some(f => f.includes('.test.') || f.includes('.spec.') || f.startsWith('tests/') || f.startsWith('test/'));
+            const hasCodeFiles = filesToReview.some(f => !f.includes('.test.') && !f.includes('.spec.') && !f.startsWith('tests/') && !f.startsWith('test/') && !f.endsWith('.md') && !f.endsWith('.json') && !f.endsWith('.png') && !f.endsWith('.svg'));
+            if (hasCodeFiles && !hasTestFiles) {
+                warnings.push('[System-One] Co-evolução de testes ausente: código de produção modificado sem testes unitários correspondentes.');
+                hasSystemOneWarning = true;
+                allLowRisk = false;
+            }
             for (const relPath of filesToReview) {
                 const fullPath = node_path_1.default.join(resolvedRoot, relPath);
                 // Score: Regression risk 0 (inofensivo) → 3 (crítico)
@@ -319,6 +328,7 @@ function executeReview(planningDir, rootDir, autoFix = false, explicitFiles, ful
     }
     return {
         filesReviewed,
+        targetFiles: filesToReview,
         criticalIssues,
         warnings,
         fixed,
@@ -441,6 +451,23 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             };
         case 'status': {
             const telemetry = getTelemetrySummary(planningDir);
+            let intelHealth = undefined;
+            let intelMsg = '';
+            try {
+                if (typeof checkIntelHealth === 'function') {
+                    const healthReport = checkIntelHealth(planningDir, cwd);
+                    intelHealth = healthReport;
+                    if (healthReport.stale) {
+                        intelMsg = ` | Intel AST: Stale (${healthReport.gitCommitSha ? healthReport.gitCommitSha.slice(0, 7) : 'missing'} vs ${healthReport.currentGitHead ? healthReport.currentGitHead.slice(0, 7) : 'head'}).`;
+                    }
+                    else if (healthReport.healthy) {
+                        intelMsg = ` | Intel AST: Fresh (${healthReport.gitCommitSha ? healthReport.gitCommitSha.slice(0, 7) : 'ok'}, ${healthReport.totalFiles ?? 0} files).`;
+                    }
+                }
+            }
+            catch {
+                // Non-blocking
+            }
             const teleMsg = telemetry.totalInvocations > 0
                 ? ` | JIT Efficiency: ${telemetry.averageEfficiencyPct}% tokens saved (${telemetry.totalTokensSaved} tokens).`
                 : '';
@@ -448,8 +475,8 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'status',
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
-                data: { telemetry },
-                message: `GSD Core Nexus 3.6 Status analyzed. Context and phase roadmap verified.${teleMsg}`,
+                data: { telemetry, intelHealth },
+                message: `GSD Core Nexus 3.6 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}`,
             };
         }
         case 'plan': {
@@ -486,12 +513,29 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             catch {
                 // Non-blocking in mock environments
             }
+            // System One Gatekeeping: decide fast vs deep planning mode
+            let planMode = 'fast';
+            try {
+                if (typeof choose === 'function') {
+                    const isComplex = targetFiles.length > 5 || gapWarnings.length > 0;
+                    const choiceResult = choose(['fast', 'deep'], {
+                        planningDir,
+                        taskType: 'planning',
+                        complexity: isComplex ? 'high' : 'low',
+                        targetFilesCount: targetFiles.length,
+                    });
+                    planMode = choiceResult.choice;
+                }
+            }
+            catch {
+                // Fallback default
+            }
             return {
                 command: 'plan',
                 action: 'PLAN_PHASE',
                 nextStep: 'run /gsd:exec to execute the generated phase plan',
-                data: { jit: jitPackage, gapWarnings },
-                message: `Phase plan ready with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).`,
+                data: { jit: jitPackage, gapWarnings, planMode },
+                message: `Phase plan ready in ${planMode} mode with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).`,
             };
         }
         case 'exec': {
@@ -553,14 +597,31 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             catch {
                 // Non-blocking telemetry
             }
+            // System One Gatekeeping: decide between wave parallelism vs serial execution
+            let executionMode = 'parallel';
+            try {
+                if (typeof choose === 'function') {
+                    const hasWarnings = preFlightReport.violations.length > 0;
+                    const choiceResult = choose(['parallel', 'serial'], {
+                        planningDir,
+                        taskType: 'execution',
+                        complexity: hasWarnings || filesToModify.length > 8 ? 'high' : 'low',
+                        violationsCount: preFlightReport.violations.length,
+                    });
+                    executionMode = choiceResult.choice;
+                }
+            }
+            catch {
+                // Fallback default
+            }
             return {
                 command: 'exec',
                 action: 'EXECUTE_PHASE',
                 nextStep: 'run /gsd:review or /gsd:verify upon wave completion',
-                data: { preFlight: preFlightReport },
+                data: { preFlight: preFlightReport, executionMode },
                 message: preFlightReport.valid
-                    ? 'Pre-flight guardrails passed. Phase execution underway with atomic commits and JIT context injection.'
-                    : `Pre-flight warnings detected (${preFlightReport.violations.length} violation(s)). Phase execution proceeding with guardrails active.`,
+                    ? `Pre-flight guardrails passed. Phase execution underway in ${executionMode} wave mode with atomic commits and JIT context injection.`
+                    : `Pre-flight warnings detected (${preFlightReport.violations.length} violation(s)). Phase execution proceeding in ${executionMode} mode with guardrails active.`,
             };
         }
         case 'review': {
@@ -579,6 +640,16 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             const fixHint = (!hasFixFlag && totalIssues > 0)
                 ? ' 💡 Dica: Para aplicar essas correções automaticamente, execute /gsd:review --fix'
                 : '';
+            const hasReject = Boolean(options.flags?.['reject'] || options.flags?.['override'] || options.args.includes('--reject'));
+            if (hasReject && typeof recordUserOverride === 'function') {
+                const rejectReason = typeof options.flags?.['reason'] === 'string'
+                    ? options.flags['reason']
+                    : 'User manual override in review session';
+                const filesToOverride = reviewResult.targetFiles || explicitFiles;
+                for (const file of filesToOverride) {
+                    recordUserOverride(file, rejectReason, planningDir);
+                }
+            }
             return {
                 command: 'review',
                 action: hasFixFlag ? 'REVIEW_AND_AUTO_FIX' : 'REVIEW_ONLY',
@@ -626,11 +697,10 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             }
             else {
                 try {
-                    const { execSync } = require('node:child_process');
                     const detectedCmd = detectProjectTestCommand(cwd);
                     const normalizedCmd = normalizeTestCommand(detectedCmd, cwd);
                     try {
-                        execSync(normalizedCmd, { cwd, stdio: 'ignore', timeout: 60000 });
+                        (0, node_child_process_1.execSync)(normalizedCmd, { cwd, stdio: 'ignore', timeout: 60000 });
                         testsGreen = true;
                     }
                     catch {
@@ -650,9 +720,9 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                     // Extract acceptance criteria from PLAN.md (numbered list under section 4 or "Verification Criteria")
                     if (phaseId && node_fs_1.default.existsSync(planPath)) {
                         const planContent = (0, shell_command_projection_cjs_1.platformReadSync)(planPath) || '';
-                        const criteriaSection = planContent.match(/##\s+4\.\s+Verification[^\n]*\n([\s\S]+?)(?=\n##|\Z)/i);
+                        const criteriaSection = (0, markdown_sectionizer_cjs_1.collectSection)(planContent, (h) => h.level === 2 && /verification/i.test(h.text), { levelBounded: true });
                         if (criteriaSection) {
-                            const lines = criteriaSection[1].split('\n');
+                            const lines = criteriaSection.body.split('\n');
                             for (const line of lines) {
                                 const clean = line.replace(/^\s*\d+\.\s*\*\*[^*]+\*\*:?\s*/, '').replace(/^\s*[-*]\s+/, '').trim();
                                 if (clean.length > 10) {
@@ -728,6 +798,13 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 : autoPassed
                     ? 'COVERAGE_AUTO_PASSED'
                     : 'MANUAL_VALIDATION_REQUIRED';
+            const hasVerifyReject = Boolean(options.flags?.['reject'] || options.args.includes('--reject'));
+            if (hasVerifyReject && typeof recordUserOverride === 'function') {
+                const rejectReason = typeof options.flags?.['reason'] === 'string'
+                    ? options.flags['reason']
+                    : 'User rejected acceptance criteria in verify';
+                recordUserOverride(`phase-${phaseId}`, rejectReason, planningDir);
+            }
             return {
                 command: 'verify',
                 action: 'VERIFY_WORK',
@@ -826,6 +903,7 @@ module.exports = {
     normalizeCommandName,
     dispatchUnifiedCommand,
     executeReview,
+    recordUserOverride,
     executeWithSelfHealing: guardrailsMod.executeWithSelfHealing,
     generateTestScaffold: testScaffolder.generateTestScaffold,
     findCanonicalExample: canonicalFinder.findCanonicalExample,

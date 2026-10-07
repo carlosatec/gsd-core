@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { platformWriteSync, platformReadSync, platformEnsureDir } from './shell-command-projection.cjs';
+import { platformWriteSync, platformReadSync, platformEnsureDir, execGit } from './shell-command-projection.cjs';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import capabilityStateMod = require('./capability-state.cjs');
@@ -742,6 +742,66 @@ function intelQueryDeps(targetFile: string, planningDir: string): unknown {
   };
 }
 
+interface IntelHealthReport {
+  healthy: boolean;
+  graphExists: boolean;
+  gitCommitSha: string | null;
+  currentGitHead: string | null;
+  stale: boolean;
+  totalFiles?: number;
+  totalSymbols?: number;
+  message: string;
+}
+
+/**
+ * Validates the freshness and integrity of the AST knowledge graph (.planning/intel/codebase-graph.json).
+ * Compares graph.stats.gitCommitSha against the current Git HEAD in O(1) time.
+ */
+function checkIntelHealth(planningDir: string, rootDir: string = process.cwd()): IntelHealthReport {
+  const graph = loadCodebaseGraph(planningDir);
+  if (!graph) {
+    return {
+      healthy: false,
+      graphExists: false,
+      gitCommitSha: null,
+      currentGitHead: null,
+      stale: true,
+      message: 'Grafo AST não encontrado em .planning/intel/codebase-graph.json. Execute /gsd:graphify build.',
+    };
+  }
+
+  let currentHead: string | null = null;
+  try {
+    const gitRes = execGit(['rev-parse', 'HEAD'], { cwd: rootDir });
+    if (gitRes.exitCode === 0 && gitRes.stdout.trim()) {
+      currentHead = gitRes.stdout.trim();
+    }
+  } catch {
+    currentHead = null;
+  }
+
+  const graphCommit = graph.stats?.gitCommitSha || null;
+  const isStale = Boolean(currentHead && graphCommit && currentHead !== graphCommit);
+
+  let message = 'Grafo AST saudável e sincronizado com o Git HEAD ativo.';
+  if (isStale) {
+    message = `Grafo AST defasado em relação ao Git HEAD ativo (grafo em ${graphCommit?.slice(0, 7)}, HEAD em ${currentHead?.slice(0, 7)}). Execute /gsd:graphify build para atualizar.`;
+  } else if (!graphCommit) {
+    message = 'Grafo AST presente sem commit SHA ancorado. Execute /gsd:graphify build para registrar a linhagem.';
+  }
+
+  return {
+    healthy: !isStale,
+    graphExists: true,
+    gitCommitSha: graphCommit,
+    currentGitHead: currentHead,
+    stale: isStale,
+    totalFiles: graph.stats?.totalFiles,
+    totalSymbols: graph.stats?.totalSymbols,
+    message,
+  };
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 export = {
@@ -754,6 +814,7 @@ export = {
   intelBuildGraph,
   intelQuerySymbol,
   intelQueryDeps,
+  checkIntelHealth,
 
   // CLI subcommands
   intelSnapshot,

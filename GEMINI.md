@@ -1,5 +1,5 @@
 <!-- GSD-SESSION-CONTEXT -->
-> **GSD Active State**: Phase: Phase 29 (System Hygiene, Dead Code Cleanup & Regression Hardening) | Status: Planned
+> **GSD Active State**: Phase: Phase 31 (Unified Graph SSOT, Semantic Edge Typing & Closed-Loop Intelligence) | Status: Complete & Verified
 > **Decisions**: **D-01 [Architecture]:** Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.; **D-02 [Docs]:** Documentação viva incremental (`ARCHITECTURE.md`, `APIS.md`) sincronizada com o código.; **D-03 [Context]:** JIT context injection para montar prompts cirúrgicos baseados no grafo de dependências.; **D-04 [Guardrails]:** Pre-flight static verification + self-healing loop automático em caso de falhas de teste.
 > **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help
 <!-- /GSD-SESSION-CONTEXT -->

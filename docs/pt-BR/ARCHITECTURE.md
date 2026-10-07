@@ -864,6 +864,14 @@ Introduzido na Fase 22 para estender a observabilidade para além da execução,
 - **Guardrails Ancorados na Raiz (D-119):** Ancoragem de todas as checagens físicas de arquivos em `checkPathExists` para `path.resolve(root, p)`, eliminando drift do diretório de trabalho (`cwd`).
 - **Dashboard ASCII Determinístico em 65 Colunas (D-116):** Formatação estrita de largura (`INNER_WIDTH = 63`), ordenação determinística de comandos (`plan` → `review` → `exec`), badge visual e nota diagnóstica pré-execução.
 
+### 6. Grafo Unificado SSOT, Tipagem Semântica de Arestas e Inteligência em Ciclo Fechado (`src/codebase-ast-analyzer.cts`, `src/graphify.cts`, Fase 31)
+Introduzido na Fase 31 para unificar a arquitetura de grafos, eliminar a duplicação em disco, calibrar o cálculo de raio de alcance e fechar o circuito de auto-aprendizado:
+- **SSOT do Grafo de Conhecimento (`.planning/intel/codebase-graph.json`):** Consolida consultas, atualizações e exportações do grafo em uma Fonte Única da Verdade, eliminando redundâncias em `.planning/graphs/graph.json` (~5.4 MB economizados por workspace) com resolução retrocompatível (`resolveGraphLocation`).
+- **Ancoragem de Commit Git & Diagnóstico de Saúde (`checkIntelHealth`):** Grava `graph.stats.gitCommitSha` via `git rev-parse HEAD` e disponibiliza verificação em $O(1)$ no `/gsd-status` contra o HEAD ativo do repositório.
+- **Tipagem Semântica de Arestas & Amortecimento de Blast Radius (`dependencyKinds`):** Rotula arestas como `'runtime'`, `'type_only'` ou `'infra'`. Aplica fator de amortecimento 0.2 em dependentes puramente de tipos em `calculateBlastRadius`, eliminando falsos positivos de risco crítico em refatorações de tipagem.
+- **Expansão Poliglota do AST:** Parsers nativos em TypeScript puro para **Zig** (`.zig`), **Astro** (`.astro`), **Protocol Buffers** (`.proto`) e resolução hierárquica de `mod <name>;` em Rust.
+- **Inteligência em Ciclo Fechado & Co-Evolução de Testes:** Ingestão automática de `.planning/intel/anti-patterns.json` no `SystemOneEngine`, elevando o risco para arquivos com histórico de regressão, e detecção de alterações em código de produção sem testes correspondentes no `QualityHead`.
+
 ---
 
 ## Relacionados

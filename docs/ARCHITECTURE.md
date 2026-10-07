@@ -1096,6 +1096,43 @@ Introduced in Phase 27 to evolve GSD's AST engine from structural topology into 
 - **God Object Coupling Ratio (`isGodObject`):**
   - Computes `couplingRatio = linesCount / max(exports, 1)`. Identifies monolithic files (>800 lines, $\le$2 exports) and flags them in `/gsd-review`.
 
+### 7. GSD System One Engine 2.0 — Adaptive Intelligence, Multi-Head Architecture & Hybrid RRF (Phases 28 & 30)
+Introduced in Phase 28 and extended in Phase 30, inspired by the non-autoregressive, discriminative principles of Jev (TypeSafe AI) and the sovereign orchestration of Laya (Apache 2.0). Provides fast, graduated decision heuristics without external proprietary API dependencies:
+- **Zero-Token Sovereign Decision Heads:**
+  - `SecurityHead` (weight 0.4): Heuristically and semantically detects authentication changes, secrets, cryptographic logic, and security guard alterations.
+  - `ArchitectureHead` (weight 0.4): Assesses public API contract breakage (`export` signature changes), topological PageRank centrality, and God-Object coupling.
+  - `QualityHead` (weight 0.2): Analyzes code churn ratios and LOC diff volumes to gate regression risk.
+- **Normalized Shannon Uncertainty ($H(P)$):**
+  - Calculates normalized Shannon entropy ($0.0 \le H(P) \le 1.0$) over calibrated probability distributions, dynamically driving decision confidence (`high`, `med`, `low`).
+- **Hybrid Reciprocal Rank Fusion (RRF $k=60$):**
+  - `reRankItems` combines topological PageRank centrality from the codebase graph with lexical code similarity from Okapi BM25 (`tokenize`), yielding calibrated item relevance scores (60% to 99%) for Quality-First JIT context injection.
+- **Durable Context Learning Store (`system-one-learning.json`):**
+  - Persists user manual overrides (`--reject`, `--override`) in `.planning/intel/system-one-learning.json` with a 100-rule FIFO retention ceiling.
+  - Hardened with atomic temporary writes and `renameWithRetry` backoff for Windows NTFS concurrency (`DEFECT.WINDOWS-FS-OPS` parity).
+  - Automatically elevates risk scores and inhibits auto-approval for matching file patterns or globs.
+- **Decision Firing Log & Session Telemetry:**
+  - Structured event streaming via `SessionLogger.logSystemOneDecision`, capturing latency, entropy, confidence, and heads breakdown in `.planning/intel/sessions/<id>.jsonl` with automatic credential sanitization.
+- **Fail-Safe Warning Fallbacks & Sliding Window Rate Guard:**
+  - Envelopes semantic LLM evaluations in `try/catch` with sub-5ms fallback to local AST deterministic analytics upon network failure, provider error, or rate exhaustion (10 req/min sliding window).
+
+### 8. Unified Graph SSOT, Semantic Edge Typing & Closed-Loop Intelligence (Phase 31)
+Introduced in Phase 31, unifying the knowledge graph architecture, eliminating multi-megabyte disk duplication, refining topological blast radius calculations, and closing the feedback loop between execution failures and static risk scoring:
+- **Knowledge Graph SSOT (`.planning/intel/codebase-graph.json`):**
+  - Consolidates all graph queries, AST updates, and exports into a Single Source of Truth located at `.planning/intel/codebase-graph.json`, eliminating redundant copies in `.planning/graphs/graph.json` (~5.4 MB saving per workspace).
+  - Backwards-compatible resolution (`resolveGraphLocation`) seamlessly falls back to legacy locations if present.
+- **Git Commit Pinning & Ecosystem Health (`checkIntelHealth`):**
+  - Anchors `graph.stats.gitCommitSha` via `git rev-parse HEAD` upon graph construction.
+  - Exposes an $O(1)$ health check in `/gsd-status` comparing the pinned SHA with the active Git HEAD, signaling when the graph requires rebuilding.
+- **Semantic Edge Typing & Blast Radius Damping (`dependencyKinds`):**
+  - Labels graph edges as `'runtime'`, `'type_only'`, or `'infra'`.
+  - In `calculateBlastRadius`, applies a 0.2 damping factor to direct counts, transitive dependents, and PageRank weights when dependents only consume types (`type_only`), eliminating false-positive critical blast radius alerts during type refactoring.
+- **Polyglot AST Expansion:**
+  - Native analyzers in pure TypeScript for **Zig** (`.zig` via `analyzeZigFile`), **Astro** (`.astro` via `analyzeAstroFile`), and **Protocol Buffers** (`.proto` via `analyzeProtoFile`).
+  - Hierarchical submodule resolution for Rust (`mod <name>;` resolved to `<name>.rs` or `<name>/mod.rs`).
+- **Closed-Loop Intelligence & Test Co-Evolution:**
+  - `AstAnalyticalProvider.evaluateRiskScore` ingests `.planning/intel/anti-patterns.json` via `queryAntiPatterns`. Files with historical regression patterns receive elevated risk scores ($\ge 2.0$) and explicit warnings.
+  - `QualityHead` checks for test co-evolution: production code changes without accompanying test file modifications are flagged with reduced confidence and auto-pass inhibition.
+
 ---
 
 ## Related

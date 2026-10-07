@@ -28,12 +28,12 @@ const DEFAULT_EXTENSIONS = new Set([
     // Styles & Design Tokens
     '.css', '.scss', '.sass', '.less',
     // Mobile & Web Templates
-    '.dart', '.swift', '.m', '.mm', '.html', '.htm', '.vue', '.svelte',
+    '.dart', '.swift', '.m', '.mm', '.html', '.htm', '.vue', '.svelte', '.astro',
     // Databases & Schemas
-    '.sql', '.prisma', '.graphql', '.gql',
+    '.sql', '.prisma', '.graphql', '.gql', '.proto',
     // Backend & Systems
     '.py', '.go', '.rs', '.cs', '.java', '.kt', '.php', '.rb',
-    '.c', '.cpp', '.h', '.hpp',
+    '.c', '.cpp', '.h', '.hpp', '.zig',
     // DevOps & Shell
     '.sh', '.bash', '.zsh', '.yaml', '.yml'
 ]);
@@ -326,10 +326,35 @@ function calculateBlastRadius(graph, targetFiles, maxHops = 3) {
             }
         }
     }
+    // Helper to determine if a dependent file only depends on targets via type_only edges
+    function isTypeOnlyDependent(dependentFile) {
+        const fNode = graph.files[dependentFile];
+        if (!fNode || !fNode.dependencyKinds)
+            return false;
+        const depKinds = fNode.dependencyKinds;
+        const matchedEntries = Object.entries(depKinds).filter(([dep]) => {
+            const normDep = toPosixPath(dep);
+            return normalizedTargets.some(t => normDep === t || normDep.endsWith('/' + t) || t.endsWith('/' + normDep) || node_path_1.default.basename(normDep) === node_path_1.default.basename(t));
+        });
+        if (matchedEntries.length === 0)
+            return false;
+        return matchedEntries.every(([, kind]) => kind === 'type_only');
+    }
     let totalPageRankWeight = 0;
     for (const f of allImpactedFiles) {
-        totalPageRankWeight += (graph.pageRankScores && graph.pageRankScores[f]) || 0;
+        const pr = (graph.pageRankScores && graph.pageRankScores[f]) || 0;
+        totalPageRankWeight += isTypeOnlyDependent(f) ? pr * 0.2 : pr;
     }
+    let directWeight = 0;
+    for (const d of directDependents) {
+        directWeight += isTypeOnlyDependent(d) ? 0.6 : 3;
+    }
+    let countWeight = 0;
+    for (const f of allImpactedFiles) {
+        countWeight += isTypeOnlyDependent(f) ? 0.4 : 2;
+    }
+    const rawImpactScore = countWeight + directWeight + impactedRoutes.length * 5;
+    const impactScore = Number(rawImpactScore.toFixed(1));
     let riskLevel = 'LOW';
     const count = allImpactedFiles.length;
     if (count >= 20 || impactedRoutes.length >= 10 || totalPageRankWeight > 0.15) {
@@ -341,9 +366,6 @@ function calculateBlastRadius(graph, targetFiles, maxHops = 3) {
     else if (count >= 2) {
         riskLevel = 'MEDIUM';
     }
-    // Weighted impact score: direct dependents are intentionally double-weighted (2+3=5)
-    // vs transitive (2) because immediate consumers bear the highest breakage risk.
-    const impactScore = count * 2 + directDependents.size * 3 + impactedRoutes.length * 5;
     return {
         targetFiles: normalizedTargets,
         directDependents: Array.from(directDependents),
@@ -644,6 +666,17 @@ function analyzeRustFile(filePath, content) {
                 externalDepsSet.add(source.split('::')[0]);
                 imports.push({ source, specifiers: [], isTypeOnly: false, isRelative: false });
             }
+        }
+        // Submodules: mod foo; or pub mod foo;
+        const modMatch = trimmed.match(/^(pub\s+)?mod\s+([a-zA-Z0-9_]+)\s*;/);
+        if (modMatch) {
+            const isPublic = !!modMatch[1];
+            const modName = modMatch[2];
+            symbols.push({ name: modName, kind: 'model', line: lineNum, exported: isPublic });
+            if (isPublic)
+                exports.push({ name: modName, kind: 'variable', isTypeOnly: false });
+            localDepsSet.add('./' + modName);
+            imports.push({ source: './' + modName, specifiers: [modName], isTypeOnly: false, isRelative: true });
         }
         // Struct / Enum / Trait: pub struct Foo, struct Bar, pub trait Baz
         const typeMatch = trimmed.match(/^(pub\s+)?(struct|enum|trait)\s+([A-Za-z0-9_]+)/);
@@ -1461,6 +1494,241 @@ function analyzeDevOpsAndShellFile(filePath, content) {
         language: baseName.includes('docker') ? 'docker' : 'shell'
     };
 }
+/**
+ * 10b. Zig Analyzer (.zig)
+ */
+function analyzeZigFile(filePath, content) {
+    const lines = content.split('\n');
+    const imports = [];
+    const exports = [];
+    const symbols = [];
+    const routes = [];
+    const externalDepsSet = new Set();
+    const localDepsSet = new Set();
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lineNum = i + 1;
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('//'))
+            continue;
+        // Imports: const foo = @import("bar"); or const std = @import("std");
+        const importMatch = trimmed.match(/(?:const|var)\s+([a-zA-Z0-9_$]+)\s*=\s*@import\(\s*["']([^"']+)["']\s*\)/);
+        if (importMatch) {
+            const specifier = importMatch[1];
+            const source = importMatch[2];
+            const isRelative = source.startsWith('.') || source.startsWith('/');
+            if (isRelative) {
+                localDepsSet.add(source);
+            }
+            else {
+                externalDepsSet.add(source);
+            }
+            imports.push({ source, specifiers: [specifier], isTypeOnly: false, isRelative });
+        }
+        // Public / Private Functions: pub fn name(...) or fn name(...)
+        const fnMatch = trimmed.match(/^(pub\s+)?fn\s+([a-zA-Z0-9_$]+)\s*\(/);
+        if (fnMatch) {
+            const isPublic = !!fnMatch[1];
+            const name = fnMatch[2];
+            symbols.push({ name, kind: 'function', line: lineNum, exported: isPublic });
+            if (isPublic)
+                exports.push({ name, kind: 'function', isTypeOnly: false });
+        }
+        // Types / Structs / Enums / Errors: pub const Name = struct / enum / union / error
+        const typeMatch = trimmed.match(/^(pub\s+)?const\s+([a-zA-Z0-9_$]+)\s*=\s*(struct|enum|union|error)/);
+        if (typeMatch) {
+            const isPublic = !!typeMatch[1];
+            const name = typeMatch[2];
+            const kind = typeMatch[3] === 'struct' ? 'struct' : (typeMatch[3] === 'enum' ? 'enum' : 'type');
+            symbols.push({ name, kind, line: lineNum, exported: isPublic, isTypeOnly: true });
+            if (isPublic)
+                exports.push({ name, kind, isTypeOnly: true });
+        }
+        else {
+            const constMatch = trimmed.match(/^pub\s+const\s+([a-zA-Z0-9_$]+)\s*=/);
+            if (constMatch) {
+                const name = constMatch[1];
+                symbols.push({ name, kind: 'const', line: lineNum, exported: true });
+                exports.push({ name, kind: 'const', isTypeOnly: false });
+            }
+        }
+    }
+    const dependencyKinds = {};
+    for (const dep of localDepsSet) {
+        dependencyKinds[dep] = 'runtime';
+    }
+    return {
+        filePath,
+        imports,
+        exports,
+        symbols,
+        routes,
+        externalDeps: Array.from(externalDepsSet),
+        localDeps: Array.from(localDepsSet),
+        linesCount: lines.length,
+        language: 'zig',
+        dependencyKinds,
+    };
+}
+/**
+ * 13b. Astro Analyzer (.astro)
+ */
+function analyzeAstroFile(filePath, content) {
+    const lines = content.split('\n');
+    const imports = [];
+    const exports = [];
+    const symbols = [];
+    const externalDepsSet = new Set();
+    const localDepsSet = new Set();
+    // Component root symbol
+    const compName = node_path_1.default.basename(filePath, '.astro');
+    symbols.push({ name: compName, kind: 'component', line: 1, exported: true });
+    exports.push({ name: 'default', kind: 'component', isTypeOnly: false });
+    // Astro Frontmatter between --- and ---
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (fmMatch) {
+        const fmLines = fmMatch[1].split('\n');
+        for (let i = 0; i < fmLines.length; i++) {
+            const trimmed = fmLines[i].trim();
+            if (!trimmed || trimmed.startsWith('//'))
+                continue;
+            // Imports: import ... from '...'
+            const importMatch = trimmed.match(/^import\s+(?:type\s+)?(?:([a-zA-Z0-9_$]+)\s*,\s*)?(?:\{([^}]+)\}|\*\s+as\s+([a-zA-Z0-9_$]+)|([a-zA-Z0-9_$]+))?\s+from\s+['"]([^'"]+)['"]/);
+            if (importMatch) {
+                const rawSource = importMatch[5];
+                const isTypeOnly = trimmed.startsWith('import type');
+                const specifiers = [];
+                if (importMatch[1])
+                    specifiers.push(importMatch[1].trim());
+                if (importMatch[4])
+                    specifiers.push(importMatch[4].trim());
+                if (importMatch[3])
+                    specifiers.push(importMatch[3].trim());
+                if (importMatch[2]) {
+                    for (const s of importMatch[2].split(',')) {
+                        const spec = s.trim().split(/\s+as\s+/)[0].trim();
+                        if (spec)
+                            specifiers.push(spec);
+                    }
+                }
+                const isRelative = rawSource.startsWith('.') || rawSource.startsWith('/');
+                if (isRelative) {
+                    localDepsSet.add(rawSource);
+                }
+                else {
+                    const pkg = rawSource.startsWith('@') ? rawSource.split('/').slice(0, 2).join('/') : rawSource.split('/')[0];
+                    externalDepsSet.add(pkg);
+                }
+                imports.push({ source: rawSource, specifiers, isTypeOnly, isRelative });
+            }
+            // Exports: export interface Props { ... }
+            const expInterface = trimmed.match(/^export\s+(?:interface|type)\s+([a-zA-Z0-9_$]+)/);
+            if (expInterface) {
+                const name = expInterface[1];
+                symbols.push({ name, kind: 'interface', line: i + 2, exported: true, isTypeOnly: true });
+                exports.push({ name, kind: 'interface', isTypeOnly: true });
+            }
+        }
+    }
+    const dependencyKinds = {};
+    for (const dep of localDepsSet) {
+        const matched = imports.filter(imp => imp.source === dep);
+        if (matched.length > 0 && matched.every(imp => imp.isTypeOnly)) {
+            dependencyKinds[dep] = 'type_only';
+        }
+        else {
+            dependencyKinds[dep] = 'runtime';
+        }
+    }
+    return {
+        filePath,
+        imports,
+        exports,
+        symbols,
+        routes: [],
+        externalDeps: Array.from(externalDepsSet),
+        localDeps: Array.from(localDepsSet),
+        linesCount: lines.length,
+        language: 'astro',
+        dependencyKinds,
+    };
+}
+/**
+ * 11b. Protocol Buffers Analyzer (.proto)
+ */
+function analyzeProtoFile(filePath, content) {
+    const lines = content.split('\n');
+    const imports = [];
+    const exports = [];
+    const symbols = [];
+    const routes = [];
+    const externalDepsSet = new Set();
+    const localDepsSet = new Set();
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lineNum = i + 1;
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('//'))
+            continue;
+        // import "other.proto";
+        const importMatch = trimmed.match(/^import\s+(?:public\s+)?["']([^"']+)["']\s*;/);
+        if (importMatch) {
+            const source = importMatch[1];
+            const isRelative = source.startsWith('.') || !source.includes('/');
+            if (isRelative) {
+                localDepsSet.add(source);
+            }
+            else {
+                externalDepsSet.add(source);
+            }
+            imports.push({ source, specifiers: [], isTypeOnly: false, isRelative });
+        }
+        // message Foo { ... }
+        const msgMatch = trimmed.match(/^message\s+([a-zA-Z0-9_$]+)/);
+        if (msgMatch) {
+            const name = msgMatch[1];
+            symbols.push({ name, kind: 'model', line: lineNum, exported: true });
+            exports.push({ name, kind: 'model', isTypeOnly: true });
+        }
+        // service Bar { ... }
+        const svcMatch = trimmed.match(/^service\s+([a-zA-Z0-9_$]+)/);
+        if (svcMatch) {
+            const name = svcMatch[1];
+            symbols.push({ name, kind: 'service', line: lineNum, exported: true });
+            exports.push({ name, kind: 'service', isTypeOnly: false });
+        }
+        // rpc Method (Req) returns (Res);
+        const rpcMatch = trimmed.match(/^rpc\s+([a-zA-Z0-9_$]+)\s*\(\s*([a-zA-Z0-9_$.]+)\s*\)\s*returns\s*\(\s*([a-zA-Z0-9_$.]+)\s*\)/);
+        if (rpcMatch) {
+            const name = rpcMatch[1];
+            symbols.push({ name, kind: 'method', line: lineNum, exported: true });
+            routes.push({ method: 'POST', path: `/rpc/${name}`, line: lineNum });
+        }
+        // enum Baz { ... }
+        const enumMatch = trimmed.match(/^enum\s+([a-zA-Z0-9_$]+)/);
+        if (enumMatch) {
+            const name = enumMatch[1];
+            symbols.push({ name, kind: 'enum', line: lineNum, exported: true });
+            exports.push({ name, kind: 'enum', isTypeOnly: true });
+        }
+    }
+    const dependencyKinds = {};
+    for (const dep of localDepsSet) {
+        dependencyKinds[dep] = 'runtime';
+    }
+    return {
+        filePath,
+        imports,
+        exports,
+        symbols,
+        routes,
+        externalDeps: Array.from(externalDepsSet),
+        localDeps: Array.from(localDepsSet),
+        linesCount: lines.length,
+        language: 'protobuf',
+        dependencyKinds,
+    };
+}
 const tsConfigCache = new Map();
 function loadTsConfigAliases(root) {
     if (tsConfigCache.has(root))
@@ -1937,6 +2205,16 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
                 }
             }
         }
+        const dependencyKinds = {};
+        for (const dep of localDepsSet) {
+            const matching = imports.filter(imp => imp.source === dep);
+            if (matching.length > 0 && matching.every(imp => imp.isTypeOnly)) {
+                dependencyKinds[dep] = 'type_only';
+            }
+            else {
+                dependencyKinds[dep] = 'runtime';
+            }
+        }
         return {
             filePath,
             imports,
@@ -1948,6 +2226,7 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
             linesCount: content.split('\n').length,
             language: 'typescript',
             unusedImports: Array.from(new Set(unusedImports)),
+            dependencyKinds,
         };
     }
     catch {
@@ -2013,6 +2292,15 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
     // 12. CSS & Design Tokens
     if (['.css', '.scss', '.sass', '.less'].includes(ext))
         return analyzeStyleFile(filePath, content);
+    // 12b. Zig
+    if (ext === '.zig')
+        return analyzeZigFile(filePath, sanitizeCodePreservingLines(content, 'zig'));
+    // 12c. Astro
+    if (ext === '.astro')
+        return analyzeAstroFile(filePath, content);
+    // 12d. Protocol Buffers
+    if (ext === '.proto')
+        return analyzeProtoFile(filePath, content);
     // 13. HTML & SFCs
     if (['.html', '.htm', '.vue', '.svelte'].includes(ext))
         return analyzeHtmlAndSfcFile(filePath, content);
@@ -2291,6 +2579,16 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             }
         }
     }
+    const dependencyKinds = {};
+    for (const dep of localDepsSet) {
+        const matching = imports.filter(imp => imp.source === dep);
+        if (matching.length > 0 && matching.every(imp => imp.isTypeOnly)) {
+            dependencyKinds[dep] = 'type_only';
+        }
+        else {
+            dependencyKinds[dep] = 'runtime';
+        }
+    }
     return {
         filePath,
         imports,
@@ -2302,6 +2600,7 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
         linesCount: lines.length,
         language: 'typescript',
         unusedImports: Array.from(new Set(unusedImports)),
+        dependencyKinds,
     };
 }
 // ─── Graph Construction & Traversal ──────────────────────────────────────────
@@ -2447,6 +2746,10 @@ function buildCodebaseGraph(rootDir, options = {}) {
                     resolved + '.py',
                     resolved + '.go',
                     resolved + '.rs',
+                    resolved + '/mod.rs',
+                    resolved + '.zig',
+                    resolved + '.astro',
+                    resolved + '.proto',
                     resolved + '.dart',
                     resolved + '.css',
                     resolved + '/index.ts',
@@ -2537,6 +2840,16 @@ function buildCodebaseGraph(rootDir, options = {}) {
         totalSymbols += f.symbols.length;
         totalExports += f.exports.length;
     }
+    let gitCommitSha = null;
+    try {
+        const gitRes = (0, shell_command_projection_cjs_1.execGit)(['rev-parse', 'HEAD'], { cwd: rootDir });
+        if (gitRes.exitCode === 0 && gitRes.stdout.trim()) {
+            gitCommitSha = gitRes.stdout.trim();
+        }
+    }
+    catch {
+        gitCommitSha = null;
+    }
     return {
         version: '2.2.0',
         createdAt: new Date().toISOString(),
@@ -2549,6 +2862,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
             totalRoutes: allRoutes.length,
             scanDurationMs: duration,
             filesByLanguage,
+            gitCommitSha,
         },
         files: filesMap,
         symbolIndex,
@@ -2612,6 +2926,9 @@ function queryTopCentralFiles(graph, limit = 10) {
 module.exports = {
     toPosixPath,
     analyzeSourceFile,
+    analyzeZigFile,
+    analyzeAstroFile,
+    analyzeProtoFile,
     buildCodebaseGraph,
     querySymbolLocations,
     queryFileDependencies,

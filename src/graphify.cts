@@ -454,9 +454,10 @@ interface GraphLocation {
 }
 
 /**
- * Resolve the absolute graph.json location. Honors `graphify.graph_path` in
- * config.json (resolved relative to the project root, `cwd`); falls back to the
- * default `<planningDir>/graphs/graph.json` when unset/blank/non-string.
+ * Resolve the absolute graph.json / codebase-graph.json location. Honors `graphify.graph_path` in
+ * config.json (resolved relative to the project root, `cwd`); prioritizes the canonical SSOT
+ * `<planningDir>/intel/codebase-graph.json`; falls back to legacy `<planningDir>/graphs/graph.json`
+ * when existing; or defaults to `<planningDir>/intel/codebase-graph.json`.
  */
 function resolveGraphLocation(cwd: string, planningDir: string): GraphLocation {
   const config = safeReadJson(path.join(planningDir, 'config.json'));
@@ -465,7 +466,19 @@ function resolveGraphLocation(cwd: string, planningDir: string): GraphLocation {
   if (typeof configuredValue === 'string' && configuredValue.trim().length > 0) {
     return { graphPath: path.resolve(cwd, configuredValue), configured: true };
   }
-  return { graphPath: path.join(planningDir, 'graphs', GRAPH_FILENAME), configured: false };
+  const canonicalIntelGraph = path.join(planningDir, 'intel', 'codebase-graph.json');
+  if (fs.existsSync(canonicalIntelGraph)) {
+    return { graphPath: canonicalIntelGraph, configured: false };
+  }
+  const legacyGraph = path.join(planningDir, 'graphs', GRAPH_FILENAME);
+  if (fs.existsSync(legacyGraph)) {
+    return { graphPath: legacyGraph, configured: false };
+  }
+  const legacySnapshot = path.join(planningDir, 'graphs', SNAPSHOT_FILENAME);
+  if (fs.existsSync(legacySnapshot) || (fs.existsSync(path.join(planningDir, 'graphs')) && !fs.existsSync(path.join(planningDir, 'intel')))) {
+    return { graphPath: legacyGraph, configured: false };
+  }
+  return { graphPath: canonicalIntelGraph, configured: false };
 }
 
 /**
@@ -585,7 +598,13 @@ function graphifyDiff(cwd: string): unknown {
   if (!isCapabilityActive('graphify', cwd)) return disabledResponse();
 
   const { graphPath } = resolveGraphLocation(cwd, planningDir);
-  const snapshotPath = path.join(path.dirname(graphPath), SNAPSHOT_FILENAME);
+  let snapshotPath = path.join(path.dirname(graphPath), SNAPSHOT_FILENAME);
+  if (!fs.existsSync(snapshotPath)) {
+    const legacySnapshot = path.join(planningDir, 'graphs', SNAPSHOT_FILENAME);
+    if (fs.existsSync(legacySnapshot)) {
+      snapshotPath = legacySnapshot;
+    }
+  }
 
   if (!fs.existsSync(snapshotPath)) {
     return { no_baseline: true, message: 'No previous snapshot. Run graphify build first, then build again to generate a diff baseline.' };
@@ -633,18 +652,22 @@ function graphifyDiff(cwd: string): unknown {
 // ─── Build Pipeline (Phase 3) ───────────────────────────────────────────────
 
 /**
- * Native TypeScript graphify build (D-31).
- * Executes native AST graph construction and persists graph.json directly.
+ * Native TypeScript graphify build (D-31 / Phase 31 SSOT).
+ * Executes native AST graph construction and persists directly to .planning/intel/codebase-graph.json
+ * as the Single Source of Truth (SSOT), preventing multi-megabyte redundant duplication.
  */
 function graphifyBuild(cwd: string): unknown {
   const planningDir = path.join(cwd, '.planning');
   if (!isCapabilityActive('graphify', cwd)) return disabledResponse();
 
+  const intelDir = path.join(planningDir, 'intel');
+  fs.mkdirSync(intelDir, { recursive: true });
+
   const graphsDir = path.join(planningDir, 'graphs');
   fs.mkdirSync(graphsDir, { recursive: true });
 
   const graph = buildCodebaseGraph(cwd);
-  const outPath = path.join(graphsDir, 'graph.json');
+  const outPath = path.join(intelDir, 'codebase-graph.json');
   platformWriteSync(outPath, JSON.stringify(graph, null, 2));
 
   return {
@@ -654,7 +677,7 @@ function graphifyBuild(cwd: string): unknown {
     timeout_seconds: 0,
     version: '2.3-native',
     version_warning: null,
-    artifacts: ['graph.json'],
+    artifacts: ['codebase-graph.json', 'graph.json'],
     node_count: graph.stats.totalSymbols,
     file_count: graph.stats.totalFiles,
   };
@@ -719,4 +742,5 @@ export = {
   // Build (Phase 3)
   graphifyBuild,
   writeSnapshot,
+  resolveGraphLocation,
 };

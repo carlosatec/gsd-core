@@ -62,14 +62,14 @@ export class UserService {
     assert.match(execRes.stdout, /native TypeScript engine/);
   });
 
-  it('should build codebase graph in TypeScript and save graph.json with action = completed', () => {
+  it('should build codebase graph in TypeScript and save codebase-graph.json with action = completed', () => {
     const buildRes = graphifyBuild(tmpDir);
 
     assert.equal(buildRes.action, 'completed');
     assert.equal(buildRes.version, '2.3-native');
-    assert.equal(buildRes.artifacts.includes('graph.json'), true);
+    assert.equal(buildRes.artifacts.includes('codebase-graph.json'), true);
 
-    const graphFile = path.join(planningDir, 'graphs', 'graph.json');
+    const graphFile = path.join(planningDir, 'intel', 'codebase-graph.json');
     assert.equal(fs.existsSync(graphFile), true);
 
     const graphData = safeReadJson(graphFile);
