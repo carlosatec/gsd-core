@@ -21,6 +21,7 @@ type SessionEventType =
   | 'file_mutation'
   | 'guardrail_intercept'
   | 'test_result'
+  | 'system_one_decision'
   | 'session_end';
 
 interface SessionEvent {
@@ -259,6 +260,22 @@ class SessionLogger {
       failed,
       durationMs,
       failureSummary: failureSummary ? SessionLogger.trimOutput(failureSummary, 8192) : undefined,
+    });
+  }
+
+  logSystemOneDecision(decision: {
+    decisionType: string;
+    target?: string;
+    verdict: unknown;
+    confidence: string;
+    entropy?: number;
+    latencyMs?: number;
+    source: string;
+    details?: Record<string, unknown>;
+  }): void {
+    this.log({
+      type: 'system_one_decision',
+      ...decision,
     });
   }
 

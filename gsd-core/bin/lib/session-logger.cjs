@@ -190,6 +190,12 @@ class SessionLogger {
             failureSummary: failureSummary ? SessionLogger.trimOutput(failureSummary, 8192) : undefined,
         });
     }
+    logSystemOneDecision(decision) {
+        this.log({
+            type: 'system_one_decision',
+            ...decision,
+        });
+    }
     endSession(status = 'completed', summary = {}) {
         if (this.isClosed)
             return;
