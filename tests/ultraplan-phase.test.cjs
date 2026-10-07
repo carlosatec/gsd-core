@@ -17,53 +17,13 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const CMD_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'ultraplan-phase.md');
 const WF_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'ultraplan-phase.md');
 
 // ─── File Existence ────────────────────────────────────────────────────────────
 
 describe('ultraplan-phase file existence', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(CMD_PATH), 'commands/gsd/ultraplan-phase.md should exist');
-  });
-
   test('workflow file exists', () => {
     assert.ok(fs.existsSync(WF_PATH), 'gsd-core/workflows/ultraplan-phase.md should exist');
-  });
-});
-
-// ─── Command Frontmatter ───────────────────────────────────────────────────────
-
-describe('ultraplan-phase command frontmatter', () => {
-  const content = fs.readFileSync(CMD_PATH, 'utf-8');
-
-  test('has correct name field', () => {
-    assert.match(content, /^name:\s*gsd:ultraplan-phase$/m);
-  });
-
-  test('description marks feature as BETA', () => {
-    assert.match(content, /^description:.*\[BETA\]/m);
-  });
-
-  test('has argument-hint', () => {
-    assert.match(content, /^argument-hint:/m);
-  });
-});
-
-// ─── Command References ────────────────────────────────────────────────────────
-
-describe('ultraplan-phase command references', () => {
-  const content = fs.readFileSync(CMD_PATH, 'utf-8');
-
-  test('references the ultraplan-phase workflow', () => {
-    assert.ok(
-      content.includes('@~/.claude/gsd-core/workflows/ultraplan-phase.md'),
-      'command should reference ultraplan-phase workflow'
-    );
-  });
-
-  test('references ui-brand', () => {
-    assert.ok(content.includes('ui-brand'), 'command should reference ui-brand');
   });
 });
 

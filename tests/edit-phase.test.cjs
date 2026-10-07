@@ -26,47 +26,13 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 
-// #2790: edit-phase.md was consolidated into phase.md as the --edit flag.
-// The COMMAND_PATH here now points to the consolidated command.
-const COMMAND_PATH = path.join(ROOT, 'commands', 'gsd', 'phase.md');
 const WORKFLOW_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'edit-phase.md');
 
 // ─── File existence ──────────────────────────────────────────────────────────
 
 describe('edit-phase: file existence', () => {
-  test('commands/gsd/phase.md exists (absorbed edit-phase in #2790)', () => {
-    assert.ok(fs.existsSync(COMMAND_PATH), 'commands/gsd/phase.md should exist (consolidates edit-phase)');
-  });
-
   test('gsd-core/workflows/edit-phase.md exists', () => {
     assert.ok(fs.existsSync(WORKFLOW_PATH), 'gsd-core/workflows/edit-phase.md should exist');
-  });
-});
-
-// ─── Command file structure ───────────────────────────────────────────────────
-
-describe('edit-phase: command file structure', () => {
-  test('consolidated phase.md has correct name frontmatter (#2790)', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(/^name:\s*gsd:phase/m.test(content), 'name should be gsd:phase (consolidated)');
-  });
-
-  test('command file has description frontmatter', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(/^description:/m.test(content), 'should have description frontmatter');
-  });
-
-  test('command file references edit-phase workflow', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(
-      content.includes('edit-phase.md'),
-      'command file should reference edit-phase workflow'
-    );
-  });
-
-  test('command file documents --force flag (passed through --edit)', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('--edit') || content.includes('--force'), 'command file should document --edit flag (which supports --force)');
   });
 });
 
@@ -406,18 +372,6 @@ describe('edit-phase: documentation registration', () => {
     assert.ok(
       inventory.includes('edit-phase.md'),
       'docs/INVENTORY.md must contain edit-phase.md workflow row'
-    );
-  });
-
-  test('INVENTORY-MANIFEST.json contains /gsd-phase in commands (#2790: edit-phase absorbed into phase.md)', () => {
-    // #2790: /gsd-edit-phase was absorbed into /gsd-phase as the --edit flag.
-    // The manifest now records /gsd-phase instead of /gsd-edit-phase.
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(ROOT, 'docs', 'INVENTORY-MANIFEST.json'), 'utf-8')
-    );
-    assert.ok(
-      manifest.families.commands.includes('/gsd-phase'),
-      'INVENTORY-MANIFEST.json must list /gsd-phase in commands (absorbed /gsd-edit-phase via #2790)'
     );
   });
 

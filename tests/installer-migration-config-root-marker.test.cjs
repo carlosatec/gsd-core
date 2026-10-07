@@ -207,7 +207,15 @@ describe('migration 007 plan()', () => {
     t.after(() => cleanup(dir));
     const outside = path.join(dir, 'outside.json');
     fs.writeFileSync(outside, `${MARKER}\n`);
-    fs.symlinkSync(outside, path.join(dir, ROOT_REL));
+    try {
+      fs.symlinkSync(outside, path.join(dir, ROOT_REL));
+    } catch (err) {
+      if (err.code === 'EPERM' && process.platform === 'win32') {
+        t.skip('symlink creation requires elevated privileges on Windows');
+        return;
+      }
+      throw err;
+    }
     writeManifest(dir, {});
 
     assert.deepEqual(

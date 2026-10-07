@@ -769,7 +769,15 @@ test('writeLedger: O_EXCL prevents write through a pre-planted symlink at the tm
   fs.writeFileSync(victimFile, 'precious', 'utf8');
 
   // Pre-plant a symlink at the exact tmp path pointing to our victim.
-  fs.symlinkSync(victimFile, tmpPath);
+  try {
+    fs.symlinkSync(victimFile, tmpPath);
+  } catch (err) {
+    if (err && (err.code === 'EPERM' || err.code === 'ENOSYS')) {
+      t.skip('symlink creation not permitted on this filesystem');
+      return;
+    }
+    throw err;
+  }
 
   // Mock randomBytes to return the known nonce so we know exactly what tmp path
   // writeLedger will compute (finding 15: make the test non-vacuous).
@@ -1637,7 +1645,15 @@ test('root-fix-4: readLedgerStrict throws LedgerIOError for a broken symlink at 
   const ledgerPath = path.join(dir, LEDGER_FILE_NAME);
 
   // Plant a dangling symlink (target does not exist).
-  fs.symlinkSync('/nonexistent/target-that-does-not-exist', ledgerPath);
+  try {
+    fs.symlinkSync('/nonexistent/target-that-does-not-exist', ledgerPath);
+  } catch (err) {
+    if (err && (err.code === 'EPERM' || err.code === 'ENOSYS')) {
+      t.skip('symlink creation not permitted on this filesystem');
+      return;
+    }
+    throw err;
+  }
 
   assert.throws(
     () => readLedgerStrict(dir),
@@ -1669,7 +1685,15 @@ test('root-fix-4: reconcileCapabilities returns warning (no mutation) when ledge
   fs.mkdirSync(backupDir);
 
   // Plant a dangling symlink (broken) at the ledger path.
-  fs.symlinkSync('/nonexistent/absent-target', ledgerPath);
+  try {
+    fs.symlinkSync('/nonexistent/absent-target', ledgerPath);
+  } catch (err) {
+    if (err && (err.code === 'EPERM' || err.code === 'ENOSYS')) {
+      t.skip('symlink creation not permitted on this filesystem');
+      return;
+    }
+    throw err;
+  }
 
   let report;
   assert.doesNotThrow(
@@ -1694,7 +1718,15 @@ test('root-fix-4: installCapability blocks when ledger is a broken symlink (not 
   const ledgerPath = path.join(dir, LEDGER_FILE_NAME);
 
   // Plant a dangling symlink at the ledger path.
-  fs.symlinkSync('/nonexistent/absent-target', ledgerPath);
+  try {
+    fs.symlinkSync('/nonexistent/absent-target', ledgerPath);
+  } catch (err) {
+    if (err && (err.code === 'EPERM' || err.code === 'ENOSYS')) {
+      t.skip('symlink creation not permitted on this filesystem');
+      return;
+    }
+    throw err;
+  }
 
   // installCapability must block (fail closed), not silently proceed as a "fresh install".
   const result = await lifecycle.installCapability('./x', {

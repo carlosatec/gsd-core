@@ -5,22 +5,27 @@ GSD is a structured AI development workflow system. It coordinates AI agents thr
 
 ## Core Rule: Never Edit Outside a GSD Workflow
 Do not make direct repo edits. All changes must go through a GSD workflow:
-- `/gsd:plan-phase` → plan the work
-- `/gsd:execute-phase` → build it
-- `/gsd:verify-work` → verify results
+- `/gsd:status` → assess project state, drift, and token savings
+- `/gsd:plan` → plan the phase
+- `/gsd:exec` → execute phase plans with waves
+- `/gsd:review` → code review with auto-repair
+- `/gsd:verify` → conversational UAT and verification
+- `/gsd:ship` → prepare release and merge
+- Canonical commands: `status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `graph`, `help`.
 
 ## Architecture
-- `gsd-core/bin/lib/` — Core Node.js library (CommonJS .cjs, no external deps)
+- `src/` — Core TypeScript runtime sources (.cts, compiled to `gsd-core/bin/lib/*.cjs` per ADR-457)
+- `gsd-core/bin/lib/` — Emitted CommonJS library (.cjs, zero external runtime dependencies)
 - `gsd-core/workflows/` — Workflow definition files (.md)
 - `agents/` — Agent definition files (.md)
-- `commands/gsd/` — Slash command definitions (.md)
+- `commands/gsd/` — Canonical slash command definitions (.md)
 - `tests/` — Test files (.test.cjs, node:test + node:assert)
 
 ## Coding Standards
-- **CommonJS only** — use `require()`, never `import`
-- **No external dependencies in core** — only Node.js built-ins
+- **TypeScript Core** — write in `src/*.cts`, compile via `npm run build:lib`
+- **Zero external runtime dependencies in core** — only Node.js built-ins
 - **Test framework** — `node:test` and `node:assert` ONLY, never Jest/Mocha/Chai
-- **File extensions** — `.cjs` for all test and lib files
+- **File extensions** — `.cts` for src, `.cjs` for scripts and tests
 
 ## Safety
 - Use `execFileSync` (array args) not `execSync` (string interpolation)

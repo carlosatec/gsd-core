@@ -332,6 +332,8 @@ export default tseslint.config(
       'gsd-core/bin/lib/visual-graph-exporter.cjs',
       'gsd-core/bin/lib/obsidian-interop.cjs',
       'gsd-core/bin/lib/canvas-roadmap-generator.cjs',
+      // Phase 28 / ADR-457: tsc-generated runtime artifact — lint the src/system-one-engine.cts source.
+      'gsd-core/bin/lib/system-one-engine.cjs',
       // #3477 follow-up: verbatim third-party artifact vendored so gsd-core/bin/**
       // carries zero external requires (installed trees have no node_modules).
       // See gsd-core/bin/lib/vendor/README.md; never lint/edit these by hand.

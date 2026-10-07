@@ -16,54 +16,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'extract-learnings.md');
 const WORKFLOW_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'extract-learnings.md');
-
-describe('extract-learnings command', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(COMMAND_PATH), 'commands/gsd/extract-learnings.md should exist');
-  });
-
-  test('command file has correct name frontmatter', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('name: gsd:extract-learnings'), 'Command must have name: gsd:extract-learnings');
-  });
-
-  test('command file has description frontmatter', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('description:'), 'Command must have description frontmatter');
-  });
-
-  test('command file has argument-hint for phase-number', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('argument-hint:'), 'Command must have argument-hint');
-    assert.ok(content.includes('<phase-number>'), 'argument-hint must reference <phase-number>');
-  });
-
-  test('command file has allowed-tools list', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('allowed-tools:'), 'Command must have allowed-tools');
-    assert.ok(content.includes('Read'), 'allowed-tools must include Read');
-    assert.ok(content.includes('Write'), 'allowed-tools must include Write');
-    assert.ok(content.includes('Bash'), 'allowed-tools must include Bash');
-    assert.ok(content.includes('Grep'), 'allowed-tools must include Grep');
-    assert.ok(content.includes('Glob'), 'allowed-tools must include Glob');
-    assert.ok(content.includes('Agent'), 'allowed-tools must include Agent');
-  });
-
-  test('command file has type: prompt', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(content.includes('type: prompt'), 'Command must have type: prompt');
-  });
-
-  test('command references the workflow via execution_context', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    assert.ok(
-      content.includes('workflows/extract-learnings.md'),
-      'Command must reference workflows/extract-learnings.md in execution_context'
-    );
-  });
-});
 
 describe('extract-learnings workflow', () => {
   test('workflow file exists', () => {
