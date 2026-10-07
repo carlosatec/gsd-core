@@ -91,8 +91,8 @@ function makeProgressBar(percentage: number, length: number = 16): string {
 /**
  * Formats a number with thousands separators (e.g. 84,500).
  */
-function formatNumber(num: number): string {
-  return num.toLocaleString('en-US');
+function formatNumber(num?: number | null): string {
+  return Number(num || 0).toLocaleString('en-US');
 }
 
 type DashboardViewMode = 'default' | 'sessions' | 'cost' | 'all';
@@ -287,11 +287,12 @@ function renderTokenDashboard(planningDir: string, options?: string | DashboardR
     const totalUsed = Math.max(1, summary.totalJitTokensUsed);
     for (const cmd of cmdKeys) {
       const stat = summary.commandBreakdown[cmd];
-      const pct = clampPercent(stat.tokensUsed, totalUsed);
+      const tokensUsed = stat?.tokensUsed ?? (stat as unknown as { jitTokensUsed?: number })?.jitTokensUsed ?? 0;
+      const pct = clampPercent(tokensUsed, totalUsed);
       const bar = makeProgressBar(pct, 12);
       const cmdPad = cmd.padEnd(8);
       const pctPad = `${pct}%`.padStart(4);
-      const tokensPad = `(${formatNumber(stat.tokensUsed)} tokens)`.padEnd(18);
+      const tokensPad = `(${formatNumber(tokensUsed)} tokens)`.padEnd(18);
       lines.push(formatBoxLine(` • ${cmdPad} [${bar}] ${pctPad} ${tokensPad}`));
     }
   }
