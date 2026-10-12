@@ -1133,6 +1133,32 @@ Introduced in Phase 31, unifying the knowledge graph architecture, eliminating m
   - `AstAnalyticalProvider.evaluateRiskScore` ingests `.planning/intel/anti-patterns.json` via `queryAntiPatterns`. Files with historical regression patterns receive elevated risk scores ($\ge 2.0$) and explicit warnings.
   - `QualityHead` checks for test co-evolution: production code changes without accompanying test file modifications are flagged with reduced confidence and auto-pass inhibition.
 
+### 9. In-Process Mod Architecture, Output Diet & Command Blast Radius (Phase 32)
+Introduced in Phase 32, establishing sub-millisecond in-process Mod integration for supported runtimes, context hygiene via semantic output dieting, physical safety guardrails, and post-compaction context persistence:
+- **In-Process Mod Bridge (`src/in-process-mod-bridge.cts`):**
+  - Canonical `register(on)` entry point compatible with Claude Code v2.1.287+ and DeepSeek Harness (`@deepseek-ai/dsh-experimental-claude-code-mods`).
+  - Intercepts `tool.call`, `command.run`, `turn.start`, and `prompt.submit` events with sub-millisecond latency.
+  - Automatically and transparently falls back to Settings Hooks for other runtimes.
+- **Output Diet & Golden Rule of Exit Codes (`src/output-diet.cts`):**
+  - Intercepts high-volume terminal outputs (>100 lines or >8KB), preserving head (30 lines), tail (50 lines), and 100% of intermediate errors, assertions, and stack traces.
+  - Strict Failure Mode: when `exitCode !== 0`, automatically expands tail retention up to 120 lines and retains 100% of stderr.
+  - Multi-framework Semantic Failure Digest (`[GSD Failure Digest]`) for Jest/Vitest, Pytest, Go test, and Cargo.
+  - Offloads raw complete logs to `.planning/intel/output-logs/<timestamp>-<hash>.log`.
+- **Compact-Keeper & Task Drift Anchor (`src/compact-keeper.cts`):**
+  - Captures high-fidelity `CompactDossier` snapshots (active phase, wave, uncompleted task, recent files, last test command, canonical decisions from `STATE.md`) in `.planning/intel/compact-dossier.json`.
+  - Injects formatted micro-dossiers at turn start to eliminate post-compaction amnesia.
+  - `checkTaskDrift` anchors task execution, emitting `SCOPE_VIOLATION` pre-flight warnings if target files diverge from declared wave tasks.
+- **JIT Headroom Re-investment (`src/jit-context-injector.cts`):**
+  - Dynamically reinvests tokens saved by Output Diet (`headroomTokens >= 5000`) into +1 hop type closure depth (+50 types) and self-healing anti-pattern injection.
+  - Tracks context fidelity balance via `noiseTokensEliminated` and `usefulContextTokensInjected`.
+- **Shell Command Blast Radius (`src/shell-blast-radius.cts`):**
+  - Lexical risk analyzer for destructive operations (`rm -rf`, `git reset --hard`, `git clean -fd`, `git push --force`, DB reset).
+  - Simulates physical impact via dry-run commands, enforcing explicit confirmation while providing non-interactive bypass for CI/headless workflows.
+- **Active Session Ledger & Multi-Agent Collision Guard (`src/active-session-ledger.cts`):**
+  - Atomic file reservations in `.planning/intel/active-edits.json` under `withFileLockSync`.
+  - Automatic orphan lock pruning via 30-minute TTL.
+  - Blocks concurrent edits across multiple agents (`COLLISION_GUARD_BLOCK`) and caches file reads in memory with SHA-256 hashes to prevent redundant loops.
+
 ---
 
 ## Related

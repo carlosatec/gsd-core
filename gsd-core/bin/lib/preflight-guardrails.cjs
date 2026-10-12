@@ -13,6 +13,12 @@ const node_path_1 = __importDefault(require("node:path"));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph, findCircularDependencyPath } = codebaseAst;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compactKeeper = require("./compact-keeper.cjs");
+const { checkTaskDrift } = compactKeeper;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const activeLedger = require("./active-session-ledger.cjs");
+const { acquireFileLock } = activeLedger;
 // ─── Cycle Detection Helper ──────────────────────────────────────────────────
 function detectCycleInGraph(graph, startNode, onDeepRecursion) {
     const visited = new Set();
@@ -169,6 +175,30 @@ function runPreFlightChecks(ctx) {
         const proposedContent = ctx.proposedCodeMap
             ? ctx.proposedCodeMap[relFile] ?? ctx.proposedCodeMap[normalized] ?? ctx.proposedCodeMap[`./${normalized}`]
             : undefined;
+        // Task Drift Anchor: check if target file is within declared task scope
+        if (ctx.declaredScopeFiles && ctx.declaredScopeFiles.length > 0) {
+            const drift = checkTaskDrift(relFile, ctx.declaredScopeFiles);
+            if (drift.isDrift) {
+                violations.push({
+                    rule: 'SCOPE_VIOLATION',
+                    severity: 'warning',
+                    file: relFile,
+                    message: drift.warning || `File ${relFile} is outside declared task scope.`,
+                });
+            }
+        }
+        // Wave 5: Multi-Agent Collision Guard
+        if (ctx.agentId) {
+            const lockRes = acquireFileLock(ctx.planningDir, relFile, ctx.agentId, ctx.sessionId);
+            if (!lockRes.acquired) {
+                violations.push({
+                    rule: 'COLLISION_GUARD_BLOCK',
+                    severity: 'error',
+                    file: relFile,
+                    message: lockRes.reason || `File ${relFile} is currently under edit by another agent.`,
+                });
+            }
+        }
         // Check proposed edits if content was provided
         if (proposedContent !== undefined) {
             // Guard against unintended file truncation (0 bytes)

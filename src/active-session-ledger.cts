@@ -1,0 +1,244 @@
+/**
+ * GSD Active Session Ledger & Multi-Agent Collision Guard (Phase 32 — Wave 5)
+ *
+ * Concurrency & Cache Guardrails:
+ * 1. Atomic reservation of files under edit in `.planning/intel/active-edits.json` with withFileLockSync.
+ * 2. Multi-agent collision prevention with automatic orphan lock expiration (TTL).
+ * 3. In-memory Reread Guard to prevent redundant read loops over unchanged files.
+ */
+
+import path from 'node:path';
+import crypto from 'node:crypto';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import shellProj = require('./shell-command-projection.cjs');
+const { platformReadSync, platformWriteSync, platformEnsureDir, withFileLockSync } = shellProj;
+
+interface FileLockRecord {
+  path: string;
+  agentId: string;
+  sessionId: string;
+  lockedAt: string;
+  ttlMs: number;
+}
+
+interface ActiveSessionLedgerData {
+  version: string;
+  locks: Record<string, FileLockRecord>;
+}
+
+interface AcquireLockResult {
+  acquired: boolean;
+  lock?: FileLockRecord;
+  conflict?: FileLockRecord;
+  reason?: string;
+}
+
+interface RereadCacheEntry {
+  hash: string;
+  content: string;
+  timestamp: number;
+  mtimeMs: number;
+}
+
+const DEFAULT_LOCK_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Normalizes a file path to POSIX relative form.
+ */
+function normalizePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/').replace(/^\.\//, '').trim();
+}
+
+/**
+ * Loads the active edits ledger from `.planning/intel/active-edits.json`.
+ */
+function loadLedger(planningDir: string): ActiveSessionLedgerData {
+  const ledgerPath = path.join(planningDir, 'intel', 'active-edits.json');
+  try {
+    const raw = platformReadSync(ledgerPath);
+    if (!raw) throw new Error('Empty');
+    const parsed = JSON.parse(raw) as Partial<ActiveSessionLedgerData>;
+    return {
+      version: parsed.version || '1.0.0',
+      locks: parsed.locks || {},
+    };
+  } catch {
+    return {
+      version: '1.0.0',
+      locks: {},
+    };
+  }
+}
+
+/**
+ * Persists the active edits ledger to disk.
+ */
+function saveLedger(planningDir: string, data: ActiveSessionLedgerData): void {
+  const intelDir = path.join(planningDir, 'intel');
+  platformEnsureDir(intelDir);
+  const ledgerPath = path.join(intelDir, 'active-edits.json');
+  platformWriteSync(ledgerPath, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Removes expired locks whose TTL has elapsed.
+ */
+function pruneExpiredLocks(data: ActiveSessionLedgerData, nowMs = Date.now()): boolean {
+  let changed = false;
+  for (const [key, lock] of Object.entries(data.locks)) {
+    const lockTime = Date.parse(lock.lockedAt);
+    if (isNaN(lockTime) || nowMs - lockTime > (lock.ttlMs || DEFAULT_LOCK_TTL_MS)) {
+      delete data.locks[key];
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/**
+ * Atomically acquires an edit reservation on a target file.
+ */
+function acquireFileLock(
+  planningDir: string,
+  filePath: string,
+  agentId: string,
+  sessionId: string = 'session-default',
+  ttlMs: number = DEFAULT_LOCK_TTL_MS
+): AcquireLockResult {
+  const norm = normalizePath(filePath);
+  const ledgerPath = path.join(planningDir, 'intel', 'active-edits.json');
+
+  return withFileLockSync(ledgerPath, () => {
+    const data = loadLedger(planningDir);
+    pruneExpiredLocks(data);
+
+    const existing = data.locks[norm];
+    if (existing) {
+      if (existing.agentId !== agentId) {
+        return {
+          acquired: false,
+          conflict: existing,
+          reason: `COLLISION_GUARD_BLOCK: File "${norm}" is under active edit by agent "${existing.agentId}" (sessionId: ${existing.sessionId}).`,
+        };
+      }
+    }
+
+    const newLock: FileLockRecord = {
+      path: norm,
+      agentId,
+      sessionId,
+      lockedAt: new Date().toISOString(),
+      ttlMs,
+    };
+
+    data.locks[norm] = newLock;
+    saveLedger(planningDir, data);
+
+    return {
+      acquired: true,
+      lock: newLock,
+    };
+  });
+}
+
+/**
+ * Releases a previously acquired edit reservation.
+ */
+function releaseFileLock(
+  planningDir: string,
+  filePath: string,
+  agentId: string
+): boolean {
+  const norm = normalizePath(filePath);
+  const ledgerPath = path.join(planningDir, 'intel', 'active-edits.json');
+
+  return withFileLockSync(ledgerPath, () => {
+    const data = loadLedger(planningDir);
+    const existing = data.locks[norm];
+    if (existing && existing.agentId === agentId) {
+      delete data.locks[norm];
+      saveLedger(planningDir, data);
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Returns all active, unexpired locks.
+ */
+function getActiveLocks(planningDir: string): FileLockRecord[] {
+  const data = loadLedger(planningDir);
+  pruneExpiredLocks(data);
+  return Object.values(data.locks);
+}
+
+/**
+ * Clears all locks in the active edits ledger.
+ */
+function clearAllLocks(planningDir: string): void {
+  const ledgerPath = path.join(planningDir, 'intel', 'active-edits.json');
+  withFileLockSync(ledgerPath, () => {
+    saveLedger(planningDir, { version: '1.0.0', locks: {} });
+  });
+}
+
+// ─── In-Memory Reread Guard ───────────────────────────────────────────────────
+
+const _rereadCache = new Map<string, RereadCacheEntry>();
+
+/**
+ * Tracks a file read and detects redundant reread loops on unchanged files.
+ */
+function trackFileRead(
+  filePath: string,
+  content: string,
+  mtimeMs?: number
+): { isRedundant: boolean; hash: string } {
+  const norm = normalizePath(filePath);
+  const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
+  const existing = _rereadCache.get(norm);
+
+  if (existing && existing.hash === hash) {
+    if (mtimeMs === undefined || mtimeMs === existing.mtimeMs) {
+      return { isRedundant: true, hash };
+    }
+  }
+
+  _rereadCache.set(norm, {
+    hash,
+    content,
+    timestamp: Date.now(),
+    mtimeMs: mtimeMs ?? 0,
+  });
+
+  return { isRedundant: false, hash };
+}
+
+/**
+ * Retrieves the cached read content for a file if available.
+ */
+function getCachedFileRead(filePath: string): RereadCacheEntry | undefined {
+  return _rereadCache.get(normalizePath(filePath));
+}
+
+/**
+ * Clears the in-memory reread cache.
+ */
+function clearRereadCache(): void {
+  _rereadCache.clear();
+}
+
+export = {
+  loadLedger,
+  saveLedger,
+  pruneExpiredLocks,
+  acquireFileLock,
+  releaseFileLock,
+  getActiveLocks,
+  clearAllLocks,
+  trackFileRead,
+  getCachedFileRead,
+  clearRereadCache,
+};

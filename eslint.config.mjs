@@ -334,6 +334,12 @@ export default tseslint.config(
       'gsd-core/bin/lib/canvas-roadmap-generator.cjs',
       // Phase 28 / ADR-457: tsc-generated runtime artifact — lint the src/system-one-engine.cts source.
       'gsd-core/bin/lib/system-one-engine.cjs',
+      // Phase 32 / ADR-457: tsc-generated runtime artifacts — lint the src/*.cts sources.
+      'gsd-core/bin/lib/output-diet.cjs',
+      'gsd-core/bin/lib/compact-keeper.cjs',
+      'gsd-core/bin/lib/shell-blast-radius.cjs',
+      'gsd-core/bin/lib/active-session-ledger.cjs',
+      'gsd-core/bin/lib/in-process-mod-bridge.cjs',
       // #3477 follow-up: verbatim third-party artifact vendored so gsd-core/bin/**
       // carries zero external requires (installed trees have no node_modules).
       // See gsd-core/bin/lib/vendor/README.md; never lint/edit these by hand.

@@ -61,6 +61,8 @@ interface JitTelemetryRecord {
   invocationId?: string;
   scopeMode?: 'targeted' | 'full-repo';
   workflowContext?: string;
+  noiseTokensEliminated?: number;
+  usefulContextTokensInjected?: number;
 }
 
 interface CommandUsageStat {
@@ -85,6 +87,8 @@ interface JitTelemetryData {
   averageRelevanceScore?: number;
   averageCompressionRatio?: number;
   peakInvocationTokens: number;
+  totalNoiseTokensEliminated?: number;
+  totalUsefulTokensInjected?: number;
   commandBreakdown: Record<string, CommandUsageStat>;
   phaseBreakdown: Record<string, PhaseUsageStat>;
   records: JitTelemetryRecord[];
@@ -99,6 +103,8 @@ interface JitTelemetrySummary {
   averageRelevanceScore?: number;
   averageCompressionRatio?: number;
   peakInvocationTokens: number;
+  totalNoiseTokensEliminated?: number;
+  totalUsefulTokensInjected?: number;
   commandBreakdown: Record<string, CommandUsageStat>;
   phaseBreakdown: Record<string, PhaseUsageStat>;
   lastInvocation?: JitTelemetryRecord;
@@ -130,6 +136,8 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       compressionRatio: r.compressionRatio,
       invocationId: r.invocationId,
       scopeMode: r.scopeMode,
+      noiseTokensEliminated: r.noiseTokensEliminated,
+      usefulContextTokensInjected: r.usefulContextTokensInjected,
     }));
 
     const scoredRecords = records.filter(r => typeof r.relevanceScore === 'number' && !isNaN(r.relevanceScore));
@@ -142,6 +150,11 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
         ? Number(Math.max(1.0, parsed.totalMonolithicTokensAvoided / parsed.totalJitTokensUsed).toFixed(1))
         : 1.0);
 
+    const totalNoiseTokensEliminated = parsed.totalNoiseTokensEliminated ??
+      records.reduce((acc, r) => acc + (r.noiseTokensEliminated || 0), 0);
+    const totalUsefulTokensInjected = parsed.totalUsefulTokensInjected ??
+      records.reduce((acc, r) => acc + (r.usefulContextTokensInjected || 0), 0);
+
     return {
       version: '2.0.0',
       totalInvocations: parsed.totalInvocations || records.length || 0,
@@ -152,6 +165,8 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       averageRelevanceScore,
       averageCompressionRatio: compressionRatio,
       peakInvocationTokens: parsed.peakInvocationTokens || 0,
+      totalNoiseTokensEliminated,
+      totalUsefulTokensInjected,
       commandBreakdown: parsed.commandBreakdown || {},
       phaseBreakdown: parsed.phaseBreakdown || {},
       records,
@@ -166,6 +181,8 @@ function loadTelemetry(planningDir: string): JitTelemetryData {
       averageEfficiencyPct: 0,
       averageCompressionRatio: 1.0,
       peakInvocationTokens: 0,
+      totalNoiseTokensEliminated: 0,
+      totalUsefulTokensInjected: 0,
       commandBreakdown: {},
       phaseBreakdown: {},
       records: [],
@@ -200,7 +217,9 @@ function recordJitInvocation(
   scopeMode?: 'targeted' | 'full-repo',
   workflowContext?: string,
   relevanceScore?: number,
-  systemOneConfidence?: 'low' | 'med' | 'high'
+  systemOneConfidence?: 'low' | 'med' | 'high',
+  noiseTokensEliminated?: number,
+  usefulContextTokensInjected?: number
 ): JitTelemetryRecord {
   const intelDir = path.join(planningDir, 'intel');
   const telemetryPath = path.join(intelDir, 'telemetry.json');
@@ -259,6 +278,8 @@ function recordJitInvocation(
       invocationId,
       scopeMode: resolvedScopeMode,
       ...(workflowContext ? { workflowContext } : {}),
+      ...(noiseTokensEliminated ? { noiseTokensEliminated } : {}),
+      ...(usefulContextTokensInjected ? { usefulContextTokensInjected } : {}),
     };
 
     data.records.push(record);
@@ -271,6 +292,8 @@ function recordJitInvocation(
     data.totalTokensSaved += tokensSaved;
     data.totalJitTokensUsed += sanitizedJit;
     data.totalMonolithicTokensAvoided += effectiveFull;
+    data.totalNoiseTokensEliminated = (data.totalNoiseTokensEliminated || 0) + (noiseTokensEliminated || 0);
+    data.totalUsefulTokensInjected = (data.totalUsefulTokensInjected || 0) + (usefulContextTokensInjected || 0);
 
     if (sanitizedJit > data.peakInvocationTokens) {
       data.peakInvocationTokens = sanitizedJit;
@@ -348,6 +371,8 @@ function getTelemetrySummary(planningDir: string): JitTelemetrySummary {
     averageRelevanceScore: data.averageRelevanceScore,
     averageCompressionRatio: data.averageCompressionRatio || (data.totalJitTokensUsed > 0 ? Number(Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)) : 1.0),
     peakInvocationTokens: data.peakInvocationTokens,
+    totalNoiseTokensEliminated: data.totalNoiseTokensEliminated,
+    totalUsefulTokensInjected: data.totalUsefulTokensInjected,
     commandBreakdown: data.commandBreakdown,
     phaseBreakdown: data.phaseBreakdown,
     lastInvocation: data.records.length > 0 ? data.records[data.records.length - 1] : undefined,

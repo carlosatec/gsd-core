@@ -33,6 +33,9 @@ const { findCanonicalExample } = canonicalMod;
 const modelCatalogMod = require("./model-catalog.cjs");
 const { getContextWindowLimit } = modelCatalogMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const antiPatternMod = require("./anti-pattern-store.cjs");
+const { queryAntiPatterns } = antiPatternMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const systemOneMod = require("./system-one-engine.cjs");
 const { reRankForJit } = systemOneMod;
 // ─── Core Implementation ──────────────────────────────────────────────────────
@@ -272,8 +275,16 @@ function assembleJitContext(options) {
         }
     }
     // Transitive Type Closure (Quality-First: D-69, Q1)
-    const maxClosureDepth = options.maxTypeClosureDepth ?? 3;
-    const maxUniqueTypes = options.maxUniqueTypes ?? (options.mode === 'budget' ? 50 : 100);
+    const headroom = options.headroomTokens ?? 0;
+    let maxClosureDepth = options.maxTypeClosureDepth ?? 3;
+    let maxUniqueTypes = options.maxUniqueTypes ?? (options.mode === 'budget' ? 50 : 100);
+    let headroomReinvested = false;
+    // Wave 3 Task 3.1: Reinvest output diet headroom into deeper type closure
+    if (headroom >= 5000) {
+        maxClosureDepth += 1;
+        maxUniqueTypes += 50;
+        headroomReinvested = true;
+    }
     const TARGET_TYPE_KINDS = new Set([
         'interface',
         'type',
@@ -463,11 +474,33 @@ function assembleJitContext(options) {
         }
         lines.push('');
     }
+    // Wave 3 Task 3.2: Query historical anti-patterns for target files
+    const applicableAntiPatterns = [];
+    for (const tf of targetFiles) {
+        try {
+            const patterns = queryAntiPatterns(resolvedPlanningDir, { file: tf, limit: 3 });
+            for (const p of patterns) {
+                if (p.lesson && !applicableAntiPatterns.includes(p.lesson)) {
+                    applicableAntiPatterns.push(p.lesson);
+                }
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
     if (canonicalExample) {
         lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
         lines.push('```' + (canonicalExample.language || ''));
         lines.push(canonicalExample.content);
         lines.push('```');
+        lines.push('');
+    }
+    if (applicableAntiPatterns.length > 0) {
+        lines.push('#### Relevant Self-Healing Lessons & Anti-Patterns:');
+        for (const lesson of applicableAntiPatterns) {
+            lines.push(`- ⚠️ ${lesson}`);
+        }
         lines.push('');
     }
     if (semanticallyRelated.length > 0) {
@@ -513,9 +546,10 @@ function assembleJitContext(options) {
         totalRepoChars += (f.linesCount || 10) * weight;
     }
     const fullRepoTokens = Math.max(Math.ceil(totalRepoChars / 4), estimatedTokensCount * 5);
-    // Record Telemetry (Schema v2.1 with relevanceScore & confidence)
+    // Record Telemetry (Schema v2.1 with relevanceScore, confidence & fidelity balance)
+    const usefulTokensAdded = estimateTokens(applicableTypes.join(' ') + applicableAntiPatterns.join(' '));
     try {
-        recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens, options.command || 'other', options.phaseId, undefined, undefined, undefined, relevanceScore, 'high');
+        recordJitInvocation(resolvedPlanningDir, targetFiles, estimatedTokensCount, fullRepoTokens, options.command || 'other', options.phaseId, undefined, undefined, undefined, relevanceScore, 'high', headroom, usefulTokensAdded);
     }
     catch {
         // Non-blocking telemetry
@@ -527,6 +561,8 @@ function assembleJitContext(options) {
         applicableTypes,
         applicableDecisions,
         canonicalExample,
+        applicableAntiPatterns,
+        headroomReinvested,
         markdownBlock,
         relevanceScore,
     };

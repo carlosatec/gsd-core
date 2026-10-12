@@ -66,6 +66,8 @@ function loadTelemetry(planningDir) {
             compressionRatio: r.compressionRatio,
             invocationId: r.invocationId,
             scopeMode: r.scopeMode,
+            noiseTokensEliminated: r.noiseTokensEliminated,
+            usefulContextTokensInjected: r.usefulContextTokensInjected,
         }));
         const scoredRecords = records.filter(r => typeof r.relevanceScore === 'number' && !isNaN(r.relevanceScore));
         const averageRelevanceScore = scoredRecords.length > 0
@@ -75,6 +77,10 @@ function loadTelemetry(planningDir) {
             (parsed.totalJitTokensUsed && parsed.totalJitTokensUsed > 0 && parsed.totalMonolithicTokensAvoided
                 ? Number(Math.max(1.0, parsed.totalMonolithicTokensAvoided / parsed.totalJitTokensUsed).toFixed(1))
                 : 1.0);
+        const totalNoiseTokensEliminated = parsed.totalNoiseTokensEliminated ??
+            records.reduce((acc, r) => acc + (r.noiseTokensEliminated || 0), 0);
+        const totalUsefulTokensInjected = parsed.totalUsefulTokensInjected ??
+            records.reduce((acc, r) => acc + (r.usefulContextTokensInjected || 0), 0);
         return {
             version: '2.0.0',
             totalInvocations: parsed.totalInvocations || records.length || 0,
@@ -85,6 +91,8 @@ function loadTelemetry(planningDir) {
             averageRelevanceScore,
             averageCompressionRatio: compressionRatio,
             peakInvocationTokens: parsed.peakInvocationTokens || 0,
+            totalNoiseTokensEliminated,
+            totalUsefulTokensInjected,
             commandBreakdown: parsed.commandBreakdown || {},
             phaseBreakdown: parsed.phaseBreakdown || {},
             records,
@@ -100,6 +108,8 @@ function loadTelemetry(planningDir) {
             averageEfficiencyPct: 0,
             averageCompressionRatio: 1.0,
             peakInvocationTokens: 0,
+            totalNoiseTokensEliminated: 0,
+            totalUsefulTokensInjected: 0,
             commandBreakdown: {},
             phaseBreakdown: {},
             records: [],
@@ -121,7 +131,7 @@ function saveTelemetry(planningDir, data) {
  * Parameters command, phaseId, invocationId, and scopeMode are optional to preserve 100% backward compatibility.
  * All mutations are wrapped in an atomic cooperative file lock (withFileLockSync).
  */
-function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode, workflowContext, relevanceScore, systemOneConfidence) {
+function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens, command = 'other', phaseId, invocationId, scopeMode, workflowContext, relevanceScore, systemOneConfidence, noiseTokensEliminated, usefulContextTokensInjected) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     const telemetryPath = node_path_1.default.join(intelDir, 'telemetry.json');
     return (0, shell_command_projection_cjs_1.withFileLockSync)(telemetryPath, () => {
@@ -173,6 +183,8 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
             invocationId,
             scopeMode: resolvedScopeMode,
             ...(workflowContext ? { workflowContext } : {}),
+            ...(noiseTokensEliminated ? { noiseTokensEliminated } : {}),
+            ...(usefulContextTokensInjected ? { usefulContextTokensInjected } : {}),
         };
         data.records.push(record);
         // Keep last 100 records
@@ -183,6 +195,8 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
         data.totalTokensSaved += tokensSaved;
         data.totalJitTokensUsed += sanitizedJit;
         data.totalMonolithicTokensAvoided += effectiveFull;
+        data.totalNoiseTokensEliminated = (data.totalNoiseTokensEliminated || 0) + (noiseTokensEliminated || 0);
+        data.totalUsefulTokensInjected = (data.totalUsefulTokensInjected || 0) + (usefulContextTokensInjected || 0);
         if (sanitizedJit > data.peakInvocationTokens) {
             data.peakInvocationTokens = sanitizedJit;
         }
@@ -247,6 +261,8 @@ function getTelemetrySummary(planningDir) {
         averageRelevanceScore: data.averageRelevanceScore,
         averageCompressionRatio: data.averageCompressionRatio || (data.totalJitTokensUsed > 0 ? Number(Math.max(1.0, data.totalMonolithicTokensAvoided / data.totalJitTokensUsed).toFixed(1)) : 1.0),
         peakInvocationTokens: data.peakInvocationTokens,
+        totalNoiseTokensEliminated: data.totalNoiseTokensEliminated,
+        totalUsefulTokensInjected: data.totalUsefulTokensInjected,
         commandBreakdown: data.commandBreakdown,
         phaseBreakdown: data.phaseBreakdown,
         lastInvocation: data.records.length > 0 ? data.records[data.records.length - 1] : undefined,

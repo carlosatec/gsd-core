@@ -872,6 +872,32 @@ Introduzido na Fase 31 para unificar a arquitetura de grafos, eliminar a duplica
 - **Expansão Poliglota do AST:** Parsers nativos em TypeScript puro para **Zig** (`.zig`), **Astro** (`.astro`), **Protocol Buffers** (`.proto`) e resolução hierárquica de `mod <name>;` em Rust.
 - **Inteligência em Ciclo Fechado & Co-Evolução de Testes:** Ingestão automática de `.planning/intel/anti-patterns.json` no `SystemOneEngine`, elevando o risco para arquivos com histórico de regressão, e detecção de alterações em código de produção sem testes correspondentes no `QualityHead`.
 
+### 7. Arquitetura de Mods In-Process, Output Diet e Blast Radius de Comandos (`src/in-process-mod-bridge.cts`, `src/output-diet.cts`, Fase 32)
+Introduzido na Fase 32 para estabelecer integração in-process de sub-milissegundo com runtimes modernos, higienização semântica de saídas de terminal, guardrails de segurança física e persistência de contexto pós-compactação:
+- **Ponte de Mods In-Process (`src/in-process-mod-bridge.cts`):**
+  - Ponto de entrada canônico `register(on)` compatível com Claude Code v2.1.287+ e DeepSeek Harness (`@deepseek-ai/dsh-experimental-claude-code-mods`).
+  - Intercepta eventos `tool.call`, `command.run`, `turn.start` e `prompt.submit` com latência sub-milissegundo.
+  - Fallback 100% transparente via Settings Hooks para os demais runtimes do ecossistema.
+- **Output Diet & Golden Rule of Exit Codes (`src/output-diet.cts`):**
+  - Intercepta saídas volumosas de terminal (>100 linhas ou >8KB), retendo cabeçalho (30 linhas), cauda (50 linhas) e 100% de erros intermediários, asserções e stack traces.
+  - Modo Estrito de Falha (*Strict Failure Mode*): quando `exitCode !== 0`, expande a cauda para até 120 linhas e retém 100% do stderr.
+  - Síntese estruturada de falhas (`[GSD Failure Digest]`) para Jest/Vitest, Pytest, Go test e Cargo test.
+  - Despejo automático de logs brutos em `.planning/intel/output-logs/<timestamp>-<hash>.log`.
+- **Compact-Keeper & Task Drift Anchor (`src/compact-keeper.cts`):**
+  - Gera snapshots `CompactDossier` duráveis (fase, onda, tarefa ativa, arquivos recentes, último teste e decisões do `STATE.md`) em `.planning/intel/compact-dossier.json`.
+  - Injeta micro-dossiers a cada início de turno eliminando amnésia pós-compactação.
+  - `checkTaskDrift` ancora a execução contra desvios de escopo, emitindo alertas pré-voo `SCOPE_VIOLATION`.
+- **Reinvestimento de Headroom no JIT (`src/jit-context-injector.cts`):**
+  - Reinveste dinamicamente a folga de tokens economizados pela dieta (`headroomTokens >= 5000`) em profundidade de tipos (+1 hop, até +50 tipos) e injeção de lições do `anti-patterns.json`.
+  - Registra balanço de fidelidade com `noiseTokensEliminated` e `usefulContextTokensInjected`.
+- **Blast Radius de Comandos de Shell (`src/shell-blast-radius.cts`):**
+  - Análise léxica de comandos destrutivos (`rm -rf`, `git reset --hard`, `git clean -fd`, `git push --force`, reset de banco).
+  - Simulação de impacto físico em dry-run exigindo confirmação explícita, com bypass automático para pipelines não-interativos/CI.
+- **Ledger de Sessão Ativa & Guarda de Colisão Multi-Agente (`src/active-session-ledger.cts`):**
+  - Reserva atômica de arquivos em `.planning/intel/active-edits.json` sob cooperative lock `withFileLockSync`.
+  - Limpeza automática de locks órfãos por TTL (30 minutos).
+  - Bloqueio de mutações concorrentes entre agentes paralelos (`COLLISION_GUARD_BLOCK`) e cache em memória com SHA-256 prevenindo releituras redundantes.
+
 ---
 
 ## Relacionados

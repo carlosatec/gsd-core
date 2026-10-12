@@ -11,6 +11,14 @@ import path from 'node:path';
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { analyzeSourceFile, buildCodebaseGraph, loadCodebaseGraph, findCircularDependencyPath } = codebaseAst;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import compactKeeper = require('./compact-keeper.cjs');
+const { checkTaskDrift } = compactKeeper;
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import activeLedger = require('./active-session-ledger.cjs');
+const { acquireFileLock } = activeLedger;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CodebaseGraph = ReturnType<typeof buildCodebaseGraph>;
@@ -26,7 +34,7 @@ interface CoEvolutionWarning {
 }
 
 interface PreFlightViolation {
-  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION' | 'UNINTENDED_TRUNCATION' | 'SIGNATURE_DRIFT';
+  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION' | 'UNINTENDED_TRUNCATION' | 'SIGNATURE_DRIFT' | 'COLLISION_GUARD_BLOCK';
   severity: 'error' | 'warning';
   file: string;
   message: string;
@@ -45,6 +53,9 @@ interface TaskExecutionContext {
   proposedCodeMap?: Record<string, string>;
   planningDir: string;
   rootDir?: string;
+  declaredScopeFiles?: string[];
+  agentId?: string;
+  sessionId?: string;
 }
 
 interface SelfHealingResult {
@@ -226,6 +237,32 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
     const proposedContent = ctx.proposedCodeMap
       ? ctx.proposedCodeMap[relFile] ?? ctx.proposedCodeMap[normalized] ?? ctx.proposedCodeMap[`./${normalized}`]
       : undefined;
+
+    // Task Drift Anchor: check if target file is within declared task scope
+    if (ctx.declaredScopeFiles && ctx.declaredScopeFiles.length > 0) {
+      const drift = checkTaskDrift(relFile, ctx.declaredScopeFiles);
+      if (drift.isDrift) {
+        violations.push({
+          rule: 'SCOPE_VIOLATION',
+          severity: 'warning',
+          file: relFile,
+          message: drift.warning || `File ${relFile} is outside declared task scope.`,
+        });
+      }
+    }
+
+    // Wave 5: Multi-Agent Collision Guard
+    if (ctx.agentId) {
+      const lockRes = acquireFileLock(ctx.planningDir, relFile, ctx.agentId, ctx.sessionId);
+      if (!lockRes.acquired) {
+        violations.push({
+          rule: 'COLLISION_GUARD_BLOCK',
+          severity: 'error',
+          file: relFile,
+          message: lockRes.reason || `File ${relFile} is currently under edit by another agent.`,
+        });
+      }
+    }
 
     // Check proposed edits if content was provided
     if (proposedContent !== undefined) {

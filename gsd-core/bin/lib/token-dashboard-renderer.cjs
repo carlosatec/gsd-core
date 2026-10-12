@@ -226,6 +226,10 @@ function renderTokenDashboard(planningDir, options) {
     const compRatio = (summary.averageCompressionRatio || 1.0).toFixed(1) + 'x';
     lines.push(formatBoxLine(` • Graph Compression:     ${compRatio.padEnd(6)} reduction factor`));
     lines.push(formatBoxLine(` • Peak Invocation:       ${formatNumber(summary.peakInvocationTokens).padEnd(6)} tokens`));
+    if ((summary.totalNoiseTokensEliminated || 0) > 0 || (summary.totalUsefulTokensInjected || 0) > 0) {
+        lines.push(formatBoxLine(` • Noise Diet Eliminated: ${formatNumber(summary.totalNoiseTokensEliminated || 0).padEnd(8)} tokens`));
+        lines.push(formatBoxLine(` • Useful Context Added:  ${formatNumber(summary.totalUsefulTokensInjected || 0).padEnd(8)} tokens`));
+    }
     // If in --all mode, inject Operational and Financial summary rows
     if (mode === 'all') {
         const fin = calculateFinancialMetrics(summary, planningDir, model);
