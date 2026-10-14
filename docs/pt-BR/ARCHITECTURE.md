@@ -36,7 +36,7 @@ O GSD Core é um **framework de meta-prompting** que fica entre o usuário e os 
 └────────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────────┘
                                                              │
 ┌────────────────────────────────────────────────────────────▼────────────────────────────────────────────────────────────┐
-│                                 NEXUS UNIFIED WORKFLOW HUB (Fases 4 e 12 — D-41)                                        │
+│                             NEXUS UNIFIED WORKFLOW HUB (Fases 4, 12, 18, 22, 28, 32, 33)                                │
 │   src/unified-workflow-hub.cts ── Super-Hub dos 11 Comandos Canônicos:                                                 │
 │   /gsd-status · /gsd-plan · /gsd-exec · /gsd-review · /gsd-verify · /gsd-ship                                           │
 │   /gsd-auto · /gsd-tokens · /gsd-migrate · /gsd-graph · /gsd-help                                                       │
@@ -46,7 +46,7 @@ O GSD Core é um **framework de meta-prompting** que fica entre o usuário e os 
 ┌──────▼──────────────────────┐ ┌────▼──────────────────────┐ ┌────▼────────────────────────┐ ┌────▼────────────────────────┐
 │  NEXUS JIT CONTEXT INJECTOR │ │ PRE-FLIGHT GUARDRAILS &   │ │ NEXUS TELEMETRY &          │ │ NEXUS SESSION INTELLIGENCE │
 │(Fases 2,8,9,20 — D-03,D-99) │ │ SELF-HEALING (Fases 3,20) │ │ OBSERVABILITY (5, 7, 25)   │ │ & DETERMINISTIC REPLAY     │
-│ src/jit-context-injector.cts│ │ src/preflight-guardrails  │ │ src/jit-telemetry.cts      │ │ (Fase 14 — D-54, D-55, D-56│
+│ src/jit-context-injector.cts│ │ src/preflight-guardrails  │ │ src/jit-telemetry.cts      │ │ (Fases 14, 22 — D-54..D-56)│
 │ - Quality-First Type Closure│ │ - inMemoryPathSet O(1)<15m│ │ src/observability-aggregat │ │ src/session-logger.cts     │
 │ - BFS 3-Hops / 50 Tipos Cap │ │ - SIGNATURE_DRIFT Warning │ │ src/observability-html-dash│ │ src/session-replay.cts     │
 │ - Orçamento elástico por LLM│ │ - CO_EVOLVE_CALLERS Action│ │ - 360 ASCII & Offline HTML │ │ - Smart Trimming (32 KB)   │
@@ -56,8 +56,19 @@ O GSD Core é um **framework de meta-prompting** que fica entre o usuário e os 
        │                             │                             │                         └────┬───────────────────────┘
        │                             │                             │                              │
 ┌──────▼─────────────────────────────▼─────────────────────────────▼──────────────────────────────▼───────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIVERSAL GRAPH ENGINE (D-01, D-06, D-99..D-103)                             │
-│   src/codebase-ast-analyzer.cts ── Tiered AST Engine (Camada 1 TS Compiler + Camada 2 State-Machine Lexer 2 Passes)      │
+│               SYSTEM ONE ADAPTIVE INTELLIGENCE & IN-PROCESS MOD BRIDGE (Fases 28, 30, 32, 33)                           │
+│   src/system-one-engine.cts ── Multi-Head Evaluator (Security, Architecture, Quality) + Shannon Entropy H(P) + RRF     │
+│   src/in-process-mod-bridge.cts ── Dual-Surface In-Process Mods (tool.call, command.run, turn.start, turn.end)         │
+│   src/output-diet.cts ── Semantic Output Diet & Golden Rule of Exit Codes (Strict Failure Mode + Failure Digest)        │
+│   src/shell-blast-radius.cts ── Command Blast Radius (Unix rm/git + Windows PowerShell Remove-Item/rd/del Interdiction)│
+│   src/active-session-ledger.cts ── Concurrency Collision Guard (Read-Only Check & Transactional Agent Release)         │
+│   src/compact-keeper.cts ── Anti-Amnesia CompactDossier & Task Drift Anchor (SCOPE_VIOLATION Guard)                     │
+└──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
+       │                                                           │
+┌──────▼───────────────────────────────────────────────────────────▼──────────────────────────────────────────────────────┐
+│                 NEXUS STATIC INTELLIGENCE & UNIFIED GRAPH SSOT (Fases 1, 5, 16, 27, 31)                                 │
+│   src/codebase-ast-analyzer.cts ── Polyglot AST Engine (16+ ecossistemas) + PageRank Centrality + Blast Radius         │
+│   .planning/intel/codebase-graph.json ── Grafo SSOT Ancorado por Git Commit SHA + Arestas Semânticas (type vs runtime) │
 │   src/visual-graph-exporter.cts ── Gerador HTML Canvas 2D 100% offline & snapshot PNG (/gsd-graph — Fase 16)            │
 │   src/canvas-roadmap-generator.cts ── Exportador JSON Open Canvas para Obsidian (ROADMAP.canvas — Fase 16)              │
 │   src/obsidian-interop.cts ── Suporte a [[wikilinks]] e índice bidirecional (.planning/intel/backlinks.json — Fase 16)  │
@@ -70,9 +81,9 @@ O GSD Core é um **framework de meta-prompting** que fica entre o usuário e os 
 ┌──────▼──────────────────────┐                           ┌────────▼───────────────────────────────┐
 │     STATE MACHINE ENGINE    │                           │    CAPABILITY & SECURITY FOUNDATION    │
 │  src/state.cts (5.1k lines) │                           │  src/security.cts (Secret Redact/Path) │
-│  src/state-markdown-parser  │                           │  src/capability-lifecycle.cts (Ledger) │
-│  src/session-context-hook   ◄── Injeção Session Handshk │  src/clock.cts (Deterministic Sleep)   │
-│  .planning/STATE.md         │   (Fase 10 — D-30)        │  src/worktree-safety.cts (Git Isolate) │
+│  src/session-context-hook   ◄── Injeção Session Handshk │  src/capability-lifecycle.cts (Ledger) │
+│  .planning/STATE.md         │   (Fase 10 — D-30)        │  src/clock.cts (Deterministic Sleep)   │
+│                             │                           │  src/worktree-safety.cts (Git Isolate) │
 └─────────────────────────────┘                           └────────────────────────────────────────┘
 ```
 

@@ -17,7 +17,7 @@ const { checkTaskDrift } = compactKeeper;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import activeLedger = require('./active-session-ledger.cjs');
-const { acquireFileLock } = activeLedger;
+const { checkLockConflict } = activeLedger;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -251,9 +251,9 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
       }
     }
 
-    // Wave 5: Multi-Agent Collision Guard
+    // Wave 5: Multi-Agent Collision Guard (Read-only conflict inspection)
     if (ctx.agentId) {
-      const lockRes = acquireFileLock(ctx.planningDir, relFile, ctx.agentId, ctx.sessionId);
+      const lockRes = checkLockConflict(ctx.planningDir, relFile, ctx.agentId);
       if (!lockRes.acquired) {
         violations.push({
           rule: 'COLLISION_GUARD_BLOCK',

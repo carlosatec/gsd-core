@@ -24,7 +24,19 @@ A detecção de conflitos é executada antes que qualquer arquivo seja gravado. 
 
 ## Execute a migração
 
-### Migrar o diretório atual
+### Comando Canônico Unificado (GSD 3.6+)
+
+A partir do GSD 3.6, o comando unificado `/gsd-migrate` (ou `/gsd:migrate`) é o ponto de entrada recomendado com 1 clique para atualizar qualquer projeto legado para a arquitetura GSD Core Nexus 3.6. Ele inspeciona `.planning/`, atualiza os esquemas para v2, reconstrói o grafo de dependências AST e migra estruturas legadas de forma não-destrutiva:
+
+```bash
+/gsd-migrate
+```
+
+### Migração Granular do GSD-2 (`/gsd-import`)
+
+Você também pode invocar o motor de migração subjacente diretamente:
+
+#### Migrar o diretório atual
 
 ```bash
 /gsd-import --from-gsd2
@@ -32,7 +44,7 @@ A detecção de conflitos é executada antes que qualquer arquivo seja gravado. 
 
 O GSD lê `.gsd/` no diretório de trabalho atual e grava os artefatos migrados em `.planning/`.
 
-### Migrar a partir de um caminho diferente
+#### Migrar a partir de um caminho diferente
 
 ```bash
 /gsd-import --from-gsd2 --path ~/projects/old-project
@@ -127,7 +139,8 @@ Se o projeto foi migrado corretamente, você verá o status da fase atual e o pr
 
 | Situação | O que fazer |
 |----------|-------------|
-| `.gsd/` existe no diretório atual | Execute `/gsd-import --from-gsd2` (sem `--path`) |
+| Atualização completa de projeto legado para GSD Core Nexus 3.6+ | Execute `/gsd-migrate` (ou `/gsd:migrate`) |
+| `.gsd/` existe no diretório atual | Execute `/gsd-migrate` ou `/gsd-import --from-gsd2` (sem `--path`) |
 | `.gsd/` está em um diretório diferente | Use `--path ~/projects/old-project` |
 | Você tem um documento de plano avulso, não um projeto GSD-2 completo | Use `/gsd-import --from /path/to/plan.md` |
 | Você tem ADRs em `docs/adr/` | Execute `/gsd-ingest-docs docs/adr/` após a migração |

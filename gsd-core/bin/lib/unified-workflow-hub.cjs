@@ -53,7 +53,13 @@ const systemOneMod = require("./system-one-engine.cjs");
 const normalizeTestMod = require("./normalize-test-command.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const intelMod = require("./intel.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const activeLedgerMod = require("./active-session-ledger.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const outputDietMod = require("./output-diet.cjs");
 const { checkIntelHealth } = intelMod;
+const { releaseAgentLocks } = activeLedgerMod;
+const { processOutputDiet } = outputDietMod;
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
 const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
@@ -614,6 +620,14 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             catch {
                 // Fallback default
             }
+            try {
+                if (typeof releaseAgentLocks === 'function') {
+                    releaseAgentLocks(planningDir);
+                }
+            }
+            catch {
+                // Non-blocking lock cleanup
+            }
             return {
                 command: 'exec',
                 action: 'EXECUTE_PHASE',
@@ -700,11 +714,30 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                     const detectedCmd = detectProjectTestCommand(cwd);
                     const normalizedCmd = normalizeTestCommand(detectedCmd, cwd);
                     try {
-                        (0, node_child_process_1.execSync)(normalizedCmd, { cwd, stdio: 'ignore', timeout: 60000 });
+                        (0, node_child_process_1.execSync)(normalizedCmd, { cwd, stdio: 'pipe', encoding: 'utf8', timeout: 60000 });
                         testsGreen = true;
                     }
-                    catch {
-                        verifyWarnings.push(`[System-One] Interlock 1 BLOQUEADO: suíte de testes falhou (${normalizedCmd}). Auto-UAT não aprovará até os testes estarem verdes.`);
+                    catch (execErr) {
+                        const errWithOutput = execErr;
+                        const rawOut = (errWithOutput.stdout ? String(errWithOutput.stdout) : '') +
+                            (errWithOutput.stderr ? '\n' + String(errWithOutput.stderr) : '');
+                        let failureDetail = '';
+                        try {
+                            if (typeof processOutputDiet === 'function') {
+                                const diet = processOutputDiet(rawOut, {
+                                    exitCode: errWithOutput.status || 1,
+                                    projectRoot: cwd,
+                                    command: normalizedCmd,
+                                });
+                                if (diet.failureDigest) {
+                                    failureDetail = ' ' + diet.failureDigest.trim();
+                                }
+                            }
+                        }
+                        catch {
+                            // Non-blocking fallback
+                        }
+                        verifyWarnings.push(`[System-One] Interlock 1 BLOQUEADO: suíte de testes falhou (${normalizedCmd}).${failureDetail} Auto-UAT não aprovará até os testes estarem verdes.`);
                     }
                 }
                 catch {

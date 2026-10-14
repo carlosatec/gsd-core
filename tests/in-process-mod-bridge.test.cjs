@@ -55,6 +55,7 @@ describe('Phase 32 Wave 6 — In-Process Event Dispatch & Guardrails', () => {
     assert.ok(registeredEvents.some(e => e.eventName === 'tool.call'));
     assert.ok(registeredEvents.some(e => e.eventName === 'command.run'));
     assert.ok(registeredEvents.some(e => e.eventName === 'turn.start'));
+    assert.ok(registeredEvents.some(e => e.eventName === 'turn.end'));
     assert.ok(registeredEvents.some(e => e.eventName === 'prompt.submit'));
   });
 
@@ -128,5 +129,30 @@ describe('Phase 32 Wave 6 — In-Process Event Dispatch & Guardrails', () => {
     assert.equal(result.allow, true);
     assert.ok(result.additionalContext);
     assert.ok(result.additionalContext.includes('GSD Compact-Keeper: Micro-Dossier'));
+  });
+
+  it('releases agent locks on turn.end event', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-mod-end-'));
+    const planningDir = path.join(tmpDir, '.planning');
+    fs.mkdirSync(path.join(planningDir, 'intel'), { recursive: true });
+
+    const ledgerMod = require('../gsd-core/bin/lib/active-session-ledger.cjs');
+    ledgerMod.acquireFileLock(planningDir, 'src/target.ts', 'agent-auto', 'session-1');
+
+    const locksBefore = ledgerMod.getActiveLocks(planningDir);
+    assert.equal(locksBefore.length, 1);
+
+    const bridge = createModBridge({
+      projectRoot: tmpDir,
+      planningDir,
+      agentId: 'agent-auto',
+      sessionId: 'session-1',
+    });
+
+    const result = await bridge.dispatchEvent('turn.end', {});
+    assert.equal(result.allow, true);
+
+    const locksAfter = ledgerMod.getActiveLocks(planningDir);
+    assert.equal(locksAfter.length, 0);
   });
 });

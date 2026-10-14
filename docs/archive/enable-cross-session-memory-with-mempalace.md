@@ -1,4 +1,10 @@
-# How to enable cross-session memory with MemPalace
+# How to enable cross-session memory with MemPalace (Archived)
+
+> [!WARNING]
+> **Deprecated / Superseded in GSD Core Nexus 3.6+**
+> External MemPalace integration has been superseded by native, zero-dependency session causal intelligence (`src/session-logger.cts`, `src/session-replay.cts`, `src/active-session-ledger.cts`, and `src/hybrid-semantic-rag.cts`). In accordance with architectural decision **D-01** (Zero external dependencies on Python or external databases), GSD Core Nexus provides native local-first session memory and causality. This document is preserved for historical reference only.
+
+---
 
 Give GSD durable memory across sessions and projects. When MemPalace is connected, GSD recalls prior decisions and patterns before you plan, and captures phase artifacts verbatim at each phase boundary.
 

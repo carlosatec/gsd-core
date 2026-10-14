@@ -24,7 +24,19 @@ Conflict detection runs before any files are written. If the target directory al
 
 ## Run the migration
 
-### Migrate the current directory
+### Canonical Unified Command (GSD 3.6+)
+
+Starting in GSD 3.6, the unified command `/gsd-migrate` (or `/gsd:migrate`) is the recommended one-click entry point to upgrade any legacy project to GSD Core Nexus 3.6 architecture. It inspects `.planning/`, updates schemas to v2, rebuilds the AST dependency graph, and coordinates legacy layouts:
+
+```bash
+/gsd-migrate
+```
+
+### Granular GSD-2 Migration (`/gsd-import`)
+
+You can also invoke the underlying migration engine directly:
+
+#### Migrate the current directory
 
 ```bash
 /gsd-import --from-gsd2
@@ -32,7 +44,7 @@ Conflict detection runs before any files are written. If the target directory al
 
 GSD reads `.gsd/` in the current working directory and writes the migrated artifacts into `.planning/`.
 
-### Migrate from a different path
+#### Migrate from a different path
 
 ```bash
 /gsd-import --from-gsd2 --path ~/projects/old-project
@@ -127,7 +139,8 @@ If the project came across cleanly you will see the current phase status and the
 
 | Situation | What to do |
 |-----------|-----------|
-| `.gsd/` exists in the current directory | Run `/gsd-import --from-gsd2` (no `--path` needed) |
+| Complete legacy upgrade to GSD Core Nexus 3.6+ | Run `/gsd-migrate` (or `/gsd:migrate`) |
+| `.gsd/` exists in the current directory | Run `/gsd-migrate` or `/gsd-import --from-gsd2` (no `--path` needed) |
 | `.gsd/` is in a different directory | Use `--path ~/projects/old-project` |
 | You have a standalone plan document, not a full GSD-2 project | Use `/gsd-import --from /path/to/plan.md` |
 | You have ADRs in `docs/adr/` | Run `/gsd-ingest-docs docs/adr/` after migration |

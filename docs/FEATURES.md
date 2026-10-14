@@ -3209,7 +3209,7 @@ The load-bearing wire is the `plan-phase` lift: `covered` and `backstop` edges b
 
 **Configuration:** `mempalace.enabled`, `mempalace.memory_mode`, `mempalace.wing`, `mempalace.recall_on_discuss`, `mempalace.recall_on_plan`, `mempalace.capture_artifacts`, `mempalace.mirror_kg`, `mempalace.cross_project_tunnels`, `mempalace.diary_journal`, `mempalace.auto_capture_hooks`
 
-See [Configuration Reference](CONFIGURATION.md#mempalace-settings) for full schema and [How to enable cross-session memory with MemPalace](how-to/enable-cross-session-memory-with-mempalace.md) for a setup walkthrough.
+See [Configuration Reference](CONFIGURATION.md#mempalace-settings) for full schema and [How to enable cross-session memory with MemPalace (Archived)](archive/enable-cross-session-memory-with-mempalace.md) for historical reference.
 
 ### 146. Spec-Phase Prohibition Probe
 

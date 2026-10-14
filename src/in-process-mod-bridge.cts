@@ -23,7 +23,7 @@ const { inspectCommandRisk } = blastRadiusMod;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import ledgerMod = require('./active-session-ledger.cjs');
-const { acquireFileLock } = ledgerMod;
+const { acquireFileLock, releaseAgentLocks } = ledgerMod;
 
 type ModEventName = 'tool.call' | 'prompt.submit' | 'turn.start' | 'command.run' | 'turn.end';
 
@@ -189,6 +189,18 @@ function createModBridge(options: ModBridgeOptions = {}) {
     }
   });
 
+  // 4. Turn End Lock Cleanup Handler
+  registerHandler('turn.end', () => {
+    try {
+      if (typeof releaseAgentLocks === 'function') {
+        releaseAgentLocks(planning, agentId);
+      }
+    } catch {
+      // Non-blocking lock cleanup
+    }
+    return { allow: true };
+  });
+
   return {
     registerHandler,
     dispatchEvent,
@@ -218,6 +230,10 @@ function register(on: ModEventRegistrar, options: ModBridgeOptions = {}): void {
 
   on('turn.start', async (ctx) => {
     return bridge.dispatchEvent('turn.start', ctx);
+  });
+
+  on('turn.end', async (ctx) => {
+    return bridge.dispatchEvent('turn.end', ctx);
   });
 
   on('prompt.submit', async (ctx) => {

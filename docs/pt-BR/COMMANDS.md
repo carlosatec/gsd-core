@@ -15,7 +15,7 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ## Interface Canônica Unificada (GSD 3.6)
 
-A partir do GSD 3.6, a superfície pública de comandos foi estritamente consolidada em **10 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 3.6, a superfície pública de comandos foi estritamente consolidada em **11 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
@@ -28,6 +28,7 @@ A partir do GSD 3.6, a superfície pública de comandos foi estritamente consoli
 | `/gsd-auto` | Piloto automático ponta a ponta através de todo o ciclo da fase |
 | `/gsd-tokens` | Painel visual de telemetria multi-comando e economia de tokens em tempo real |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados em um clique |
+| `/gsd-graph` | Exportador de grafo de conhecimento visual interativo HTML e compatível com Obsidian |
 | `/gsd-help` | Guia de uso e referência rápida para todos os comandos unificados |
 
 ---
@@ -88,9 +89,24 @@ node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
 
 ---
 
+### Exportador Visual de Grafo de Conhecimento (`/gsd-graph` & `gsd-tools graph`)
+
+Exporta uma visualização interativa em HTML e uma representação em Obsidian Canvas do roadmap, fases, dependências AST e arquitetura do projeto para `.planning/intel/graph-view.html` e `.planning/ROADMAP.canvas`:
+
+```bash
+# Exportar e abrir automaticamente no navegador padrão
+/gsd-graph
+
+# Exportar silenciosamente sem abrir o navegador
+/gsd-graph --no-open
+node gsd-core/bin/gsd-tools.cjs graph --no-open
+```
+
+---
+
 ### Execução Direta de Comandos via CLI Seam (`gsd-tools <comando>`)
 
-Todos os 10 Comandos Canônicos Unificados podem ser acionados diretamente pelo terminal, scripts de automação ou pipelines de CI/CD:
+Todos os 11 Comandos Canônicos Unificados podem ser acionados diretamente pelo terminal, scripts de automação ou pipelines de CI/CD:
 
 ```bash
 node gsd-core/bin/gsd-tools.cjs status
@@ -102,6 +118,7 @@ node gsd-core/bin/gsd-tools.cjs verify 22
 node gsd-core/bin/gsd-tools.cjs ship
 node gsd-core/bin/gsd-tools.cjs auto 22
 node gsd-core/bin/gsd-tools.cjs tokens
+node gsd-core/bin/gsd-tools.cjs graph
 ```
 
 ---

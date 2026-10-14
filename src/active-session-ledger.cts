@@ -184,6 +184,51 @@ function clearAllLocks(planningDir: string): void {
   });
 }
 
+/**
+ * Inspects whether a file has an active edit reservation by another agent without acquiring a lock.
+ */
+function checkLockConflict(
+  planningDir: string,
+  filePath: string,
+  agentId: string
+): AcquireLockResult {
+  const norm = normalizePath(filePath);
+  const data = loadLedger(planningDir);
+  pruneExpiredLocks(data);
+
+  const existing = data.locks[norm];
+  if (existing && existing.agentId !== agentId) {
+    return {
+      acquired: false,
+      conflict: existing,
+      reason: `COLLISION_GUARD_BLOCK: File "${norm}" is under active edit by agent "${existing.agentId}" (sessionId: ${existing.sessionId}).`,
+    };
+  }
+
+  return { acquired: true };
+}
+
+/**
+ * Releases all active locks held by a specific agent (or all agents if omitted).
+ */
+function releaseAgentLocks(planningDir: string, agentId?: string): number {
+  const ledgerPath = path.join(planningDir, 'intel', 'active-edits.json');
+  return withFileLockSync(ledgerPath, () => {
+    const data = loadLedger(planningDir);
+    let releasedCount = 0;
+    for (const [key, lock] of Object.entries(data.locks)) {
+      if (!agentId || lock.agentId === agentId) {
+        delete data.locks[key];
+        releasedCount++;
+      }
+    }
+    if (releasedCount > 0) {
+      saveLedger(planningDir, data);
+    }
+    return releasedCount;
+  });
+}
+
 // ─── In-Memory Reread Guard ───────────────────────────────────────────────────
 
 const _rereadCache = new Map<string, RereadCacheEntry>();
@@ -238,6 +283,8 @@ export = {
   releaseFileLock,
   getActiveLocks,
   clearAllLocks,
+  checkLockConflict,
+  releaseAgentLocks,
   trackFileRead,
   getCachedFileRead,
   clearRereadCache,

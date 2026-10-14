@@ -15,7 +15,10 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
 const DESTRUCTIVE_RM_PATTERN = /(?:^|\s|;|&|\|)(?:rm|rimraf)\s+(?:-[a-zA-Z]*r[a-zA-Z]*f?|--recursive(?:\s+--force)?)\s+([^;&|]+)/i;
+const POWERSHELL_RM_PATTERN = /(?:^|\s|;|&|\|)(?:Remove-Item|rmdir|rd)\s+(?:.*-(?:Recurse|r)\b.*|.*-(?:Force|fo)\b.*|\/s\s+\/q)\s*([^;&|]*)/i;
+const WINDOWS_DEL_PATTERN = /(?:^|\s|;|&|\|)del\s+.*(?:\/s|\/q)\b\s*([^;&|]*)/i;
 const GIT_RESET_HARD_PATTERN = /(?:^|\s|;|&|\|)git\s+reset\s+--hard(?:\s+([^\s;&|]+))?/i;
+const GIT_RESTORE_PATTERN = /(?:^|\s|;|&|\|)git\s+(?:restore\s+\.|checkout\s+--\s+\.)/i;
 const GIT_CLEAN_FORCE_PATTERN = /(?:^|\s|;|&|\|)git\s+clean\s+.*-[a-zA-Z]*f/i;
 const GIT_FORCE_PUSH_PATTERN = /(?:^|\s|;|&|\|)git\s+push\s+.*(?:--force|-f\b)/i;
 const DB_MIGRATE_DESTRUCTIVE_PATTERN = /(?:prisma\s+migrate\s+(?:reset|dev\s+--force)|(?:db:drop|db:reset))/i;
@@ -139,12 +142,12 @@ function inspectCommandRisk(command, options = {}) {
     let category = 'other';
     let riskLevel = 'safe';
     let isDestructive = false;
-    if (DESTRUCTIVE_RM_PATTERN.test(trimmed)) {
+    if (DESTRUCTIVE_RM_PATTERN.test(trimmed) || POWERSHELL_RM_PATTERN.test(trimmed) || WINDOWS_DEL_PATTERN.test(trimmed)) {
         category = 'file_deletion';
         riskLevel = 'critical';
         isDestructive = true;
     }
-    else if (GIT_RESET_HARD_PATTERN.test(trimmed)) {
+    else if (GIT_RESET_HARD_PATTERN.test(trimmed) || GIT_RESTORE_PATTERN.test(trimmed)) {
         category = 'git_reset';
         riskLevel = 'critical';
         isDestructive = true;

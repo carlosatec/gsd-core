@@ -49,6 +49,8 @@ const RENAMED_TARGET_MAP = {
   'issue-driven-orchestration.md': 'docs/how-to/issue-driven-orchestration.md',
   'contributor-standards.md': 'docs/contributing/contributor-standards.md',
   'RELEASE-NOTES-LEGACY.md': 'docs/archive/RELEASE-NOTES-LEGACY.md',
+  'enable-cross-session-memory-with-mempalace.md': 'docs/archive/enable-cross-session-memory-with-mempalace.md',
+  'mempalace-capability-prd-adr.md': 'docs/archive/mempalace-capability-prd-adr.md',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -60,6 +60,23 @@ describe('Phase 32 Wave 4 — Command Risk Lexer & Detection', () => {
     assert.equal(cleanReport.riskLevel, 'high');
   });
 
+  it('detects Windows PowerShell and CMD destructive commands', () => {
+    const pwshReport = inspectCommandRisk('Remove-Item -Recurse -Force ./dist', { nonInteractive: false });
+    assert.equal(pwshReport.isDestructive, true);
+    assert.equal(pwshReport.category, 'file_deletion');
+    assert.equal(pwshReport.riskLevel, 'critical');
+    assert.equal(pwshReport.requiresConfirmation, true);
+
+    const cmdReport = inspectCommandRisk('rd /s /q temp', { nonInteractive: false });
+    assert.equal(cmdReport.isDestructive, true);
+    assert.equal(cmdReport.category, 'file_deletion');
+
+    const restoreReport = inspectCommandRisk('git restore .', { nonInteractive: false });
+    assert.equal(restoreReport.isDestructive, true);
+    assert.equal(restoreReport.category, 'git_reset');
+    assert.equal(restoreReport.riskLevel, 'critical');
+  });
+
   it('detects git push --force as critical operation', () => {
     const pushReport = inspectCommandRisk('git push origin main --force', { nonInteractive: false });
     assert.equal(pushReport.isDestructive, true);
