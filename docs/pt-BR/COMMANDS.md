@@ -13,9 +13,9 @@ As formas com hífen e com dois-pontos são *variações específicas do runtime
 
 ---
 
-## Interface Canônica Unificada (GSD 3.6)
+## Interface Canônica Unificada (GSD 3.7)
 
-A partir do GSD 3.6, a superfície pública de comandos foi estritamente consolidada em **11 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
+A partir do GSD 3.7, a superfície pública de comandos foi estritamente consolidada em **11 Comandos Canônicos Unificados** (com todos os playbooks operacionais carregados sob demanda):
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|

@@ -1200,6 +1200,35 @@ Introduced in Phase 34, expanding the architectural foundation with native TypeS
 - **Dual-Package ESM Wrappers & Conditional Exports (`package.json`, `index.mjs`):**
   - Modern `"exports"` map in `package.json` with conditional `"import"` and `"require"` mapping, providing typed `.mjs` wrappers without breaking CommonJS consumers.
 
+### 11. Code Quality, Full AST Contracts, Bug Remediation & Anti-Amnesia Architecture (Phase 35)
+Introduced in Phase 35, prioritizing code quality, runtime stability, full AST semantic type contracts, and an active cognitive sentry to systematically eradicate AI amnesia and hallucinations across all workflows:
+- **Worktree Isolation Resilience & Zero Lost Work Recovery (`src/worktree-isolation.cts`):**
+  - Replaced CPU busy-wait spinloop (`while(Date.now() - start < sleepMs)`) with CPU-idle `Atomics.wait` on a shared `Int32Array` buffer, exposing an injectable `Clock` seam for deterministic testing.
+  - Conflict Retention: when a merge conflict occurs in `mergeAndCleanupWorktree`, the temporary branch and worktree directory are strictly **retained** rather than deleted, while the root merge conflict is cleanly aborted (`git merge --abort`). Returns structured recovery diagnostics (`recoveryBranch`, `recoveryWorktreeDir`) guaranteeing zero lost work. Added `cleanupRetainedWorktree` helper for post-investigation cleanup.
+- **Shell Blast Radius Force Escalator (`src/shell-blast-radius.cts`):**
+  - Inverted `--force` semantics: `--force` acts as a risk escalator elevating commands to `critical` and strictly demanding interactive confirmation, preventing catastrophic automated destructions. Automation bypasses require explicit flags (`--yes`, `--non-interactive`).
+- **Continuous Memory Atomic Hygiene & 2-Character Technical Lexicon (`src/continuous-memory.cts`):**
+  - Serialized `recordMemoryEntry` and `tryCompaction` under a single non-nested cooperative file lock (`withFileLockSync`) using temporary sibling writes (`platformWriteSync`) for atomic crash consistency.
+  - Expanded BM25 tokenizer to retain critical 2-character technical tokens (`db`, `io`, `ui`, `ci`, `cd`, `ts`, `js`, `go`, `rs`, `os`, `fs`).
+- **MCP Feasibility Grounding & Curated State Guard (`src/mcp-server.cts`):**
+  - Fixed graph schema access in `gsd_check_feasibility` to read `graph.files` (with `graph.nodes` fallback), reporting accurate `knownSymbolsCount` and graph freshness (`updatedAt`, `isStale`).
+  - Structured candidate classification: categorizes symbols into `known`, `intentionallyNew`, `ignored` (built-ins/standard library), and `missing` to eliminate false-positive blocks.
+  - Connected `inspectWriteSafety` to `gsd_write_state` to prevent 0-byte truncations or catastrophic shrinkage of curated state files (`STATE.md`, `ROADMAP.md`).
+- **Full AST Type Contracts & Quality-First JIT Calibration (`src/codebase-ast-analyzer.cts`, `src/jit-context-injector.cts`):**
+  - Extracted full, normalized textual contracts for TypeScript declarations (`interface`, `type`, `enum`, class headers) into `meta.contract` (bounded to 1,000 characters via `normalizeTypeContract`) and `meta.signature`.
+  - JIT target type contracts render actual TypeScript code blocks instead of line-number stubs, eliminating object attribute guessing.
+  - Elevated Quality-First prompt budget to 32k tokens, prioritized as: Invariants -> Full Type Contracts -> Continuous Memory -> Anti-Patterns -> Neighbor Signatures -> Isolated Canonical Anchor.
+- **Anti-Amnesia Session Context Hook & Causal Output Diet (`src/session-context-hook.cts`, `src/output-diet.cts`):**
+  - Removed arbitrary 4-decision cutoff in session bootstrap context, prioritizing global `[Invariant]` and `[Architecture]` decisions packed up to 1,200 characters with overflow indicators (`... and N more decisions in STATE.md`).
+  - Idempotent multi-target synchronization across `GEMINI.md`, `AGENTS.md`, and `.agents/rules/gsd-session.md`.
+  - Preserved a causal window of 30 lines immediately preceding test/execution failure markers in Output Diet (within a 250-line global cap).
+- **Sovereign System One Cognitive Sentry & Active Learning (JEV + LAYA) (`src/system-one-engine.cts`, `src/unified-workflow-hub.cts`):**
+  - `Noul(evaluateNoulSafety)`: JEV-inspired boolean reflex intercepting illegal mutations (forbidden Python runtimes, missing junction unlinking on Windows) with `AMNESIA_GATE_VIOLATION`.
+  - `Score(evaluateGroundingScore)`: Ordinal rubric (0 to 3) checking called methods against AST symbols to block hallucinations with `GROUNDING_MISMATCH`.
+  - `Choice(evaluateChoiceStrategy)`: RFC 2119 `MUST`/`SHALL` auditor blocking phase closure without verification evidence (`REQUIREMENT_EVIDENCE_MISSING`) and routing self-healing repair strategies using canonical `listMilestonePhaseDirs` (`src/phase-locator.cts`).
+  - Active Learning (`recordSelfHealingLesson`): LAYA-inspired continuous capture of fail-then-pass repairs into `.planning/memory/decisions.jsonl` under `self_healing_fix` for subsequent RRF fusion retrieval.
+  - Dynamic skill manifest triage in `commands/gsd/plan.md` and `skills/gsd-plan/SKILL.md`, reducing bootstrap overhead from 113k to <5k tokens via progressive on-demand routing.
+
 ---
 
 ## Related

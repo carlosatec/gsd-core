@@ -8,7 +8,7 @@
 
 **A light-weight meta-prompting, context engineering, native static analysis, and spec-driven development system for Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![version](https://img.shields.io/badge/version-3.6.3-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![version](https://img.shields.io/badge/version-3.7.0-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -35,9 +35,9 @@ Each milestone repeats the same five-step loop, one phase at a time:
 
 ---
 
-## GSD Core Nexus 3.6 Highlights
+## GSD Core Nexus 3.7 Highlights
 
-GSD Core Nexus 3.6 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
+GSD Core Nexus 3.7 elevates AI coding agents with deep execution observability, multi-runtime autonomy, mobile intelligence, strict canonical surface, and unified release automation:
 
 1. **Universal 360° AST & Native Knowledge Graph (Zero Python):** Native static code analysis in pure TypeScript across 35+ extensions with full **Mobile 360°** support (iOS Swift/SwiftUI, Android Kotlin/Compose) and PageRank architectural ranking.
 2. **Quality-First JIT & Transitive Type Closure:** Deep recursive type discovery up to 3 degrees (BFS 3 hops), eliminating context rot and saving **80% to 95% of tokens**.
@@ -52,8 +52,12 @@ GSD Core Nexus 3.6 elevates AI coding agents with deep execution observability, 
 11. **MCP Centralization & 9 Canonical Tools:** Full JSON-RPC tool surface (`bin/gsd-mcp-server.js`) including surgical JIT context, pre-flight guardrails, and NVIDIA Auto-Ontology AST feasibility checks to verify symbols before coding.
 12. **GitHub Spec-Kit Interoperability & RFC 2119 Parsing:** Bidirectional conversion between GitHub Spec-Kit format and GSD, RFC 2119 normative categorization (`MUST`/`SHALL`/`SHOULD`/`MAY`), anti-prompt-injection sanitization, and root `CONSTITUTION.md`.
 13. **Claude-Mem Continuous Memory (Native TypeScript):** Cross-session technical memory under `.planning/memory/decisions.jsonl` with BM25 ranking, temporal decay, PII sanitization, and automatic log compaction — zero Python, zero external vector DBs.
-14. **Worktree Concurrency & Windows Junction Safety:** Ephemeral Git worktree isolation (Worktrunk pattern) with NTFS directory junctions, guaranteed defensive unlinking (`fs.unlinkSync`), and exponential backoff retry for Git `index.lock`.
-15. **Unified Drift Linter Suite & Skills Spec:** 13+ discrete repository linters consolidated into an fast in-memory pipeline (10x faster execution) with Anthropic Agent Skills compliance checking.
+14. **Worktree Concurrency & Windows Junction Safety:** Ephemeral Git worktree isolation (Worktrunk pattern) with NTFS directory junctions, guaranteed defensive unlinking (`fs.unlinkSync`), exponential backoff retry for Git `index.lock`, and conflict retention with clean root merge abort.
+15. **Unified Drift Linter Suite & Skills Spec:** 13+ discrete repository linters consolidated into a fast in-memory pipeline (10x faster execution) with Anthropic Agent Skills compliance checking.
+16. **Full AST Type Contracts & Quality-First JIT Calibration:** Full normalized interface, type, and class body extraction (`meta.contract`) injected as real TypeScript code blocks in JIT target contracts, eliminating object attribute guessing with an expanded 32k token budget.
+17. **Sovereign System One Cognitive Sentry (JEV + LAYA):** Active pre-mutation reflex gates (`Noul` constitutional invariant checker, `Score` AST symbol grounding, `Choice` RFC 2119 requirement auditor with canonical phase enumeration), and continuous active learning (`recordSelfHealingLesson`) recording fail-then-pass repairs.
+18. **Anti-Amnesia Memory & Concurrency Hardening:** Multi-target global invariant synchronization in host rules, causal failure retention (30 lines) in Output Diet, atomic continuous memory writes with 2-char technical tokens, and blast radius `--force` risk escalation.
+19. **Dynamic Skill Manifest Triage:** Progressive on-demand sub-workflow routing reducing `gsd-plan` bootstrap overhead from 113,000 to <5,000 tokens, unlocking over 100k tokens of clean attention headroom.
 
 ---
 
@@ -81,10 +85,10 @@ New here? Check the [Complete Practical GSD Tutorial](docs/tutorials/practical-t
 
 ## Documentation
 
-**What's new in GSD Core Nexus 3.6** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
+**What's new in GSD Core Nexus 3.7** → [Complete Practical Tutorial](docs/tutorials/practical-tutorial.md) · [Roadmap](.planning/ROADMAP.md)
 
 **Tutorials** — learning by doing:
-- [Practical Tutorial: Mastering GSD Core Nexus 3.6](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- [Practical Tutorial: Mastering GSD Core Nexus 3.7](docs/tutorials/practical-tutorial.md) ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - [Your first project](docs/tutorials/your-first-project.md)
 - [Onboarding an existing codebase](docs/tutorials/onboarding-an-existing-codebase.md)
 

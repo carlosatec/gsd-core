@@ -1,5 +1,5 @@
 /**
- * Visual Knowledge Graph Exporter — GSD Core Nexus 3.6
+ * Visual Knowledge Graph Exporter — GSD Core Nexus 3.7
  *
  * Generates an interactive, standalone, zero-dependency HTML/Canvas 2D visualization
  * of the repository knowledge graph stored in `.planning/intel/codebase-graph.json`.

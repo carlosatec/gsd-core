@@ -909,6 +909,53 @@ Introduzido na Fase 32 para estabelecer integração in-process de sub-milissegu
   - Limpeza automática de locks órfãos por TTL (30 minutos).
   - Bloqueio de mutações concorrentes entre agentes paralelos (`COLLISION_GUARD_BLOCK`) e cache em memória com SHA-256 prevenindo releituras redundantes.
 
+### 8. Centralização MCP, Interoperabilidade Spec-Kit, Memória Contínua & Isolamento de Worktrees (Fase 34)
+Introduzido na Fase 34, expandindo a fundação arquitetural com componentes nativos em TypeScript puro:
+- **Interoperabilidade GitHub Spec-Kit & Parser Normativo RFC 2119 (`src/speckit-interop.cts`):**
+  - Conversão bidirecional entre o formato GitHub Spec-Kit (`constitution.md`, `spec.md`, `plan.md`, `tasks.md`) e estruturas nativas `.planning/`.
+  - Classificação normativa RFC 2119 estrita: `MUST` / `SHALL` (erro fatal em pré-voo), `SHOULD` / `RECOMMENDED` (aviso com justificativa requerida) e `MAY` (opcional).
+  - Sanitizador Anti-Prompt-Injection (`sanitizeExternalSpecContent`): remoção de homóglifos zero-width, tags HTML maliciosas e delimitadores de prompt LLM (`[SYSTEM]`, `<<SYS>>`).
+  - Documento raiz `CONSTITUTION.md` formalizando invariantes arquiteturais imutáveis.
+- **Motor de Memória Contínua — Padrão Claude-Mem em TypeScript Nativo (`src/continuous-memory.cts`):**
+  - Memória técnica persistente entre sessões em `.planning/memory/decisions.jsonl` sem dependência de Python ou ChromaDB (Decisão D-01).
+  - Ranker Okapi BM25 em memória com decaimento temporal e reforço por proximidade topológica AST.
+  - Motor de compactação e arquivamento para `.planning/memory/archive/` ao atingir 1.500 entradas, retendo decisões arquiteturais permanentemente.
+  - Sanitização automática de PII removendo caminhos absolutos do sistema e diretórios de usuário.
+- **Isolamento de Concorrência Zero-Copy via Git Worktrees — Padrão Worktrunk (`src/worktree-isolation.cts`):**
+  - Execução paralela de subagentes em Git worktrees isolados com compartilhamento de `node_modules` via junções NTFS no Windows e symlinks no Unix.
+  - Desconexão defensiva obrigatória de junções (`fs.unlinkSync`) antes da remoção do worktree, protegendo dependências do hospedeiro.
+- **Expansão da Superfície do MCP Server & Verificação de Viabilidade AST (`src/mcp-server.cts`):**
+  - 9 ferramentas canônicas JSON-RPC e ferramenta `gsd_feasibility_check` verificando símbolos AST antes do início da codificação.
+- **Suíte Unificada de Drift Linter (`src/drift-linter-suite.cts`, `scripts/lint-unified-suite.cjs`):**
+  - Execução em memória das 13+ regras de drift em ~2 segundos com 100% de compatibilidade retroativa para scripts legados.
+
+### 9. Qualidade de Código, Contratos AST Reais, Correção de Bugs e Cognição Anti-Amnésia (Fase 35)
+Introduzido na Fase 35, priorizando estabilidade em tempo de execução, contratos semânticos completos e sentinela cognitiva ativa:
+- **Resiliência de Worktrees e Preservação de Conflitos (`src/worktree-isolation.cts`):**
+  - Substituição de spinlocks de espera por `Atomics.wait` (repouso de CPU) com seam de relógio injetável.
+  - Preservação estrita de branches e diretórios de worktree temporários em caso de conflito de merge, abortando de forma limpa o merge raiz (`git merge --abort`) e gerando diagnósticos completos de recuperação.
+- **Escalonador de Risco no Blast Radius (`src/shell-blast-radius.cts`):**
+  - Inversão da semântica de `--force`: tratado como escalador de risco mandatório que exige confirmação interativa explícita, prevenindo deleções acidentais em scripts.
+- **Higiene Atômica de Memória e Tokens Técnicos (`src/continuous-memory.cts`):**
+  - Gravação atômica via irmão temporário (`platformWriteSync`) sob lock cooperativo único (`withFileLockSync`).
+  - Suporte a tokens técnicos de 2 caracteres (`db`, `io`, `ui`, `ci`, `cd`, `ts`, `js`, `go`, `rs`, `os`, `fs`) no índice de busca.
+- **Grounding Real no Servidor MCP (`src/mcp-server.cts`):**
+  - Leitura correta do grafo AST (`graph.files`), rastreamento de frescor e classificação estruturada de símbolos candidatos (`known`, `intentionallyNew`, `ignored`, `missing`).
+  - Guardrails integrados em `gsd_write_state` protegendo arquivos curados (`STATE.md`, `ROADMAP.md`) contra truncamento acidental.
+- **Contratos AST de Tipos Completos & JIT Calibrado (`src/codebase-ast-analyzer.cts`, `src/jit-context-injector.cts`):**
+  - Extração textual normalizada de corpos de `interface`, `type`, `enum` e classes (`meta.contract` de até 1.000 caracteres).
+  - Injeção cirúrgica de blocos de código TypeScript no prompt JIT, eliminando adivinhação de atributos pela IA.
+  - Orçamento JIT expandido para 32k tokens em modo de alta qualidade com ordenação: Invariantes -> Contratos de Tipo -> Memória Contínua -> Anti-Patterns -> Vizinhos -> Âncora Canônica isolada.
+- **Arquitetura Anti-Amnésia & Output Diet Causal (`src/session-context-hook.cts`, `src/output-diet.cts`):**
+  - Desbloqueio de invariantes globais sincronizadas com idempotência em `GEMINI.md`, `AGENTS.md` e regras ativas.
+  - Retenção causal de 30 linhas imediatamente anteriores a falhas de testes no Output Diet.
+- **Guardião Cognitivo Soberano no System One Engine (JEV + LAYA) (`src/system-one-engine.cts`, `src/unified-workflow-hub.cts`):**
+  - `Noul(evaluateNoulSafety)`: Bloqueia mutações proibidas com `AMNESIA_GATE_VIOLATION`.
+  - `Score(evaluateGroundingScore)`: Bloqueia métodos alucinados contra símbolos da AST com `GROUNDING_MISMATCH`.
+  - `Choice(evaluateChoiceStrategy)`: Auditoria de requisitos RFC 2119 `MUST`/`SHALL` e roteamento de auto-cura usando `listMilestonePhaseDirs`.
+  - Active Learning contínuo (`recordSelfHealingLesson`) gravando reparos fail-then-pass comprovados em `decisions.jsonl`.
+  - Triagem de manifestos de skills reduzindo o bootstrap de `gsd-plan` de 113.000 para menos de 5.000 tokens.
+
 ---
 
 ## Relacionados

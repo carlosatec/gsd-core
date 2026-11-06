@@ -1,6 +1,6 @@
-# Guia do Usuário — GSD Core Nexus 3.6
+# Guia do Usuário — GSD Core Nexus 3.7
 
-Guia prático e narrativo do GSD Core Nexus 3.6 — oriente-se aqui e siga os links para a documentação especializada.
+Guia prático e narrativo do GSD Core Nexus 3.7 — oriente-se aqui e siga os links para a documentação especializada.
 
 > **A documentação do GSD Core é organizada segundo o padrão [Diataxis](https://diataxis.fr).**
 > Navegue por objetivo: [Tutoriais](README.md#tutoriais) · [Guias Como Fazer](README.md#guias-como-fazer) · [Referência](README.md#referência) · [Explicação](README.md#explicação) · [Índice da Documentação](README.md)
@@ -30,7 +30,7 @@ Guia prático e narrativo do GSD Core Nexus 3.6 — oriente-se aqui e siga os li
 
 ## A Superfície Unificada de 11 Comandos
 
-A partir do GSD Core Nexus 3.6, a interface pública é simplificada e consolidada em **11 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
+A partir do GSD Core Nexus 3.7, a interface pública é simplificada e consolidada em **11 Comandos Canônicos Unificados**. Todas as sub-habilidades e fluxos internos são orquestrados de forma transparente sob esses pontos de entrada:
 
 | Comando | Finalidade Principal | Gatilhos & Flags Comuns |
 |---|---|---|
@@ -42,7 +42,7 @@ A partir do GSD Core Nexus 3.6, a interface pública é simplificada e consolida
 | `/gsd-ship` | Conclusão de milestone, abertura de PR, tags e entrega | `--draft`, `--tag <versão>` |
 | `/gsd-auto` | Piloto automático ponta a ponta em todas as fases | `--until <fase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Painel de telemetria multi-comando em tempo real, sessões operacionais, cálculo financeiro e web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
-| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.6 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Modernização não-destrutiva de projetos legados e greenfield para o GSD Core Nexus 3.7 | `--dry-run`, `--force` |
 | `/gsd-graph` | Exporta o grafo de conhecimento HTML interativo e o canvas do Obsidian | `--no-open` |
 | `/gsd-help` | Exibe o catálogo de comandos, flags e ajuda contextual | `[comando]` |
 
@@ -70,7 +70,7 @@ Para a referência completa com todas as flags, consulte [`docs/pt-BR/COMMANDS.m
 
 ## Inteligência de Sessão & Replay Determinístico CLI
 
-O GSD Core Nexus 3.6 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
+O GSD Core Nexus 3.7 grava automaticamente eventos de execução estruturados em JSONL em `.planning/intel/sessions/`. Toda execução de comando registra chamadas de ferramentas, checagens de guardrails pré-voo, stack traces e diffs reais:
 
 ```bash
 # Replay da última sessão no terminal
@@ -112,7 +112,7 @@ O **System One Engine** é uma camada de decisão local, sem APIs externas, que 
 
 ## DeepSeek Harness & Suporte Multi-Runtime
 
-O GSD Core Nexus 3.6 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
+O GSD Core Nexus 3.7 fornece suporte nativo de 1ª classe para o **DeepSeek Harness** (micro-kernel `@deepseek-ai/dsh`), **Google Antigravity CLI**, **Claude Code**, **OpenCode** e **Codex**, garantindo execução consistente e disciplinada em todas as principais plataformas de IA.
 
 ---
 
@@ -282,7 +282,7 @@ Principais recursos:
 | Código quebrado ou instável | Execute `/gsd-review --fix` ou desfaça o commit da fase |
 | STATE.md fora de sincronia | Execute `gsd-tools state sync` para reconstruir o estado |
 | Consumo elevado de tokens | Verifique `/gsd-tokens` e ajuste `model_profile: "budget"` |
-| Upgrade de projeto antigo | Execute `/gsd-migrate` para atualizar a estrutura para o formato do GSD Core Nexus 3.6 |
+| Upgrade de projeto antigo | Execute `/gsd-migrate` para atualizar a estrutura para o formato do GSD Core Nexus 3.7 |
 | `Intel AST: Stale` no status | Execute `node gsd-core/bin/gsd-tools.cjs intel graph` para reancorar o grafo no Git HEAD atual |
 
 ---

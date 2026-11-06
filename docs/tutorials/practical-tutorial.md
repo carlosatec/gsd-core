@@ -1,8 +1,8 @@
-# 🚀 Practical Tutorial: Mastering GSD Core Nexus 3.6
+# 🚀 Practical Tutorial: Mastering GSD Core Nexus 3.7
 
 > 🌐 **Language / Idioma:** **English** | [Versão em Português (Brasil)](../pt-BR/tutorials/tutorial-pratico.md)  
 > **Git. Ship. Done.**  
-> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 3.6**.
+> The definitive guide to autonomous software engineering, meta-prompting, surgical context injection, causal session intelligence, and AI governance with **GSD Core Nexus 3.7**.
 
 ---
 
@@ -92,7 +92,7 @@ Generates the specification and task plans for the upcoming milestone phase base
 ```bash
 /gsd-migrate
 ```
-Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 3.6 non-destructively.
+Upgrades directory layouts, manifests, and schema versions to GSD Core Nexus 3.7 non-destructively.
 
 ---
 
@@ -102,7 +102,7 @@ In GSD 3.6, the user-facing command surface is strictly consolidated into **11 c
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                 GSD 3.6 CANONICAL INTERFACE                 │
+│                 GSD 3.7 CANONICAL INTERFACE                 │
 ├────────────┬────────────────────────────────────────────────┤
 │ Command    │ Operational Purpose                            │
 ├────────────┼────────────────────────────────────────────────┤
@@ -159,7 +159,7 @@ In GSD 3.6, the user-facing command surface is strictly consolidated into **11 c
 
 9. **`/gsd-migrate` — Non-Destructive Project Modernization:**
    - **What it does:** Safely snapshots legacy GSD directories, converts older schemas and roadmaps to wave execution, runs the Universal 360° AST analyzer, and generates `.planning/intel/` (`codebase-graph.json`, `ARCHITECTURE.md`, `APIS.md`).
-   - **When to use:** When bringing an existing project from older GSD versions to GSD Core Nexus 3.6.
+   - **When to use:** When bringing an existing project from older GSD versions to GSD Core Nexus 3.7.
 
 10. **`/gsd-graph` — Visual Knowledge Graph Exporter:**
     - **What it does:** Exports a 100% offline interactive HTML/Canvas 2D graph (PageRank hubs, edge types, filters, PNG snapshot) and an Obsidian-compatible `.planning/ROADMAP.canvas`.
@@ -311,7 +311,7 @@ node gsd-core/bin/gsd-tools.cjs session clean --max 50 --days 30
 
 ## 11. Unified Version Management & Release System
 
-GSD Core Nexus 3.6 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
+GSD Core Nexus 3.7 includes an automated, single-command release orchestrator (`scripts/bump-version.cjs`):
 
 ```bash
 # 1. Elevate version across all 49 capability manifests, core modules, lockfiles, and badges
@@ -392,4 +392,4 @@ Follow a complete end-to-end GSD development flow:
 
 ---
 
-*GSD Core Nexus 3.6 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*
+*GSD Core Nexus 3.7 — Develop with surgical precision, zero context rot, causal observability, and peak efficiency.*

@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 3.6 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 3.7 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -30,7 +30,7 @@ A narrative companion guide to GSD Core Nexus 3.6 — orient yourself here, then
 
 ## The Unified 11-Command Surface
 
-Starting with GSD Core Nexus 3.6, the public command surface is streamlined into **11 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 3.7, the public command surface is streamlined into **11 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -42,7 +42,7 @@ Starting with GSD Core Nexus 3.6, the public command surface is streamlined into
 | `/gsd-ship` | Complete milestone, open PR, tag release, and archive state | `--draft`, `--tag <version>` |
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Real-time multi-command token telemetry dashboard, operational sessions, financial estimation, and web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
-| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.6 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.7 | `--dry-run`, `--force` |
 | `/gsd-graph` | Export the interactive HTML knowledge graph and Obsidian canvas | `--no-open` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
@@ -70,7 +70,7 @@ For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS
 
 ## Session Intelligence & Deterministic Replay CLI
 
-GSD Core Nexus 3.6 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+GSD Core Nexus 3.7 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
 
 ```bash
 # Replay the latest session in the terminal
@@ -112,7 +112,7 @@ The **System One Engine** is a local, API-free decision layer that triages risk 
 
 ## DeepSeek Harness & Multi-Runtime Support
 
-GSD Core Nexus 3.6 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
+GSD Core Nexus 3.7 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
 
 ---
 
@@ -330,7 +330,7 @@ Key capabilities:
 | Broken implementation | Run `/gsd-review --fix` or `git revert` last phase commit |
 | STATE.md out of sync | Run `gsd-tools state sync` to reconstruct state |
 | High token consumption | Check `/gsd-tokens` and set `model_profile: "budget"` in config |
-| Legacy project upgrade | Run `/gsd-migrate` to update the structure to the GSD Core Nexus 3.6 format |
+| Legacy project upgrade | Run `/gsd-migrate` to update the structure to the GSD Core Nexus 3.7 format |
 | `Intel AST: Stale` in status | Run `node gsd-core/bin/gsd-tools.cjs intel graph` so the graph re-anchors to the current Git HEAD |
 
 ---
