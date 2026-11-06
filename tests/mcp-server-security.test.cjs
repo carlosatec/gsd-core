@@ -135,4 +135,159 @@ describe('MCP Server Security & Path Confinement (Task 23.03, D-124)', () => {
       cleanup(fakeWorkspace);
     }
   });
+
+  test('tools/list returns all 9 canonical tools with schemas', () => {
+    const res = handleMessage({
+      jsonrpc: '2.0',
+      id: 101,
+      method: 'tools/list',
+    }, { cwd: path.resolve(__dirname, '..') });
+
+    assert.ok(res);
+    assert.equal(res.id, 101);
+    assert.ok(res.result && Array.isArray(res.result.tools));
+
+    const toolNames = res.result.tools.map(t => t.name);
+    assert.ok(toolNames.includes('gsd_invoke_command'));
+    assert.ok(toolNames.includes('gsd_read_state'));
+    assert.ok(toolNames.includes('gsd_write_state'));
+    assert.ok(toolNames.includes('gsd_jit_context'));
+    assert.ok(toolNames.includes('gsd_preflight_check'));
+    assert.ok(toolNames.includes('gsd_feasibility_check'));
+    assert.ok(toolNames.includes('gsd_verify_step'));
+    assert.ok(toolNames.includes('gsd_memory_recall'));
+    assert.ok(toolNames.includes('gsd_memory_record'));
+  });
+
+  test('tools/call gsd_jit_context returns surgical context payload', () => {
+    const res = handleMessage({
+      jsonrpc: '2.0',
+      id: 102,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_jit_context',
+        arguments: {
+          files: ['src/state.cts'],
+          dryRun: true,
+        },
+      },
+    }, { cwd: path.resolve(__dirname, '..') });
+
+    assert.ok(res);
+    assert.equal(res.id, 102);
+    assert.ok(res.result && Array.isArray(res.result.content));
+    const data = JSON.parse(res.result.content[0].text);
+    assert.ok(Array.isArray(data.targetFiles));
+    assert.ok(data.targetFiles.includes('src/state.cts'));
+  });
+
+  test('tools/call gsd_preflight_check inspects files and command risk', () => {
+    const res = handleMessage({
+      jsonrpc: '2.0',
+      id: 103,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_preflight_check',
+        arguments: {
+          files: ['src/state.cts'],
+          command: 'npm run lint',
+        },
+      },
+    }, { cwd: path.resolve(__dirname, '..') });
+
+    assert.ok(res);
+    assert.equal(res.id, 103);
+    const data = JSON.parse(res.result.content[0].text);
+    assert.ok(data.checks);
+    assert.ok(data.blastReport);
+    assert.ok(['safe', 'low'].includes(data.blastReport.riskLevel));
+  });
+
+  test('tools/call gsd_feasibility_check returns analysis without throwing', () => {
+    const res = handleMessage({
+      jsonrpc: '2.0',
+      id: 104,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_feasibility_check',
+        arguments: {
+          taskText: 'Refactor state engine transitions and update lock mechanisms',
+          referencedFiles: ['src/state.cts'],
+        },
+      },
+    }, { cwd: path.resolve(__dirname, '..') });
+
+    assert.ok(res);
+    assert.equal(res.id, 104);
+    const data = JSON.parse(res.result.content[0].text);
+    assert.equal(typeof data.feasible, 'boolean');
+    assert.equal(data.missingFiles.length, 0);
+  });
+
+  test('tools/call gsd_verify_step returns verification status', () => {
+    const res = handleMessage({
+      jsonrpc: '2.0',
+      id: 105,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_verify_step',
+        arguments: {},
+      },
+    }, { cwd: path.resolve(__dirname, '..') });
+
+    assert.ok(res);
+    assert.equal(res.id, 105);
+    const data = JSON.parse(res.result.content[0].text);
+    assert.equal(data.ok, true);
+    assert.ok(data.status);
+  });
+
+  test('tools/call gsd_memory_record and gsd_memory_recall roundtrip', () => {
+    const testCategory = 'self_healing_fix';
+    const testSummary = `Test memory entry for MCP test ${Date.now()}`;
+    const root = path.resolve(__dirname, '..');
+
+    // Record
+    const recordRes = handleMessage({
+      jsonrpc: '2.0',
+      id: 106,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_memory_record',
+        arguments: {
+          category: testCategory,
+          summary: testSummary,
+          details: 'Root cause was mock timeout on Windows',
+          relevantFiles: ['tests/sample.test.cjs'],
+          keywords: ['timeout', 'mock', 'windows'],
+        },
+      },
+    }, { cwd: root });
+
+    assert.ok(recordRes);
+    assert.equal(recordRes.id, 106);
+    const recordData = JSON.parse(recordRes.result.content[0].text);
+    assert.equal(recordData.ok, true);
+    assert.equal(recordData.entry.summary, testSummary);
+
+    // Recall
+    const recallRes = handleMessage({
+      jsonrpc: '2.0',
+      id: 107,
+      method: 'tools/call',
+      params: {
+        name: 'gsd_memory_recall',
+        arguments: {
+          query: 'mock timeout windows',
+          files: ['tests/sample.test.cjs'],
+        },
+      },
+    }, { cwd: root });
+
+    assert.ok(recallRes);
+    assert.equal(recallRes.id, 107);
+    const recallData = JSON.parse(recallRes.result.content[0].text);
+    assert.ok(Array.isArray(recallData));
+    assert.ok(recallData.some(e => e.summary === testSummary));
+  });
 });

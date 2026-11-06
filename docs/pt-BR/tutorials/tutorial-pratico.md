@@ -169,7 +169,7 @@ No GSD 3.6, a superfície de comandos é estritamente consolidada em **11 comand
     - **O que faz:** Lista os 11 comandos canônicos, sintaxes aceitas por cada runtime e flags disponíveis.
     - **Quando usar:** Sempre que precisar consultar parâmetros ou atalhos de sintaxe.
 
-> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd-plan`, `/gsd:plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 11 oficiais são rejeitados de forma segura e orientadora.
+> **Compatibilidade de Sintaxe:** O GSD aceita múltiplos formatos nativos por runtime: `/gsd-plan`, `/gsd-core:plan`, `$gsd-plan` ou `gsd plan`. Comandos antigos/descontinuados fora dos 11 oficiais são rejeitados de forma segura e orientadora.
 
 ---
 

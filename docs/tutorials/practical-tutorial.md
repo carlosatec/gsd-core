@@ -169,7 +169,7 @@ In GSD 3.6, the user-facing command surface is strictly consolidated into **11 c
     - **What it does:** Displays all 11 canonical commands, accepted runtime syntax variants, and CLI flags.
     - **When to use:** Whenever you need a quick syntax lookup or options reference.
 
-> **Syntax Compatibility:** GSD natively supports your runtime's slash command formatting: `/gsd-plan`, `/gsd:plan`, `$gsd-plan`, or `gsd plan`. Legacy retired commands fail closed safely with guidance pointing to the canonical 11.
+> **Syntax Compatibility:** GSD natively supports your runtime's slash command formatting: `/gsd-plan`, `/gsd-core:plan`, `$gsd-plan`, or `gsd plan`. Legacy retired commands fail closed safely with guidance pointing to the canonical 11.
 
 ---
 

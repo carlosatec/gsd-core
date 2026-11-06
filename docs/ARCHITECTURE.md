@@ -1170,6 +1170,36 @@ Introduced in Phase 32, establishing sub-millisecond in-process Mod integration 
   - Automatic orphan lock pruning via 30-minute TTL.
   - Blocks concurrent edits across multiple agents (`COLLISION_GUARD_BLOCK`) and caches file reads in memory with SHA-256 hashes to prevent redundant loops.
 
+### 10. MCP Centralization, Spec-Kit Interoperability, Continuous Memory & Worktree Isolation (Phase 34)
+Introduced in Phase 34, expanding the architectural foundation with native TypeScript components inspired by emerging industry standards:
+- **GitHub Spec-Kit Interoperability & RFC 2119 Normative Parser (`src/speckit-interop.cts`):**
+  - Bidirectional conversion between GitHub Spec-Kit format (`constitution.md`, `spec.md`, `plan.md`, `tasks.md`) and native GSD `.planning/` structures.
+  - Strict RFC 2119 normative taxonomy classification: `MUST` / `SHALL` (fatal error in pre-flight), `SHOULD` / `RECOMMENDED` (warning with justification required), and `MAY` (optional).
+  - Anti-Prompt-Injection Sanitizer (`sanitizeExternalSpecContent`): strips invisible zero-width unicode homoglyphs, malicious HTML execution tags, LLM prompt control delimiters (`[SYSTEM]`, `<<SYS>>`), and indirect injection instructions from third-party specifications.
+  - Project `CONSTITUTION.md`: formalization of immutable architectural invariants (Decision D-01 Zero-Python, No-Throw contract, Canonical 10 commands, JIT context under token budget, NTFS junction safety).
+- **Continuous Memory Engine — Claude-Mem Native TypeScript Pattern (`src/continuous-memory.cts`):**
+  - Cross-session persistent technical decisions and micro-learnings under `.planning/memory/decisions.jsonl` with zero external Python or ChromaDB dependencies (Decision D-01).
+  - Okapi BM25 in-memory ranker with temporal decay ($Score = BM25 \times \frac{1}{1 + 0.05 \cdot \Delta days} + Bonus$) and AST topological proximity boosting.
+  - Hierarchical Log Compaction & Rollup Engine: archives older entries to `.planning/memory/archive/` once exceeding 1,500 entries, retaining `architecture_decision` records permanently.
+  - Automatic PII Sanitizer: strips local filesystem root paths and user home paths before persistence.
+  - Integrated into JIT Context Injector (`assembleJitContext`) and exposed via MCP tools (`gsd_memory_recall`, `gsd_memory_record`).
+- **Zero-Copy Worktree Concurrency Engine — Worktrunk Pattern (`src/worktree-isolation.cts`):**
+  - High-level orchestrator consuming `worktree-safety.cts` for parallel wave-based subagent execution in isolated Git worktrees.
+  - Instantaneous dependency sharing (`node_modules`) via Windows NTFS Directory Junctions (`mklink /J` / `junction`) and Unix directory symlinks without duplicating storage.
+  - Mandatory Defensive Junction Unlinking: guarantees `fs.unlinkSync(junctionPath)` runs before any worktree removal, completely preventing host dependency deletion on Windows.
+  - Git `index.lock` contention mitigation: exponential backoff retries (3 attempts, 150-450ms).
+  - Deterministic Wave Rollback: cleans up all worktrees and removes ephemeral branches on subagent failure. Safe in-place fallback for non-worktree environments.
+- **MCP Server Surface Expansion & NVIDIA Auto-Ontology Feasibility Check (`src/mcp-server.cts`):**
+  - Expanded JSON-RPC tool surface to 9 canonical tools (`gsd_invoke_command`, `gsd_read_state`, `gsd_write_state`, `gsd_jit_context`, `gsd_preflight_check`, `gsd_feasibility_check`, `gsd_verify_step`, `gsd_memory_recall`, `gsd_memory_record`).
+  - AST Feasibility Check: statically verifies whether symbols (classes, methods, functions) referenced in proposed task plans exist in `codebase-graph.json`, preventing LLM hallucinations prior to coding.
+  - Strict No-Throw contract and temporary test directory confinement.
+- **Unified Drift Linter Suite & Anthropic Agent Skills Specification (`src/drift-linter-suite.cts`, `scripts/lint-unified-suite.cjs`):**
+  - Consolidates 35+ discrete drift linting rules into an in-memory execution pipeline, reducing CI execution time from ~25s to ~2.2s.
+  - 100% backwards compatibility: preserves all nominal exports in legacy scripts (`scripts/lint-*.cjs`) to keep 30+ legacy test suites passing.
+  - Anthropic Agent Skills Spec auditor (`lintAnthropicSkillsSpec`): validates YAML frontmatter (`name`, `description`) and markdown structure for skills in `.github/skills/`.
+- **Dual-Package ESM Wrappers & Conditional Exports (`package.json`, `index.mjs`):**
+  - Modern `"exports"` map in `package.json` with conditional `"import"` and `"require"` mapping, providing typed `.mjs` wrappers without breaking CommonJS consumers.
+
 ---
 
 ## Related

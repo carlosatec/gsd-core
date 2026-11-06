@@ -26,7 +26,7 @@ A detecção de conflitos é executada antes que qualquer arquivo seja gravado. 
 
 ### Comando Canônico Unificado (GSD 3.6+)
 
-A partir do GSD 3.6, o comando unificado `/gsd-migrate` (ou `/gsd:migrate`) é o ponto de entrada recomendado com 1 clique para atualizar qualquer projeto legado para a arquitetura GSD Core Nexus 3.6. Ele inspeciona `.planning/`, atualiza os esquemas para v2, reconstrói o grafo de dependências AST e migra estruturas legadas de forma não-destrutiva:
+A partir do GSD 3.6, o comando unificado `/gsd-migrate` é o ponto de entrada recomendado com 1 clique para atualizar qualquer projeto legado para a arquitetura GSD Core Nexus 3.6. Ele inspeciona `.planning/`, atualiza os esquemas para v2, reconstrói o grafo de dependências AST e migra estruturas legadas de forma não-destrutiva:
 
 ```bash
 /gsd-migrate
@@ -139,7 +139,7 @@ Se o projeto foi migrado corretamente, você verá o status da fase atual e o pr
 
 | Situação | O que fazer |
 |----------|-------------|
-| Atualização completa de projeto legado para GSD Core Nexus 3.6+ | Execute `/gsd-migrate` (ou `/gsd:migrate`) |
+| Atualização completa de projeto legado para GSD Core Nexus 3.6+ | Execute `/gsd-migrate` |
 | `.gsd/` existe no diretório atual | Execute `/gsd-migrate` ou `/gsd-import --from-gsd2` (sem `--path`) |
 | `.gsd/` está em um diretório diferente | Use `--path ~/projects/old-project` |
 | Você tem um documento de plano avulso, não um projeto GSD-2 completo | Use `/gsd-import --from /path/to/plan.md` |

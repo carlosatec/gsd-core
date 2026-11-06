@@ -19,6 +19,14 @@ const { checkTaskDrift } = compactKeeper;
 import activeLedger = require('./active-session-ledger.cjs');
 const { checkLockConflict } = activeLedger;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import speckitInterop = require('./speckit-interop.cjs');
+const { validateAgainstConstitution } = speckitInterop;
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import textLines = require('./text-lines.cjs');
+const { splitLines } = textLines;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CodebaseGraph = ReturnType<typeof buildCodebaseGraph>;
@@ -34,7 +42,7 @@ interface CoEvolutionWarning {
 }
 
 interface PreFlightViolation {
-  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION' | 'UNINTENDED_TRUNCATION' | 'SIGNATURE_DRIFT' | 'COLLISION_GUARD_BLOCK';
+  rule: 'CONTRACT_BREAK' | 'PHANTOM_IMPORT' | 'CIRCULAR_DEPENDENCY' | 'SCOPE_VIOLATION' | 'UNINTENDED_TRUNCATION' | 'SIGNATURE_DRIFT' | 'COLLISION_GUARD_BLOCK' | 'CONSTITUTION_VIOLATION';
   severity: 'error' | 'warning';
   file: string;
   message: string;
@@ -49,6 +57,7 @@ interface PreFlightReport {
 
 interface TaskExecutionContext {
   taskId: string;
+  taskDescription?: string;
   filesToModify: string[];
   proposedCodeMap?: Record<string, string>;
   planningDir: string;
@@ -228,6 +237,25 @@ function runPreFlightChecks(ctx: TaskExecutionContext): PreFlightReport {
     for (const [fName, content] of Object.entries(ctx.proposedCodeMap)) {
       const norm = fName.replace(/\\/g, '/').replace(/^\.\//, '');
       proposedAnalyses.set(norm, analyzeSourceFile(path.join(root, fName), content));
+    }
+  }
+
+  // Constitutional Invariants Verification (Spec-Kit Interoperability)
+  const taskCorpus = [
+    ctx.taskId,
+    ctx.taskDescription || '',
+    ...allTargetFiles,
+    ...Object.values(ctx.proposedCodeMap || {}),
+  ].join(' ');
+  const constitutionResult = validateAgainstConstitution(taskCorpus, root);
+  if (!constitutionResult.valid) {
+    for (const msg of constitutionResult.violations) {
+      violations.push({
+        rule: 'CONSTITUTION_VIOLATION',
+        severity: 'error',
+        file: 'CONSTITUTION.md',
+        message: msg,
+      });
     }
   }
 
@@ -510,7 +538,48 @@ async function executeWithSelfHealing(
   };
 }
 
+/**
+ * Canonical write guard validation (Phase 34 centralization)
+ * Detects catastrophic shrink (>60% reduction) on curated .planning artifacts
+ * or unintended empty-file truncations.
+ */
+function inspectWriteSafety(filePath: string, proposedContent: string, _root?: string): { safe: boolean; reason?: string } {
+  const normPath = filePath.replace(/\\/g, '/');
+  // Check empty content truncation
+  if (proposedContent.length === 0 && fs.existsSync(filePath)) {
+    try {
+      const existing = fs.readFileSync(filePath, 'utf8');
+      if (existing.trim().length > 0) {
+        return { safe: false, reason: 'UNINTENDED_TRUNCATION: Proposed content is 0 bytes for non-empty file.' };
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Check catastrophic shrink for curated planning documents
+  const isCurated = normPath.endsWith('ROADMAP.md') || normPath.endsWith('STATE.md');
+  if (isCurated && fs.existsSync(filePath)) {
+    try {
+      const existing = fs.readFileSync(filePath, 'utf8');
+      const existingLines = splitLines(existing).length;
+      const proposedLines = splitLines(proposedContent).length;
+      if (existingLines >= 40 && proposedLines < existingLines * 0.4) {
+        return {
+          safe: false,
+          reason: `CATASTROPHIC_SHRINK: Proposed content has ${proposedLines} lines, which is fewer than 40% of on-disk ${existingLines} lines.`,
+        };
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  return { safe: true };
+}
+
 export = {
   runPreFlightChecks,
   executeWithSelfHealing,
+  inspectWriteSafety,
 };

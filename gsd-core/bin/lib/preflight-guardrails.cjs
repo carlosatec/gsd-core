@@ -19,6 +19,12 @@ const { checkTaskDrift } = compactKeeper;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const activeLedger = require("./active-session-ledger.cjs");
 const { checkLockConflict } = activeLedger;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const speckitInterop = require("./speckit-interop.cjs");
+const { validateAgainstConstitution } = speckitInterop;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const textLines = require("./text-lines.cjs");
+const { splitLines } = textLines;
 // ─── Cycle Detection Helper ──────────────────────────────────────────────────
 function detectCycleInGraph(graph, startNode, onDeepRecursion) {
     const visited = new Set();
@@ -167,6 +173,24 @@ function runPreFlightChecks(ctx) {
         for (const [fName, content] of Object.entries(ctx.proposedCodeMap)) {
             const norm = fName.replace(/\\/g, '/').replace(/^\.\//, '');
             proposedAnalyses.set(norm, analyzeSourceFile(node_path_1.default.join(root, fName), content));
+        }
+    }
+    // Constitutional Invariants Verification (Spec-Kit Interoperability)
+    const taskCorpus = [
+        ctx.taskId,
+        ctx.taskDescription || '',
+        ...allTargetFiles,
+        ...Object.values(ctx.proposedCodeMap || {}),
+    ].join(' ');
+    const constitutionResult = validateAgainstConstitution(taskCorpus, root);
+    if (!constitutionResult.valid) {
+        for (const msg of constitutionResult.violations) {
+            violations.push({
+                rule: 'CONSTITUTION_VIOLATION',
+                severity: 'error',
+                file: 'CONSTITUTION.md',
+                message: msg,
+            });
         }
     }
     for (const relFile of allTargetFiles) {
@@ -424,7 +448,47 @@ async function executeWithSelfHealing(runFn, repairFn, maxRetries = 3, planningD
         history,
     };
 }
+/**
+ * Canonical write guard validation (Phase 34 centralization)
+ * Detects catastrophic shrink (>60% reduction) on curated .planning artifacts
+ * or unintended empty-file truncations.
+ */
+function inspectWriteSafety(filePath, proposedContent, _root) {
+    const normPath = filePath.replace(/\\/g, '/');
+    // Check empty content truncation
+    if (proposedContent.length === 0 && node_fs_1.default.existsSync(filePath)) {
+        try {
+            const existing = node_fs_1.default.readFileSync(filePath, 'utf8');
+            if (existing.trim().length > 0) {
+                return { safe: false, reason: 'UNINTENDED_TRUNCATION: Proposed content is 0 bytes for non-empty file.' };
+            }
+        }
+        catch {
+            // Ignore
+        }
+    }
+    // Check catastrophic shrink for curated planning documents
+    const isCurated = normPath.endsWith('ROADMAP.md') || normPath.endsWith('STATE.md');
+    if (isCurated && node_fs_1.default.existsSync(filePath)) {
+        try {
+            const existing = node_fs_1.default.readFileSync(filePath, 'utf8');
+            const existingLines = splitLines(existing).length;
+            const proposedLines = splitLines(proposedContent).length;
+            if (existingLines >= 40 && proposedLines < existingLines * 0.4) {
+                return {
+                    safe: false,
+                    reason: `CATASTROPHIC_SHRINK: Proposed content has ${proposedLines} lines, which is fewer than 40% of on-disk ${existingLines} lines.`,
+                };
+            }
+        }
+        catch {
+            // Ignore
+        }
+    }
+    return { safe: true };
+}
 module.exports = {
     runPreFlightChecks,
     executeWithSelfHealing,
+    inspectWriteSafety,
 };

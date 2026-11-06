@@ -38,6 +38,9 @@ const { queryAntiPatterns } = antiPatternMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const systemOneMod = require("./system-one-engine.cjs");
 const { reRankForJit } = systemOneMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const continuousMemory = require("./continuous-memory.cjs");
+const { queryMemory } = continuousMemory;
 // ─── Core Implementation ──────────────────────────────────────────────────────
 /**
  * Finds symbols from directly connected files (imports & callers) in the AST graph.
@@ -503,6 +506,24 @@ function assembleJitContext(options) {
         }
         lines.push('');
     }
+    // Claude-Mem Continuous Memory Injection (Phase 34 Wave 4)
+    const applicableMemories = [];
+    try {
+        const mems = queryMemory(root, options.query || '', { files: targetFiles, limit: 3 });
+        for (const m of mems) {
+            applicableMemories.push(`- **[${m.category}]**: ${m.summary}${m.details ? ` — ${m.details}` : ''}`);
+        }
+    }
+    catch {
+        // Fail-open
+    }
+    if (applicableMemories.length > 0) {
+        lines.push('#### Continuous Memory (Historical Decisions & Fixes):');
+        for (const mem of applicableMemories) {
+            lines.push(mem);
+        }
+        lines.push('');
+    }
     if (semanticallyRelated.length > 0) {
         lines.push('#### Semantically Related Modules:');
         for (const r of semanticallyRelated) {
@@ -562,6 +583,7 @@ function assembleJitContext(options) {
         applicableDecisions,
         canonicalExample,
         applicableAntiPatterns,
+        applicableMemories,
         headroomReinvested,
         markdownBlock,
         relevanceScore,

@@ -35,6 +35,9 @@ const { queryAntiPatterns } = antiPatternMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import systemOneMod = require('./system-one-engine.cjs');
 const { reRankForJit } = systemOneMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import continuousMemory = require('./continuous-memory.cjs');
+const { queryMemory } = continuousMemory;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +71,7 @@ interface JitContextPackage {
   neighborSymbols: NeighborSymbolInfo[];
   applicableTypes: string[];
   applicableDecisions: string[];
+  applicableMemories?: string[];
   canonicalExample?: { file: string; content: string; reason: string } | null;
   applicableAntiPatterns?: string[];
   headroomReinvested?: boolean;
@@ -622,6 +626,25 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     lines.push('');
   }
 
+  // Claude-Mem Continuous Memory Injection (Phase 34 Wave 4)
+  const applicableMemories: string[] = [];
+  try {
+    const mems = queryMemory(root, options.query || '', { files: targetFiles, limit: 3 });
+    for (const m of mems) {
+      applicableMemories.push(`- **[${m.category}]**: ${m.summary}${m.details ? ` — ${m.details}` : ''}`);
+    }
+  } catch {
+    // Fail-open
+  }
+
+  if (applicableMemories.length > 0) {
+    lines.push('#### Continuous Memory (Historical Decisions & Fixes):');
+    for (const mem of applicableMemories) {
+      lines.push(mem);
+    }
+    lines.push('');
+  }
+
   if (semanticallyRelated.length > 0) {
     lines.push('#### Semantically Related Modules:');
     for (const r of semanticallyRelated) {
@@ -703,6 +726,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     applicableDecisions,
     canonicalExample,
     applicableAntiPatterns,
+    applicableMemories,
     headroomReinvested,
     markdownBlock,
     relevanceScore,

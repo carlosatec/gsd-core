@@ -54,6 +54,12 @@ import intelMod = require('./intel.cjs');
 import activeLedgerMod = require('./active-session-ledger.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import outputDietMod = require('./output-diet.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import speckitInterop = require('./speckit-interop.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import continuousMemory = require('./continuous-memory.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import worktreeIsolation = require('./worktree-isolation.cjs');
 
 const { checkIntelHealth } = intelMod;
 const { releaseAgentLocks } = activeLedgerMod;
@@ -646,12 +652,23 @@ function runInternalUnifiedCommand(
         // Fallback default
       }
 
+      const isSpecKit = Boolean(options.flags?.['speckit'] || options.args.includes('--speckit'));
+      let specKitArtifacts: { specMd: string; planMd: string; tasksMd: string } | undefined;
+      if (isSpecKit) {
+        specKitArtifacts = speckitInterop.exportToSpecKit({
+          title: `Phase ${phaseId}`,
+          goal: `Execution goal for Phase ${phaseId}`,
+          requirements: ['Adhere strictly to project CONSTITUTION.md invariants', 'Pass all pre-flight guardrails'],
+          tasks: targetFiles.map((tf, idx) => ({ id: `TASK-${idx + 1}`, description: `Implement changes for ${tf}`, wave: 1 })),
+        });
+      }
+
       return {
         command: 'plan',
         action: 'PLAN_PHASE',
         nextStep: 'run /gsd:exec to execute the generated phase plan',
-        data: { jit: jitPackage, gapWarnings, planMode },
-        message: `Phase plan ready in ${planMode} mode with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).`,
+        data: { jit: jitPackage, gapWarnings, planMode, ...(specKitArtifacts ? { speckit: specKitArtifacts } : {}) },
+        message: `Phase plan ready in ${planMode} mode with atomic task waves, verification criteria, and surgical JIT context (${jitPackage.estimatedTokens} estimated tokens).${isSpecKit ? ' (Spec-Kit artifacts exported)' : ''}`,
       };
     }
 
@@ -749,14 +766,43 @@ function runInternalUnifiedCommand(
         // Non-blocking lock cleanup
       }
 
+      // Record Continuous Memory Entry for phase execution (Claude-Mem pattern)
+      try {
+        continuousMemory.recordMemoryEntry(cwd, {
+          phase: phaseId,
+          command: 'exec',
+          category: 'execution_cycle',
+          summary: `Executed Phase ${phaseId} across ${filesToModify.length} target files`,
+          relevantFiles: filesToModify,
+          keywords: ['phase_execution', phaseId || 'phase'],
+        });
+      } catch {
+        // Fail-open
+      }
+
+      // Zero-Copy Worktree Concurrency Engine (Worktrunk pattern)
+      let worktreeInfo: worktreeIsolation.WorktreeIsolationResult | undefined;
+      const isIsolate = Boolean(options.flags?.['isolate'] || options.args.includes('--isolate'));
+      if (isIsolate) {
+        worktreeInfo = worktreeIsolation.createIsolatedWorktree({
+          rootDir: cwd,
+          taskId: phaseId || 'phase',
+          subagentId: options.flags?.['agent-id'] as string | undefined,
+        });
+      }
+
+      const isolationNote = worktreeInfo && !worktreeInfo.isFallback
+        ? ` [Worktree Isolated: ${worktreeInfo.branch}]`
+        : '';
+
       return {
         command: 'exec',
         action: 'EXECUTE_PHASE',
         nextStep: 'run /gsd:review or /gsd:verify upon wave completion',
-        data: { preFlight: preFlightReport, executionMode },
+        data: { preFlight: preFlightReport, executionMode, ...(worktreeInfo ? { worktree: worktreeInfo } : {}) },
         message: preFlightReport.valid
-          ? `Pre-flight guardrails passed. Phase execution underway in ${executionMode} wave mode with atomic commits and JIT context injection.`
-          : `Pre-flight warnings detected (${preFlightReport.violations.length} violation(s)). Phase execution proceeding in ${executionMode} mode with guardrails active.`,
+          ? `Pre-flight guardrails passed. Phase execution underway in ${executionMode} wave mode with atomic commits and JIT context injection.${isolationNote}`
+          : `Pre-flight warnings detected (${preFlightReport.violations.length} violation(s)). Phase execution proceeding in ${executionMode} mode with guardrails active.${isolationNote}`,
       };
     }
 
@@ -797,6 +843,22 @@ function runInternalUnifiedCommand(
         const filesToOverride = reviewResult.targetFiles || explicitFiles;
         for (const file of filesToOverride) {
           recordUserOverride(file, rejectReason, planningDir);
+        }
+      }
+
+      if (hasFixFlag && reviewResult.fixed && reviewResult.fixed.length > 0) {
+        try {
+          continuousMemory.recordMemoryEntry(cwd, {
+            phase: phaseId,
+            command: 'review',
+            category: 'self_healing_fix',
+            summary: `Automated review fix repaired ${reviewResult.fixed.length} issue(s)`,
+            details: reviewResult.fixed.join('; '),
+            relevantFiles: reviewResult.targetFiles,
+            keywords: ['review_fix', 'auto_repair'],
+          });
+        } catch {
+          // Fail-open
         }
       }
 
@@ -1024,6 +1086,22 @@ function runInternalUnifiedCommand(
       };
 
     case 'migrate': {
+      const fromSpecKit = Boolean(options.flags?.['from-speckit'] || options.flags?.['fromSpeckit'] || options.args.includes('--from-speckit'));
+      if (fromSpecKit) {
+        const specPath = path.join(cwd, 'spec.md');
+        let importedDoc = null;
+        if (fs.existsSync(specPath)) {
+          importedDoc = speckitInterop.parseSpecKitDocument(fs.readFileSync(specPath, 'utf8'));
+        }
+        return {
+          command: 'migrate',
+          action: 'IMPORT_SPECKIT',
+          nextStep: 'run /gsd:plan to create execution waves from imported spec',
+          data: { importedDoc, source: specPath },
+          message: `Spec-Kit specification imported successfully (${importedDoc?.requirements?.length || 0} RFC 2119 requirements classified).`,
+        };
+      }
+
       const upgradeOpts = {
         dryRun: Boolean(options.flags?.['dry-run'] || options.flags?.['dryRun'] || options.args.includes('--dry-run')),
         force: Boolean(options.flags?.['force'] || options.args.includes('--force')),
