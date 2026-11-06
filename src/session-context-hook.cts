@@ -23,7 +23,9 @@ function extractSessionBrief(planningDir: string): string {
   const lines = stateContent.split('\n');
   let currentPhase = 'Unknown';
   let status = 'Idle';
-  const decisions: string[] = [];
+  const MAX_DECISIONS_LINE_CHARS = 1200;
+  const invariantDecisions: string[] = [];
+  const otherDecisions: string[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -32,15 +34,44 @@ function extractSessionBrief(planningDir: string): string {
     } else if (trimmed.startsWith('- **Status:**') || trimmed.startsWith('Status:')) {
       status = trimmed.replace(/.*Status:\s*\**/i, '').replace(/\*+/g, '').trim();
     } else if (trimmed.startsWith('- **D-') || trimmed.startsWith('- D-')) {
-      if (decisions.length < 4) {
-        decisions.push(trimmed.slice(2));
+      const decisionText = trimmed.slice(2);
+      if (/\[Invariant\]|\[Architecture\]/i.test(decisionText) || /^D-0[1-4]\b/.test(decisionText)) {
+        invariantDecisions.push(decisionText);
+      } else {
+        otherDecisions.push(decisionText);
       }
     }
   }
 
+  // Stable ordering: invariants first, then other decisions
+  invariantDecisions.sort();
+  otherDecisions.sort();
+  const prioritized = [...invariantDecisions, ...otherDecisions];
+
+  const selectedDecisions: string[] = [];
+  let currentLength = 0;
+  let remainingCount = 0;
+
+  for (let i = 0; i < prioritized.length; i++) {
+    const d = prioritized[i];
+    const addedLength = d.length + 2;
+    if (currentLength + addedLength <= MAX_DECISIONS_LINE_CHARS || selectedDecisions.length < 4) {
+      selectedDecisions.push(d);
+      currentLength += addedLength;
+    } else {
+      remainingCount = prioritized.length - i;
+      break;
+    }
+  }
+
+  let decisionsFormatted = selectedDecisions.join('; ');
+  if (remainingCount > 0) {
+    decisionsFormatted += `; ... and ${remainingCount} more decisions in STATE.md`;
+  }
+
   const briefLines = [
     `> **GSD Active State**: Phase: ${currentPhase} | Status: ${status}`,
-    `> **Decisions**: ${decisions.length > 0 ? decisions.join('; ') : 'Standard constraints active'}`,
+    `> **Decisions**: ${selectedDecisions.length > 0 ? decisionsFormatted : 'Standard constraints active'}`,
     `> **Unified Commands**: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help`
   ];
 
@@ -81,7 +112,6 @@ function syncSessionContext(planningDir: string, rootDir: string): boolean {
 
         platformWriteSync(targetFile, newContent);
         synchronized = true;
-        break; // Only update the primary existing file
       }
     }
 

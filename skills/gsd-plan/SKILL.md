@@ -17,27 +17,31 @@ Create a detailed, executable phase plan in .planning/phases/<phase_dir>/<phase>
 
 <execution_context>
 @~/.claude/gsd-core/workflows/plan-phase.md
-@~/.claude/gsd-core/workflows/spec-phase.md
-@~/.claude/gsd-core/workflows/discuss-phase.md
-@~/.claude/gsd-core/workflows/discuss-phase-assumptions.md
-@~/.claude/gsd-core/workflows/discuss-phase-power.md
-@~/.claude/gsd-core/workflows/ultraplan-phase.md
-@~/.claude/gsd-core/workflows/spike.md
-@~/.claude/gsd-core/workflows/spike-wrap-up.md
-@~/.claude/gsd-core/workflows/sketch.md
-@~/.claude/gsd-core/workflows/sketch-wrap-up.md
-@~/.claude/gsd-core/workflows/explore.md
-@~/.claude/gsd-core/workflows/plan-review-convergence.md
-@~/.claude/gsd-core/workflows/ai-integration-phase.md
-@~/.claude/gsd-core/workflows/mvp-phase.md
-@~/.claude/gsd-core/workflows/secure-phase.md
-@~/.claude/gsd-core/workflows/ui-phase.md
-@~/.claude/gsd-core/workflows/add-phase.md
-@~/.claude/gsd-core/workflows/insert-phase.md
-@~/.claude/gsd-core/workflows/edit-phase.md
-@~/.claude/gsd-core/workflows/remove-phase.md
-@~/.claude/gsd-core/workflows/list-phase-assumptions.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/spec-phase.md
+- workflows/discuss-phase.md
+- workflows/discuss-phase-assumptions.md
+- workflows/discuss-phase-power.md
+- workflows/ultraplan-phase.md
+- workflows/spike.md
+- workflows/spike-wrap-up.md
+- workflows/sketch.md
+- workflows/sketch-wrap-up.md
+- workflows/explore.md
+- workflows/plan-review-convergence.md
+- workflows/ai-integration-phase.md
+- workflows/mvp-phase.md
+- workflows/secure-phase.md
+- workflows/ui-phase.md
+- workflows/add-phase.md
+- workflows/insert-phase.md
+- workflows/edit-phase.md
+- workflows/remove-phase.md
+- workflows/list-phase-assumptions.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

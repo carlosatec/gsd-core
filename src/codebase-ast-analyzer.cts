@@ -2230,6 +2230,18 @@ function analyzeWithTypeScriptCompiler(
       return node.modifiers.some((m: any) => m.kind === ts.SyntaxKind.ExportKeyword);
     }
 
+    const MAX_CONTRACT_CHARS = 1000;
+    function normalizeTypeContract(rawText: string, maxChars: number = MAX_CONTRACT_CHARS): string {
+      if (!rawText) return '';
+      const cleaned = rawText
+        .replace(/\r\n/g, '\n')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n')
+        .trim();
+      if (cleaned.length <= maxChars) return cleaned;
+      return cleaned.slice(0, maxChars - 3) + '...';
+    }
+
     const normalizedFilePath = toPosixPath(filePath);
     const isAppRouterRoute = /(?:^|\/)(?:app|pages\/api)\/(.+)\/route\.(?:ts|tsx|js|jsx)$/i.test(normalizedFilePath) ||
       normalizedFilePath.endsWith('/route.ts') || normalizedFilePath.endsWith('/route.js') ||
@@ -2334,7 +2346,10 @@ function analyzeWithTypeScriptCompiler(
       // 3. ClassDeclaration
       else if (ts.isClassDeclaration(statement) && statement.name) {
         const name = statement.name.text;
-        symbols.push({ name, kind: 'class', line: lineNum, exported: isExported });
+        const classHeader = statement.getText(sourceFile).split('{')[0].trim();
+        const classContract = normalizeTypeContract(classHeader ? `${classHeader} { ... }` : `class ${name} { ... }`);
+        const classMeta: Record<string, string> = { contract: classContract, signature: classContract };
+        symbols.push({ name, kind: 'class', line: lineNum, exported: isExported, meta: classMeta });
         if (isExported) exports.push({ name, kind: 'class', isTypeOnly: false });
 
         for (const member of statement.members) {
@@ -2365,6 +2380,9 @@ function analyzeWithTypeScriptCompiler(
           }
           if (extendsList.length > 0) meta.extends = extendsList.join(', ');
         }
+        const contract = normalizeTypeContract(statement.getText(sourceFile));
+        meta.contract = contract;
+        meta.signature = contract;
         symbols.push({
           name,
           kind: 'interface',
@@ -2378,13 +2396,17 @@ function analyzeWithTypeScriptCompiler(
       // 5. TypeAliasDeclaration
       else if (ts.isTypeAliasDeclaration(statement)) {
         const name = statement.name.text;
-        symbols.push({ name, kind: 'type', line: lineNum, exported: isExported, isTypeOnly: true });
+        const contract = normalizeTypeContract(statement.getText(sourceFile));
+        const meta: Record<string, string> = { contract, signature: contract };
+        symbols.push({ name, kind: 'type', line: lineNum, exported: isExported, isTypeOnly: true, meta });
         if (isExported) exports.push({ name, kind: 'type', isTypeOnly: true });
       }
       // 6. EnumDeclaration
       else if (ts.isEnumDeclaration(statement)) {
         const name = statement.name.text;
-        symbols.push({ name, kind: 'enum', line: lineNum, exported: isExported });
+        const contract = normalizeTypeContract(statement.getText(sourceFile));
+        const meta: Record<string, string> = { contract, signature: contract };
+        symbols.push({ name, kind: 'enum', line: lineNum, exported: isExported, meta });
         if (isExported) exports.push({ name, kind: 'enum', isTypeOnly: false });
       }
       // 7. VariableStatement (const, let, var, arrow functions, CommonJS require)
@@ -3249,9 +3271,9 @@ function queryFileDependencies(
   const fileData = graph.files[normalized];
 
   return {
-    imports: fileData ? fileData.localDeps : [],
-    importedBy: graph.reverseDependencies[normalized] || [],
-    external: fileData ? fileData.externalDeps : [],
+    imports: fileData && Array.isArray(fileData.localDeps) ? fileData.localDeps : [],
+    importedBy: (graph.reverseDependencies && graph.reverseDependencies[normalized]) || [],
+    external: fileData && Array.isArray(fileData.externalDeps) ? fileData.externalDeps : [],
   };
 }
 

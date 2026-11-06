@@ -26,6 +26,7 @@ interface ShellBlastRadiusOptions {
   cwd?: string;
   nonInteractive?: boolean;
   force?: boolean;
+  yes?: boolean;
 }
 
 interface CommandRiskReport {
@@ -33,6 +34,7 @@ interface CommandRiskReport {
   riskLevel: RiskLevel;
   category: CommandCategory;
   isDestructive: boolean;
+  isForce?: boolean;
   affectedResources: string[];
   affectedCount: number;
   dryRunOutput?: string;
@@ -163,9 +165,12 @@ function inspectCommandRisk(command: string, options: ShellBlastRadiusOptions = 
   const isCi = process.env['CI'] === 'true';
   const isAuto = process.env['GSD_AUTO'] === '1';
   const isDebianNonInteractive = process.env['DEBIAN_FRONTEND'] === 'noninteractive';
-  const isForce = options.force === true || /--force|--non-interactive/.test(trimmed);
+  const hasExplicitNonInteractiveFlag = /--non-interactive\b|--yes\b|\s-y\b/.test(trimmed) || options.yes === true;
 
-  const nonInteractive = options.nonInteractive ?? (isCi || isAuto || isDebianNonInteractive || isForce);
+  // Refined in Phase 35: --force is a RISK ESCALATOR, NOT an automation or non-interactive bypass.
+  // Explicit nonInteractive option, CI, approved automation or explicit non-interactive flags remain separate bypasses.
+  const isForce = options.force === true || /--force\b|\s-f\b/.test(trimmed);
+  const nonInteractive = options.nonInteractive ?? (isCi || isAuto || isDebianNonInteractive || hasExplicitNonInteractiveFlag);
 
   let category: CommandCategory = 'other';
   let riskLevel: RiskLevel = 'safe';
@@ -199,12 +204,18 @@ function inspectCommandRisk(command: string, options: ShellBlastRadiusOptions = 
     isDestructive = false;
   }
 
+  // Escalate risk if force flag is present
+  if (isDestructive && isForce && riskLevel === 'high') {
+    riskLevel = 'critical';
+  }
+
   if (!isDestructive) {
     return {
       command: trimmed,
       riskLevel,
       category,
       isDestructive: false,
+      isForce,
       affectedResources: [],
       affectedCount: 0,
       requiresConfirmation: false,
@@ -225,6 +236,7 @@ function inspectCommandRisk(command: string, options: ShellBlastRadiusOptions = 
     riskLevel,
     category,
     isDestructive: true,
+    isForce,
     affectedResources: simulation.affectedResources,
     affectedCount: simulation.affectedCount,
     dryRunOutput: simulation.details,

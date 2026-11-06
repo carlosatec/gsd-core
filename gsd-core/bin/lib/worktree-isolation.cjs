@@ -33,11 +33,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.execGitWithRetry = execGitWithRetry;
 exports.isWorktreeSupported = isWorktreeSupported;
 exports.linkSharedDependencies = linkSharedDependencies;
 exports.unlinkSharedDependencies = unlinkSharedDependencies;
 exports.createIsolatedWorktree = createIsolatedWorktree;
 exports.mergeAndCleanupWorktree = mergeAndCleanupWorktree;
+exports.cleanupRetainedWorktree = cleanupRetainedWorktree;
 exports.cleanupWaveWorktrees = cleanupWaveWorktrees;
 /**
  * Worktree Isolation & Zero-Copy Concurrency Engine (Worktrunk Pattern) - Phase 34
@@ -50,6 +52,7 @@ exports.cleanupWaveWorktrees = cleanupWaveWorktrees;
 const fs = __importStar(require("node:fs"));
 const path = __importStar(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const clock_cjs_1 = require("./clock.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const worktreeSafety = require("./worktree-safety.cjs");
 /**
@@ -57,6 +60,7 @@ const worktreeSafety = require("./worktree-safety.cjs");
  */
 function execGitWithRetry(args, opts = {}) {
     const maxAttempts = opts.maxAttempts ?? 3;
+    const clock = opts.clock ?? clock_cjs_1.realClock;
     let attempt = 0;
     let lastResult = { exitCode: 1, stdout: '', stderr: '', signal: null, error: null, timedOut: false };
     while (attempt < maxAttempts) {
@@ -67,13 +71,12 @@ function execGitWithRetry(args, opts = {}) {
         }
         const errStr = (lastResult.stderr || '') + (lastResult.stdout || '');
         if (errStr.includes('.git/index.lock') || errStr.includes('Unable to create') || errStr.includes('File exists')) {
-            // Lock contention detected: backoff 150ms * attempt
-            const sleepMs = 150 * attempt;
-            const start = Date.now();
-            while (Date.now() - start < sleepMs) {
-                // Synchronous pause
+            if (attempt < maxAttempts) {
+                // Lock contention detected: backoff 150ms * attempt using clock seam (CPU-idle)
+                const sleepMs = 150 * attempt;
+                clock.sleep(sleepMs);
+                continue;
             }
-            continue;
         }
         // Non-retryable error
         break;
@@ -264,6 +267,9 @@ function createIsolatedWorktree(options) {
 }
 /**
  * Merge changes from a worktree branch and safely remove the worktree.
+ * Refined in Phase 35: on merge conflict, preserves the branch and worktree
+ * for developer inspection, cleanly aborts any in-progress merge on the root repo,
+ * and performs cleanup exclusively on the successful merge path.
  */
 function mergeAndCleanupWorktree(options) {
     const { rootDir, worktreePath, branch, commitMessage, mergeStrategy = 'merge' } = options;
@@ -276,32 +282,42 @@ function mergeAndCleanupWorktree(options) {
         execGitWithRetry(['add', '-A'], { cwd: worktreePath });
         const msg = commitMessage || `chore(worktree): save changes from ${branch}`;
         execGitWithRetry(['commit', '-m', msg], { cwd: worktreePath });
-        // 2. Defensively unlink shared dependencies before removing worktree
-        unlinkSharedDependencies(worktreePath);
-        // 3. Remove git worktree
-        execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
-        // 4. Merge branch into current branch in root
+        // 2. Merge branch into current branch in root BEFORE destroying worktree
         const mergeArgs = mergeStrategy === 'squash'
             ? ['merge', '--squash', branch]
             : ['merge', '--no-ff', '-m', `Merge branch '${branch}'`, branch];
         const mergeRes = execGitWithRetry(mergeArgs, { cwd: rootDir });
-        let commitHash;
-        if (mergeRes.exitCode === 0) {
-            if (mergeStrategy === 'squash') {
-                const commitRes = execGitWithRetry(['commit', '-m', msg], { cwd: rootDir });
-                if (commitRes.exitCode === 0) {
-                    const revRes = (0, shell_command_projection_cjs_1.execGit)(['rev-parse', 'HEAD'], { cwd: rootDir });
-                    commitHash = revRes.stdout.trim();
-                }
+        // 3. Handle merge failure defensively without deleting branch or worktree
+        if (mergeRes.exitCode !== 0) {
+            // Abort only active root merge so repo returns to clean pre-merge state
+            const mergeHeadPath = path.join(rootDir, '.git', 'MERGE_HEAD');
+            if (fs.existsSync(mergeHeadPath)) {
+                execGitWithRetry(['merge', '--abort'], { cwd: rootDir });
             }
-            else {
+            return {
+                success: false,
+                error: mergeRes.stderr || mergeRes.stdout || 'Merge conflict encountered, branch and worktree preserved for recovery',
+                recoveryBranch: branch,
+                recoveryWorktreeDir: worktreePath,
+            };
+        }
+        // 4. Merge succeeded: handle squash commit if requested
+        let commitHash;
+        if (mergeStrategy === 'squash') {
+            const commitRes = execGitWithRetry(['commit', '-m', msg], { cwd: rootDir });
+            if (commitRes.exitCode === 0) {
                 const revRes = (0, shell_command_projection_cjs_1.execGit)(['rev-parse', 'HEAD'], { cwd: rootDir });
                 commitHash = revRes.stdout.trim();
             }
         }
-        // 5. Delete temporary branch
+        else {
+            const revRes = (0, shell_command_projection_cjs_1.execGit)(['rev-parse', 'HEAD'], { cwd: rootDir });
+            commitHash = revRes.stdout.trim();
+        }
+        // 5. Cleanup EXCLUSIVELY on successful merge path
+        unlinkSharedDependencies(worktreePath);
+        execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
         execGitWithRetry(['branch', '-D', branch], { cwd: rootDir });
-        // 6. Ensure worktree path is gone
         if (fs.existsSync(worktreePath)) {
             try {
                 fs.rmSync(worktreePath, { recursive: true, force: true });
@@ -311,13 +327,38 @@ function mergeAndCleanupWorktree(options) {
             }
         }
         return {
-            success: mergeRes.exitCode === 0,
+            success: true,
             commitHash,
-            error: mergeRes.exitCode !== 0 ? mergeRes.stderr : undefined,
         };
     }
     catch (err) {
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : String(err),
+            recoveryBranch: branch,
+            recoveryWorktreeDir: worktreePath,
+        };
+    }
+}
+/**
+ * Explicit later cleanup of a retained worktree and its branch after conflict resolution.
+ */
+function cleanupRetainedWorktree(rootDir, worktreePath, branch) {
+    try {
         unlinkSharedDependencies(worktreePath);
+        execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
+        execGitWithRetry(['branch', '-D', branch], { cwd: rootDir });
+        if (fs.existsSync(worktreePath)) {
+            try {
+                fs.rmSync(worktreePath, { recursive: true, force: true });
+            }
+            catch {
+                // Non-blocking
+            }
+        }
+        return { success: true };
+    }
+    catch (err) {
         return {
             success: false,
             error: err instanceof Error ? err.message : String(err),

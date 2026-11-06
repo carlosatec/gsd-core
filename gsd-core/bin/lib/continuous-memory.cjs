@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sanitizePii = sanitizePii;
 exports.recordMemoryEntry = recordMemoryEntry;
 exports.queryMemory = queryMemory;
+exports.tryCompaction = tryCompaction;
 /**
  * Continuous Memory Engine — Claude-Mem Native TypeScript Implementation (Phase 34)
  *
@@ -50,6 +51,7 @@ const crypto = __importStar(require("node:crypto"));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const textLines = require("./text-lines.cjs");
 const { splitLines } = textLines;
+const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 const MEMORY_DIR_NAME = 'memory';
 const DECISIONS_FILE_NAME = 'decisions.jsonl';
 const ARCHIVE_DIR_NAME = 'archive';
@@ -70,12 +72,13 @@ function sanitizePii(text, root) {
     result = result.replace(/(?:\/Users|\/home|[A-Za-z]:\/Users)\/[^/\s"'\\]+/g, '~');
     return result;
 }
+const TECHNICAL_SHORT_TOKENS = new Set(['db', 'io', 'ui', 'ci', 'cd', 'ts', 'js', 'go', 'rs', 'os', 'fs']);
 function tokenize(text) {
     return text
         .toLowerCase()
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
-        .filter(t => t.length > 2);
+        .filter(t => t.length > 2 || TECHNICAL_SHORT_TOKENS.has(t));
 }
 /**
  * Simple in-memory BM25 ranker with temporal decay and file proximity bonus
@@ -113,7 +116,55 @@ function scoreEntry(entry, queryTokens, targetFiles) {
     return (tf * temporalFactor) + fileBonus;
 }
 /**
- * Record a new memory entry append-only under `.planning/memory/decisions.jsonl`
+ * Auto-compaction helper called within the active file lock transaction.
+ * Uses atomic sibling write (platformWriteSync) for crash consistency.
+ */
+function tryCompactionLocked(root, filePath) {
+    if (!fs.existsSync(filePath))
+        return;
+    try {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const lines = splitLines(raw).filter(l => l.trim().length > 0);
+        if (lines.length <= COMPACT_TRIGGER_THRESHOLD) {
+            return;
+        }
+        const archiveDir = path.join(root, '.planning', MEMORY_DIR_NAME, ARCHIVE_DIR_NAME);
+        fs.mkdirSync(archiveDir, { recursive: true });
+        const entries = [];
+        for (const l of lines) {
+            try {
+                entries.push(JSON.parse(l));
+            }
+            catch {
+                // Skip
+            }
+        }
+        // Retain all 'architecture_decision' permanently
+        const toRetain = [];
+        const toArchive = [];
+        const cutoffIndex = entries.length - MAX_ACTIVE_ENTRIES;
+        for (let i = 0; i < entries.length; i++) {
+            const e = entries[i];
+            if (e.category === 'architecture_decision' || i >= cutoffIndex) {
+                toRetain.push(e);
+            }
+            else {
+                toArchive.push(e);
+            }
+        }
+        if (toArchive.length > 0) {
+            const archiveFile = path.join(archiveDir, `decisions-archive-${Date.now()}.jsonl`);
+            (0, shell_command_projection_cjs_1.platformWriteSync)(archiveFile, toArchive.map(e => JSON.stringify(e)).join('\n') + '\n');
+            (0, shell_command_projection_cjs_1.platformWriteSync)(filePath, toRetain.map(e => JSON.stringify(e)).join('\n') + '\n');
+        }
+    }
+    catch {
+        // Fail-open
+    }
+}
+/**
+ * Record a new memory entry append-only under `.planning/memory/decisions.jsonl`.
+ * Refined in Phase 35: holds a single non-nested file lock across append and compaction.
  */
 function recordMemoryEntry(root, input) {
     const memoryDir = path.join(root, '.planning', MEMORY_DIR_NAME);
@@ -131,14 +182,15 @@ function recordMemoryEntry(root, input) {
     };
     try {
         fs.mkdirSync(memoryDir, { recursive: true });
-        const line = JSON.stringify(entry) + '\n';
-        fs.appendFileSync(filePath, line, 'utf8');
+        (0, shell_command_projection_cjs_1.withFileLockSync)(filePath, () => {
+            const line = JSON.stringify(entry) + '\n';
+            fs.appendFileSync(filePath, line, 'utf8');
+            tryCompactionLocked(root, filePath);
+        });
     }
     catch {
         // Fail-open: do not crash agent if storage fails
     }
-    // Trigger compaction if threshold reached
-    tryCompaction(root, filePath);
     return entry;
 }
 /**
@@ -184,46 +236,14 @@ function queryMemory(root, query, options = {}) {
     return scored.slice(0, limit).map(s => s.entry);
 }
 /**
- * Auto-compaction: archive older entries if count exceeds COMPACT_TRIGGER_THRESHOLD
+ * Auto-compaction: archive older entries if count exceeds COMPACT_TRIGGER_THRESHOLD.
+ * Refined in Phase 35: wraps compaction in withFileLockSync and uses platformWriteSync.
  */
 function tryCompaction(root, filePath) {
-    if (!fs.existsSync(filePath))
-        return;
     try {
-        const raw = fs.readFileSync(filePath, 'utf8');
-        const lines = splitLines(raw).filter(l => l.trim().length > 0);
-        if (lines.length <= COMPACT_TRIGGER_THRESHOLD) {
-            return;
-        }
-        const archiveDir = path.join(root, '.planning', MEMORY_DIR_NAME, ARCHIVE_DIR_NAME);
-        fs.mkdirSync(archiveDir, { recursive: true });
-        const entries = [];
-        for (const l of lines) {
-            try {
-                entries.push(JSON.parse(l));
-            }
-            catch {
-                // Skip
-            }
-        }
-        // Retain all 'architecture_decision' permanently
-        const toRetain = [];
-        const toArchive = [];
-        const cutoffIndex = entries.length - MAX_ACTIVE_ENTRIES;
-        for (let i = 0; i < entries.length; i++) {
-            const e = entries[i];
-            if (e.category === 'architecture_decision' || i >= cutoffIndex) {
-                toRetain.push(e);
-            }
-            else {
-                toArchive.push(e);
-            }
-        }
-        if (toArchive.length > 0) {
-            const archiveFile = path.join(archiveDir, `decisions-archive-${Date.now()}.jsonl`);
-            fs.writeFileSync(archiveFile, toArchive.map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
-            fs.writeFileSync(filePath, toRetain.map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
-        }
+        (0, shell_command_projection_cjs_1.withFileLockSync)(filePath, () => {
+            tryCompactionLocked(root, filePath);
+        });
     }
     catch {
         // Fail-open

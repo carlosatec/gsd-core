@@ -128,7 +128,7 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
 
   // Outgoing dependencies (files that targetFile imports)
   const fileDir = path.dirname(targetFile);
-  for (const imp of deps.imports) {
+  for (const imp of (deps.imports || [])) {
     const resolved = path.normalize(path.join(fileDir, imp)).replace(/\\/g, '/').replace(/^\.\//, '');
     const candidates = [
       imp,
@@ -170,7 +170,7 @@ function queryNeighboringSymbols(graph: CodebaseGraph, targetFile: string): Neig
   }
 
   // Incoming dependencies (files that import targetFile)
-  for (const caller of deps.importedBy) {
+  for (const caller of (deps.importedBy || [])) {
     if (graph.files[caller]) {
       const fileData = graph.files[caller] as GraphFileNode;
       results.push({
@@ -314,24 +314,24 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   if (options.windowTier === 'small' || windowLimit <= 32768) {
     defaultTokenBudget = 2500; // 32k window (Mistral Small, Qwen, local Ollama)
   } else if (options.windowTier === 'large' || windowLimit >= 1000000) {
-    defaultTokenBudget = 24000; // 1M+ window (Gemini Pro/Flash, Antigravity)
+    defaultTokenBudget = 32000; // 1M+ window (Gemini Pro/Flash, Antigravity)
   } else if (options.windowTier === 'standard' || windowLimit >= 128000) {
-    defaultTokenBudget = 8000;
+    defaultTokenBudget = 16000; // Modern frontier window (Claude 3.5/3.7, GPT-4o)
   } else if (effectiveProfile) {
     const prof = effectiveProfile.toLowerCase();
     if (prof === 'quality' || prof === 'deep' || prof === 'pro' || prof === 'large') {
-      defaultTokenBudget = 8000;
+      defaultTokenBudget = 32000;
     } else if (prof === 'budget' || prof === 'fast' || prof === 'flash' || prof === 'small') {
       defaultTokenBudget = 2500;
     } else if (prof === 'ultra' || prof === 'mega') {
-      defaultTokenBudget = 24000;
+      defaultTokenBudget = 32000;
     } else if (prof === 'balanced') {
-      defaultTokenBudget = 5000;
+      defaultTokenBudget = 8000;
     }
   }
 
   const maxTokens = options.maxTokens ?? defaultTokenBudget;
-  const maxDecisions = options.maxDecisions ?? 5;
+  const maxDecisions = options.maxDecisions ?? 25;
   const { targetFiles } = options;
 
   let graph = loadCodebaseGraph(resolvedPlanningDir);
@@ -482,11 +482,16 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   });
 
   for (const t of collectedTypes.slice(0, maxUniqueTypes)) {
-    const heritage = typeof t.meta?.extends === 'string' ? ` extends ${t.meta.extends}` : '';
-    if (t.isDirect) {
-      applicableTypes.push(`${t.name} (${t.kind} at line ${t.line})${heritage}`);
+    const rawContract = typeof t.meta?.contract === 'string' ? t.meta.contract : (typeof t.meta?.signature === 'string' ? t.meta.signature : null);
+    if (rawContract) {
+      applicableTypes.push(`// ${t.name} (${t.kind} at ${t.file || 'target'}:${t.line})\n${rawContract}`);
     } else {
-      applicableTypes.push(`${t.name} (${t.kind} at ${t.file}:${t.line})${heritage}`);
+      const heritage = typeof t.meta?.extends === 'string' ? ` extends ${t.meta.extends}` : '';
+      if (t.isDirect) {
+        applicableTypes.push(`${t.name} (${t.kind} at line ${t.line})${heritage}`);
+      } else {
+        applicableTypes.push(`${t.name} (${t.kind} at ${t.file}:${t.line})${heritage}`);
+      }
     }
   }
 
@@ -571,30 +576,6 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     };
   }
 
-  // Build markdown representation
-  const lines: string[] = [
-    '<jit_context>',
-    `### Surgical Context for: ${targetFiles.join(', ')}`,
-    '',
-  ];
-
-  if (applicableDecisions.length > 0) {
-    lines.push('#### Active Architectural Decisions:');
-    for (const d of applicableDecisions) {
-      lines.push(d);
-    }
-    lines.push('');
-  }
-
-  if (allNeighbors.length > 0) {
-    lines.push('#### Neighboring Modules & Exported Signatures:');
-    for (const n of allNeighbors) {
-      const exportList = n.exports.map(e => e.signature ? `${e.name}: ${e.signature}` : `${e.name} (${e.kind})`).join(', ');
-      lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
-    }
-    lines.push('');
-  }
-
   // Wave 3 Task 3.2: Query historical anti-patterns for target files
   const applicableAntiPatterns: string[] = [];
   for (const tf of targetFiles) {
@@ -610,22 +591,6 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
-  if (canonicalExample) {
-    lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
-    lines.push('```' + (canonicalExample.language || ''));
-    lines.push(canonicalExample.content);
-    lines.push('```');
-    lines.push('');
-  }
-
-  if (applicableAntiPatterns.length > 0) {
-    lines.push('#### Relevant Self-Healing Lessons & Anti-Patterns:');
-    for (const lesson of applicableAntiPatterns) {
-      lines.push(`- ⚠️ ${lesson}`);
-    }
-    lines.push('');
-  }
-
   // Claude-Mem Continuous Memory Injection (Phase 34 Wave 4)
   const applicableMemories: string[] = [];
   try {
@@ -637,6 +602,38 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     // Fail-open
   }
 
+  // Build markdown representation (Reordered in Phase 35: Critical contracts and decisions precede examples)
+  const lines: string[] = [
+    '<jit_context>',
+    `### Surgical Context for: ${targetFiles.join(', ')}`,
+    '',
+  ];
+
+  // 1. Active Architectural Decisions
+  if (applicableDecisions.length > 0) {
+    lines.push('#### Active Architectural Decisions:');
+    for (const d of applicableDecisions) {
+      lines.push(d);
+    }
+    lines.push('');
+  }
+
+  // 2. Full Type Contracts
+  if (applicableTypes.length > 0) {
+    lines.push('#### Target Type Contracts:');
+    for (const t of applicableTypes) {
+      if (t.includes('\n')) {
+        lines.push('```typescript');
+        lines.push(t);
+        lines.push('```');
+      } else {
+        lines.push(`- ${t}`);
+      }
+    }
+    lines.push('');
+  }
+
+  // 3. Continuous Memory (Decisions & Fixes)
   if (applicableMemories.length > 0) {
     lines.push('#### Continuous Memory (Historical Decisions & Fixes):');
     for (const mem of applicableMemories) {
@@ -645,6 +642,26 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     lines.push('');
   }
 
+  // 4. Relevant Self-Healing Lessons & Anti-Patterns
+  if (applicableAntiPatterns.length > 0) {
+    lines.push('#### Relevant Self-Healing Lessons & Anti-Patterns:');
+    for (const lesson of applicableAntiPatterns) {
+      lines.push(`- ⚠️ ${lesson}`);
+    }
+    lines.push('');
+  }
+
+  // 5. Neighboring Modules & Exported Signatures
+  if (allNeighbors.length > 0) {
+    lines.push('#### Neighboring Modules & Exported Signatures:');
+    for (const n of allNeighbors) {
+      const exportList = n.exports.map(e => e.signature ? `${e.name}: ${e.signature}` : `${e.name} (${e.kind})`).join(', ');
+      lines.push(`- **${n.file}** (${n.relation === 'import' ? 'imported by target' : 'imports target'}): ${exportList || 'no public exports'}`);
+    }
+    lines.push('');
+  }
+
+  // 6. Semantically Related Modules
   if (semanticallyRelated.length > 0) {
     lines.push('#### Semantically Related Modules:');
     for (const r of semanticallyRelated) {
@@ -653,11 +670,12 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     lines.push('');
   }
 
-  if (applicableTypes.length > 0) {
-    lines.push('#### Target Type Contracts:');
-    for (const t of applicableTypes) {
-      lines.push(`- ${t}`);
-    }
+  // 7. Canonical Architecture Anchor (Positioned last to protect critical sections against truncation)
+  if (canonicalExample) {
+    lines.push(`#### Canonical Architecture Anchor (${canonicalExample.file}):`);
+    lines.push('```' + (canonicalExample.language || ''));
+    lines.push(canonicalExample.content);
+    lines.push('```');
     lines.push('');
   }
 

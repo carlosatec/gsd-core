@@ -580,6 +580,28 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                     message: `Execution blocked by pre-flight guardrails: ${errorViolations.length} error-level violation(s) detected. Rerun with --force to override.`,
                 };
             }
+            // System One Cognitive Sentry Gates (Phase 35)
+            try {
+                if (typeof systemOneMod.evaluateNoulSafety === 'function') {
+                    const noulRes = systemOneMod.evaluateNoulSafety({
+                        taskText: `Phase ${phaseId} execution with files: ${filesToModify.join(', ')}`,
+                        rootDir: cwd,
+                        planningDir,
+                    });
+                    if (!noulRes.passed && !isForced) {
+                        return {
+                            command: 'exec',
+                            action: 'BLOCKED_BY_GUARDRAIL',
+                            nextStep: noulRes.remedyHint || 'address invariant violation or use --force to override',
+                            data: { gate: noulRes.gate, violation: noulRes.violatedRule },
+                            message: `[System One Sentry] Execution BLOCKED (${noulRes.gate}): ${noulRes.reason || 'Safety gate violation'}`,
+                        };
+                    }
+                }
+            }
+            catch {
+                // Non-blocking fallback
+            }
             try {
                 initMod.cmdInitExecutePhase(cwd, phaseId, Boolean(options.raw));
             }

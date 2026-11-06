@@ -215,14 +215,30 @@ function processOutputDiet(rawOutput, options = {}) {
     const tailLinesCount = Math.min(defaultTail, Math.max(0, allLines.length - headLinesCount));
     const head = allLines.slice(0, headLinesCount);
     const tail = allLines.slice(allLines.length - tailLinesCount);
-    // Middle section: keep diagnostic/error lines
+    // Middle section: retain diagnostic lines and their causal 30-line preceding windows (Phase 35 Anti-Amnesia)
     const middle = allLines.slice(headLinesCount, allLines.length - tailLinesCount);
     const retainedMiddle = [];
     let omittedMiddleLines = 0;
+    const MAX_CAUSAL_LINES = 250;
+    const causalIndices = new Set();
     for (let i = 0; i < middle.length; i++) {
-        const line = middle[i];
-        if (isDiagnosticOrErrorLine(line)) {
-            retainedMiddle.push(line);
+        if (isDiagnosticOrErrorLine(middle[i])) {
+            const windowStart = Math.max(0, i - 30);
+            const windowEnd = Math.min(middle.length - 1, i + 5);
+            for (let w = windowStart; w <= windowEnd; w++) {
+                causalIndices.add(w);
+            }
+        }
+    }
+    // Enforce global cap on retained causal lines, prioritizing the most recent failure context
+    let allowedIndices = causalIndices;
+    if (causalIndices.size > MAX_CAUSAL_LINES) {
+        const sorted = Array.from(causalIndices).sort((a, b) => a - b);
+        allowedIndices = new Set(sorted.slice(-MAX_CAUSAL_LINES));
+    }
+    for (let i = 0; i < middle.length; i++) {
+        if (allowedIndices.has(i)) {
+            retainedMiddle.push(middle[i]);
         }
         else {
             omittedMiddleLines++;

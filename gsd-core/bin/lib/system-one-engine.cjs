@@ -27,6 +27,11 @@ const { escapeRegex } = patternMod;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const sessionLoggerMod = require("./session-logger.cjs");
 const { SessionLogger } = sessionLoggerMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const continuousMem = require("./continuous-memory.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const phaseLocator = require("./phase-locator.cjs");
+const { listMilestonePhaseDirs } = phaseLocator;
 // ─── Mathematics & Information Theory (Shannon Entropy) ───────────────────────
 /**
  * Calculates normalized Shannon entropy H(P) over a probability distribution.
@@ -1055,6 +1060,220 @@ function recordUserOverride(targetFile, reason = 'User manual override', plannin
     const store = new SystemOneLearningStore(planningDir);
     store.recordOverride(targetFile, reason, 3, true);
 }
+/**
+ * Primitiva Noul(isSafeToMutate) — JEV-inspired Boolean Reflex Sentry.
+ * Intercepts plan and proposed code before filesystem mutation, checking against
+ * historical invariants in STATE.md and rules in CONSTITUTION.md.
+ */
+function evaluateNoulSafety(options) {
+    const { taskText, proposedCodeMap = {}, rootDir: _rootDir, planningDir } = options;
+    const combinedText = `${taskText} ${Object.entries(proposedCodeMap).map(([k, v]) => `${k}\n${v}`).join('\n')}`;
+    // Decision D-01: Zero external Python runtime boundary
+    if (/(?:import\s+(?:sys|os|json|requests|chromadb)|from\s+[a-zA-Z_]+\s+import|def\s+[a-zA-Z_]+\s*\(.*?\):|python3?\s+)/i.test(combinedText)) {
+        if (combinedText.includes('pip install') || combinedText.includes('chromadb') || combinedText.includes('requirements.txt')) {
+            return {
+                noul: 0.0,
+                passed: false,
+                gate: 'AMNESIA_GATE_VIOLATION',
+                reason: 'Violates Decision D-01 (Zero Python Runtime Boundary): External Python packages or scripts are prohibited.',
+                violatedRule: 'D-01 [Architecture]: Analisador AST nativo em TypeScript sem dependência de Python ou compiladores externos.',
+                remedyHint: 'Implement native TypeScript or Node.js primitives without external Python runtimes.',
+            };
+        }
+    }
+    // Windows Junction Safety Invariant
+    if (combinedText.includes('fs.rmSync') && (combinedText.includes('node_modules') || combinedText.includes('junction') || combinedText.includes('worktree'))) {
+        if (!combinedText.includes('unlinkSharedDependencies') && !combinedText.includes('fs.unlinkSync') && !combinedText.includes('no-raw-rmsync')) {
+            return {
+                noul: 0.0,
+                passed: false,
+                gate: 'AMNESIA_GATE_VIOLATION',
+                reason: 'Violates Windows Junction Safety Invariant: Directory junctions MUST be unlinked via fs.unlinkSync before removal.',
+                violatedRule: 'D-12 [Windows]: Strict defensive unlinking of NTFS directory junctions before worktree removal.',
+                remedyHint: 'Call unlinkSharedDependencies() or fs.unlinkSync() on Windows junctions prior to fs.rmSync().',
+            };
+        }
+    }
+    // CONSTITUTION.md Rule checks
+    const constitutionPath = node_path_1.default.join(planningDir, 'CONSTITUTION.md');
+    if (node_fs_1.default.existsSync(constitutionPath)) {
+        try {
+            const constitution = node_fs_1.default.readFileSync(constitutionPath, 'utf8');
+            if (constitution.includes('ZERO_MOCK') && combinedText.includes('jest.mock(')) {
+                return {
+                    noul: 0.0,
+                    passed: false,
+                    gate: 'AMNESIA_GATE_VIOLATION',
+                    reason: 'Violates CONSTITUTION.md Rule: Mocking forbidden in production contracts.',
+                    violatedRule: 'CONSTITUTION Article II: Zero Mocks in integration verification.',
+                    remedyHint: 'Use real process/filesystem seams instead of synthetic mocks.',
+                };
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
+    return {
+        noul: 1.0,
+        passed: true,
+        gate: 'PASSED',
+    };
+}
+/**
+ * Primitiva Score(groundingFidelity) — JEV-inspired Ordinal AST Grounding Reflex.
+ * Cross-references referenced methods and identifiers against the AST symbols index.
+ */
+function evaluateGroundingScore(options) {
+    const { codeDiff = '', rootDir = process.cwd() } = options;
+    const graph = options.graph || loadCodebaseGraph(node_path_1.default.join(rootDir, '.planning'));
+    if (!graph || (!graph.files && !graph.nodes)) {
+        return { score: 3, passed: true, gate: 'PASSED' };
+    }
+    const fileMap = graph.files || graph.nodes || {};
+    const knownSymbols = new Set();
+    for (const n of Object.values(fileMap)) {
+        if (!n)
+            continue;
+        for (const exp of n.exports || []) {
+            if (exp && exp.name)
+                knownSymbols.add(exp.name);
+        }
+        for (const sym of n.symbols || []) {
+            if (sym && sym.name)
+                knownSymbols.add(sym.name);
+        }
+    }
+    if (graph.symbolIndex) {
+        for (const s of Object.keys(graph.symbolIndex))
+            knownSymbols.add(s);
+    }
+    const BUILTIN_METHODS = new Set([
+        'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'push', 'pop', 'shift', 'unshift',
+        'slice', 'splice', 'join', 'split', 'trim', 'replace', 'match', 'test', 'toLowerCase', 'toUpperCase',
+        'startsWith', 'endsWith', 'substring', 'charAt', 'charCodeAt', 'toString', 'valueOf', 'keys',
+        'values', 'entries', 'has', 'get', 'set', 'delete', 'add', 'clear', 'resolve', 'reject', 'then',
+        'catch', 'finally', 'json', 'send', 'status', 'writeHead', 'end', 'log', 'error', 'warn', 'info',
+        'existsSync', 'readFileSync', 'writeFileSync', 'mkdirSync', 'statSync', 'unlinkSync'
+    ]);
+    const invocationRegex = /\.([a-zA-Z_$][a-zA-Z0-9_$]+)\s*\(/g;
+    const missing = [];
+    let totalInvocations = 0;
+    let match;
+    while ((match = invocationRegex.exec(codeDiff)) !== null) {
+        const method = match[1];
+        if (BUILTIN_METHODS.has(method) || method.length <= 2)
+            continue;
+        totalInvocations++;
+        if (!knownSymbols.has(method)) {
+            missing.push(method);
+        }
+    }
+    if (totalInvocations > 0 && missing.length > 0 && missing.length >= totalInvocations * 0.5) {
+        return {
+            score: 1,
+            passed: false,
+            gate: 'GROUNDING_MISMATCH',
+            reason: `Grounding mismatch: ${missing.length} ungrounded method invocations detected (${missing.slice(0, 5).join(', ')}).`,
+            missingSymbols: missing,
+        };
+    }
+    return {
+        score: 3,
+        passed: true,
+        gate: 'PASSED',
+    };
+}
+/**
+ * Primitiva Choice(actionRouting) & Auditor RFC 2119.
+ * Validates mandatory MUST/SHALL requirements from SPEC.md against named evidence,
+ * and deterministically routes self-healing repair strategies.
+ */
+function evaluateChoiceStrategy(options) {
+    const { phaseId, planningDir, evidence = [], waiver, failureCategory } = options;
+    if (failureCategory) {
+        let strategy = 'fix_logic';
+        if (failureCategory === 'syntax')
+            strategy = 'revert_and_reparse';
+        else if (failureCategory === 'type')
+            strategy = 'align_contracts_and_rebuild';
+        else if (failureCategory === 'concurrency')
+            strategy = 'retry_with_backoff_and_lock';
+        return {
+            choice: strategy,
+            passed: true,
+            gate: 'PASSED',
+        };
+    }
+    try {
+        const phasesDir = node_path_1.default.join(planningDir, 'phases');
+        const { value: phaseFolders } = listMilestonePhaseDirs(phasesDir);
+        const targetFolder = phaseFolders.find(f => f.startsWith(`${phaseId}-`) || f === phaseId);
+        if (targetFolder) {
+            const specFile = node_path_1.default.join(phasesDir, targetFolder, `${phaseId}-SPEC.md`);
+            if (node_fs_1.default.existsSync(specFile)) {
+                const specContent = node_fs_1.default.readFileSync(specFile, 'utf8');
+                const lines = specContent.split(/\r?\n/);
+                const mandatoryReqs = [];
+                for (const line of lines) {
+                    if (/\b(?:MUST|SHALL|REQUIRED)\b/.test(line) && line.trim().startsWith('-')) {
+                        mandatoryReqs.push(line.trim());
+                    }
+                }
+                if (mandatoryReqs.length > 0 && !waiver) {
+                    const missingReqs = [];
+                    for (const req of mandatoryReqs) {
+                        const hasEvidence = evidence.some(e => req.toLowerCase().includes(e.toLowerCase()) || e.includes(req.slice(0, 20)));
+                        if (!hasEvidence && evidence.length === 0) {
+                            missingReqs.push(req);
+                        }
+                    }
+                    if (missingReqs.length > 0) {
+                        return {
+                            choice: 'BLOCK_PHASE_CLOSE',
+                            passed: false,
+                            gate: 'REQUIREMENT_EVIDENCE_MISSING',
+                            reason: `RFC 2119 Audit: ${missingReqs.length} mandatory MUST/SHALL requirement(s) lack named verification evidence or human waiver.`,
+                            unverifiedRequirements: missingReqs,
+                        };
+                    }
+                }
+            }
+        }
+    }
+    catch {
+        // Graceful fallback if planning tree is not found
+    }
+    return {
+        choice: 'PROCEED',
+        passed: true,
+        gate: 'PASSED',
+    };
+}
+/**
+ * Laya-inspired Active Learning: records self-healing lessons into continuous memory
+ * when a correlated fail-then-pass cycle occurs with complete evidence.
+ */
+function recordSelfHealingLesson(options) {
+    try {
+        const { rootDir, testFailureOutput, successfulFixSummary, category = 'self_healing_fix', files, command } = options;
+        if (!testFailureOutput || !successfulFixSummary || files.length === 0) {
+            return false;
+        }
+        continuousMem.recordMemoryEntry(rootDir, {
+            category,
+            summary: successfulFixSummary,
+            details: `Root Cause: ${testFailureOutput.slice(0, 300)}`,
+            relevantFiles: files,
+            command,
+            keywords: ['self-healing', 'test-fix', ...files.map((f) => node_path_1.default.basename(f))],
+        });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
 // Global Singleton Export
 const defaultEngine = new SystemOneEngine();
 module.exports = {
@@ -1070,6 +1289,10 @@ module.exports = {
     computeShannonEntropy,
     computeRrfScore,
     recordUserOverride,
+    evaluateNoulSafety,
+    evaluateGroundingScore,
+    evaluateChoiceStrategy,
+    recordSelfHealingLesson,
     defaultEngine,
     classifyRisk: defaultEngine.classifyRisk.bind(defaultEngine),
     classifyRiskSync: defaultEngine.classifyRiskSync.bind(defaultEngine),

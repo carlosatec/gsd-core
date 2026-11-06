@@ -415,6 +415,12 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
       if (!pathCheck.safe) {
         return { isError: true, content: [{ type: 'text', text: `Access denied: ${pathCheck.error}` }] };
       }
+      if (typeof guardrails.inspectWriteSafety === 'function') {
+        const safety = guardrails.inspectWriteSafety(pathCheck.resolved, content, cwd);
+        if (!safety.safe) {
+          return { isError: true, content: [{ type: 'text', text: `Write safety violation: ${safety.reason}` }] };
+        }
+      }
       const io = stateIo.createStateIO({ io: 'filesystem' });
       io.write(pathCheck.resolved, content);
       return { content: [{ type: 'text', text: JSON.stringify({ ok: true, path: pathCheck.resolved }) }] };
@@ -457,32 +463,118 @@ function callTool(name: string, args: unknown, ctx: McpContext): { content: Arra
       const graphPath = path.join(cwd, '.planning', 'intel', 'codebase-graph.json');
       let knownFiles: string[] = [];
       const knownExports = new Set<string>();
+      const knownSymbols = new Set<string>();
+      let graphLoaded = false;
+      let graphFreshness: { updatedAt?: string; stale: boolean } = { stale: false };
+
       if (fs.existsSync(graphPath)) {
         try {
           const raw = fs.readFileSync(graphPath, 'utf8');
-          const graph = JSON.parse(raw) as { nodes?: Record<string, { exports?: Array<{ name?: string }> }> };
-          if (graph && graph.nodes) {
-            knownFiles = Object.keys(graph.nodes);
-            for (const n of Object.values(graph.nodes)) {
+          const graph = JSON.parse(raw) as {
+            updatedAt?: string;
+            files?: Record<string, { exports?: Array<{ name?: string }>; symbols?: Array<{ name?: string }> }>;
+            nodes?: Record<string, { exports?: Array<{ name?: string }>; symbols?: Array<{ name?: string }> }>;
+            symbolIndex?: Record<string, string[]>;
+          };
+          const fileMap = graph.files || graph.nodes;
+          if (fileMap) {
+            knownFiles = Object.keys(fileMap);
+            graphLoaded = knownFiles.length > 0;
+            for (const n of Object.values(fileMap)) {
               for (const exp of n.exports || []) {
                 if (exp && exp.name) knownExports.add(exp.name);
               }
+              for (const sym of n.symbols || []) {
+                if (sym && sym.name) knownSymbols.add(sym.name);
+              }
             }
+          }
+          if (graph.symbolIndex) {
+            for (const symName of Object.keys(graph.symbolIndex)) {
+              knownSymbols.add(symName);
+            }
+          }
+          if (graph.updatedAt) {
+            const stat = fs.statSync(graphPath);
+            const ageMs = Date.now() - stat.mtimeMs;
+            graphFreshness = {
+              updatedAt: graph.updatedAt,
+              stale: ageMs > 24 * 60 * 60 * 1000,
+            };
           }
         } catch {
           // ignore
         }
       }
+
+      // Candidate classification (ADR Phase 35)
+      const BUILTIN_OR_PROSE = new Set([
+        'object', 'array', 'string', 'number', 'boolean', 'promise', 'map', 'set', 'json', 'math',
+        'date', 'regexp', 'error', 'buffer', 'process', 'console', 'fs', 'path', 'os', 'crypto',
+        'execsync', 'describe', 'it', 'assert', 'true', 'false', 'null', 'undefined', 'void',
+        'record', 'type', 'interface', 'class', 'function', 'const', 'let', 'var', 'import',
+        'export', 'return', 'async', 'await', 'try', 'catch', 'finally', 'throw', 'new', 'if',
+        'else', 'for', 'while', 'switch', 'case', 'default', 'break', 'continue', 'this', 'super',
+        'the', 'and', 'to', 'in', 'for', 'with', 'check', 'add', 'update', 'fix', 'test', 'tests',
+        'file', 'files', 'code', 'task', 'phase', 'plan', 'step', 'create', 'implement', 'run',
+        'node', 'npm', 'git', 'src', 'bin', 'lib', 'docs', 'use', 'using', 'from', 'as', 'any'
+      ]);
+
+      const candidateRegex = /\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g;
+      const allTokens = taskText.match(candidateRegex) || [];
+
+      const candidateClassification = {
+        known: [] as string[],
+        intentionallyNew: [] as string[],
+        ignored: [] as string[],
+        missing: [] as string[],
+      };
+
+      const seen = new Set<string>();
+      for (const token of allTokens) {
+        if (seen.has(token)) continue;
+        seen.add(token);
+        const tokenLower = token.toLowerCase();
+
+        if (BUILTIN_OR_PROSE.has(tokenLower) || token.length <= 2) {
+          candidateClassification.ignored.push(token);
+          continue;
+        }
+
+        const isDeclaredNew =
+          new RegExp(`\\b(?:create|implement|add|introduce|new|define|declare)\\s+(?:class\\s+|interface\\s+|type\\s+|function\\s+)?${token}\\b`, 'i').test(taskText) ||
+          new RegExp(`\\b(?:class|interface|type|function)\\s+${token}\\b`, 'i').test(taskText);
+
+        if (isDeclaredNew) {
+          candidateClassification.intentionallyNew.push(token);
+          continue;
+        }
+
+        if (knownExports.has(token) || knownSymbols.has(token)) {
+          candidateClassification.known.push(token);
+          continue;
+        }
+
+        if (graphLoaded && /^[A-Z][a-zA-Z0-9]+$|^[a-z]+[A-Z][a-zA-Z0-9]*$/.test(token)) {
+          candidateClassification.missing.push(token);
+        } else {
+          candidateClassification.ignored.push(token);
+        }
+      }
+
       const missingFiles = referencedFiles.filter(f => !fs.existsSync(path.resolve(cwd, f)));
-      const feasible = missingFiles.length === 0;
+      const feasible = missingFiles.length === 0 && candidateClassification.missing.length === 0;
+
       return {
         content: [{
           type: 'text',
           text: JSON.stringify({
             feasible,
             missingFiles,
-            knownSymbolsCount: knownExports.size,
-            graphLoaded: knownFiles.length > 0,
+            knownSymbolsCount: knownExports.size + knownSymbols.size,
+            graphLoaded,
+            graphFreshness,
+            candidates: candidateClassification,
           }, null, 2),
         }],
       };

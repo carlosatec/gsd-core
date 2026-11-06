@@ -557,8 +557,9 @@ function inspectWriteSafety(filePath: string, proposedContent: string, _root?: s
     }
   }
 
-  // Check catastrophic shrink for curated planning documents
-  const isCurated = normPath.endsWith('ROADMAP.md') || normPath.endsWith('STATE.md');
+  // Check catastrophic shrink for curated planning documents (case-insensitive)
+  const normPathLower = normPath.toLowerCase();
+  const isCurated = normPathLower.endsWith('/roadmap.md') || normPathLower.endsWith('/state.md') || normPathLower === 'roadmap.md' || normPathLower === 'state.md';
   if (isCurated && fs.existsSync(filePath)) {
     try {
       const existing = fs.readFileSync(filePath, 'utf8');

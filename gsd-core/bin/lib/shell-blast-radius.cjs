@@ -137,8 +137,11 @@ function inspectCommandRisk(command, options = {}) {
     const isCi = process.env['CI'] === 'true';
     const isAuto = process.env['GSD_AUTO'] === '1';
     const isDebianNonInteractive = process.env['DEBIAN_FRONTEND'] === 'noninteractive';
-    const isForce = options.force === true || /--force|--non-interactive/.test(trimmed);
-    const nonInteractive = options.nonInteractive ?? (isCi || isAuto || isDebianNonInteractive || isForce);
+    const hasExplicitNonInteractiveFlag = /--non-interactive\b|--yes\b|\s-y\b/.test(trimmed) || options.yes === true;
+    // Refined in Phase 35: --force is a RISK ESCALATOR, NOT an automation or non-interactive bypass.
+    // Explicit nonInteractive option, CI, approved automation or explicit non-interactive flags remain separate bypasses.
+    const isForce = options.force === true || /--force\b|\s-f\b/.test(trimmed);
+    const nonInteractive = options.nonInteractive ?? (isCi || isAuto || isDebianNonInteractive || hasExplicitNonInteractiveFlag);
     let category = 'other';
     let riskLevel = 'safe';
     let isDestructive = false;
@@ -172,12 +175,17 @@ function inspectCommandRisk(command, options = {}) {
         riskLevel = 'safe';
         isDestructive = false;
     }
+    // Escalate risk if force flag is present
+    if (isDestructive && isForce && riskLevel === 'high') {
+        riskLevel = 'critical';
+    }
     if (!isDestructive) {
         return {
             command: trimmed,
             riskLevel,
             category,
             isDestructive: false,
+            isForce,
             affectedResources: [],
             affectedCount: 0,
             requiresConfirmation: false,
@@ -195,6 +203,7 @@ function inspectCommandRisk(command, options = {}) {
         riskLevel,
         category,
         isDestructive: true,
+        isForce,
         affectedResources: simulation.affectedResources,
         affectedCount: simulation.affectedCount,
         dryRunOutput: simulation.details,
