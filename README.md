@@ -49,6 +49,11 @@ GSD Core Nexus 3.6 elevates AI coding agents with deep execution observability, 
 8. **System One Engine — Sovereign, Multi-Head Decision Intelligence:** Local, API-free risk triage (`SecurityHead`, `ArchitectureHead`, `QualityHead`) with calibrated confidence, Shannon-entropy uncertainty, hybrid BM25 + PageRank RRF re-ranking, a persistent learning store, and closed-loop ingestion of `anti-patterns.json` into risk scoring.
 9. **Unified Graph SSOT & Intel Freshness:** `.planning/intel/codebase-graph.json` is the single source of truth, pinned to the Git commit SHA (no more ~5.4 MB duplicate graph). `/gsd-status` reports whether the AST graph is `Fresh` or `Stale` against `HEAD` in O(1).
 10. **Semantic Edge Typing & Expanded Polyglot AST:** Dependency edges are labelled `runtime`, `type_only`, or `infra` (type-only blast radius damped by 80%), with native support for Zig, Astro, Protobuf, and Rust `mod` resolution.
+11. **MCP Centralization & 9 Canonical Tools:** Full JSON-RPC tool surface (`bin/gsd-mcp-server.js`) including surgical JIT context, pre-flight guardrails, and NVIDIA Auto-Ontology AST feasibility checks to verify symbols before coding.
+12. **GitHub Spec-Kit Interoperability & RFC 2119 Parsing:** Bidirectional conversion between GitHub Spec-Kit format and GSD, RFC 2119 normative categorization (`MUST`/`SHALL`/`SHOULD`/`MAY`), anti-prompt-injection sanitization, and root `CONSTITUTION.md`.
+13. **Claude-Mem Continuous Memory (Native TypeScript):** Cross-session technical memory under `.planning/memory/decisions.jsonl` with BM25 ranking, temporal decay, PII sanitization, and automatic log compaction — zero Python, zero external vector DBs.
+14. **Worktree Concurrency & Windows Junction Safety:** Ephemeral Git worktree isolation (Worktrunk pattern) with NTFS directory junctions, guaranteed defensive unlinking (`fs.unlinkSync`), and exponential backoff retry for Git `index.lock`.
+15. **Unified Drift Linter Suite & Skills Spec:** 13+ discrete repository linters consolidated into an fast in-memory pipeline (10x faster execution) with Anthropic Agent Skills compliance checking.
 
 ---
 

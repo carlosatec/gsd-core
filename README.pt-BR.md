@@ -49,6 +49,11 @@ O GSD Core Nexus 3.6 transforma agentes de codificação em uma engenharia autô
 8. **System One Engine — Inteligência de Decisão Soberana Multi-Head:** Triagem de risco local e sem APIs externas (`SecurityHead`, `ArchitectureHead`, `QualityHead`) com confiança calibrada, incerteza por Entropia de Shannon, re-ranking híbrido RRF (BM25 + PageRank), store de aprendizado persistente e auto-ingestão de `anti-patterns.json` no cálculo de risco.
 9. **SSOT Unificado do Grafo & Frescor do Intel:** `.planning/intel/codebase-graph.json` é a Fonte Única da Verdade, ancorada no Git commit SHA (sem a duplicata de ~5.4 MB). O `/gsd-status` informa se o grafo AST está `Fresh` ou `Stale` em relação ao `HEAD` em O(1).
 10. **Tipagem Semântica de Arestas & AST Poliglota Expandido:** Arestas rotuladas como `runtime`, `type_only` ou `infra` (blast radius de tipos puros amortecido em 80%), com suporte nativo a Zig, Astro, Protobuf e resolução de `mod` em Rust.
+11. **Centralização MCP & 9 Ferramentas Canônicas:** Superfície JSON-RPC completa (`bin/gsd-mcp-server.js`) incluindo montagem de contexto JIT cirúrgico, pre-flight guardrails e checagem de viabilidade AST (padrão NVIDIA Auto-Ontology) para verificar símbolos antes de programar.
+12. **Interoperabilidade GitHub Spec-Kit & Parser RFC 2119:** Conversão bidirecional entre o formato Spec-Kit e o GSD nativo, classificação normativa RFC 2119 (`MUST`/`SHALL`/`SHOULD`/`MAY`), sanitização anti-injeção de prompt e arquivo [`CONSTITUTION.md`](CONSTITUTION.md) na raiz.
+13. **Memória Contínua Claude-Mem (TypeScript Nativo):** Memória técnica entre sessões sob `.planning/memory/decisions.jsonl` com ranking BM25, decaimento temporal, sanitização de PII e compactação automática — zero dependência de Python ou vector DBs externos.
+14. **Concorrência com Worktrees & Segurança de Junções NTFS:** Isolamento de subagentes em Git worktrees efêmeros (padrão Worktrunk) com Directory Junctions no NTFS, desvinculação defensiva garantida (`fs.unlinkSync`) e retentativa exponencial contra travamentos de `index.lock`.
+15. **Suíte Unificada de Linters de Drift & Especificação de Skills:** 13+ linters de repositório consolidados em pipeline em memória (execução 10x mais rápida) com auditoria de conformidade Anthropic Agent Skills.
 
 ---
 

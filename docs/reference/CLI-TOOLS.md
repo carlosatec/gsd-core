@@ -1111,6 +1111,37 @@ node gsd-tools.cjs session clean [--max 50] [--days 30] [--raw]
 | Worktree Base Ref | `lib/worktree-base-ref.cjs` | Worktree fork-base detection and `worktree base-check` / `set-baseref` commands (#683) |
 | Session Logger | `lib/session-logger.cjs` | Structured append-only JSONL session logging, 32KB smart trimming, secret redaction, 50-session/30-day ring buffer |
 | Session Replay | `lib/session-replay.cjs` | Deterministic timeline replay, ANSI rendering, Markdown export, anti-pattern diagnostic extraction |
+| Continuous Memory | `lib/continuous-memory.cjs` | Claude-Mem persistent memory engine under `.planning/memory/decisions.jsonl` with BM25, temporal decay & PII sanitization |
+| Spec-Kit Interop | `lib/speckit-interop.cjs` | GitHub Spec-Kit bidirectional converter, RFC 2119 normative classifier, and anti-prompt-injection sanitizer |
+| Worktree Isolation | `lib/worktree-isolation.cjs` | Worktrunk zero-copy worktree orchestrator with Windows NTFS junction defensive unlinking & index.lock backoff retries |
+| Drift Linter Suite | `lib/drift-linter-suite.cjs` | Consolidated in-memory repository drift linter pipeline & Anthropic Agent Skills compliance checker |
+
+---
+
+## Model Context Protocol (MCP) Server (`bin/gsd-mcp-server.js`)
+
+GSD Core Nexus provides a standalone Model Context Protocol server exposing 9 canonical JSON-RPC tools for AI agents and IDE hosts (Claude Desktop, Cursor, VS Code, Windsurf, Antigravity):
+
+```bash
+# Start MCP server via STDIO transport
+node bin/gsd-mcp-server.js
+# Or via global bin
+gsd-mcp-server
+```
+
+### Canonical MCP Tool Surface
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `gsd_invoke_command` | `command`, `args` | Dispatch unified canonical command within active repository session. |
+| `gsd_read_state` | `file` | Read planning state file within path-confinement boundary (`.planning/`). |
+| `gsd_write_state` | `file`, `content` | Write planning state file with preflight file-shrinkage safety checks (`inspectWriteSafety`). |
+| `gsd_jit_context` | `files`, `maxTokens`, `dryRun` | Assemble language-aware surgical JIT prompt context with type closure and relevant continuous memory. |
+| `gsd_preflight_check` | `files`, `command` | Run static pre-flight guardrail checks and optional command blast-radius analysis before mutating code. |
+| `gsd_feasibility_check` | `taskText`, `referencedFiles` | Validate whether referenced classes, methods, and symbols exist in codebase graph before execution (NVIDIA Auto-Ontology pattern). |
+| `gsd_verify_step` | `phase` | Read verification status and execute automated verification step for the current phase. |
+| `gsd_memory_recall` | `query`, `files`, `limit` | Retrieve relevant technical decisions and self-healing precedents from continuous memory (Claude-Mem pattern). |
+| `gsd_memory_record` | `category`, `summary`, `details`, `relevantFiles`, `keywords` | Record an architectural decision, tool quirk, or self-healing fix to persistent cross-session memory (`decisions.jsonl`). |
 
 ---
 
