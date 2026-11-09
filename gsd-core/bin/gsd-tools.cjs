@@ -3737,10 +3737,13 @@ function routeGraph({ args, cwd, raw }) {
       return;
     }
     process.stdout.write(`\n🧠 GSD Project Second Brain Obsidian Vault Generated:\n`);
-    process.stdout.write(`  • Vault Path:   ${report.vaultPath}\n`);
-    process.stdout.write(`  • Master Home:  ${report.homePath}\n`);
-    process.stdout.write(`  • Visual Canvas: ${report.canvasPath}\n`);
-    process.stdout.write(`  • Total Notes:  ${report.totalNotes} (${report.totalDecisions} decisions, ${report.totalPhases} phases, ${report.totalModules} modules, ${report.totalLessons} lessons)\n\n`);
+    process.stdout.write(`  • Vault Path:     ${report.vaultPath}\n`);
+    process.stdout.write(`  • Master Home:    ${report.homePath}\n`);
+    process.stdout.write(`  • Visual Mindmap: ${report.canvasPath}\n`);
+    if (report.roadmapCanvasPath) {
+      process.stdout.write(`  • Roadmap Canvas: ${report.roadmapCanvasPath}\n`);
+    }
+    process.stdout.write(`  • Total Notes:    ${report.totalNotes} (${report.totalDecisions} decisions, ${report.totalPhases} phases, ${report.totalModules} modules, ${report.totalLessons} lessons)\n\n`);
     process.stdout.write(`Open '${report.vaultPath}' as an Obsidian Vault to explore your interactive second brain!\n`);
     if (shouldOpen) {
       openBrowserUrl(report.homePath);

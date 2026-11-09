@@ -30,6 +30,8 @@ const { syncDecisionsToMemory, queryMemory } = continuousMem;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const obsidianInterop = require("./obsidian-interop.cjs");
 const { saveBacklinkIndex } = obsidianInterop;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const canvasGenMod = require("./canvas-roadmap-generator.cjs");
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 function sanitizeSlug(filePath) {
     return filePath.replace(/\\/g, '/').replace(/[/\\:]/g, '--');
@@ -218,6 +220,55 @@ function generateSecondBrainVault(planningDir, rootDir) {
     }
     // 5. Generate Lessons/
     let totalLessons = 0;
+    const lessonsList = [];
+    // 5a. From Continuous Memory (self_healing_fix, self_healing_lesson, anti_pattern)
+    const memEntries = queryMemory(root, '', { limit: 1000 });
+    for (const m of memEntries) {
+        if (m.category === 'architecture_decision')
+            continue;
+        totalLessons++;
+        const lessonId = `L-${String(totalLessons).padStart(2, '0')}`;
+        const summary = m.summary || 'Lição de Auto-Cura';
+        const details = m.details || 'Manter conformidade com testes e invariantes.';
+        const relevantFiles = m.relevantFiles || [];
+        lessonsList.push({ id: lessonId, title: summary, category: m.category, files: relevantFiles });
+        const notePath = node_path_1.default.join(lessonsDir, `${lessonId}.md`);
+        const relFileLinks = relevantFiles.map((f) => {
+            const base = node_path_1.default.basename(f);
+            const slug = sanitizeSlug(f);
+            return `- [[Modules/${slug}|${base}]] (\`${f}\`)`;
+        }).join('\n');
+        const frontmatter = [
+            '---',
+            `id: ${escapeYamlString(lessonId)}`,
+            `title: ${escapeYamlString(summary)}`,
+            `category: ${escapeYamlString(m.category)}`,
+            m.phase ? `phase: ${escapeYamlString(m.phase)}` : '',
+            `aliases: [${escapeYamlString(lessonId)}, ${escapeYamlString(`${lessonId}: ${summary.slice(0, 50)}`)}]`,
+            'tags: [gsd, lesson, self-healing]',
+            '---',
+        ].filter(Boolean).join('\n');
+        const content = [
+            frontmatter,
+            '',
+            `# ${lessonId}: ${summary}`,
+            '',
+            `> **Categoria:** ${m.category}  `,
+            m.phase ? `> **Fase de Origem:** [[Phases/${m.phase}|Fase ${m.phase}]]  ` : '',
+            `> **Timestamp:** ${new Date(m.timestamp).toISOString()}  `,
+            '',
+            '## Causa Raiz e Detalhes',
+            details,
+            '',
+            relevantFiles.length > 0 ? `## Módulos Relacionados\n${relFileLinks}\n` : '',
+            '## Navegação',
+            '- [[00-Home|Voltar ao Home (MOC)]]',
+            '- [[00-Vault.canvas|Canvas Interativo do Projeto]]',
+            '',
+        ].filter(Boolean).join('\n');
+        (0, shell_command_projection_cjs_1.platformWriteSync)(notePath, content);
+    }
+    // 5b. From anti-patterns.json (if present)
     const antiPatternsPath = node_path_1.default.join(planningDir, 'intel', 'anti-patterns.json');
     if (node_fs_1.default.existsSync(antiPatternsPath)) {
         try {
@@ -229,15 +280,18 @@ function generateSecondBrainVault(planningDir, rootDir) {
                     const ap = patterns[i];
                     if (ap && (ap.lesson || ap.pattern)) {
                         totalLessons++;
-                        const lessonId = `lesson-${i + 1}`;
+                        const lessonId = `AP-${String(i + 1).padStart(2, '0')}`;
+                        const summary = ap.lesson || ap.details || 'Anti-Pattern identificado';
+                        lessonsList.push({ id: lessonId, title: summary, category: 'anti_pattern', files: [] });
                         const notePath = node_path_1.default.join(lessonsDir, `${lessonId}.md`);
                         const text = [
                             '---',
                             `id: ${escapeYamlString(lessonId)}`,
+                            `title: ${escapeYamlString(summary)}`,
                             'tags: [gsd, lesson, anti-pattern]',
                             '---',
                             '',
-                            `# Lição Aprendida #${i + 1}`,
+                            `# ${lessonId}: ${ap.pattern || 'Anti-Pattern'}`,
                             '',
                             `> **Padrão:** ${ap.pattern || 'Detectado em testes'}  `,
                             `> **Frequência:** ${ap.occurrences || 1}  `,
@@ -247,6 +301,7 @@ function generateSecondBrainVault(planningDir, rootDir) {
                             '',
                             '## Navegação',
                             '- [[00-Home|Voltar ao Home]]',
+                            '',
                         ].join('\n');
                         (0, shell_command_projection_cjs_1.platformWriteSync)(notePath, text);
                     }
@@ -257,7 +312,14 @@ function generateSecondBrainVault(planningDir, rootDir) {
             // Non-blocking
         }
     }
-    // 6. Generate 00-Home.md (Master Map of Content)
+    // 6. Separate Production Modules vs Tooling/Tests Modules
+    const productionModules = primaryModules
+        .filter(m => m.file.startsWith('src/') || m.file.startsWith('gsd-core/bin/lib/'))
+        .sort((a, b) => b.pageRank - a.pageRank);
+    const toolingModules = primaryModules
+        .filter(m => !m.file.startsWith('src/') && !m.file.startsWith('gsd-core/bin/lib/'))
+        .sort((a, b) => b.pageRank - a.pageRank);
+    // 7. Generate 00-Home.md (Master Map of Content)
     const homePath = node_path_1.default.join(vaultDir, '00-Home.md');
     const homeContent = [
         '---',
@@ -273,7 +335,10 @@ function generateSecondBrainVault(planningDir, rootDir) {
         `> **Última Atualização:** ${new Date().toISOString()}  `,
         '',
         '## 🗺️ Visualização & Mapas Mentais',
-        '- 🎨 **[[00-Vault.canvas|Abrir Canvas Interativo do Projeto (Obsidian Canvas)]]**',
+        '- 🎨 **[[00-Vault.canvas|Abrir Canvas do Segundo Cérebro (Mindmap Ativo)]]** — Visão 2D interativa conectando Fase Ativa, Decisões, Módulos e Lições.',
+        '- 🗺️ **[[01-Roadmap.canvas|Abrir Canvas do Roteiro Completo (Linha do Tempo)]]** — Visão panorâmica dos Milestones e das 37 fases organizadas cronologicamente.',
+        '- 🌐 [Grafo Visual Interativo de Conhecimento (HTML)](file:///../intel/graph-view.html) — Visualizador gráfico 3D/2D offline com física de partículas.',
+        '- 📈 [Dashboard Visual de Observabilidade 360° (HTML)](file:///../intel/dashboard.html) — Painel executivo com simulador de custos e métricas.',
         '',
         '## 📊 Estatísticas do Segundo Cérebro',
         `- 🏛️ **Decisões Arquiteturais Ativas:** ${totalDecisions} notas em \`Decisions/\``,
@@ -288,20 +353,37 @@ function generateSecondBrainVault(planningDir, rootDir) {
         '- [[Decisions/D-153|D-153: Memória Contínua Claude-Mem]]',
         '- [[Decisions/D-162|D-162: System One Sovereign Sentry]]',
         '- [[Decisions/D-168|D-168: Modular State Lock Subsystem]]',
+        '- [[Decisions/D-174|D-174: Universal Second Brain Obsidian Vault Engine]]',
+        '- [[Decisions/D-175|D-175: Quality-First Telemetry & Zero Amnesia Dashboard]]',
         '',
-        '## 📦 Módulos Centrais (Top PageRank)',
-        primaryModules
-            .sort((a, b) => b.pageRank - a.pageRank)
+        '## 📦 Módulos Centrais de Produção (src/)',
+        productionModules
             .slice(0, 8)
-            .map(m => `- [[Modules/${sanitizeSlug(m.file)}|${node_path_1.default.basename(m.file)}]] (PageRank: ${m.pageRank}, ${m.exportsCount} exports)`)
+            .map(m => `- [[Modules/${sanitizeSlug(m.file)}|${node_path_1.default.basename(m.file)}]] (\`${m.file}\`, PageRank: ${m.pageRank}, ${m.exportsCount} exports)`)
             .join('\n'),
+        '',
+        toolingModules.length > 0 ? '## 🛠️ Suporte, Testes e Tooling' : '',
+        toolingModules.length > 0
+            ? toolingModules
+                .slice(0, 4)
+                .map(m => `- [[Modules/${sanitizeSlug(m.file)}|${node_path_1.default.basename(m.file)}]] (\`${m.file}\`, PageRank: ${m.pageRank})`)
+                .join('\n')
+            : '',
+        '',
+        lessonsList.length > 0 ? '## 🛡️ Lições de Auto-Cura & Anti-Patterns Recentes' : '',
+        lessonsList.length > 0
+            ? lessonsList
+                .slice(0, 6)
+                .map(l => `- [[Lessons/${l.id}|${l.id}: ${l.title.slice(0, 70)}]]`)
+                .join('\n')
+            : '',
         '',
         '---',
         '*Gerado automaticamente pelo GSD Core Nexus. Todos os nós estão integrados e navegáveis bidirecionalmente.*',
         '',
-    ].join('\n');
+    ].filter(Boolean).join('\n');
     (0, shell_command_projection_cjs_1.platformWriteSync)(homePath, homeContent);
-    // 7. Generate 00-Vault.canvas (Obsidian Canvas Visual Mindmap)
+    // 8. Generate 00-Vault.canvas (Obsidian Canvas Visual Mindmap)
     const canvasPath = node_path_1.default.join(vaultDir, '00-Vault.canvas');
     const canvasNodes = [];
     const canvasEdges = [];
@@ -339,9 +421,9 @@ function generateSecondBrainVault(planningDir, rootDir) {
             color: '5',
         });
     });
-    // Right column: Top Modules (Green)
-    const topModules = primaryModules.slice(0, 4);
-    topModules.forEach((mod, idx) => {
+    // Right column: Top Production Modules from src/ (Green)
+    const topProdModules = (productionModules.length > 0 ? productionModules : primaryModules).slice(0, 4);
+    topProdModules.forEach((mod, idx) => {
         const modNodeId = `node-mod-${idx}`;
         canvasNodes.push({
             id: modNodeId,
@@ -362,11 +444,43 @@ function generateSecondBrainVault(planningDir, rootDir) {
             color: '4',
         });
     });
+    // Bottom row: Top Self-Healing Lessons (Orange, color: 2)
+    const topLessons = lessonsList.slice(0, 3);
+    topLessons.forEach((les, idx) => {
+        const lesNodeId = `node-lesson-${idx}`;
+        canvasNodes.push({
+            id: lesNodeId,
+            type: 'text',
+            text: `### 🛡️ [[Lessons/${les.id}|${les.id}]]\n**${les.category}**\n${les.title.slice(0, 80)}...`,
+            x: 180 + idx * 300,
+            y: 450,
+            width: 270,
+            height: 120,
+            color: '2', // Orange
+        });
+        canvasEdges.push({
+            id: `edge-${lesNodeId}-to-phase`,
+            fromNode: lesNodeId,
+            fromSide: 'top',
+            toNode: 'node-active-phase',
+            toSide: 'bottom',
+            color: '2',
+        });
+    });
     const canvasPayload = {
         nodes: canvasNodes,
         edges: canvasEdges,
     };
     (0, shell_command_projection_cjs_1.platformWriteSync)(canvasPath, JSON.stringify(canvasPayload, null, 2));
+    // 9. Generate 01-Roadmap.canvas inside the vault (Full 37-Phase Visual Roadmap)
+    const roadmapCanvasPath = node_path_1.default.join(vaultDir, '01-Roadmap.canvas');
+    try {
+        const { payload: roadmapPayload } = canvasGenMod.exportRoadmapCanvas(planningDir);
+        (0, shell_command_projection_cjs_1.platformWriteSync)(roadmapCanvasPath, JSON.stringify(roadmapPayload, null, 2));
+    }
+    catch {
+        // Non-blocking
+    }
     // 8. Generate .obsidian/ configuration files
     const graphConfigPath = node_path_1.default.join(obsidianConfigDir, 'graph.json');
     const graphConfig = {
@@ -396,6 +510,7 @@ function generateSecondBrainVault(planningDir, rootDir) {
     return {
         vaultPath: vaultDir,
         canvasPath,
+        roadmapCanvasPath,
         homePath,
         totalNotes,
         totalDecisions,

@@ -60,15 +60,15 @@ function formatBoxLine(content: string): string {
       const charWidth = (charCode === 0xfe0f || (charCode >= 0x0300 && charCode <= 0x036f))
         ? 0
         : ((charCode >= 0x1100 && charCode <= 0x115f) ||
-           (charCode >= 0x2600 && charCode <= 0x27bf) ||
-           (charCode >= 0x2e80 && charCode <= 0xa4cf) ||
-           (charCode >= 0xac00 && charCode <= 0xd7a3) ||
-           (charCode >= 0xf900 && charCode <= 0xfaff) ||
-           (charCode >= 0xfe10 && charCode <= 0xfe19) ||
-           (charCode >= 0xfe30 && charCode <= 0xfe6f) ||
-           (charCode >= 0xff00 && charCode <= 0xff60) ||
-           (charCode >= 0xffe0 && charCode <= 0xffe6) ||
-           (charCode >= 0x1f000 && charCode <= 0x1faff)) ? 2 : 1;
+          (charCode >= 0x2600 && charCode <= 0x27bf) ||
+          (charCode >= 0x2e80 && charCode <= 0xa4cf) ||
+          (charCode >= 0xac00 && charCode <= 0xd7a3) ||
+          (charCode >= 0xf900 && charCode <= 0xfaff) ||
+          (charCode >= 0xfe10 && charCode <= 0xfe19) ||
+          (charCode >= 0xfe30 && charCode <= 0xfe6f) ||
+          (charCode >= 0xff00 && charCode <= 0xff60) ||
+          (charCode >= 0xffe0 && charCode <= 0xffe6) ||
+          (charCode >= 0x1f000 && charCode <= 0x1faff)) ? 2 : 1;
       if (curWidth + charWidth > INNER_WIDTH) break;
       acc += char;
       curWidth += charWidth;

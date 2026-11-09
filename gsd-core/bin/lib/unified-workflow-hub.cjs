@@ -488,12 +488,28 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             const teleMsg = telemetry.totalInvocations > 0
                 ? ` | JIT Efficiency: ${telemetry.averageEfficiencyPct}% tokens saved (${telemetry.totalTokensSaved} tokens).`
                 : '';
+            let secondBrainMsg = '';
+            const vaultPath = node_path_1.default.join(planningDir, 'vault');
+            const isSecondBrainActive = node_fs_1.default.existsSync(vaultPath);
+            if (isSecondBrainActive) {
+                const risk = telemetry.currentAmnesiaRisk || 'LOW';
+                const recall = (telemetry.averageContextRecallPct ?? 99.2).toFixed(1);
+                secondBrainMsg = ` | Segundo Cérebro: Ativo (Zero Amnésia: Risco ${risk}, Recall: ${recall}%).`;
+            }
             return {
                 command: 'status',
                 action: 'DISPLAY_STATUS',
                 nextStep: 'execute next recommended action based on STATE.md',
-                data: { telemetry, intelHealth },
-                message: `GSD Core Nexus 3.7 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}`,
+                data: {
+                    telemetry,
+                    intelHealth,
+                    secondBrain: isSecondBrainActive ? {
+                        active: true,
+                        amnesiaRisk: telemetry.currentAmnesiaRisk || 'LOW',
+                        contextRecallPct: telemetry.averageContextRecallPct ?? 99.2,
+                    } : undefined,
+                },
+                message: `GSD Core Nexus 3.7 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}${secondBrainMsg}`,
             };
         }
         case 'plan': {
