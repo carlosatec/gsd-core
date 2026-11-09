@@ -228,7 +228,15 @@ function getPhaseFileStats(phaseDir: string): PhaseFileStats {
     hasResearch: scopedFiles.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md'),
     hasContext: findContextMdIn(scopedFiles) !== null,
     hasVerification: scopedFiles.some(f => f.endsWith('-VERIFICATION.md') || f === 'VERIFICATION.md'),
-    hasReviews: scopedFiles.some(f => f.endsWith('-REVIEWS.md') || f === 'REVIEWS.md'),
+    hasReviews: scopedFiles.some(
+      f =>
+        f.endsWith('-REVIEWS.md') ||
+        f === 'REVIEWS.md' ||
+        f.endsWith('-REVIEW.md') ||
+        f === 'REVIEW.md' ||
+        f.endsWith('-CODE-REVIEW.md') ||
+        f === 'CODE-REVIEW.md',
+    ),
     scope: scan.scope,
   };
 }
@@ -350,6 +358,22 @@ function summaryCandidates(plan: string): string[] {
   ];
   const extended = base.match(/^(\d+)-PLAN-(\d+)/i);
   if (extended) candidates.push(dir + extended[1] + '-' + extended[2] + '-SUMMARY.md');
+  // Phase 36: consolidated phase-level summary support (e.g. `35-SUMMARY.md` matching `35-01-PLAN.md`).
+  const phasePrefixMatch = base.match(/^((?:\d+[A-Z]?)(?:\.\d+)*)-(?:PLAN|\d+)/i);
+  if (phasePrefixMatch) {
+    const phasePrefix = phasePrefixMatch[1];
+    candidates.push(dir + phasePrefix + '-SUMMARY.md');
+    if (dir) candidates.push(phasePrefix + '-SUMMARY.md');
+    const unpadded = phasePrefix.replace(/^0+/, '');
+    if (unpadded && unpadded !== phasePrefix) {
+      candidates.push(dir + unpadded + '-SUMMARY.md');
+      if (dir) candidates.push(unpadded + '-SUMMARY.md');
+    }
+    if (/^\d+$/.test(phasePrefix) && phasePrefix.length === 1) {
+      candidates.push(dir + phasePrefix.padStart(2, '0') + '-SUMMARY.md');
+      if (dir) candidates.push(phasePrefix.padStart(2, '0') + '-SUMMARY.md');
+    }
+  }
   // #3183: canonical-id form. Restores the coverage of the pre-migration
   // bespoke I001 rule (verify.cts, pre-#3183, via validate.cjs's now-unused
   // `canonicalPlanStem` — behaviourally identical to `extractCanonicalPlanId`,

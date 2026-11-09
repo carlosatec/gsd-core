@@ -186,6 +186,10 @@ function aggregateOperationalSessions(planningDir) {
                         // Non-fatal: ignore single malformed line
                     }
                 }
+                // Skip standalone decision traces that do not represent interactive operational sessions
+                const isDecisionTraceOnly = !startEv && !endEv && sessionTools === 0 && sessionMuts === 0;
+                if (isDecisionTraceOnly)
+                    continue;
                 const id = f.replace(/^session_/, '').replace(/\.jsonl$/, '');
                 const status = endEv?.status || (endEv ? 'completed' : 'in_progress');
                 const duration = Number(endEv?.totalDurationMs) || 0;

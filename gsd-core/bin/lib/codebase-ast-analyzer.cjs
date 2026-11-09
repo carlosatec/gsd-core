@@ -2920,20 +2920,43 @@ function queryFileDependencies(graph, targetFile) {
         external: fileData && Array.isArray(fileData.externalDeps) ? fileData.externalDeps : [],
     };
 }
+const _graphMemoryCache = new Map();
+function _clearGraphMemoryCache() {
+    _graphMemoryCache.clear();
+}
 function saveCodebaseGraph(planningDir, graph) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
     const outPath = node_path_1.default.join(intelDir, 'codebase-graph.json');
     (0, shell_command_projection_cjs_1.platformWriteSync)(outPath, JSON.stringify(graph, null, 2));
+    try {
+        const resolved = node_path_1.default.resolve(outPath);
+        const st = node_fs_1.default.statSync(resolved);
+        _graphMemoryCache.set(resolved, { mtimeMs: st.mtimeMs, size: st.size, graph });
+    }
+    catch {
+        _graphMemoryCache.delete(node_path_1.default.resolve(outPath));
+    }
     return outPath;
 }
 function loadCodebaseGraph(planningDir) {
-    const graphPath = node_path_1.default.join(planningDir, 'intel', 'codebase-graph.json');
+    const graphPath = node_path_1.default.resolve(node_path_1.default.join(planningDir, 'intel', 'codebase-graph.json'));
     try {
+        if (!node_fs_1.default.existsSync(graphPath)) {
+            _graphMemoryCache.delete(graphPath);
+            return null;
+        }
+        const st = node_fs_1.default.statSync(graphPath);
+        const cached = _graphMemoryCache.get(graphPath);
+        if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) {
+            return cached.graph;
+        }
         const content = (0, shell_command_projection_cjs_1.platformReadSync)(graphPath);
         if (!content)
             return null;
-        return JSON.parse(content);
+        const graph = JSON.parse(content);
+        _graphMemoryCache.set(graphPath, { mtimeMs: st.mtimeMs, size: st.size, graph });
+        return graph;
     }
     catch {
         return null;
@@ -2958,6 +2981,7 @@ module.exports = {
     queryTopCentralFiles,
     saveCodebaseGraph,
     loadCodebaseGraph,
+    _clearGraphMemoryCache,
     inspectRouteSecurityGuards,
     inspectRouteDataAccess,
     compareDuplicateSymbols,

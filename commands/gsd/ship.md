@@ -19,13 +19,17 @@ Closes the plan → execute → verify → ship loop.
 
 <execution_context>
 @~/.claude/gsd-core/workflows/ship.md
-@~/.claude/gsd-core/workflows/pr-branch.md
-@~/.claude/gsd-core/workflows/complete-milestone.md
-@~/.claude/gsd-core/workflows/audit-milestone.md
-@~/.claude/gsd-core/workflows/milestone-summary.md
-@~/.claude/gsd-core/workflows/new-milestone.md
-@~/.claude/gsd-core/workflows/graduation.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/pr-branch.md
+- workflows/complete-milestone.md
+- workflows/audit-milestone.md
+- workflows/milestone-summary.md
+- workflows/new-milestone.md
+- workflows/graduation.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

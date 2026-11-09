@@ -3277,20 +3277,44 @@ function queryFileDependencies(
   };
 }
 
+const _graphMemoryCache = new Map<string, { mtimeMs: number; size: number; graph: CodebaseGraph }>();
+
+function _clearGraphMemoryCache(): void {
+  _graphMemoryCache.clear();
+}
+
 function saveCodebaseGraph(planningDir: string, graph: CodebaseGraph): string {
   const intelDir = path.join(planningDir, 'intel');
   platformEnsureDir(intelDir);
   const outPath = path.join(intelDir, 'codebase-graph.json');
   platformWriteSync(outPath, JSON.stringify(graph, null, 2));
+  try {
+    const resolved = path.resolve(outPath);
+    const st = fs.statSync(resolved);
+    _graphMemoryCache.set(resolved, { mtimeMs: st.mtimeMs, size: st.size, graph });
+  } catch {
+    _graphMemoryCache.delete(path.resolve(outPath));
+  }
   return outPath;
 }
 
 function loadCodebaseGraph(planningDir: string): CodebaseGraph | null {
-  const graphPath = path.join(planningDir, 'intel', 'codebase-graph.json');
+  const graphPath = path.resolve(path.join(planningDir, 'intel', 'codebase-graph.json'));
   try {
+    if (!fs.existsSync(graphPath)) {
+      _graphMemoryCache.delete(graphPath);
+      return null;
+    }
+    const st = fs.statSync(graphPath);
+    const cached = _graphMemoryCache.get(graphPath);
+    if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) {
+      return cached.graph;
+    }
     const content = platformReadSync(graphPath);
     if (!content) return null;
-    return JSON.parse(content) as CodebaseGraph;
+    const graph = JSON.parse(content) as CodebaseGraph;
+    _graphMemoryCache.set(graphPath, { mtimeMs: st.mtimeMs, size: st.size, graph });
+    return graph;
   } catch {
     return null;
   }
@@ -3319,6 +3343,7 @@ export = {
   queryTopCentralFiles,
   saveCodebaseGraph,
   loadCodebaseGraph,
+  _clearGraphMemoryCache,
   inspectRouteSecurityGuards,
   inspectRouteDataAccess,
   compareDuplicateSymbols,

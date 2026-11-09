@@ -131,6 +131,7 @@ interface SystemOneReRankResult<T extends SystemOneReRankItem = SystemOneReRankI
 interface EvaluationOptions {
   planningDir?: string;
   rootDir?: string;
+  graph?: CodebaseGraph | null;
   diff?: string;
   diffLines?: number;
   testsPassed?: boolean;
@@ -208,6 +209,7 @@ class SystemOneLearningStore {
   readonly planningDir: string;
   readonly filePath: string;
   readonly maxRules: number;
+  private static _rulesCache = new Map<string, { mtimeMs: number; rules: SystemOneLearningRule[] }>();
 
   constructor(planningDir?: string, maxRules = LEARNING_STORE_MAX_RULES) {
     this.planningDir = planningDir || path.resolve('.planning');
@@ -218,14 +220,19 @@ class SystemOneLearningStore {
   loadRules(): SystemOneLearningRule[] {
     try {
       if (!fs.existsSync(this.filePath)) {
+        SystemOneLearningStore._rulesCache.delete(this.filePath);
         return [];
+      }
+      const st = fs.statSync(this.filePath);
+      const cached = SystemOneLearningStore._rulesCache.get(this.filePath);
+      if (cached && cached.mtimeMs === st.mtimeMs) {
+        return cached.rules;
       }
       const raw = fs.readFileSync(this.filePath, 'utf8');
       const parsed = JSON.parse(raw) as SystemOneLearningPayload;
-      if (Array.isArray(parsed?.rules)) {
-        return parsed.rules;
-      }
-      return [];
+      const rules = Array.isArray(parsed?.rules) ? parsed.rules : [];
+      SystemOneLearningStore._rulesCache.set(this.filePath, { mtimeMs: st.mtimeMs, rules });
+      return rules;
     } catch {
       return [];
     }
@@ -250,6 +257,7 @@ class SystemOneLearningStore {
       const tmpPath = `${this.filePath}.tmp.${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
       renameWithRetry(tmpPath, this.filePath);
+      SystemOneLearningStore._rulesCache.delete(this.filePath);
     } catch {
       // Non-blocking fail-safe
     }
@@ -1127,6 +1135,7 @@ class UserRuntimeSemanticProvider {
 class SystemOneEngine {
   readonly analytical: AstAnalyticalProvider;
   readonly semantic: UserRuntimeSemanticProvider;
+  private static _sharedLoggers = new Map<string, InstanceType<typeof SessionLogger>>();
 
   constructor() {
     this.analytical = new AstAnalyticalProvider();
@@ -1148,7 +1157,12 @@ class SystemOneEngine {
   ): void {
     if (!planningDir) return;
     try {
-      const logger = new SessionLogger({ planningDir });
+      const resolved = path.resolve(planningDir);
+      let logger = SystemOneEngine._sharedLoggers.get(resolved);
+      if (!logger) {
+        logger = new SessionLogger({ planningDir: resolved, sessionId: `sys1_${process.pid}` });
+        SystemOneEngine._sharedLoggers.set(resolved, logger);
+      }
       logger.logSystemOneDecision(decision);
     } catch {
       // Non-blocking telemetry emission
@@ -1160,8 +1174,8 @@ class SystemOneEngine {
    */
   async classifyRisk(filePath: string, options?: EvaluationOptions): Promise<SystemOneScoreResult> {
     const startTime = Date.now();
-    let graph: CodebaseGraph | null = null;
-    if (options?.planningDir) {
+    let graph: CodebaseGraph | null = options?.graph !== undefined ? options.graph : null;
+    if (!graph && options?.planningDir) {
       graph = loadCodebaseGraph(options.planningDir);
     }
     if (!graph && options?.rootDir) {
@@ -1197,8 +1211,8 @@ class SystemOneEngine {
     context?: EvaluationOptions & { filePath?: string }
   ): Promise<SystemOneNoulResult> {
     const startTime = Date.now();
-    let graph: CodebaseGraph | null = null;
-    if (context?.planningDir) {
+    let graph: CodebaseGraph | null = context?.graph !== undefined ? context.graph : null;
+    if (!graph && context?.planningDir) {
       graph = loadCodebaseGraph(context.planningDir);
     }
     if (!graph && context?.rootDir) {
@@ -1230,8 +1244,8 @@ class SystemOneEngine {
    */
   classifyRiskSync(filePath: string, options?: EvaluationOptions): SystemOneScoreResult {
     const startTime = Date.now();
-    let graph: CodebaseGraph | null = null;
-    if (options?.planningDir) {
+    let graph: CodebaseGraph | null = options?.graph !== undefined ? options.graph : null;
+    if (!graph && options?.planningDir) {
       graph = loadCodebaseGraph(options.planningDir);
     }
     if (!graph && options?.rootDir) {
@@ -1261,8 +1275,8 @@ class SystemOneEngine {
     context?: EvaluationOptions & { filePath?: string }
   ): SystemOneNoulResult {
     const startTime = Date.now();
-    let graph: CodebaseGraph | null = null;
-    if (context?.planningDir) {
+    let graph: CodebaseGraph | null = context?.graph !== undefined ? context.graph : null;
+    if (!graph && context?.planningDir) {
       graph = loadCodebaseGraph(context.planningDir);
     }
     if (!graph && context?.rootDir) {

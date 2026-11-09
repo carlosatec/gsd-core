@@ -28,7 +28,7 @@ const {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import roadmapParserMod = require('./roadmap-parser.cjs');
 const { getMilestoneInfo, extractCurrentMilestone, isMilestoneBoundedInRoadmap, hasMilestoneSectioning } = roadmapParserMod;
-import { platformWriteSync, platformReadSync, platformEnsureDir, retryRenameSync, toPosixPath, execGit } from './shell-command-projection.cjs';
+import { platformWriteSync, platformReadSync, platformEnsureDir, toPosixPath, execGit } from './shell-command-projection.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import planningWorkspace = require('./planning-workspace.cjs');
 const { planningDir, planningPaths } = planningWorkspace;
@@ -91,11 +91,6 @@ type Diagnostic = healthDiagnosticTypesMod.Diagnostic;
 // Local frontmatter type alias matching frontmatter.cts so we can call reconstructFrontmatter
 type FrontmatterValue = string | string[] | Record<string, unknown>;
 type Frontmatter = Record<string, FrontmatterValue>;
-
-interface StateLockClock {
-  now(): number;
-  sleep(ms: number): void;
-}
 
 interface ReadModifyWriteOptions {
   resync?: boolean;
@@ -237,154 +232,19 @@ const _diskScanCache = new Map<string, {
 }>();
 
 // Track all lock files held by this process so they can be removed on exit.
-// process.on('exit') fires even on process.exit(1), unlike try/finally which is
-// skipped when error() calls process.exit(1) inside a locked region (#1916).
-const _heldStateLocks = new Set<string>();
-process.on('exit', () => {
-  for (const lockPath of _heldStateLocks) {
-    try { fs.unlinkSync(lockPath); } catch { /* already gone */ }
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Lock liveness probe (test seam) — audit M1
-//
-// mtime is a LEAKY proxy for "the holder is still alive": a live-but-slow writer
-// whose critical section runs past staleThresholdMs ages out and a waiter would
-// steal its lock → two writers in STATE.md's read-modify-write window → lost
-// update / corruption (the recurring #500/#905/#1230 family). The real signal —
-// process.kill(pid, 0) — is already used by capability-lock.cts. We backport it
-// here. The indirection lets unit tests inject a deterministic isPidAlive without
-// real pids (mirrors capability-lock's _lockProbes / _setLockProbes seam).
-// ---------------------------------------------------------------------------
-
-/** Is `pid` a live process? process.kill(pid, 0) succeeds for a live (signalable) process. */
-function _realIsPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true; // signalable → alive
-  } catch (err) {
-    // EPERM = process exists but we cannot signal it (still ALIVE). ESRCH = gone.
-    return (err as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
-
-const _stateLockProbes: { isPidAlive: (pid: number) => boolean } = { isPidAlive: _realIsPidAlive };
-
-// ---------------------------------------------------------------------------
-// State-lock test hooks (test seam) — audit M8 / M9
-//
-// Both M8 (scan-before-lock TOCTOU in writeStateMd) and M9 (orphan empty lock +
-// fd leak on a recoverable writeSync/closeSync error in acquireStateLock) are
-// concurrency / resource-safety issues a single-threaded test cannot otherwise
-// observe. These purpose-built hooks make the failure windows deterministic
-// (mirrors the M1 _setLockProbes seam above):
-//
-//   afterAcquire(lockPath)  — fired inside writeStateMd immediately AFTER the lock
-//     is acquired. A test can mutate the disk here (simulate a concurrent writer
-//     landing in the scan→lock window) to prove the disk scan runs INSIDE the lock.
-//   simulateWriteError      — a ONE-SHOT errno string. When set, the next writeSync
-//     inside acquireStateLock throws it (and the hook self-clears), forcing the
-//     openSync-succeeds-then-write-fails cleanup path without an OS-level fault.
-//   onLoopIteration(ctx)    — fired at the TOP of each acquireStateLock retry
-//     iteration so a test can snapshot whether an orphan lock is stranded.
-//   beforeSteal(ctx)        — fired AFTER the steal decision but BEFORE the identity
-//     re-confirm + atomic rename-steal. A test can recreate a fresh lock here to
-//     simulate a racer winning the steal in the decision→steal gap, proving the
-//     identity re-confirm aborts a double-steal (PR #1532 review window b).
-//
-// All hooks default to no-ops; real callers are byte-for-behaviour unchanged.
-// ---------------------------------------------------------------------------
-interface StateLockTestHooks {
-  afterAcquire?: (lockPath: string) => void;
-  simulateWriteError?: string | null;
-  onLoopIteration?: (ctx: { iteration: number }) => void;
-  beforeSteal?: (ctx: { lockPath: string }) => void;
-}
-const _stateLockTestHooks: StateLockTestHooks = {};
-
-/**
- * Consume the one-shot simulateWriteError errno, if set. Returns an Error with the
- * configured `.code` and self-clears so only the NEXT writeSync throws (the retry
- * then succeeds). Returns null when no injection is pending.
- */
-function _consumeSimulatedWriteError(): NodeJS.ErrnoException | null {
-  const code = _stateLockTestHooks.simulateWriteError;
-  if (!code) return null;
-  _stateLockTestHooks.simulateWriteError = null; // one-shot
-  const e = new Error('simulated writeSync failure (' + code + ')') as NodeJS.ErrnoException;
-  e.code = code;
-  return e;
-}
-
-function _stateLockIsPidAlive(pid: number): boolean {
-  return _stateLockProbes.isPidAlive(pid);
-}
-
-/**
- * Is the holder recorded in the lock body VERIFIED-LIVE? The STATE.md lock body is
- * a bare pid (written at acquire time). Returns true ONLY when the body parses to a
- * positive integer pid AND that pid signals alive. A garbage / non-numeric / legacy
- * body (or a dead pid) is NOT verified-live, so the lock stays stealable — corrupt
- * locks never block forever, and a live holder is never stolen.
- */
-function _stateHolderVerifiedLive(lockPath: string): boolean {
-  const pid = _stateLockBodyPid(lockPath);
-  return pid !== null && _stateLockIsPidAlive(pid);
-}
-
-/**
- * Three-way classification of a lock body read (issue #3057 B2): a pid that
- * parses cleanly, a body that reads but is empty/garbage/non-numeric, or a
- * body that could not be READ at all (I/O fault — permission error, transient
- * NFS/overlay-fs hiccup, mid-rename, etc.). The third case is NOT the same as
- * the second: an unreadable body tells us nothing about whether the lock is
- * fresh, stale, or actively held mid-write by a live process whose file the
- * fault merely prevented us from reading. Collapsing it into "empty" would
- * make it eligible for the short fresh-create-floor steal window, which can
- * rob an active holder purely because of a transient read fault.
- */
-type LockBodyStatus =
-  | { kind: 'pid'; pid: number }
-  | { kind: 'empty' }
-  | { kind: 'unreadable' };
-
-/**
- * Read + classify the lock body at `lockPath`. See `LockBodyStatus` for the
- * three-way distinction the steal decision in `acquireStateLock` relies on.
- */
-function _stateLockBodyStatus(lockPath: string): LockBodyStatus {
-  let body: string;
-  try {
-    body = fs.readFileSync(lockPath, 'utf-8');
-  } catch {
-    return { kind: 'unreadable' };
-  }
-  const trimmed = body.trim();
-  const pid = parseInt(trimmed, 10);
-  if (!Number.isInteger(pid) || pid <= 0 || String(pid) !== trimmed) return { kind: 'empty' };
-  return { kind: 'pid', pid };
-}
-
-/**
- * Parse the lock body to its recorded pid, or null when the body is empty / non-numeric
- * / unreadable (legacy or mid-creation). Distinguishing a COMPLETE dead-pid body (steal
- * promptly) from an EMPTY/unparseable one (the create→write window — do not steal while
- * fresh) is what `_stateHolderVerifiedLive` alone cannot express, so the steal decision
- * in acquireStateLock reads the pid directly (PR #1532 review, window a).
- *
- * NOTE: this collapses "genuinely empty" and "unreadable" to the same `null` —
- * that is fine for `_stateHolderVerifiedLive` (both mean "not verified-live"
- * either way), but the STEAL-TIMING decision must not make that same
- * collapse (#3057 B2) and reads `_stateLockBodyStatus` directly instead.
- */
-function _stateLockBodyPid(lockPath: string): number | null {
-  const status = _stateLockBodyStatus(lockPath);
-  return status.kind === 'pid' ? status.pid : null;
-}
-
-// Monotonic sequence for unique stale-steal rename targets (no crypto dependency).
-let _stateStealSeq = 0;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import stateLockMod = require('./state-lock.cjs');
+const {
+  acquireStateLock,
+  releaseStateLock,
+  withStateLock,
+  _setLockProbes,
+  _resetLockProbes,
+  _setStateLockTestHooks,
+  _resetStateLockTestHooks,
+  _stateLockTestHooks,
+} = stateLockMod;
+type StateLockClock = stateLockMod.StateLockClock;
 
 // The `byPhaseTablePattern` regex hoisted here for #320 (canonical-column-
 // ORDER-only By-Phase table match) is retired (#2245 audit): its last caller
@@ -2837,219 +2697,7 @@ function syncStateFrontmatter(
   return `---\n${yamlStr}\n---\n\n${body}`;
 }
 
-// Transient errno codes that indicate a temporary filesystem condition under
-// concurrent O_EXCL races — Docker overlay-fs (ENOENT/EINVAL/EIO), NFS
-// (ESTALE), and OS-level interrupt/retry signals (EAGAIN/EINTR).  These are
-// recoverable; acquireStateLock retries instead of propagating them.
-// Truly fatal codes (EMFILE, ENOSPC, EROFS, EACCES) are NOT in this set and
-// will still throw immediately.
-const ACQUIRE_LOCK_RETRY_ERRNOS = new Set([
-  'EPERM',   // Windows / macOS AV scanner holds the file open during delete
-  'EBUSY',   // Windows: file in use by another process
-  'EAGAIN',  // POSIX: resource temporarily unavailable
-  'EINTR',   // POSIX: syscall interrupted by signal
-  'EINVAL',  // Docker overlay-fs: transient during concurrent O_EXCL creation
-  'EIO',     // Docker overlay-fs / NFS: transient I/O error
-  'ENOENT',  // Docker overlay-fs: parent dir transiently missing during race
-  'ESTALE',  // NFS: stale file handle (self-resolves on retry)
-]);
 
-/**
- * Acquire a lockfile for STATE.md operations.
- * Returns the lock path for later release.
- *
- * @param statePath
- * @param clock
- *   Optional clock seam for testing. Defaults to realClock (Date.now + Atomics.wait).
- *   Pass a fake clock from tests/helpers/clock.cjs to drive timeout/stale logic
- *   without real wall-clock waits.
- */
-function acquireStateLock(statePath: string, clock?: StateLockClock): string {
-  if (clock === undefined) clock = realClock;
-  const lockPath = statePath + '.lock';
-  const retryDelay = 200; // ms
-  const maxWaitMs = 30000;
-  // Deadman ceiling (audit M1) — set ABOVE maxWaitMs so a holder that reads as
-  // VERIFIED-LIVE is NEVER stolen within the wait budget; only a crashed (dead
-  // pid) or unparseable-body lock is stolen, and a pid-reuse holder (reads alive
-  // but is unrelated) is recovered once age crosses this absolute ceiling rather
-  // than blocking forever. The prior mtime-only `staleThresholdMs = 10000` gate
-  // was BELOW maxWaitMs, so a live-but-slow holder >10 s was robbed mid-write.
-  const deadmanCeilingMs = 60000;
-  // Fresh-create floor (PR #1532 review, window a) — a lock with an EMPTY/unparseable
-  // body is either mid-creation (O_EXCL create done, pid not yet written by the holder)
-  // or a genuine orphan. While such a body is younger than this floor it is treated as
-  // mid-creation and is NEVER stolen — stealing it at age ≈ 0 robs a holder still
-  // writing its pid (the lost-update window capability-lock.cts's `age <= LOCK_STALE_MS`
-  // floor closes). The create→write gap is sub-millisecond; this floor is orders of
-  // magnitude larger yet well under maxWaitMs so a real orphan still clears within budget.
-  // A COMPLETE dead-pid body is NOT subject to this floor — it is stolen promptly.
-  const freshCreateFloorMs = 1000;
-  const startedAt = clock.now();
-
-  // Shared helper: check the time budget then back off with jitter before the
-  // next retry.  Both the EEXIST contention path and the recoverable-errno path
-  // must go through this so neither can busy-spin (#1217).
-  const checkBudgetAndSleep = (context: string) => {
-    if (clock.now() - startedAt >= maxWaitMs) {
-      const e = new Error(
-        'acquireStateLock: ' + lockPath + ' ' + context + ' for ' +
-        (clock.now() - startedAt) + 'ms (exceeded ' + maxWaitMs + 'ms budget)'
-      );
-      (e as unknown as Record<string, unknown>).lockBudgetExceeded = true;
-      throw e;
-    }
-    const jitter = Math.floor(Math.random() * 50);
-    clock.sleep(retryDelay + jitter);
-  };
-
-  let _loopIteration = 0;
-  while (true) {
-    if (_stateLockTestHooks.onLoopIteration) _stateLockTestHooks.onLoopIteration({ iteration: _loopIteration++ });
-    try {
-      const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
-      // Audit M9 (resource-safety): once the exclusive create SUCCEEDS, a
-      // writeSync/closeSync failure must NOT leak the fd or strand the just-created
-      // (now empty) lock — an orphan body self-blocks every later acquirer until a
-      // liveness steal or the deadman. On any write/close error, guardedly close the
-      // fd and unlink the file we created, then re-throw to the existing outer catch
-      // (which keeps classifying recoverable vs fatal errnos — DRY). A FATAL errno
-      // still propagates after cleanup; a RECOVERABLE one retries from a clean slate.
-      // Mirrors capability-lock.cts:415-425.
-      try {
-        const injected = _consumeSimulatedWriteError();
-        if (injected) throw injected; // test seam: one-shot writeSync failure (M9)
-        fs.writeSync(fd, String(process.pid));
-        fs.closeSync(fd);
-      } catch (writeErr) {
-        try { fs.closeSync(fd); } catch { /* best-effort — fd may already be closed */ }
-        // Best-effort unlink of the lock WE just created. Guarded so we never throw
-        // here; if another acquirer already stole the empty lock the unlink is a
-        // harmless ENOENT no-op (we do not double-unlink someone else's lock — the
-        // open(O_EXCL) above guarantees we created this path this iteration).
-        try { fs.unlinkSync(lockPath); } catch { /* best-effort — no orphan */ }
-        throw writeErr; // re-throw to the outer catch for recoverable/fatal classification
-      }
-      // Exit-time cleanup keeps a crashed locked region from leaving a stale file (#1916).
-      _heldStateLocks.add(lockPath);
-      return lockPath;
-    } catch (err) {
-      // Transient filesystem errors (Docker overlay-fs, NFS, OS signals, AV scanners)
-      // are recoverable — retry with the same budget + backoff as the EEXIST path so
-      // a permanently-failing errno cannot busy-spin at 100% CPU (#1217).
-      // See ACQUIRE_LOCK_RETRY_ERRNOS for the full list and rationale.
-      if (ACQUIRE_LOCK_RETRY_ERRNOS.has((err as NodeJS.ErrnoException).code as string)) {
-        checkBudgetAndSleep((err as NodeJS.ErrnoException).code + ' persisted');
-        continue;
-      }
-      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err; // propagate — silent bypass causes lost updates
-      // Liveness-gated steal (audit M1) + steal-safety (PR #1532 review). The steal
-      // decision is four-way on the lock body (#3057 B2 added the fourth):
-      //   - VERIFIED-LIVE holder (parseable pid that signals alive): NEVER stolen until
-      //     its age crosses the absolute deadman ceiling (the pid-reuse backstop) —
-      //     nuking a slow-but-live writer's lock causes lost updates (#3711 / #500/#905/
-      //     #1230 family).
-      //   - COMPLETE DEAD pid (parseable pid, not alive): stolen PROMPTLY regardless of
-      //     age — a crashed holder left a full body.
-      //   - UNREADABLE body (I/O fault reading the file): NOT the same as empty — we
-      //     have no evidence this is a fresh create window, only that we could not read
-      //     it. Held to the SAME conservative ceiling as a verified-live holder rather
-      //     than the short fresh-create floor, so a transient read fault can never rob
-      //     an active holder the way stealing at 1s would.
-      //   - EMPTY / unparseable body (body WAS read, and holds no valid pid): liveness is
-      //     unknowable. While FRESH (age <= freshCreateFloorMs) it is a lock still
-      //     mid-creation (O_EXCL done, pid not yet written) and is NOT stolen (window a);
-      //     only once aged past the floor is it a genuine orphan and stealable.
-      // The steal itself is an ATOMIC rename-then-recreate (only one racer can rename the
-      // inode) guarded by an identity re-confirm, so a racer that recreates a fresh lock
-      // in the decision→steal gap never has its replacement deleted (window b). Mirrors
-      // capability-lock.cts:455-499.
-      try {
-        const stat = fs.statSync(lockPath);
-        const ageMs = clock.now() - stat.mtimeMs;
-        const bodyStatus = _stateLockBodyStatus(lockPath);
-        const bodyPid = bodyStatus.kind === 'pid' ? bodyStatus.pid : null;
-        const holderLive = bodyPid !== null && _stateLockIsPidAlive(bodyPid);
-        let steal: boolean;
-        if (holderLive) {
-          steal = ageMs > deadmanCeilingMs;   // pid-reuse backstop only
-        } else if (bodyPid !== null) {
-          steal = true;                       // complete dead pid → prompt steal
-        } else if (bodyStatus.kind === 'unreadable') {
-          steal = ageMs > deadmanCeilingMs;   // I/O fault ≠ known-fresh — do not grant the short floor
-        } else {
-          steal = ageMs > freshCreateFloorMs; // empty/garbage → protect the create window
-        }
-        if (steal) {
-          if (_stateLockTestHooks.beforeSteal) _stateLockTestHooks.beforeSteal({ lockPath });
-          // Identity re-confirm immediately before the steal: a racer that stole +
-          // recreated a fresh lock in the decision→steal gap changes (dev, ino) and/or
-          // the body pid → do NOT delete the replacement; re-evaluate from scratch.
-          let confirmStat: fs.Stats;
-          try {
-            confirmStat = fs.statSync(lockPath);
-          } catch {
-            continue; // lock vanished between decision and steal — retry the create.
-          }
-          const sameInstance =
-            typeof stat.dev === 'number' && typeof stat.ino === 'number' &&
-            confirmStat.dev === stat.dev && confirmStat.ino === stat.ino &&
-            _stateLockBodyPid(lockPath) === bodyPid;
-          if (!sameInstance) {
-            // The lock changed under us (a racer won the steal + recreated). Back off
-            // and re-evaluate rather than deleting the racer's fresh replacement.
-            checkBudgetAndSleep('lock changed before steal');
-            continue;
-          }
-          // Atomic steal: rename the inode aside, then remove it. Only ONE racer can
-          // win the rename; a failed rename means another process already stole it, so
-          // we must NOT fall through to a delete — back off and retry the create.
-          const stolen = lockPath + '.stale-' + process.pid + '-' + clock.now() + '-' + (_stateStealSeq++);
-          let renamed = false;
-          try { retryRenameSync(lockPath, stolen); renamed = true; } catch { /* another racer won */ }
-          if (renamed) {
-            try { fs.rmSync(stolen, { force: true }); } catch { /* best-effort */ }
-            // Successful steal — retry immediately to grab the just-freed lock.
-            // Must NOT call checkBudgetAndSleep here: a throw-after-rename would
-            // corrupt filesystem state, and the budget is already bounded on the next
-            // iteration's EEXIST or open attempt (#1217 regression fix).
-            continue;
-          }
-          // Lost the steal race (or a transient rename failure) — apply budget + backoff
-          // so it cannot busy-spin (#1217).
-          checkBudgetAndSleep('stale lock steal lost to racer');
-          continue;
-        }
-      } catch (err) {
-        // Re-throw a budget-exceeded error from the steal path above unchanged — its
-        // message already names the real cause ("lock changed before steal" / "stale
-        // lock steal lost to racer") and double-wrapping it would replace that with the
-        // misleading "statSync failed after EEXIST" context string (#1217 diagnostic fix).
-        if ((err as Record<string, unknown>)?.lockBudgetExceeded) throw err;
-        // statSync failed — lock was likely released between our EEXIST and this
-        // stat call.  Apply budget + backoff so a persistent statSync failure
-        // cannot busy-spin (#1217).
-        checkBudgetAndSleep('statSync failed after EEXIST');
-        continue;
-      }
-      checkBudgetAndSleep('held by live process');
-    }
-  }
-}
-
-function releaseStateLock(lockPath: string): void {
-  _heldStateLocks.delete(lockPath);
-  try { fs.unlinkSync(lockPath); } catch { /* lock already gone */ }
-}
-
-function withStateLock<T>(statePath: string, fn: () => T): T {
-  const lockPath = acquireStateLock(statePath);
-  try {
-    return fn();
-  } finally {
-    releaseStateLock(lockPath);
-  }
-}
 
 /**
  * Write STATE.md with synchronized YAML frontmatter.
@@ -5125,25 +4773,8 @@ export = {
   _FRONTMATTER_KEY_TO_BODY_LABEL: FRONTMATTER_KEY_TO_BODY_LABEL,
   // Test seam (audit M1): inject a deterministic isPidAlive so the liveness-gated
   // steal decision is exercised without real pids. Mirrors capability-lock.cts.
-  _setLockProbes(probes: Partial<{ isPidAlive: (pid: number) => boolean }>): void {
-    if (typeof probes.isPidAlive === 'function') _stateLockProbes.isPidAlive = probes.isPidAlive;
-  },
-  _resetLockProbes(): void {
-    _stateLockProbes.isPidAlive = _realIsPidAlive;
-  },
-  // Test seam (audit M8/M9): inject deterministic hooks for the scan-in-lock window
-  // (afterAcquire), the one-shot recoverable writeSync failure (simulateWriteError),
-  // and per-iteration orphan-lock snapshots (onLoopIteration). See _stateLockTestHooks.
-  _setStateLockTestHooks(hooks: StateLockTestHooks): void {
-    if ('afterAcquire' in hooks) _stateLockTestHooks.afterAcquire = hooks.afterAcquire;
-    if ('simulateWriteError' in hooks) _stateLockTestHooks.simulateWriteError = hooks.simulateWriteError;
-    if ('onLoopIteration' in hooks) _stateLockTestHooks.onLoopIteration = hooks.onLoopIteration;
-    if ('beforeSteal' in hooks) _stateLockTestHooks.beforeSteal = hooks.beforeSteal;
-  },
-  _resetStateLockTestHooks(): void {
-    delete _stateLockTestHooks.afterAcquire;
-    delete _stateLockTestHooks.simulateWriteError;
-    delete _stateLockTestHooks.onLoopIteration;
-    delete _stateLockTestHooks.beforeSteal;
-  },
+  _setLockProbes,
+  _resetLockProbes,
+  _setStateLockTestHooks,
+  _resetStateLockTestHooks,
 };

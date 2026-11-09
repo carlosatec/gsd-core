@@ -449,6 +449,13 @@ describe('getPhaseFileStats', () => {
     assert.strictEqual(stats.hasReviews, true);
   });
 
+  test('detects CODE-REVIEW.md and *-REVIEW.md formats', () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-cu-test-'));
+    fs.writeFileSync(path.join(tmpDir, '36-CODE-REVIEW.md'), '');
+    const stats = coreUtils.getPhaseFileStats(tmpDir);
+    assert.strictEqual(stats.hasReviews, true);
+  });
+
   test('detects CONTEXT.md via findContextMdIn', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-cu-test-'));
     fs.writeFileSync(path.join(tmpDir, 'CONTEXT.md'), '');

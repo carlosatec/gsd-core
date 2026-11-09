@@ -198,7 +198,7 @@ function runAutoUpgrade(planningDir: string, rootDir?: string, options?: AutoUpg
   if (options?.dryRun) {
     return {
       success: true,
-      version: '3.7.0',
+      version: '3.7.1',
       isNewMigration,
       indexedFiles: graph.stats.totalFiles,
       detectedLanguages,
@@ -252,7 +252,7 @@ function runAutoUpgrade(planningDir: string, rootDir?: string, options?: AutoUpg
 
   return {
     success: true,
-    version: '3.7.0',
+    version: '3.7.1',
     isNewMigration,
     indexedFiles: graph.stats.totalFiles,
     detectedLanguages,

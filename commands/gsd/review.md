@@ -17,12 +17,16 @@ Run comprehensive static and heuristic code review over modified files (or whole
 
 <execution_context>
 @~/.claude/gsd-core/workflows/code-review.md
-@~/.claude/gsd-core/workflows/code-review-fix.md
-@~/.claude/gsd-core/workflows/ui-review.md
-@~/.claude/gsd-core/workflows/eval-review.md
-@~/.claude/gsd-core/workflows/audit-fix.md
-@~/.claude/gsd-core/workflows/review.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/code-review-fix.md
+- workflows/ui-review.md
+- workflows/eval-review.md
+- workflows/audit-fix.md
+- workflows/review.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

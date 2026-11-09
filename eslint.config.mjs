@@ -264,6 +264,7 @@ export default tseslint.config(
       'gsd-core/bin/lib/profile-output.cjs',
       'gsd-core/bin/lib/commands.cjs',
       'gsd-core/bin/lib/state.cjs',
+      'gsd-core/bin/lib/state-lock.cjs',
       'gsd-core/bin/lib/milestone.cjs',
       'gsd-core/bin/lib/phase.cjs',
       'gsd-core/bin/lib/verify.cjs',

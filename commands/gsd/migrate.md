@@ -16,17 +16,21 @@ Upgrade legacy project structures and older GSD versions to GSD Core Nexus 2.9+ 
 
 <execution_context>
 @~/.claude/gsd-core/workflows/update.md
-@~/.claude/gsd-core/workflows/import.md
-@~/.claude/gsd-core/workflows/onboard.md
-@~/.claude/gsd-core/workflows/new-project.md
-@~/.claude/gsd-core/workflows/settings.md
-@~/.claude/gsd-core/workflows/settings-advanced.md
-@~/.claude/gsd-core/workflows/settings-integrations.md
-@~/.claude/gsd-core/workflows/ingest-docs.md
-@~/.claude/gsd-core/workflows/sync-skills.md
-@~/.claude/gsd-core/workflows/docs-update.md
-@~/.claude/gsd-core/workflows/profile-user.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/import.md
+- workflows/onboard.md
+- workflows/new-project.md
+- workflows/settings.md
+- workflows/settings-advanced.md
+- workflows/settings-integrations.md
+- workflows/ingest-docs.md
+- workflows/sync-skills.md
+- workflows/docs-update.md
+- workflows/profile-user.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

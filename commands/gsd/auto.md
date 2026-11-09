@@ -16,8 +16,12 @@ Run continuous autonomous autopilot across all remaining phases in ROADMAP.md, a
 
 <execution_context>
 @~/.claude/gsd-core/workflows/autonomous.md
-@~/.claude/gsd-core/workflows/extract-learnings.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/extract-learnings.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

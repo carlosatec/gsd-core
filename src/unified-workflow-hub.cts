@@ -359,7 +359,7 @@ function executeReview(
   const topCentral = typeof queryTopCentralFiles === 'function' && graph ? queryTopCentralFiles(graph, 5) : [];
 
   let systemOneAutoPass = false;
-  const systemOneCtx = { planningDir: resolvedPlanningDir, rootDir: resolvedRoot };
+  const systemOneCtx = { planningDir: resolvedPlanningDir, rootDir: resolvedRoot, graph };
   if (filesToReview.length > 0) {
     try {
       let allLowRisk = true;
@@ -374,7 +374,11 @@ function executeReview(
         allLowRisk = false;
       }
 
-      for (const relPath of filesToReview) {
+      const systemOneTargets = fullRepoMode
+        ? (topCentral.length > 0 ? topCentral.map((t: { file: string }) => t.file) : filesToReview.filter(f => isAnalyzablePath(f)).slice(0, 50))
+        : filesToReview;
+
+      for (const relPath of systemOneTargets) {
         const fullPath = path.join(resolvedRoot, relPath);
 
         // Score: Regression risk 0 (inofensivo) → 3 (crítico)

@@ -17,20 +17,24 @@ Output ONLY the reference content of the chosen tier. Do NOT add:
 
 <execution_context>
 @~/.claude/gsd-core/workflows/help.md
-@~/.claude/gsd-core/workflows/manager.md
-@~/.claude/gsd-core/workflows/thread.md
-@~/.claude/gsd-core/workflows/note.md
-@~/.claude/gsd-core/workflows/list-workspaces.md
-@~/.claude/gsd-core/workflows/new-workspace.md
-@~/.claude/gsd-core/workflows/remove-workspace.md
-@~/.claude/gsd-core/workflows/list-seeds.md
-@~/.claude/gsd-core/workflows/plant-seed.md
-@~/.claude/gsd-core/workflows/add-todo.md
-@~/.claude/gsd-core/workflows/check-todos.md
-@~/.claude/gsd-core/workflows/add-backlog.md
-@~/.claude/gsd-core/workflows/node-repair.md
-@~/.claude/gsd-core/workflows/transition.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/manager.md
+- workflows/thread.md
+- workflows/note.md
+- workflows/list-workspaces.md
+- workflows/new-workspace.md
+- workflows/remove-workspace.md
+- workflows/list-seeds.md
+- workflows/plant-seed.md
+- workflows/add-todo.md
+- workflows/check-todos.md
+- workflows/add-backlog.md
+- workflows/node-repair.md
+- workflows/transition.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

@@ -16,10 +16,14 @@ Validate built features against phase acceptance criteria, run end-to-end test s
 
 <execution_context>
 @~/.claude/gsd-core/workflows/verify-work.md
-@~/.claude/gsd-core/workflows/validate-phase.md
-@~/.claude/gsd-core/workflows/audit-uat.md
-@~/.claude/gsd-core/workflows/add-tests.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/validate-phase.md
+- workflows/audit-uat.md
+- workflows/add-tests.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

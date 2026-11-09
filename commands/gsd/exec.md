@@ -16,16 +16,20 @@ Execute all tasks in the phase plan sequentially or in parallel waves, running P
 
 <execution_context>
 @~/.claude/gsd-core/workflows/execute-phase.md
-@~/.claude/gsd-core/workflows/execute-plan.md
-@~/.claude/gsd-core/workflows/quick.md
-@~/.claude/gsd-core/workflows/fast.md
-@~/.claude/gsd-core/workflows/do.md
-@~/.claude/gsd-core/workflows/pause-work.md
-@~/.claude/gsd-core/workflows/resume-project.md
-@~/.claude/gsd-core/workflows/cleanup.md
-@~/.claude/gsd-core/workflows/undo.md
-@~/.claude/gsd-core/workflows/reapply-patches.md
 </execution_context>
+
+<load_on_demand>
+Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/execute-plan.md
+- workflows/quick.md
+- workflows/fast.md
+- workflows/do.md
+- workflows/pause-work.md
+- workflows/resume-project.md
+- workflows/cleanup.md
+- workflows/undo.md
+- workflows/reapply-patches.md
+</load_on_demand>
 
 <context>
 Arguments: $ARGUMENTS

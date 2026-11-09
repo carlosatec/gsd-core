@@ -93,6 +93,7 @@ class SystemOneLearningStore {
     planningDir;
     filePath;
     maxRules;
+    static _rulesCache = new Map();
     constructor(planningDir, maxRules = LEARNING_STORE_MAX_RULES) {
         this.planningDir = planningDir || node_path_1.default.resolve('.planning');
         this.filePath = node_path_1.default.join(this.planningDir, 'intel', 'system-one-learning.json');
@@ -101,14 +102,19 @@ class SystemOneLearningStore {
     loadRules() {
         try {
             if (!node_fs_1.default.existsSync(this.filePath)) {
+                SystemOneLearningStore._rulesCache.delete(this.filePath);
                 return [];
+            }
+            const st = node_fs_1.default.statSync(this.filePath);
+            const cached = SystemOneLearningStore._rulesCache.get(this.filePath);
+            if (cached && cached.mtimeMs === st.mtimeMs) {
+                return cached.rules;
             }
             const raw = node_fs_1.default.readFileSync(this.filePath, 'utf8');
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed?.rules)) {
-                return parsed.rules;
-            }
-            return [];
+            const rules = Array.isArray(parsed?.rules) ? parsed.rules : [];
+            SystemOneLearningStore._rulesCache.set(this.filePath, { mtimeMs: st.mtimeMs, rules });
+            return rules;
         }
         catch {
             return [];
@@ -130,6 +136,7 @@ class SystemOneLearningStore {
             const tmpPath = `${this.filePath}.tmp.${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
             node_fs_1.default.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
             renameWithRetry(tmpPath, this.filePath);
+            SystemOneLearningStore._rulesCache.delete(this.filePath);
         }
         catch {
             // Non-blocking fail-safe
@@ -870,6 +877,7 @@ class UserRuntimeSemanticProvider {
 class SystemOneEngine {
     analytical;
     semantic;
+    static _sharedLoggers = new Map();
     constructor() {
         this.analytical = new AstAnalyticalProvider();
         this.semantic = new UserRuntimeSemanticProvider(this.analytical);
@@ -878,7 +886,12 @@ class SystemOneEngine {
         if (!planningDir)
             return;
         try {
-            const logger = new SessionLogger({ planningDir });
+            const resolved = node_path_1.default.resolve(planningDir);
+            let logger = SystemOneEngine._sharedLoggers.get(resolved);
+            if (!logger) {
+                logger = new SessionLogger({ planningDir: resolved, sessionId: `sys1_${process.pid}` });
+                SystemOneEngine._sharedLoggers.set(resolved, logger);
+            }
             logger.logSystemOneDecision(decision);
         }
         catch {
@@ -890,8 +903,8 @@ class SystemOneEngine {
      */
     async classifyRisk(filePath, options) {
         const startTime = Date.now();
-        let graph = null;
-        if (options?.planningDir) {
+        let graph = options?.graph !== undefined ? options.graph : null;
+        if (!graph && options?.planningDir) {
             graph = loadCodebaseGraph(options.planningDir);
         }
         if (!graph && options?.rootDir) {
@@ -921,8 +934,8 @@ class SystemOneEngine {
      */
     async evaluateAssertion(assertion, context) {
         const startTime = Date.now();
-        let graph = null;
-        if (context?.planningDir) {
+        let graph = context?.graph !== undefined ? context.graph : null;
+        if (!graph && context?.planningDir) {
             graph = loadCodebaseGraph(context.planningDir);
         }
         if (!graph && context?.rootDir) {
@@ -951,8 +964,8 @@ class SystemOneEngine {
      */
     classifyRiskSync(filePath, options) {
         const startTime = Date.now();
-        let graph = null;
-        if (options?.planningDir) {
+        let graph = options?.graph !== undefined ? options.graph : null;
+        if (!graph && options?.planningDir) {
             graph = loadCodebaseGraph(options.planningDir);
         }
         if (!graph && options?.rootDir) {
@@ -976,8 +989,8 @@ class SystemOneEngine {
      */
     evaluateAssertionSync(assertion, context) {
         const startTime = Date.now();
-        let graph = null;
-        if (context?.planningDir) {
+        let graph = context?.graph !== undefined ? context.graph : null;
+        if (!graph && context?.planningDir) {
             graph = loadCodebaseGraph(context.planningDir);
         }
         if (!graph && context?.rootDir) {

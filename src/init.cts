@@ -962,16 +962,16 @@ function cmdInitExecutePhase(
     branch_name:
       config.branching_strategy === 'phase' && phaseInfo
         ? (config.phase_branch_template as string)
-            .replace('{project}', (config.project_code as string) || '')
-            .replace('{phase}', normalizePhaseName(phaseInfo['phase_number']))
-            .replace('{slug}', (phaseInfo['phase_slug'] as string) || 'phase')
+          .replace('{project}', (config.project_code as string) || '')
+          .replace('{phase}', normalizePhaseName(phaseInfo['phase_number']))
+          .replace('{slug}', (phaseInfo['phase_slug'] as string) || 'phase')
         : config.branching_strategy === 'milestone'
           ? (config.milestone_branch_template as string)
-              .replace('{milestone}', (milestone['version'] as string | undefined) ?? '')
-              .replace(
-                '{slug}',
-                generateSlugInternal(milestone['name'] as string | undefined) || 'milestone',
-              )
+            .replace('{milestone}', (milestone['version'] as string | undefined) ?? '')
+            .replace(
+              '{slug}',
+              generateSlugInternal(milestone['name'] as string | undefined) || 'milestone',
+            )
           : null,
 
     milestone_version: milestone['version'] ?? null,
@@ -1116,11 +1116,11 @@ function cmdInitPlanPhase(
 
     phase_status: phaseDirPlan
       ? determinePhaseStatus(
-          (phaseInfo?.['plans'] as unknown[] | undefined)?.length || 0,
-          (phaseInfo?.['summaries'] as unknown[] | undefined)?.length || 0,
-          path.join(cwd, phaseDirPlan),
-          'Pending',
-        )
+        (phaseInfo?.['plans'] as unknown[] | undefined)?.length || 0,
+        (phaseInfo?.['summaries'] as unknown[] | undefined)?.length || 0,
+        path.join(cwd, phaseDirPlan),
+        'Pending',
+      )
       : 'Pending',
 
     has_research: phaseInfo?.['has_research'] || false,
@@ -1197,7 +1197,13 @@ function cmdInitPlanPhase(
         result['uat_path'] = toPosixPath(path.join(phaseDirFull, uatFile));
       }
       const reviewsFile = scopedFiles.find(
-        (f) => f.endsWith('-REVIEWS.md') || f === 'REVIEWS.md',
+        (f) =>
+          f.endsWith('-REVIEWS.md') ||
+          f === 'REVIEWS.md' ||
+          f.endsWith('-REVIEW.md') ||
+          f === 'REVIEW.md' ||
+          f.endsWith('-CODE-REVIEW.md') ||
+          f === 'CODE-REVIEW.md',
       );
       if (reviewsFile) {
         result['reviews_path'] = toPosixPath(path.join(phaseDirFull, reviewsFile));
@@ -1226,7 +1232,7 @@ function cmdInitPlanPhase(
           totalPlansInPhase !== null &&
           phaseInfo &&
           totalPlansInPhase !==
-            ((phaseInfo['plans'] as unknown[] | undefined)?.length || 0)
+          ((phaseInfo['plans'] as unknown[] | undefined)?.length || 0)
         ) {
           stateWarnings.push(
             `Plan count mismatch: STATE.md says ${totalPlansInPhase}, disk has ${(phaseInfo['plans'] as unknown[] | undefined)?.length || 0}`,
@@ -1340,8 +1346,8 @@ function cmdInitNewMilestone(cwd: string, raw: boolean, options: Record<string, 
     // #2376: absolute — see comment on phase_dir in cmdInitExecutePhase.
     phase_archive_path: latestCompleted
       ? toPosixPath(
-          path.join(planningRoot(cwd), 'milestones', `${latestCompleted.version}-phases`),
-        )
+        path.join(planningRoot(cwd), 'milestones', `${latestCompleted.version}-phases`),
+      )
       : null,
 
     project_exists: pathExistsInternal(cwd, '.planning/PROJECT.md'),
@@ -1415,9 +1421,9 @@ function cmdInitQuick(
   const branchSlug = slug || 'quick';
   const quickBranchName = config.quick_branch_template
     ? (config.quick_branch_template as string)
-        .replace('{num}', quickId)
-        .replace('{quick}', quickId)
-        .replace('{slug}', branchSlug)
+      .replace('{num}', quickId)
+      .replace('{quick}', quickId)
+      .replace('{slug}', branchSlug)
     : null;
 
   const result: Record<string, unknown> = {
@@ -1579,8 +1585,8 @@ function cmdInitVerifyWork(cwd: string, phase: string, raw: boolean): void {
   );
   const uatReport = phaseDir
     ? evaluateUatPassed(path.join(cwd, phaseDir), {
-        policy: { requireVerification: true },
-      })
+      policy: { requireVerification: true },
+    })
     : null;
   const uiPhaseActive = detectUiPhaseActive(cwd, phaseInfo);
 
@@ -2053,7 +2059,13 @@ function cmdInitPhaseOp(cwd: string, phase: string, raw: boolean): void {
         result['uat_path'] = toPosixPath(path.join(phaseDirFull, uatFile));
       }
       const reviewsFile = scopedFiles.find(
-        (f) => f.endsWith('-REVIEWS.md') || f === 'REVIEWS.md',
+        (f) =>
+          f.endsWith('-REVIEWS.md') ||
+          f === 'REVIEWS.md' ||
+          f.endsWith('-REVIEW.md') ||
+          f === 'REVIEW.md' ||
+          f.endsWith('-CODE-REVIEW.md') ||
+          f === 'CODE-REVIEW.md',
       );
       if (reviewsFile) {
         result['reviews_path'] = toPosixPath(path.join(phaseDirFull, reviewsFile));
@@ -2833,9 +2845,9 @@ function cmdInitTransition(cwd: string, raw: boolean, options: Record<string, un
   const result: Record<string, unknown> = {
     other_active_workstreams: workstreamActive
       ? getOtherActiveWorkstreamInventories(cwd, resolvedWorkstream).map((inv) => ({
-          name: inv.name,
-          status: inv.status,
-        }))
+        name: inv.name,
+        status: inv.status,
+      }))
       : [],
   };
 
@@ -2940,16 +2952,16 @@ function cmdInitProgress(cwd: string, raw: boolean, options: Record<string, unkn
     if (_diagnosis.present) {
       error(
         `init.progress requires a workstream in workstream mode — the active-workstream marker names '${_diagnosis.value}', but it did not resolve: ${describeUnresolvedWorkstreamReason(_diagnosis.reason)}. Root STATE.md (likely stale) would be reported otherwise. ` +
-          `Pass --ws <name> or run ${formatGsdSlash('workstream set', _slashRuntime) as string} to point it at an existing workstream. ` +
-          `Available workstreams: ${_availableWorkstreams.join(', ')}`,
+        `Pass --ws <name> or run ${formatGsdSlash('workstream set', _slashRuntime) as string} to point it at an existing workstream. ` +
+        `Available workstreams: ${_availableWorkstreams.join(', ')}`,
         ERROR_REASON.WORKSTREAM_MODE_MARKER_UNRESOLVED,
         { marker_value: _diagnosis.value, marker_reason: _diagnosis.reason },
       );
     }
     error(
       `init.progress requires a workstream in workstream mode — no active workstream is set, so root STATE.md (likely stale) would be reported. ` +
-        `Pass --ws <name> or run ${formatGsdSlash('workstream set', _slashRuntime) as string} first. ` +
-        `Available workstreams: ${_availableWorkstreams.join(', ')}`,
+      `Pass --ws <name> or run ${formatGsdSlash('workstream set', _slashRuntime) as string} first. ` +
+      `Available workstreams: ${_availableWorkstreams.join(', ')}`,
       ERROR_REASON.WORKSTREAM_MODE_NONE_ACTIVE,
     );
   }
@@ -3695,85 +3707,85 @@ function buildSkillManifest(cwd: string, skillsDir: string | null = null): Skill
 
   const canonicalRoots: CanonicalRoot[] = skillsDir
     ? [
-        {
-          root: path.resolve(skillsDir),
-          path: path.resolve(skillsDir),
-          scope: 'custom',
-          present: fs.existsSync(skillsDir),
-          kind: 'skills',
-        },
-      ]
+      {
+        root: path.resolve(skillsDir),
+        path: path.resolve(skillsDir),
+        scope: 'custom',
+        present: fs.existsSync(skillsDir),
+        kind: 'skills',
+      },
+    ]
     : [
-        {
-          root: '.claude/skills',
-          path: path.join(cwd, '.claude', 'skills'),
-          scope: 'project',
-          kind: 'skills',
-        },
-        {
-          root: '.agents/skills',
-          path: path.join(cwd, '.agents', 'skills'),
-          scope: 'project',
-          kind: 'skills',
-        },
-        {
-          root: '.cursor/skills',
-          path: path.join(cwd, '.cursor', 'skills'),
-          scope: 'project',
-          kind: 'skills',
-        },
-        {
-          root: '.github/skills',
-          path: path.join(cwd, '.github', 'skills'),
-          scope: 'project',
-          kind: 'skills',
-        },
-        {
-          root: '.codex/skills',
-          path: path.join(cwd, '.codex', 'skills'),
-          scope: 'project',
-          kind: 'skills',
-        },
-        {
-          root: '~/.claude/skills',
-          path: getGlobalSkillsBase('claude') as string,
-          scope: 'global',
-          kind: 'skills',
-        },
-        {
-          // ADR-1239 upgrade 3 (#2088): Codex's canonical skill root is
-          // $HOME/.agents/skills (per codex core-skills loader.rs), resolved via
-          // the skills-kind `home` override in getGlobalSkillsBase.
-          root: '~/.agents/skills',
-          path: getGlobalSkillsBase('codex') as string,
-          scope: 'global',
-          kind: 'skills',
-        },
-        {
-          // Codex's deprecated fallback skill root ($CODEX_HOME/skills). Kept as a
-          // discovery-only legacy root so pre-move installs remain inventoried;
-          // GSD no longer installs here (#2088).
-          root: '~/.codex/skills',
-          path: path.join(getGlobalConfigDir('codex'), 'skills'),
-          scope: 'global',
-          kind: 'skills',
-          deprecated: true,
-        },
-        {
-          root: '.claude/gsd-core/skills',
-          path: path.join(os.homedir(), '.claude', 'gsd-core', 'skills'),
-          scope: 'import-only',
-          kind: 'skills',
-          deprecated: true,
-        },
-        {
-          root: '.claude/commands/gsd',
-          path: path.join(os.homedir(), '.claude', 'commands', 'gsd'),
-          scope: 'legacy-commands',
-          kind: 'commands',
-          deprecated: true,
-        },
-      ];
+      {
+        root: '.claude/skills',
+        path: path.join(cwd, '.claude', 'skills'),
+        scope: 'project',
+        kind: 'skills',
+      },
+      {
+        root: '.agents/skills',
+        path: path.join(cwd, '.agents', 'skills'),
+        scope: 'project',
+        kind: 'skills',
+      },
+      {
+        root: '.cursor/skills',
+        path: path.join(cwd, '.cursor', 'skills'),
+        scope: 'project',
+        kind: 'skills',
+      },
+      {
+        root: '.github/skills',
+        path: path.join(cwd, '.github', 'skills'),
+        scope: 'project',
+        kind: 'skills',
+      },
+      {
+        root: '.codex/skills',
+        path: path.join(cwd, '.codex', 'skills'),
+        scope: 'project',
+        kind: 'skills',
+      },
+      {
+        root: '~/.claude/skills',
+        path: getGlobalSkillsBase('claude') as string,
+        scope: 'global',
+        kind: 'skills',
+      },
+      {
+        // ADR-1239 upgrade 3 (#2088): Codex's canonical skill root is
+        // $HOME/.agents/skills (per codex core-skills loader.rs), resolved via
+        // the skills-kind `home` override in getGlobalSkillsBase.
+        root: '~/.agents/skills',
+        path: getGlobalSkillsBase('codex') as string,
+        scope: 'global',
+        kind: 'skills',
+      },
+      {
+        // Codex's deprecated fallback skill root ($CODEX_HOME/skills). Kept as a
+        // discovery-only legacy root so pre-move installs remain inventoried;
+        // GSD no longer installs here (#2088).
+        root: '~/.codex/skills',
+        path: path.join(getGlobalConfigDir('codex'), 'skills'),
+        scope: 'global',
+        kind: 'skills',
+        deprecated: true,
+      },
+      {
+        root: '.claude/gsd-core/skills',
+        path: path.join(os.homedir(), '.claude', 'gsd-core', 'skills'),
+        scope: 'import-only',
+        kind: 'skills',
+        deprecated: true,
+      },
+      {
+        root: '.claude/commands/gsd',
+        path: path.join(os.homedir(), '.claude', 'commands', 'gsd'),
+        scope: 'legacy-commands',
+        kind: 'commands',
+        deprecated: true,
+      },
+    ];
 
   const skills: SkillEntry[] = [];
   const roots: RootSummary[] = [];

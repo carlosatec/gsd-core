@@ -275,6 +275,7 @@ build/
 /gsd-core/bin/lib/template.cjs
 /gsd-core/bin/lib/commands.cjs
 /gsd-core/bin/lib/state.cjs
+/gsd-core/bin/lib/state-lock.cjs
 /gsd-core/bin/lib/milestone.cjs
 /gsd-core/bin/lib/phase.cjs
 /gsd-core/bin/lib/verify.cjs

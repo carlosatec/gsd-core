@@ -211,9 +211,53 @@ class SessionLogger {
         this.isClosed = true;
         SessionLogger.rotateSessions(this.sessionsDir, this.maxSessions, this.maxAgeDays);
     }
+    static cleanupOrphanDecisionFiles(sessionsDir, maxRetained = 20) {
+        if (!node_fs_1.default.existsSync(sessionsDir))
+            return 0;
+        let deletedCount = 0;
+        try {
+            const files = node_fs_1.default
+                .readdirSync(sessionsDir)
+                .filter((f) => f.startsWith('session_') && f.endsWith('.jsonl'));
+            const orphanEntries = [];
+            for (const file of files) {
+                const fullPath = node_path_1.default.join(sessionsDir, file);
+                try {
+                    const stat = node_fs_1.default.statSync(fullPath);
+                    if (stat.size > 10240)
+                        continue;
+                    const content = node_fs_1.default.readFileSync(fullPath, 'utf8');
+                    if (content.includes('"system_one_decision"') &&
+                        !content.includes('"session_start"') &&
+                        !content.includes('"session_end"') &&
+                        !content.includes('"tool_call"')) {
+                        orphanEntries.push({ path: fullPath, mtime: stat.mtimeMs });
+                    }
+                }
+                catch {
+                    // Ignore
+                }
+            }
+            orphanEntries.sort((a, b) => b.mtime - a.mtime);
+            for (let i = maxRetained; i < orphanEntries.length; i++) {
+                try {
+                    node_fs_1.default.unlinkSync(orphanEntries[i].path);
+                    deletedCount++;
+                }
+                catch {
+                    // Transient Windows lock ignored
+                }
+            }
+        }
+        catch {
+            // Non-fatal
+        }
+        return deletedCount;
+    }
     static rotateSessions(sessionsDir, maxSessions = DEFAULT_MAX_SESSIONS, maxAgeDays = DEFAULT_MAX_AGE_DAYS) {
         if (!node_fs_1.default.existsSync(sessionsDir))
             return 0;
+        SessionLogger.cleanupOrphanDecisionFiles(sessionsDir, 10);
         let deletedCount = 0;
         try {
             const files = node_fs_1.default
