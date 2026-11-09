@@ -394,6 +394,7 @@
       "observability/logger.cjs",
       "observability/redaction.cjs",
       "obsidian-interop.cjs",
+      "obsidian-second-brain.cjs",
       "onboard-projection.cjs",
       "output-diet.cjs",
       "package-identity.cjs",

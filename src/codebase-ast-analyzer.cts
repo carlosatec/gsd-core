@@ -134,6 +134,23 @@ interface FileAnalysisResult {
   dependencyKinds?: Record<string, 'runtime' | 'type_only' | 'infra'>;
 }
 
+interface KnowledgeNodes {
+  decisions?: Record<string, {
+    id: string;
+    title: string;
+    category?: string;
+    governedFiles?: string[];
+    phase?: string;
+  }>;
+  phases?: Record<string, {
+    id: string;
+    name?: string;
+    specPath?: string;
+    planPaths?: string[];
+    summaryPath?: string;
+  }>;
+}
+
 interface CodebaseGraph {
   version: string;
   createdAt: string;
@@ -147,6 +164,7 @@ interface CodebaseGraph {
     scanDurationMs: number;
     filesByLanguage?: Record<string, number>;
     gitCommitSha?: string | null;
+    totalKnowledgeNodes?: number;
   };
   files: Record<string, FileAnalysisResult>;
   symbolIndex: Record<string, string[]>;
@@ -154,6 +172,7 @@ interface CodebaseGraph {
   dependencies?: Record<string, string[]>;
   pageRankScores: Record<string, number>;
   routes: ExtractedRoute[];
+  knowledgeNodes?: KnowledgeNodes;
 }
 
 interface BuildGraphOptions {
@@ -2290,24 +2309,47 @@ function analyzeWithTypeScriptCompiler(
       // 1. ImportDeclaration: import ... from '...'
       if (ts.isImportDeclaration(statement)) {
         const rawSource = (statement.moduleSpecifier as any).text || '';
-        const isTypeOnly = !!(statement.importClause && (statement.importClause as any).isTypeOnly);
-        const specifiers: string[] = [];
+        const clauseIsTypeOnly = !!(statement.importClause && (statement.importClause as any).isTypeOnly);
+        const typeSpecifiers: string[] = [];
+        const runtimeSpecifiers: string[] = [];
 
         if (statement.importClause) {
           if (statement.importClause.name) {
-            specifiers.push(statement.importClause.name.text);
+            if (clauseIsTypeOnly) {
+              typeSpecifiers.push(statement.importClause.name.text);
+            } else {
+              runtimeSpecifiers.push(statement.importClause.name.text);
+            }
           }
           if (statement.importClause.namedBindings) {
             if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
-              specifiers.push(statement.importClause.namedBindings.name.text);
+              if (clauseIsTypeOnly) {
+                typeSpecifiers.push(statement.importClause.namedBindings.name.text);
+              } else {
+                runtimeSpecifiers.push(statement.importClause.namedBindings.name.text);
+              }
             } else if (ts.isNamedImports(statement.importClause.namedBindings)) {
               for (const el of statement.importClause.namedBindings.elements) {
-                specifiers.push(el.name.text);
+                const elTypeOnly = clauseIsTypeOnly || !!(el as any).isTypeOnly;
+                if (elTypeOnly) {
+                  typeSpecifiers.push(el.name.text);
+                } else {
+                  runtimeSpecifiers.push(el.name.text);
+                }
               }
             }
           }
         }
-        addImport(rawSource, specifiers, isTypeOnly);
+        if (typeSpecifiers.length > 0 && runtimeSpecifiers.length === 0) {
+          addImport(rawSource, typeSpecifiers, true);
+        } else if (runtimeSpecifiers.length > 0 && typeSpecifiers.length === 0) {
+          addImport(rawSource, runtimeSpecifiers, false);
+        } else if (typeSpecifiers.length > 0 && runtimeSpecifiers.length > 0) {
+          addImport(rawSource, typeSpecifiers, true);
+          addImport(rawSource, runtimeSpecifiers, false);
+        } else {
+          addImport(rawSource, [], clauseIsTypeOnly);
+        }
       }
       // 2. FunctionDeclaration
       else if (ts.isFunctionDeclaration(statement) && statement.name) {
@@ -2712,20 +2754,45 @@ function analyzeSourceFile(filePath: string, sourceText?: string, explicitRoot?:
       const nsSpec = importMatch[3];
       const standaloneDefault = importMatch[4];
       const rawSource = importMatch[5];
-      const isTypeOnly = trimmed.startsWith('import type');
-      const specifiers: string[] = [];
+      const clauseIsTypeOnly = trimmed.startsWith('import type');
+      const typeSpecifiers: string[] = [];
+      const runtimeSpecifiers: string[] = [];
 
-      if (defaultPrefix) specifiers.push(defaultPrefix.trim());
-      if (standaloneDefault) specifiers.push(standaloneDefault.trim());
-      if (nsSpec) specifiers.push(nsSpec.trim());
+      if (defaultPrefix) {
+        if (clauseIsTypeOnly) typeSpecifiers.push(defaultPrefix.trim());
+        else runtimeSpecifiers.push(defaultPrefix.trim());
+      }
+      if (standaloneDefault) {
+        if (clauseIsTypeOnly) typeSpecifiers.push(standaloneDefault.trim());
+        else runtimeSpecifiers.push(standaloneDefault.trim());
+      }
+      if (nsSpec) {
+        if (clauseIsTypeOnly) typeSpecifiers.push(nsSpec.trim());
+        else runtimeSpecifiers.push(nsSpec.trim());
+      }
       if (namedSpecs) {
         for (const part of namedSpecs.split(',')) {
-          const spec = part.trim().split(/\s+as\s+/)[0].trim();
-          if (spec) specifiers.push(spec);
+          const trimmedPart = part.trim();
+          const isInlineType = clauseIsTypeOnly || /^type\s+/.test(trimmedPart);
+          const cleanPart = trimmedPart.replace(/^type\s+/, '');
+          const spec = cleanPart.split(/\s+as\s+/)[0].trim();
+          if (spec) {
+            if (isInlineType) typeSpecifiers.push(spec);
+            else runtimeSpecifiers.push(spec);
+          }
         }
       }
 
-      rawImports.push({ rawSource, specifiers, isTypeOnly, lineIdx: i });
+      if (typeSpecifiers.length > 0 && runtimeSpecifiers.length === 0) {
+        rawImports.push({ rawSource, specifiers: typeSpecifiers, isTypeOnly: true, lineIdx: i });
+      } else if (runtimeSpecifiers.length > 0 && typeSpecifiers.length === 0) {
+        rawImports.push({ rawSource, specifiers: runtimeSpecifiers, isTypeOnly: false, lineIdx: i });
+      } else if (typeSpecifiers.length > 0 && runtimeSpecifiers.length > 0) {
+        rawImports.push({ rawSource, specifiers: typeSpecifiers, isTypeOnly: true, lineIdx: i });
+        rawImports.push({ rawSource, specifiers: runtimeSpecifiers, isTypeOnly: false, lineIdx: i });
+      } else {
+        rawImports.push({ rawSource, specifiers: [], isTypeOnly: clauseIsTypeOnly, lineIdx: i });
+      }
     }
 
     // 2. CommonJS require: const ... = require('...')
@@ -3144,7 +3211,11 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
       fData.isOrphan = false;
     } else if (inDegree === 0) {
       const isEntrypoint = /^(?:index|main|app|page|route)\.[a-zA-Z0-9]+$/i.test(baseLower);
-      fData.isOrphan = !isEntrypoint;
+      const isTestOrTool = /(?:^|\/)(?:tests?|specs?|scripts?|bin|fixtures?|benchmarks?|examples?)\//i.test(k) ||
+        /\.(?:test|spec)\.[a-zA-Z0-9]+$/i.test(baseLower) ||
+        baseLower.startsWith('.') ||
+        /^(?:setup|jest|vitest|playwright|vite|webpack|rollup|tsconfig|eslint|prettier)\./i.test(baseLower);
+      fData.isOrphan = !isEntrypoint && !isTestOrTool;
     } else {
       fData.isOrphan = false;
     }
@@ -3217,8 +3288,62 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
     gitCommitSha = null;
   }
 
+  // REQ-37-03: Discover knowledge nodes (Decisions, Phases) for Unified Knowledge Graph AST
+  const knowledgeNodes: KnowledgeNodes = { decisions: {}, phases: {} };
+  let totalKnowledgeNodes = 0;
+  const planningDir = path.join(rootDir, '.planning');
+  const statePath = path.join(planningDir, 'STATE.md');
+  if (fs.existsSync(statePath)) {
+    try {
+      const stateContent = fs.readFileSync(statePath, 'utf8');
+      const lines = splitLines(stateContent);
+      const decRegex = /^-\s+\*\*(D-\d+)\s+\[([^\]]+)\]:\*\*\s*(.+)$/i;
+      for (const l of lines) {
+        const m = l.trim().match(decRegex);
+        if (m) {
+          const id = m[1].toUpperCase();
+          const category = m[2].trim();
+          const title = m[3].trim();
+          const fileMatches = title.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g) || [];
+          const governedFiles = fileMatches.map(fm => fm.replace(/`/g, '').replace(/\\/g, '/')).filter(Boolean);
+          if (knowledgeNodes.decisions) {
+            knowledgeNodes.decisions[id] = { id, title, category, governedFiles };
+            totalKnowledgeNodes++;
+          }
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  const phasesDir = path.join(planningDir, 'phases');
+  if (fs.existsSync(phasesDir)) {
+    try {
+      const pDirs = fs.readdirSync(phasesDir, { withFileTypes: true });
+      for (const d of pDirs) {
+        if (d.isDirectory()) {
+          const pId = d.name;
+          const phaseSub = path.join(phasesDir, pId);
+          const entries = fs.readdirSync(phaseSub);
+          const planPaths = entries.filter(e => e.endsWith('-PLAN.md')).map(e => path.join('.planning/phases', pId, e).replace(/\\/g, '/'));
+          const specFile = entries.find(e => e.endsWith('-SPEC.md'));
+          const specPath = specFile ? path.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
+          const summaryFile = entries.find(e => e.endsWith('-SUMMARY.md'));
+          const summaryPath = summaryFile ? path.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
+          if (knowledgeNodes.phases) {
+            knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
+            totalKnowledgeNodes++;
+          }
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
   return {
-    version: '2.2.0',
+    version: '2.1.0',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     root: rootDir,
@@ -3230,6 +3355,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
       scanDurationMs: duration,
       filesByLanguage,
       gitCommitSha,
+      totalKnowledgeNodes,
     },
     files: filesMap,
     symbolIndex,
@@ -3237,6 +3363,7 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
     dependencies,
     pageRankScores,
     routes: allRoutes,
+    knowledgeNodes,
   };
 }
 

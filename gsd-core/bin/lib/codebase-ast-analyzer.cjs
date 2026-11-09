@@ -1976,24 +1976,53 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
             // 1. ImportDeclaration: import ... from '...'
             if (ts.isImportDeclaration(statement)) {
                 const rawSource = statement.moduleSpecifier.text || '';
-                const isTypeOnly = !!(statement.importClause && statement.importClause.isTypeOnly);
-                const specifiers = [];
+                const clauseIsTypeOnly = !!(statement.importClause && statement.importClause.isTypeOnly);
+                const typeSpecifiers = [];
+                const runtimeSpecifiers = [];
                 if (statement.importClause) {
                     if (statement.importClause.name) {
-                        specifiers.push(statement.importClause.name.text);
+                        if (clauseIsTypeOnly) {
+                            typeSpecifiers.push(statement.importClause.name.text);
+                        }
+                        else {
+                            runtimeSpecifiers.push(statement.importClause.name.text);
+                        }
                     }
                     if (statement.importClause.namedBindings) {
                         if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
-                            specifiers.push(statement.importClause.namedBindings.name.text);
+                            if (clauseIsTypeOnly) {
+                                typeSpecifiers.push(statement.importClause.namedBindings.name.text);
+                            }
+                            else {
+                                runtimeSpecifiers.push(statement.importClause.namedBindings.name.text);
+                            }
                         }
                         else if (ts.isNamedImports(statement.importClause.namedBindings)) {
                             for (const el of statement.importClause.namedBindings.elements) {
-                                specifiers.push(el.name.text);
+                                const elTypeOnly = clauseIsTypeOnly || !!el.isTypeOnly;
+                                if (elTypeOnly) {
+                                    typeSpecifiers.push(el.name.text);
+                                }
+                                else {
+                                    runtimeSpecifiers.push(el.name.text);
+                                }
                             }
                         }
                     }
                 }
-                addImport(rawSource, specifiers, isTypeOnly);
+                if (typeSpecifiers.length > 0 && runtimeSpecifiers.length === 0) {
+                    addImport(rawSource, typeSpecifiers, true);
+                }
+                else if (runtimeSpecifiers.length > 0 && typeSpecifiers.length === 0) {
+                    addImport(rawSource, runtimeSpecifiers, false);
+                }
+                else if (typeSpecifiers.length > 0 && runtimeSpecifiers.length > 0) {
+                    addImport(rawSource, typeSpecifiers, true);
+                    addImport(rawSource, runtimeSpecifiers, false);
+                }
+                else {
+                    addImport(rawSource, [], clauseIsTypeOnly);
+                }
             }
             // 2. FunctionDeclaration
             else if (ts.isFunctionDeclaration(statement) && statement.name) {
@@ -2386,22 +2415,54 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
             const nsSpec = importMatch[3];
             const standaloneDefault = importMatch[4];
             const rawSource = importMatch[5];
-            const isTypeOnly = trimmed.startsWith('import type');
-            const specifiers = [];
-            if (defaultPrefix)
-                specifiers.push(defaultPrefix.trim());
-            if (standaloneDefault)
-                specifiers.push(standaloneDefault.trim());
-            if (nsSpec)
-                specifiers.push(nsSpec.trim());
+            const clauseIsTypeOnly = trimmed.startsWith('import type');
+            const typeSpecifiers = [];
+            const runtimeSpecifiers = [];
+            if (defaultPrefix) {
+                if (clauseIsTypeOnly)
+                    typeSpecifiers.push(defaultPrefix.trim());
+                else
+                    runtimeSpecifiers.push(defaultPrefix.trim());
+            }
+            if (standaloneDefault) {
+                if (clauseIsTypeOnly)
+                    typeSpecifiers.push(standaloneDefault.trim());
+                else
+                    runtimeSpecifiers.push(standaloneDefault.trim());
+            }
+            if (nsSpec) {
+                if (clauseIsTypeOnly)
+                    typeSpecifiers.push(nsSpec.trim());
+                else
+                    runtimeSpecifiers.push(nsSpec.trim());
+            }
             if (namedSpecs) {
                 for (const part of namedSpecs.split(',')) {
-                    const spec = part.trim().split(/\s+as\s+/)[0].trim();
-                    if (spec)
-                        specifiers.push(spec);
+                    const trimmedPart = part.trim();
+                    const isInlineType = clauseIsTypeOnly || /^type\s+/.test(trimmedPart);
+                    const cleanPart = trimmedPart.replace(/^type\s+/, '');
+                    const spec = cleanPart.split(/\s+as\s+/)[0].trim();
+                    if (spec) {
+                        if (isInlineType)
+                            typeSpecifiers.push(spec);
+                        else
+                            runtimeSpecifiers.push(spec);
+                    }
                 }
             }
-            rawImports.push({ rawSource, specifiers, isTypeOnly, lineIdx: i });
+            if (typeSpecifiers.length > 0 && runtimeSpecifiers.length === 0) {
+                rawImports.push({ rawSource, specifiers: typeSpecifiers, isTypeOnly: true, lineIdx: i });
+            }
+            else if (runtimeSpecifiers.length > 0 && typeSpecifiers.length === 0) {
+                rawImports.push({ rawSource, specifiers: runtimeSpecifiers, isTypeOnly: false, lineIdx: i });
+            }
+            else if (typeSpecifiers.length > 0 && runtimeSpecifiers.length > 0) {
+                rawImports.push({ rawSource, specifiers: typeSpecifiers, isTypeOnly: true, lineIdx: i });
+                rawImports.push({ rawSource, specifiers: runtimeSpecifiers, isTypeOnly: false, lineIdx: i });
+            }
+            else {
+                rawImports.push({ rawSource, specifiers: [], isTypeOnly: clauseIsTypeOnly, lineIdx: i });
+            }
         }
         // 2. CommonJS require: const ... = require('...')
         const requireMatch = trimmed.match(/(?:const|let|var)\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/);
@@ -2806,7 +2867,11 @@ function buildCodebaseGraph(rootDir, options = {}) {
         }
         else if (inDegree === 0) {
             const isEntrypoint = /^(?:index|main|app|page|route)\.[a-zA-Z0-9]+$/i.test(baseLower);
-            fData.isOrphan = !isEntrypoint;
+            const isTestOrTool = /(?:^|\/)(?:tests?|specs?|scripts?|bin|fixtures?|benchmarks?|examples?)\//i.test(k) ||
+                /\.(?:test|spec)\.[a-zA-Z0-9]+$/i.test(baseLower) ||
+                baseLower.startsWith('.') ||
+                /^(?:setup|jest|vitest|playwright|vite|webpack|rollup|tsconfig|eslint|prettier)\./i.test(baseLower);
+            fData.isOrphan = !isEntrypoint && !isTestOrTool;
         }
         else {
             fData.isOrphan = false;
@@ -2873,8 +2938,62 @@ function buildCodebaseGraph(rootDir, options = {}) {
     catch {
         gitCommitSha = null;
     }
+    // REQ-37-03: Discover knowledge nodes (Decisions, Phases) for Unified Knowledge Graph AST
+    const knowledgeNodes = { decisions: {}, phases: {} };
+    let totalKnowledgeNodes = 0;
+    const planningDir = node_path_1.default.join(rootDir, '.planning');
+    const statePath = node_path_1.default.join(planningDir, 'STATE.md');
+    if (node_fs_1.default.existsSync(statePath)) {
+        try {
+            const stateContent = node_fs_1.default.readFileSync(statePath, 'utf8');
+            const lines = (0, text_lines_cjs_1.splitLines)(stateContent);
+            const decRegex = /^-\s+\*\*(D-\d+)\s+\[([^\]]+)\]:\*\*\s*(.+)$/i;
+            for (const l of lines) {
+                const m = l.trim().match(decRegex);
+                if (m) {
+                    const id = m[1].toUpperCase();
+                    const category = m[2].trim();
+                    const title = m[3].trim();
+                    const fileMatches = title.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g) || [];
+                    const governedFiles = fileMatches.map(fm => fm.replace(/`/g, '').replace(/\\/g, '/')).filter(Boolean);
+                    if (knowledgeNodes.decisions) {
+                        knowledgeNodes.decisions[id] = { id, title, category, governedFiles };
+                        totalKnowledgeNodes++;
+                    }
+                }
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
+    const phasesDir = node_path_1.default.join(planningDir, 'phases');
+    if (node_fs_1.default.existsSync(phasesDir)) {
+        try {
+            const pDirs = node_fs_1.default.readdirSync(phasesDir, { withFileTypes: true });
+            for (const d of pDirs) {
+                if (d.isDirectory()) {
+                    const pId = d.name;
+                    const phaseSub = node_path_1.default.join(phasesDir, pId);
+                    const entries = node_fs_1.default.readdirSync(phaseSub);
+                    const planPaths = entries.filter(e => e.endsWith('-PLAN.md')).map(e => node_path_1.default.join('.planning/phases', pId, e).replace(/\\/g, '/'));
+                    const specFile = entries.find(e => e.endsWith('-SPEC.md'));
+                    const specPath = specFile ? node_path_1.default.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
+                    const summaryFile = entries.find(e => e.endsWith('-SUMMARY.md'));
+                    const summaryPath = summaryFile ? node_path_1.default.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
+                    if (knowledgeNodes.phases) {
+                        knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
+                        totalKnowledgeNodes++;
+                    }
+                }
+            }
+        }
+        catch {
+            // Non-blocking
+        }
+    }
     return {
-        version: '2.2.0',
+        version: '2.1.0',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         root: rootDir,
@@ -2886,6 +3005,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
             scanDurationMs: duration,
             filesByLanguage,
             gitCommitSha,
+            totalKnowledgeNodes,
         },
         files: filesMap,
         symbolIndex,
@@ -2893,6 +3013,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
         dependencies,
         pageRankScores,
         routes: allRoutes,
+        knowledgeNodes,
     };
 }
 // ─── Queries & Persistence ───────────────────────────────────────────────────

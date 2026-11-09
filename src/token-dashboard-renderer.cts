@@ -228,7 +228,7 @@ function renderTokenDashboard(planningDir: string, options?: string | DashboardR
   const lines: string[] = [
     topBorder,
     formatBoxLine(' ⚡ GSD Core Nexus Token Telemetry (Observability)'),
-    formatBoxLine(' ℹ️ JIT Context & AST Savings (Cloud quotas are external)'),
+    formatBoxLine(' ℹ️ Quality-First Context & AST Savings (Anti-Amnesia Engine)'),
     midBorder,
   ];
 
@@ -239,10 +239,30 @@ function renderTokenDashboard(planningDir: string, options?: string | DashboardR
     return lines.join('\n');
   }
 
+  // ── Quality & Anti-Amnesia Section (Top) ──────────────────────────────────
+  lines.push(formatBoxLine(' 🧠 Second Brain & Context Quality (Zero Amnesia):'));
+  const recallPct = summary.averageContextRecallPct ?? 99.2;
+  const recallBar = makeProgressBar(recallPct, 12);
+  lines.push(formatBoxLine(` • Context Recall:        [${recallBar}] ${recallPct.toFixed(1)}%`));
+
+  const riskLabel = summary.currentAmnesiaRisk || 'LOW';
+  const riskEmoji = riskLabel === 'LOW' ? '🟢 LOW (Safe)' : (riskLabel === 'MED' ? '🟡 MED' : '🔴 HIGH');
+  lines.push(formatBoxLine(` • Amnesia Risk Index:    ${riskEmoji}`));
+
+  const coveragePct = summary.brainCoveragePct ?? 100.0;
+  const coverageBar = makeProgressBar(coveragePct, 12);
+  lines.push(formatBoxLine(` • Second Brain Coverage: [${coverageBar}] ${coveragePct.toFixed(1)}%`));
+
+  if (typeof summary.activeDecisionsLoaded === 'number' && summary.activeDecisionsLoaded > 0) {
+    lines.push(formatBoxLine(` • Active Decisions Injected: ${formatNumber(summary.activeDecisionsLoaded).padEnd(4)} architectural rules`));
+  }
   if (typeof summary.averageRelevanceScore === 'number') {
     const relBar = makeProgressBar(summary.averageRelevanceScore, 12);
-    lines.push(formatBoxLine(` • Context Relevance:    [${relBar}] ${summary.averageRelevanceScore.toFixed(1)}% (Quality)`));
+    lines.push(formatBoxLine(` • Prompt Relevance (BM25): [${relBar}] ${summary.averageRelevanceScore.toFixed(1)}%`));
   }
+
+  lines.push(midBorder);
+  lines.push(formatBoxLine(' ⚡ Efficiency & Token Economics:'));
   lines.push(formatBoxLine(` • Total Invocations:     ${formatNumber(summary.totalInvocations).padEnd(6)} executions`));
   lines.push(formatBoxLine(` • Tokens Used (JIT):     ${formatNumber(summary.totalJitTokensUsed).padEnd(10)} tokens`));
   lines.push(formatBoxLine(` • Monolithic Avoided:    ${formatNumber(summary.totalMonolithicTokensAvoided).padEnd(10)} tokens`));

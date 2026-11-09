@@ -353,7 +353,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   }
 
   // Re-rank neighbors and evaluate semantic relevance (Wave 5: Modo B — Qualidade Máxima)
-  let relevanceScore = 95.0;
+  let relevanceScore: number | undefined = undefined;
   if (allNeighbors.length > 0) {
     try {
       const ranked = reRankForJit(allNeighbors, targetFiles, {
@@ -362,6 +362,21 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
       });
       allNeighbors = ranked.items;
       relevanceScore = ranked.averageRelevance;
+    } catch {
+      // Non-blocking fallback
+    }
+  } else if (options.query && targetFiles.length > 0) {
+    // REQ-37-01: Calculate genuine query-to-files BM25 term overlap when no graph neighbors exist
+    try {
+      const queryTokens = options.query.toLowerCase().replace(/[^\w\s-]/g, ' ').split(/\s+/).filter(Boolean);
+      if (queryTokens.length > 0) {
+        const fileNames = targetFiles.map(f => path.basename(f).toLowerCase());
+        let matches = 0;
+        for (const qt of queryTokens) {
+          if (fileNames.some(fn => fn.includes(qt))) matches++;
+        }
+        relevanceScore = Number(Math.min(100, Math.round((matches / queryTokens.length) * 100)).toFixed(1));
+      }
     } catch {
       // Non-blocking fallback
     }
@@ -591,12 +606,19 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
     }
   }
 
-  // Claude-Mem Continuous Memory Injection (Phase 34 Wave 4)
+  // Claude-Mem Continuous Memory Injection (Phase 34 Wave 4 & Phase 37 Wave 2)
   const applicableMemories: string[] = [];
   try {
-    const mems = queryMemory(root, options.query || '', { files: targetFiles, limit: 3 });
+    const mems = queryMemory(root, options.query || '', { files: targetFiles, limit: 6 });
     for (const m of mems) {
-      applicableMemories.push(`- **[${m.category}]**: ${m.summary}${m.details ? ` — ${m.details}` : ''}`);
+      if (m.category === 'architecture_decision') {
+        const decText = `- **${m.id}:** ${m.summary}`;
+        if (!applicableDecisions.some(d => d.includes(m.id))) {
+          applicableDecisions.unshift(decText);
+        }
+      } else {
+        applicableMemories.push(`- **[${m.category}]**: ${m.summary}${m.details ? ` — ${m.details}` : ''}`);
+      }
     }
   } catch {
     // Fail-open

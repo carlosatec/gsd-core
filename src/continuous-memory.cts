@@ -27,6 +27,7 @@ export interface AgentMemoryEntry {
   details?: string;
   relevantFiles?: string[];
   keywords?: string[];
+  permanent?: boolean;
 }
 
 export interface MemoryQueryOptions {
@@ -98,12 +99,14 @@ function scoreEntry(entry: AgentMemoryEntry, queryTokens: string[], targetFiles:
   // BM25-like TF component
   const tf = queryTokens.length > 0 ? termMatches / (termMatches + 1.2) : 0;
 
-  // Temporal decay: halve weight every 20 days
+  // Temporal decay: halve weight every 20 days (permanent decisions are immune to temporal decay)
+  const isPermanent = Boolean(entry.permanent || entry.category === 'architecture_decision');
   const now = Date.now();
   const ageDays = Math.max(0, (now - entry.timestamp) / (1000 * 60 * 60 * 24));
-  const temporalFactor = 1 / (1 + 0.05 * ageDays);
+  const temporalFactor = isPermanent ? 1.0 : (1 / (1 + 0.05 * ageDays));
+  const decisionBonus = isPermanent ? 1.5 : 0;
 
-  return (tf * temporalFactor) + fileBonus;
+  return (tf * temporalFactor) + fileBonus + decisionBonus;
 }
 
 /**
@@ -132,14 +135,14 @@ function tryCompactionLocked(root: string, filePath: string): void {
       }
     }
 
-    // Retain all 'architecture_decision' permanently
+    // Retain all 'architecture_decision' and permanent entries permanently
     const toRetain: AgentMemoryEntry[] = [];
     const toArchive: AgentMemoryEntry[] = [];
 
     const cutoffIndex = entries.length - MAX_ACTIVE_ENTRIES;
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
-      if (e.category === 'architecture_decision' || i >= cutoffIndex) {
+      if (e.category === 'architecture_decision' || e.permanent || i >= cutoffIndex) {
         toRetain.push(e);
       } else {
         toArchive.push(e);
@@ -160,12 +163,12 @@ function tryCompactionLocked(root: string, filePath: string): void {
  * Record a new memory entry append-only under `.planning/memory/decisions.jsonl`.
  * Refined in Phase 35: holds a single non-nested file lock across append and compaction.
  */
-export function recordMemoryEntry(root: string, input: Omit<AgentMemoryEntry, 'id' | 'timestamp'>): AgentMemoryEntry {
+export function recordMemoryEntry(root: string, input: Omit<AgentMemoryEntry, 'id' | 'timestamp'> & { id?: string; permanent?: boolean }): AgentMemoryEntry {
   const memoryDir = path.join(root, '.planning', MEMORY_DIR_NAME);
   const filePath = path.join(memoryDir, DECISIONS_FILE_NAME);
 
   const entry: AgentMemoryEntry = {
-    id: `mem-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+    id: input.id || `mem-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     timestamp: Date.now(),
     phase: input.phase,
     command: input.command,
@@ -174,6 +177,7 @@ export function recordMemoryEntry(root: string, input: Omit<AgentMemoryEntry, 'i
     details: input.details ? sanitizePii(input.details, root) : undefined,
     relevantFiles: input.relevantFiles?.map(f => sanitizePii(f, root)),
     keywords: input.keywords,
+    permanent: input.permanent ?? (input.category === 'architecture_decision'),
   };
 
   try {
@@ -246,4 +250,108 @@ export function tryCompaction(root: string, filePath: string): void {
   } catch {
     // Fail-open
   }
+}
+
+/**
+ * Syncs all architectural decisions (D-01 to D-NNN) from STATE.md into
+ * .planning/memory/decisions.jsonl with permanent retention (REQ-37-02).
+ */
+export function syncDecisionsToMemory(planningDir: string, rootDir?: string): { synced: number; total: number } {
+  const root = rootDir ?? path.dirname(planningDir);
+  const statePath = path.join(planningDir, 'STATE.md');
+  if (!fs.existsSync(statePath)) {
+    return { synced: 0, total: 0 };
+  }
+
+  let rawState = '';
+  try {
+    rawState = fs.readFileSync(statePath, 'utf8');
+  } catch {
+    return { synced: 0, total: 0 };
+  }
+
+  const lines = splitLines(rawState);
+  // Pattern: - **D-01 [Architecture]:** Analisador AST nativo...
+  const DECISION_REGEX = /^-\s+\*\*(D-\d+)\s+\[([^\]]+)\]:\*\*\s*(.+)$/i;
+  const extractedDecisions: AgentMemoryEntry[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(DECISION_REGEX);
+    if (match) {
+      const id = match[1].toUpperCase();
+      const rawCategory = match[2].trim();
+      const summary = match[3].trim();
+
+      // Extract referenced files from summary (e.g. `src/state.cts`, `ARCHITECTURE.md`)
+      const fileMatches = summary.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g) || [];
+      const relevantFiles: string[] = [];
+      for (const fm of fileMatches) {
+        const cleanFile = fm.replace(/`/g, '').replace(/\\/g, '/');
+        if (cleanFile.includes('/') || cleanFile.endsWith('.md') || cleanFile.endsWith('.json') || cleanFile.endsWith('.cts') || cleanFile.endsWith('.cjs')) {
+          if (!relevantFiles.includes(cleanFile)) relevantFiles.push(cleanFile);
+        }
+      }
+
+      const keywords = tokenize(`${rawCategory} ${summary}`);
+
+      extractedDecisions.push({
+        id,
+        timestamp: Date.now(),
+        category: 'architecture_decision',
+        summary: sanitizePii(summary, root),
+        details: `Category: ${rawCategory} | Decision ID: ${id}`,
+        relevantFiles,
+        keywords,
+        permanent: true,
+      });
+    }
+  }
+
+  if (extractedDecisions.length === 0) {
+    return { synced: 0, total: 0 };
+  }
+
+  const memoryDir = path.join(planningDir, MEMORY_DIR_NAME);
+  const filePath = path.join(memoryDir, DECISIONS_FILE_NAME);
+
+  let synced = 0;
+  fs.mkdirSync(memoryDir, { recursive: true });
+
+  withFileLockSync(filePath, () => {
+    const existingEntries: AgentMemoryEntry[] = [];
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf8');
+      for (const l of splitLines(raw)) {
+        if (!l.trim()) continue;
+        try {
+          existingEntries.push(JSON.parse(l) as AgentMemoryEntry);
+        } catch {
+          // Skip corrupt line
+        }
+      }
+    }
+
+    const existingById = new Map<string, AgentMemoryEntry>();
+    for (const e of existingEntries) {
+      existingById.set(e.id, e);
+    }
+
+    let modified = false;
+    for (const dec of extractedDecisions) {
+      const existing = existingById.get(dec.id);
+      if (!existing || existing.summary !== dec.summary) {
+        existingById.set(dec.id, dec);
+        synced++;
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      const updatedLines = Array.from(existingById.values()).map(e => JSON.stringify(e)).join('\n') + '\n';
+      platformWriteSync(filePath, updatedLines);
+    }
+  });
+
+  return { synced, total: extractedDecisions.length };
 }

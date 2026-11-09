@@ -19,6 +19,8 @@ const visualGraph = require("./visual-graph-exporter.cjs");
 const obsidianInterop = require("./obsidian-interop.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const canvasGenerator = require("./canvas-roadmap-generator.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const obsidianSecondBrain = require("./obsidian-second-brain.cjs");
 // ─── Markdown Generators ──────────────────────────────────────────────────────
 /**
  * Generates an up-to-date Markdown document summarizing the project architecture from the AST graph.
@@ -141,6 +143,15 @@ function syncLivingDocs(planningDir, rootDir) {
     catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         errors.push({ artifact: 'ROADMAP.canvas', error: errMsg });
+    }
+    // 8. Generate Universal Second Brain Obsidian Vault
+    try {
+        const { homePath } = obsidianSecondBrain.generateSecondBrainVault(planningDir, root);
+        generatedDocs.push(homePath);
+    }
+    catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        errors.push({ artifact: 'vault', error: errMsg });
     }
     return {
         timestamp: new Date().toISOString(),

@@ -18,6 +18,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 const markdown_sectionizer_cjs_1 = require("./markdown-sectionizer.cjs");
+const text_lines_cjs_1 = require("./text-lines.cjs");
 // ─── Wikilink Parser Engine ───────────────────────────────────────────────────
 // Global regex for [[target|alias]] patterns. Safe for concurrent matchAll iterators.
 const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -26,7 +27,7 @@ const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
  */
 function extractWikilinks(content, sourceFile) {
     const links = [];
-    const lines = content.split('\n');
+    const lines = (0, text_lines_cjs_1.splitLines)(content);
     let inCodeBlock = false;
     for (let i = 0; i < lines.length; i++) {
         const lineText = lines[i];
@@ -36,7 +37,9 @@ function extractWikilinks(content, sourceFile) {
         }
         if (inCodeBlock)
             continue;
-        const sanitizedLine = (0, markdown_sectionizer_cjs_1.stripInlineCode)(lineText);
+        // Normalize escaped backticks (\`) to standard backticks so inline code stripping covers them
+        const normalizedLine = lineText.replace(/\\`/g, '`');
+        const sanitizedLine = (0, markdown_sectionizer_cjs_1.stripInlineCode)(normalizedLine);
         const matches = sanitizedLine.matchAll(WIKILINK_REGEX);
         for (const match of matches) {
             const target = match[1].trim();
@@ -56,15 +59,18 @@ function extractWikilinks(content, sourceFile) {
  * Resolves the target type of a given wikilink.
  */
 function resolveTargetType(target) {
-    if (/^D-\d+$/i.test(target) || /^decision/i.test(target))
+    const clean = target.replace(/\\/g, '/').trim();
+    if (!clean)
+        return 'unknown';
+    if (/^D-\d+/i.test(clean) || /^decision/i.test(clean) || clean.includes('Decisions/'))
         return 'decision';
-    if (/^\d{2}-\d{2}-PLAN/i.test(target) || /^phase/i.test(target))
+    if (/^\d{2}(?:\.\d+)?(?:-\d{2})?-PLAN/i.test(clean) || /^phase/i.test(clean) || clean.includes('Phases/') || /^\d{2}-[a-z0-9-]+$/i.test(clean))
         return 'phase';
-    if (/SPEC/i.test(target))
+    if (/SPEC/i.test(clean) || /CONSTITUTION/i.test(clean))
         return 'spec';
-    if (/\.(ts|js|cts|cjs|py|go|rs|cs|c|h|kt|swift|dart)$/i.test(target))
+    if (/\.(ts|js|cts|cjs|mts|mjs|tsx|jsx|py|go|rs|cs|c|h|kt|swift|dart|sql|prisma|css|scss|sh|bash)$/i.test(clean) || clean.startsWith('src/') || clean.startsWith('lib/') || clean.startsWith('bin/') || clean.includes('Modules/'))
         return 'code';
-    if (/\.md$/i.test(target) || /ARCHITECTURE|APIS|ROADMAP|STATE/i.test(target))
+    if (/\.md$/i.test(clean) || /ARCHITECTURE|APIS|ROADMAP|STATE|SUMMARY|REVIEW|TUTORIAL|README|AGENTS|GEMINI|00-Home/i.test(clean) || clean.includes('Lessons/') || clean.endsWith('.canvas') || clean.length > 0)
         return 'doc';
     return 'unknown';
 }
@@ -125,7 +131,7 @@ function buildBacklinkIndex(planningDir, rootDir) {
         const fileId = node_path_1.default.basename(file, '.md');
         ensureNode(fileId, relPath);
         const extracted = extractWikilinks(content, relPath);
-        const lines = content.split('\n');
+        const lines = (0, text_lines_cjs_1.splitLines)(content);
         for (const link of extracted) {
             totalLinks++;
             const targetId = link.target;

@@ -397,18 +397,37 @@ class ArchitectureHead {
     const diff = options?.diff || '';
     const hasExportBreaking = /-\s*export\s+(function|class|interface|type|const)/.test(diff);
 
+    // REQ-37-02: Cognitive Guard — check continuous memory for governing architectural decisions
+    let governingDecisionsText = '';
+    const root = options?.rootDir || (options?.planningDir ? path.dirname(options.planningDir) : process.cwd());
+    try {
+      if (continuousMem.queryMemory) {
+        const decisions = continuousMem.queryMemory(root, path.basename(filePath), {
+          files: [lookupKey, norm],
+          category: 'architecture_decision',
+          limit: 2,
+        });
+        if (decisions.length > 0) {
+          const decIds = decisions.map((d: { id: string }) => d.id).join(', ');
+          governingDecisionsText = ` Módulo regido por decisões arquiteturais (${decIds}).`;
+        }
+      }
+    } catch {
+      // Fail-open
+    }
+
     if (hasExportBreaking || isGodObject || totalBlast > 10 || pageRank > 0.05) {
       return {
         score: 3,
-        reason: `Módulo central de alto acoplamento (PageRank: ${pageRank.toFixed(3)}, Blast Radius: ${totalBlast}, GodObject: ${isGodObject}, Quebra de Export: ${hasExportBreaking}).`,
+        reason: `Módulo central de alto acoplamento (PageRank: ${pageRank.toFixed(3)}, Blast Radius: ${totalBlast}, GodObject: ${isGodObject}, Quebra de Export: ${hasExportBreaking}).${governingDecisionsText}`,
         weight: this.weight,
       };
     }
 
-    if (totalBlast > 2 || pageRank > 0.015) {
+    if (totalBlast > 2 || pageRank > 0.015 || governingDecisionsText) {
       return {
         score: 2,
-        reason: `Módulo com dependentes moderados (Blast Radius: ${totalBlast}, PageRank: ${pageRank.toFixed(3)}).`,
+        reason: `Módulo com dependentes moderados ou decisões ativas (Blast Radius: ${totalBlast}, PageRank: ${pageRank.toFixed(3)}).${governingDecisionsText}`,
         weight: this.weight,
       };
     }

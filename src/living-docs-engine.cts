@@ -16,6 +16,8 @@ import visualGraph = require('./visual-graph-exporter.cjs');
 import obsidianInterop = require('./obsidian-interop.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import canvasGenerator = require('./canvas-roadmap-generator.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import obsidianSecondBrain = require('./obsidian-second-brain.cjs');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -177,6 +179,15 @@ function syncLivingDocs(planningDir: string, rootDir?: string): LivingDocsSyncRe
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     errors.push({ artifact: 'ROADMAP.canvas', error: errMsg });
+  }
+
+  // 8. Generate Universal Second Brain Obsidian Vault
+  try {
+    const { homePath } = obsidianSecondBrain.generateSecondBrainVault(planningDir, root);
+    generatedDocs.push(homePath);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    errors.push({ artifact: 'vault', error: errMsg });
   }
 
   return {

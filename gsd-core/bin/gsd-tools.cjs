@@ -3723,10 +3723,30 @@ function openBrowserUrl(targetPath) {
 function routeGraph({ args, cwd, raw }) {
   const visualGraph = require('./lib/visual-graph-exporter.cjs');
   const canvasGen = require('./lib/canvas-roadmap-generator.cjs');
+  const secondBrain = require('./lib/obsidian-second-brain.cjs');
   const planningDir = path.join(cwd, '.planning');
 
+  const isVault = args.includes('--vault') || args.includes('--brain') || args.includes('vault') || args.includes('brain');
   const isCanvasOnly = args.includes('--canvas');
   const shouldOpen = args.includes('--open');
+
+  if (isVault) {
+    const report = secondBrain.generateSecondBrainVault(planningDir, cwd);
+    if (raw) {
+      process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+      return;
+    }
+    process.stdout.write(`\n🧠 GSD Project Second Brain Obsidian Vault Generated:\n`);
+    process.stdout.write(`  • Vault Path:   ${report.vaultPath}\n`);
+    process.stdout.write(`  • Master Home:  ${report.homePath}\n`);
+    process.stdout.write(`  • Visual Canvas: ${report.canvasPath}\n`);
+    process.stdout.write(`  • Total Notes:  ${report.totalNotes} (${report.totalDecisions} decisions, ${report.totalPhases} phases, ${report.totalModules} modules, ${report.totalLessons} lessons)\n\n`);
+    process.stdout.write(`Open '${report.vaultPath}' as an Obsidian Vault to explore your interactive second brain!\n`);
+    if (shouldOpen) {
+      openBrowserUrl(report.homePath);
+    }
+    return;
+  }
 
   if (isCanvasOnly) {
     const { canvasPath, payload } = canvasGen.exportRoadmapCanvas(planningDir);
@@ -3973,7 +3993,18 @@ function routeTelemetry({ args, cwd, raw, error }) {
       else if (args[i] === '--avoided' && args[i + 1]) fullRepoTokens = parseInt(args[++i], 10) || 0;
       else if (args[i] === '--command' && args[i + 1]) command = args[++i];
       else if ((args[i] === '--phase' || args[i] === '--from-phase') && args[i + 1]) phaseId = args[++i];
-      else if ((args[i] === '--files' || args[i] === '--from-files') && args[i + 1]) targetFiles = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+      else if (args[i] === '--files' || args[i] === '--from-files') {
+        const collected = [];
+        while (i + 1 < args.length && !args[i + 1].startsWith('--')) {
+          i++;
+          const parts = args[i].split(',').map(s => s.trim()).filter(Boolean);
+          collected.push(...parts);
+        }
+        for (const f of collected) {
+          const norm = f.replace(/\\/g, '/');
+          if (!targetFiles.includes(norm)) targetFiles.push(norm);
+        }
+      }
       else if (args[i] === '--invocation-id' && args[i + 1]) invocationId = args[++i];
       else if (args[i] === '--scope-mode' && args[i + 1]) scopeMode = args[++i];
     }

@@ -339,6 +339,7 @@ export default tseslint.config(
       'gsd-core/bin/lib/visual-graph-exporter.cjs',
       'gsd-core/bin/lib/obsidian-interop.cjs',
       'gsd-core/bin/lib/canvas-roadmap-generator.cjs',
+      'gsd-core/bin/lib/obsidian-second-brain.cjs',
       // Phase 28 / ADR-457: tsc-generated runtime artifact — lint the src/system-one-engine.cts source.
       'gsd-core/bin/lib/system-one-engine.cjs',
       // Phase 32 / ADR-457: tsc-generated runtime artifacts — lint the src/*.cts sources.

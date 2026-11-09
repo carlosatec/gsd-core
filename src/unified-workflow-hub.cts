@@ -43,6 +43,8 @@ import visualGraphMod = require('./visual-graph-exporter.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import canvasGenMod = require('./canvas-roadmap-generator.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+import secondBrainMod = require('./obsidian-second-brain.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import observabilityHtmlMod = require('./observability-html-dashboard.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import systemOneMod = require('./system-one-engine.cjs');
@@ -1175,6 +1177,17 @@ function runInternalUnifiedCommand(
     }
 
     case 'graph': {
+      const isVault = options.args.includes('--vault') || options.args.includes('--brain') || Boolean(options.flags?.['vault']) || Boolean(options.flags?.['brain']);
+      if (isVault) {
+        const report = secondBrainMod.generateSecondBrainVault(planningDir, cwd);
+        return {
+          command: 'graph',
+          action: 'EXPORT_SECOND_BRAIN_VAULT',
+          nextStep: `open ${report.vaultPath} in Obsidian to explore your interactive second brain`,
+          data: report,
+          message: `Second Brain Obsidian Vault exported to ${report.vaultPath} (${report.totalNotes} notes, ${report.totalDecisions} decisions, ${report.totalPhases} phases, ${report.totalModules} modules).`,
+        };
+      }
       const { htmlPath, payload } = visualGraphMod.exportVisualGraph(planningDir, cwd);
       const canvasResult = canvasGenMod.exportRoadmapCanvas(planningDir);
       return {
