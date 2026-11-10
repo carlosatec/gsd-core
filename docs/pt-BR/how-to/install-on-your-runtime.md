@@ -46,18 +46,20 @@ CLAUDE_CONFIG_DIR=~/.claude-alt npx github:carlosatec/gsd-core --claude --global
 
 ---
 
-### Gemini CLI
+### Google Antigravity (Sucessor oficial do Gemini CLI)
 
 ```bash
-npx github:carlosatec/gsd-core --gemini --global
+npx github:carlosatec/gsd-core --antigravity --global
 ```
 
-As habilidades são instaladas em `~/.gemini/`. O instalador reescreve todos os corpos de comando para o namespace de dois-pontos do Gemini (`/gsd-update`, `/gsd-config`, etc.). Reinicie o Gemini CLI após a instalação.
+O instalador detecta automaticamente a raiz canônica de customizações do Google Antigravity (`~/.gemini/config/`) e instala as habilidades em `~/.gemini/config/skills/`. Qualquer resquício de skills legadas em `~/.gemini/antigravity-ide/` é limpo automaticamente de forma transparente.
+
+> **Nota:** O Gemini CLI foi descontinuado pelo Google em 18/06/2026. O Antigravity CLI é seu sucessor oficial e é suportado nativamente pelo GSD Core.
 
 **Substituir o diretório de instalação:**
 
 ```bash
-GEMINI_CONFIG_DIR=~/.gemini-alt npx github:carlosatec/gsd-core --gemini --global
+ANTIGRAVITY_CONFIG_DIR=~/.gemini/config-alt npx github:carlosatec/gsd-core --antigravity --global
 ```
 
 ---
@@ -208,19 +210,13 @@ As habilidades são instaladas em `~/.augment/`. O GSD instala habilidades e age
 
 ---
 
-### Antigravity
+### Kimi Code
 
 ```bash
-npx github:carlosatec/gsd-core --antigravity --global
+npx github:carlosatec/gsd-core --kimi-code --global
 ```
 
-O instalador detecta automaticamente a raiz canônica de customizações do Google Antigravity (`~/.gemini/config/`) e instala as habilidades em `~/.gemini/config/skills/`. Qualquer resquício de skills legadas em `~/.gemini/antigravity-ide/` é limpo automaticamente de forma transparente.
-
-**Substituir o diretório de instalação:**
-
-```bash
-ANTIGRAVITY_CONFIG_DIR=~/.gemini/config-alt npx github:carlosatec/gsd-core --antigravity --global
-```
+As habilidades são instaladas em `~/.kimi-code/` (e `~/.kimi/`). O GSD instala habilidades, agentes e hooks com descritores de ciclo de vida nativos.
 
 ---
 

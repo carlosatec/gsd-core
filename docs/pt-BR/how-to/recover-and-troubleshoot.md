@@ -295,6 +295,52 @@ Audite também quais servidores MCP estão habilitados. Cada servidor MCP habili
 
 ---
 
+## Desinstalação & Remoção Limpa
+
+Se você precisar remover o GSD Core Nexus do seu sistema ou limpar a instalação de um ambiente de IA específico, use a flag dedicada `--uninstall`.
+
+### Sintaxe dos Comandos
+
+A flag `--uninstall` requer a especificação explícita do escopo (`--global` ou `--local`):
+
+```bash
+# Desinstalação global no Claude Code
+npx github:carlosatec/gsd-core --global --uninstall
+
+# Desinstalação global no Google Antigravity
+npx github:carlosatec/gsd-core --antigravity --global --uninstall
+
+# Desinstalação global no Codex
+npx github:carlosatec/gsd-core --codex --global --uninstall
+
+# Cursor / Windsurf / Kimi / Copilot / Cline / Qwen / DeepSeek / etc.
+npx github:carlosatec/gsd-core --<runtime> --global --uninstall
+
+# Apenas no diretório local do projeto atual
+npx github:carlosatec/gsd-core --local --uninstall
+
+# Desinstalar de todos os ambientes de IA globalmente
+npx github:carlosatec/gsd-core --all --global --uninstall
+```
+
+### Garantias de Remoção vs. Preservação
+
+Ao executar a desinstalação, o GSD realiza uma limpeza atômica com isolamento e preservação durável:
+
+| Tipo de Artefato | O que acontece durante o `--uninstall` |
+|---|---|
+| **Motor GSD Core (`gsd-core/`)** | Totalmente removido. |
+| **Comandos / Skills GSD (`skills/gsd-*`)** | Removidos de forma limpa. |
+| **Agentes GSD (`agents/gsd-*`)** | Removidos de forma limpa. |
+| **Hooks Gerenciados (`hooks/gsd-*.js`, `hooks/lib/`)** | Removidos; hooks de terceiros/usuário são preservados. |
+| **Manifestos e Marcadores GSD** | `gsd-file-manifest.json` e `.gsd-profile` removidos. `package.json` sintético com apenas `{"type":"commonjs"}` é removido. |
+| **Perfil e Preferências do Usuário** | **PRESERVADOS.** `USER-PROFILE.md`, `dev-preferences.md`, `.gsd-preferences.md` são colocados em staging seguro e jamais são excluídos. |
+| **Skills e Agentes Customizados** | **PRESERVADOS.** Qualquer skill ou agente sem o prefixo `gsd-` é preservado. |
+| **Configurações Pessoais** | **PRESERVADOS.** `settings.json`, `config.toml`, `mcp_config.json` mantêm as configurações do usuário; apenas as entradas do GSD são desvinculadas. |
+| **Diretório `.planning/` do Projeto** | **PRESERVADO.** Roadmaps, planos de fase e estado são mantidos sob controle de versão e nunca são tocados. |
+
+---
+
 ## Referência rápida de recuperação
 
 | Problema | Solução |
