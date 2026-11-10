@@ -168,7 +168,65 @@ function buildVisualGraphPayload(planningDir, rootDir) {
             // non-blocking
         }
     }
-    // 3. Discover Architectural Decisions from STATE.md / GEMINI.md / CONTEXT.md
+    // 3. Discover Architectural Decisions and Knowledge Nodes
+    if (graph.knowledgeNodes && graph.knowledgeNodes.phases) {
+        for (const [pId, pData] of Object.entries(graph.knowledgeNodes.phases)) {
+            if (!nodeMap.has(`phase:${pId}`)) {
+                totalPhases++;
+                addNode({
+                    id: `phase:${pId}`,
+                    label: pId,
+                    type: 'phase',
+                    pageRank: 0.15,
+                    radius: 14,
+                    color: PALETTE.phase,
+                    phaseId: pId,
+                    details: { isPhase: true },
+                });
+            }
+            const relatedFiles = [pData.specPath, ...(pData.planPaths || []), pData.summaryPath].filter(Boolean);
+            for (const rf of relatedFiles) {
+                if (nodeMap.has(rf)) {
+                    links.push({
+                        source: `phase:${pId}`,
+                        target: rf,
+                        type: 'specifies',
+                    });
+                }
+            }
+        }
+    }
+    if (graph.knowledgeNodes && graph.knowledgeNodes.decisions) {
+        for (const [dId, dData] of Object.entries(graph.knowledgeNodes.decisions)) {
+            if (!nodeMap.has(`decision:${dId}`)) {
+                totalDecisions++;
+                addNode({
+                    id: `decision:${dId}`,
+                    label: dId,
+                    type: 'decision',
+                    pageRank: 0.2,
+                    radius: 12,
+                    color: PALETTE.decision,
+                    details: {
+                        isDecision: true,
+                        category: dData.category || 'Architecture',
+                        summary: (dData.title || dData.summary || '').slice(0, 100),
+                    },
+                });
+                // Add governance links to relevant/governed files
+                const targets = dData.governedFiles || dData.relevantFiles;
+                if (targets && Array.isArray(targets)) {
+                    for (const rf of targets) {
+                        links.push({
+                            source: `decision:${dId}`,
+                            target: rf,
+                            type: 'governs',
+                        });
+                    }
+                }
+            }
+        }
+    }
     try {
         const searchFiles = [
             node_path_1.default.join(planningDir, 'STATE.md'),
@@ -210,6 +268,7 @@ function buildVisualGraphPayload(planningDir, rootDir) {
             totalLinks: validLinks.length,
             totalDecisions,
             totalPhases,
+            totalKnowledgeNodes: totalDecisions + totalPhases,
             totalFiles: Object.keys(graph.files).length,
         },
         nodes,

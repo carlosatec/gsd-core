@@ -45,7 +45,7 @@ interface VisualGraphNode {
 interface VisualGraphLink {
   source: string;
   target: string;
-  type: 'import' | 'implements' | 'governs' | 'tests' | 'route';
+  type: 'import' | 'implements' | 'governs' | 'specifies' | 'tests' | 'route';
   weight?: number;
 }
 
@@ -58,6 +58,7 @@ interface VisualGraphPayload {
     totalDecisions: number;
     totalPhases: number;
     totalFiles: number;
+    totalKnowledgeNodes?: number;
   };
   nodes: VisualGraphNode[];
   links: VisualGraphLink[];
@@ -215,7 +216,68 @@ function buildVisualGraphPayload(planningDir: string, rootDir?: string): VisualG
     }
   }
 
-  // 3. Discover Architectural Decisions from STATE.md / GEMINI.md / CONTEXT.md
+  // 3. Discover Architectural Decisions and Knowledge Nodes
+  if (graph.knowledgeNodes && graph.knowledgeNodes.phases) {
+    for (const [pId, pData] of Object.entries(graph.knowledgeNodes.phases as Record<string, { id: string; name?: string; specPath?: string; planPaths?: string[]; summaryPath?: string }>)) {
+      if (!nodeMap.has(`phase:${pId}`)) {
+        totalPhases++;
+        addNode({
+          id: `phase:${pId}`,
+          label: pId,
+          type: 'phase',
+          pageRank: 0.15,
+          radius: 14,
+          color: PALETTE.phase,
+          phaseId: pId,
+          details: { isPhase: true },
+        });
+      }
+      const relatedFiles = [pData.specPath, ...(pData.planPaths || []), pData.summaryPath].filter(Boolean) as string[];
+      for (const rf of relatedFiles) {
+        if (nodeMap.has(rf)) {
+          links.push({
+            source: `phase:${pId}`,
+            target: rf,
+            type: 'specifies',
+          });
+        }
+      }
+    }
+  }
+
+  if (graph.knowledgeNodes && graph.knowledgeNodes.decisions) {
+    for (const [dId, dData] of Object.entries(graph.knowledgeNodes.decisions as Record<string, { id: string; category?: string; summary?: string; title?: string; relevantFiles?: string[]; governedFiles?: string[] }>)) {
+      if (!nodeMap.has(`decision:${dId}`)) {
+        totalDecisions++;
+        addNode({
+          id: `decision:${dId}`,
+          label: dId,
+          type: 'decision',
+          pageRank: 0.2,
+          radius: 12,
+          color: PALETTE.decision,
+          details: {
+            isDecision: true,
+            category: dData.category || 'Architecture',
+            summary: (dData.title || dData.summary || '').slice(0, 100),
+          },
+        });
+
+        // Add governance links to relevant/governed files
+        const targets = dData.governedFiles || dData.relevantFiles;
+        if (targets && Array.isArray(targets)) {
+          for (const rf of targets) {
+            links.push({
+              source: `decision:${dId}`,
+              target: rf,
+              type: 'governs',
+            });
+          }
+        }
+      }
+    }
+  }
+
   try {
     const searchFiles = [
       path.join(planningDir, 'STATE.md'),
@@ -258,6 +320,7 @@ function buildVisualGraphPayload(planningDir: string, rootDir?: string): VisualG
       totalLinks: validLinks.length,
       totalDecisions,
       totalPhases,
+      totalKnowledgeNodes: totalDecisions + totalPhases,
       totalFiles: Object.keys(graph.files).length,
     },
     nodes,
