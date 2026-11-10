@@ -66,25 +66,26 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
 └──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
        │                                                           │
 ┌──────▼───────────────────────────────────────────────────────────▼──────────────────────────────────────────────────────┐
-│                 NEXUS STATIC INTELLIGENCE & UNIFIED GRAPH SSOT (Fases 1, 5, 16, 27, 31)                                 │
-│   src/codebase-ast-analyzer.cts ── Polyglot AST Engine (16+ ecossistemas) + PageRank Centrality + Blast Radius         │
-│   .planning/intel/codebase-graph.json ── Grafo SSOT Ancorado por Git Commit SHA + Arestas Semânticas (type vs runtime) │
-│   src/visual-graph-exporter.cts ── Gerador HTML Canvas 2D 100% offline & snapshot PNG (/gsd-graph — Fase 16)            │
-│   src/canvas-roadmap-generator.cts ── Exportador JSON Open Canvas para Obsidian (ROADMAP.canvas — Fase 16)              │
-│   src/obsidian-interop.cts ── Suporte a [[wikilinks]] e índice bidirecional (.planning/intel/backlinks.json — Fase 16)  │
-│   src/hybrid-semantic-rag.cts ── Retrieval Okapi BM25 & Tokenizador Poliglota                                           │
-│   src/graphify.cts ── Fachada de Grafo nativa em TypeScript (Zero Python)                                               │
-│   src/anti-pattern-store.cts ◄── Memória de Lições Aprendidas (BM25 Relevance + Stack Sanitizer — Fase 20)              │
+│       NEXUS STATIC INTELLIGENCE, AST v2.1 & PROJECT SECOND BRAIN (Fases 1, 5, 16, 27, 31, 37)                           │
+│   src/codebase-ast-analyzer.cts ── Polyglot AST Engine (35+ extensões) + PageRank + Tipagem Semântica + KnowledgeNodes   │
+│   .planning/intel/codebase-graph.json ── Grafo SSOT Ancorado por Git Commit SHA + Arestas type_only vs runtime           │
+│   src/obsidian-second-brain.cts ── Motor do Segundo Cérebro Obsidian (.planning/vault/ MOC 00-Home.md & 600+ notas)     │
+│   src/visual-graph-exporter.cts ── Grafo Visual 360° HTML Canvas 2D/3D (1.585 nós, governs & specifies)                 │
+│   src/canvas-roadmap-generator.cts ── Gerador de Dual Canvas (00-Vault.canvas Mindmap & 01-Roadmap.canvas 37 Fases)      │
+│   src/obsidian-interop.cts ── Resolução de [[wikilinks]] com zero alvos órfãos (.planning/intel/backlinks.json)         │
+│   src/continuous-memory.cts ── Memória Contínua Permanente Claude-Mem (decisions.jsonl, 191 regras sem perda temporal)  │
+│   src/hybrid-semantic-rag.cts ── Motor de Busca Léxica Okapi BM25 & Tokenizador Poliglota                              │
+│   src/anti-pattern-store.cts ◄── Repositório de Lições Aprendidas & Auto-Cura (anti-patterns.jsonl)                     │
 │   src/test-scaffold-engine.cts ── Sintetizador de testes por topologia (Go, Rust, Py, Dart, Swift, Kotlin, Java)         │
 └──────┬───────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┘
        │                                                           │
-┌──────▼──────────────────────┐                           ┌────────▼───────────────────────────────┐
-│     STATE MACHINE ENGINE    │                           │    CAPABILITY & SECURITY FOUNDATION    │
-│  src/state.cts (5.1k lines) │                           │  src/security.cts (Secret Redact/Path) │
-│  src/session-context-hook   ◄── Injeção Session Handshk │  src/capability-lifecycle.cts (Ledger) │
-│  .planning/STATE.md         │   (Fase 10 — D-30)        │  src/clock.cts (Deterministic Sleep)   │
-│                             │                           │  src/worktree-safety.cts (Git Isolate) │
-└─────────────────────────────┘                           └────────────────────────────────────────┘
+┌──────▼──────────────────────────────┐                   ┌────────▼────────────────────────────────────────┐
+│        STATE MACHINE ENGINE         │                   │    CAPABILITY, WORKTREE & CONCURRENCY SEAM      │
+│  src/state.cts                      │                   │  src/state-lock.cts (Modular Lock Facade F. 36) │
+│  src/state-lock.cts (Lock Facade)   │                   │  src/worktree-isolation.cts (Worktrunk F. 34)   │
+│  src/session-context-hook           │                   │  src/speckit-interop.cts (GitHub Spec-Kit F. 34)│
+│  .planning/STATE.md                 │                   │  src/security.cts (Secret Redact/Path Isolation)│
+└─────────────────────────────────────┘                   └─────────────────────────────────────────────────┘
 ```
 
 ---

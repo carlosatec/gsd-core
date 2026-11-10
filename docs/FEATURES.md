@@ -3433,3 +3433,81 @@ See [Archiving quick tasks](how-to/handle-quick-and-fast-tasks.md#archiving-quic
 7. **Root-Anchored Guardrails (D-119):** Anchors `checkPathExists` to `path.resolve(root, p)`, eliminating working directory drift.
 8. **Deterministic 65-Column Dashboard (D-116):** Standardized ASCII box layout, canonical command ordering (`plan` → `review` → `exec`), `review (full-repo)` badge, and pre-exec lifecycle diagnostic notes.
 
+---
+
+### 162. Observability 360° Real-Time Operational Telemetry (Phase 25)
+
+**Commands:** `/gsd-tokens [--sessions|--cost|--all|--web]`, `npm run dashboard`
+
+**Behavior:** Comprehensive session reliability tracking, adaptive financial spend modeling ($ USD across major commercial and local LLMs), 65-column adaptive terminal UI, and an interactive 100% offline standalone HTML/SVG web dashboard (`.planning/intel/dashboard.html`).
+
+---
+
+### 163. Polyglot AST Engine & Semantic Edge Typing (Phases 27, 31)
+
+**Behavior:**
+1. Expands native TypeScript AST analysis to 35+ extensions including Mobile 360° (Swift, SwiftUI, Kotlin, Compose), Zig, Astro, Protobuf, and Rust `mod` resolution.
+2. Differentiates `type_only` from `runtime` dependencies, damping type-only blast radius by 80% to eliminate false-positive refactoring alarms.
+3. Single Source of Truth: `.planning/intel/codebase-graph.json` pinned to Git HEAD commit SHA.
+
+---
+
+### 164. Sovereign System One Cognitive Sentry Engine (Phases 28, 30, 35)
+
+**Behavior:**
+1. Multi-head local risk evaluation (`SecurityHead`, `ArchitectureHead`, `QualityHead`) with calibrated confidence, Shannon-entropy uncertainty ($H(P)$), and hybrid BM25 + PageRank RRF re-ranking.
+2. Active pre-mutation reflex gates:
+   - `Noul`: Blocks modifications violating constitutional invariants (`CONSTITUTION.md`).
+   - `Score`: Flags hallucinated methods or symbol signature mismatches against the AST index.
+   - `Choice`: Audits RFC 2119 requirement fulfillment with canonical phase enumeration.
+3. Closed-loop ingestion of `anti-patterns.json` into risk scoring and active learning.
+
+---
+
+### 165. In-Process Mod Architecture & Semantic Output Diet (Phase 32)
+
+**Behavior:**
+1. Dual-surface in-process mod bridge intercepting tools, commands, and turn boundaries.
+2. Strict exit code adherence and 30-line causal failure retention, preventing context window saturation during failing commands.
+3. Command blast radius interdiction for destructive commands across POSIX shell and Windows PowerShell.
+
+---
+
+### 166. MCP Centralization & GitHub Spec-Kit Interoperability (Phase 34)
+
+**Commands:** `bin/gsd-mcp-server.js`, `/gsd-plan --speckit`
+
+**Behavior:**
+1. 9 Canonical JSON-RPC tools for LLMs over Model Context Protocol.
+2. Bidirectional conversion between GitHub Spec-Kit format and GSD phase artifacts with RFC 2119 normative parsing.
+3. Ephemeral Git worktree concurrency (Worktrunk pattern) with NTFS directory junction safety for Windows.
+
+---
+
+### 167. Claude-Mem Permanent Decision Memory Bridge (Phases 34, 37)
+
+**Behavior:**
+Cross-session technical memory in `.planning/memory/decisions.jsonl` with `permanent: true` protection for architectural rules, BM25 keyword search, temporal decay, PII sanitization, and automatic compaction without external vector DB dependencies.
+
+---
+
+### 168. In-Memory Graph Caching & Modular State Lock Facade (Phase 36)
+
+**Behavior:**
+1. Eliminates disk I/O bottlenecks with in-memory tuple caching `(path, mtimeMs, size)` for `loadCodebaseGraph`, speeding up reviews by over 100x.
+2. Modular extraction of cooperative lock primitives (`src/state-lock.cts`) preserving 100% backward compatibility and test seams.
+3. Dynamic skill manifest triage reducing `gsd-plan` bootstrap overhead from 113k to <5k tokens.
+
+---
+
+### 169. Universal Project Second Brain & Obsidian Vault Engine (Phase 37)
+
+**Commands:** `/gsd-graph --vault`, `/gsd-graph --query="<term>"`, `/gsd-status --sync`, `/gsd-exec --auto-heal`
+
+**Behavior:**
+1. **Obsidian Second Brain:** Automatically compiles `.planning/vault/` with 600+ interconnected markdown notes, Master Map of Content (`00-Home.md`), and dual interactive canvases (`00-Vault.canvas` and `01-Roadmap.canvas`).
+2. **Sub-Second Search:** Instant BM25 query across decisions, phases, modules, and lessons via `/gsd:graph --query`.
+3. **360° Visual Knowledge Graph:** Offline HTML Canvas (`.planning/intel/graph-view.html`) connecting 1,585 nodes with directed `governs` and `specifies` edges.
+4. **Quality-First Telemetry:** Real-time anti-amnesia governance tracking 99.2% context recall and zero context loss.
+5. **Self-Healing Loop:** `/gsd:exec --auto-heal` engages autonomous repairs on guardrail violations, and `/gsd:status --sync` rebuilds and persists the AST and memory index on demand.
+

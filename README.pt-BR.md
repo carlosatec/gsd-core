@@ -1,167 +1,202 @@
 <div align="center">
 
-# GSD Core Nexus
+# ⚡ GSD Core Nexus
 
-**Git. Ship. Done.**
+### **Git. Ship. Done. — O Sistema Operacional para Agentes de IA**
 
 [English](README.md) · **Português**
 
-**Um sistema leve de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações para Claude Code, DeepSeek Harness, OpenCode, Antigravity CLI, Codex, Copilot, Cursor, Windsurf e muito mais.**
+**Um sistema soberano de meta-prompting, engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações com Segundo Cérebro integrado para Claude Code, Antigravity CLI, DeepSeek Harness, OpenCode, Codex, Copilot, Cursor, Windsurf, Kimi CLI, Qwen Code e muito mais.**
 
-[![version](https://img.shields.io/badge/version-3.7.5-CB3837?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
-[![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests)](https://github.com/carlosatec/gsd-core/actions)
+<br/>
+
+[![Versão](https://img.shields.io/badge/version-3.7.5-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
+[![Testes](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Testes&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-38bdf8?style=for-the-badge)](LICENSE)
+[![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
+[![Segundo Cérebro](https://img.shields.io/badge/obsidian-segundo%20c%C3%A9rebro-8b5cf6?style=for-the-badge&logo=obsidian&logoColor=white)](.planning/vault/)
 [![GitHub stars](https://img.shields.io/github/stars/carlosatec/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/carlosatec/gsd-core/stargazers)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+
+<br/>
 
 </div>
 
 ---
 
-## O que é o GSD Core Nexus
+## 🌟 Por que o GSD Core Nexus?
 
-GSD Core Nexus é um framework de engenharia de contexto, análise estática nativa e desenvolvimento orientado a especificações que conduz agentes de codificação com IA (Claude Code, DeepSeek Harness, Codex, Antigravity CLI, Copilot, Cursor e mais) por meio de um ciclo de fases disciplinado. Ele resolve o [context rot](docs/pt-BR/explanation/context-engineering.md) — a degradação de qualidade que se acumula à medida que uma IA preenche sua janela de contexto — executando todo o trabalho pesado de pesquisa, planejamento e execução em subagentes com contexto limpo, mantendo sua sessão principal enxuta.
+A maioria dos fluxos de trabalho com IA em projetos médios e grandes falha devido a três gargalos críticos:
+1. **Context Rot & Desperdício de Tokens:** Conforme a conversa avança, o histórico satura a janela de contexto, degradando a qualidade das respostas, alucinando métodos inexistentes e queimando milhões de tokens desnecessários.
+2. **Amnésia de Contexto & Perda de Decisões:** Cada nova sessão reseta a memória da IA. Decisões de arquitetura, erros superados e regras constitucionais são imediatamente esquecidos.
+3. **Edições Sem Salvaguarda & Regressões Silenciosas:** Os agentes alteram arquivos sem validação estática prévia, quebrando contratos de tipos, violando regras de negócio e introduzindo bugs em cascata.
 
----
-
-## Como funciona
-
-Cada marco repete o mesmo ciclo de cinco etapas, uma fase por vez:
-
-1. **Discuss & Spec** — capturar decisões de implementação antes de qualquer planejamento (`/gsd:plan --spec`)
-2. **Plan** — pesquisar, decompor e verificar se o plano cabe em uma janela de contexto limpa (`/gsd:plan`)
-3. **Execute** — executar planos em ondas paralelas com Pre-Flight static guardrails (`/gsd:exec`)
-4. **Review & Verify** — revisão profunda de código e UI com auto-fix (`/gsd:review --fix`) e UAT (`/gsd:verify`)
-5. **Ship** — release limpa, geração automática de PR, arquivamento de fase e repetição (`/gsd:ship`)
+**O GSD Core Nexus elimina essas falhas na raiz:**
+- 🧠 **Segundo Cérebro do Projeto (Obsidian Vault):** Transforma automaticamente seu código, roteiro de fases e 170+ decisões de arquitetura em um **Obsidian Vault** estruturado (`.planning/vault/`) com mindmaps interativos em 2D.
+- ⚡ **Injeção de Contexto JIT Cirúrgica:** Economiza de **80% a 95%** de tokens ao injetar apenas os tipos, dependências e decisões ativas pertinentes no prompt do subagente.
+- 🛡️ **Guardiões Cognitivos Soberanos:** Avaliação de risco System One (`SecurityHead`, `ArchitectureHead`, `QualityHead`), invariantes constitucionais `Noul` e checagem de aterramento AST 100% locais, sem dependência de APIs externas.
+- 🔄 **Loop de Auto-Cura:** Guardrails pré-voo barram mutações perigosas antes das alterações, enquanto loops automáticos de teste diagnosticam e auto-reparam falhas de execução.
 
 ---
 
-## Destaques do GSD Core Nexus 3.7
+## 🔄 O Ciclo Contínuo de 5 Etapas
 
-O GSD Core Nexus 3.7 transforma agentes de codificação em uma engenharia autônoma e disciplinada de alta precisão com observabilidade causal completa, integração nativa multi-runtime e automação de release:
+Cada marco do projeto é dividido em fases testáveis e orquestradas através de um ciclo rigoroso de 5 etapas:
 
-1. **AST Universal 360° & Grafo Nativo (Zero Python):** Análise estática nativa em TypeScript puro para 35+ extensões com suporte completo a **Mobile 360°** (iOS/SwiftUI e Android/Kotlin Compose) e PageRank arquitetural.
-2. **Injeção Cirúrgica JIT & Fechamento Transitivo de Tipos:** Descoberta profunda de tipos em até 3 graus (BFS 3 hops), eliminando o *context rot* e economizando de **80% a 95% de tokens**.
-3. **Superfície Canônica Estrita de 11 Comandos:** Interface consolidada e unificada (`status`, `plan`, `exec`, `review`, `verify`, `ship`, `auto`, `tokens`, `migrate`, `graph`, `help`) consistente e sem duplicidades em todos os runtimes de IA.
-4. **Inteligência Causal de Sessão & CLI de Replay Determinístico (`gsd-tools session`):** Log append-only em JSONL com smart trimming de 32 KB, sanitização de segredos, ring buffer (50 sessões / 30 dias) e replay interativo no terminal.
-5. **Observabilidade 360° & Painel de Tokens em Tempo Real:** Telemetria operacional de sessões (confiabilidade, latência, chamadas de ferramentas), modelo financeiro adaptativo (gastos e economia em $ USD para Claude, GPT-4o, Gemini, DeepSeek e LLMs locais), terminal adaptativo de 65 colunas (`/gsd-tokens`) e dashboard web HTML/SVG 100% offline (`npm run dashboard`).
-6. **Code Review em Modo Duplo com Auto-Reparo (`--fix`):** Revisão seletiva cirúrgica via JIT versus auditoria estática global de todo o repositório a custo zero (`--full` / `--repo`).
-7. **Suporte Nativo ao DeepSeek Harness (`@deepseek-ai/dsh`):** Integração declarativa via micro-kernel Cordis, transporte MCP e resolução transparente de aliases de CLI.
-8. **System One Engine — Inteligência de Decisão Soberana Multi-Head:** Triagem de risco local e sem APIs externas (`SecurityHead`, `ArchitectureHead`, `QualityHead`) com confiança calibrada, incerteza por Entropia de Shannon, re-ranking híbrido RRF (BM25 + PageRank), store de aprendizado persistente e auto-ingestão de `anti-patterns.json` no cálculo de risco.
-9. **SSOT Unificado do Grafo & Frescor do Intel:** `.planning/intel/codebase-graph.json` é a Fonte Única da Verdade, ancorada no Git commit SHA (sem a duplicata de ~5.4 MB). O `/gsd-status` informa se o grafo AST está `Fresh` ou `Stale` em relação ao `HEAD` em O(1).
-10. **Tipagem Semântica de Arestas & AST Poliglota Expandido:** Arestas rotuladas como `runtime`, `type_only` ou `infra` (blast radius de tipos puros amortecido em 80%), com suporte nativo a Zig, Astro, Protobuf e resolução de `mod` em Rust.
-11. **Centralização MCP & 9 Ferramentas Canônicas:** Superfície JSON-RPC completa (`bin/gsd-mcp-server.js`) incluindo montagem de contexto JIT cirúrgico, pre-flight guardrails e checagem de viabilidade AST (padrão NVIDIA Auto-Ontology) para verificar símbolos antes de programar.
-12. **Interoperabilidade GitHub Spec-Kit & Parser RFC 2119:** Conversão bidirecional entre o formato Spec-Kit e o GSD nativo, classificação normativa RFC 2119 (`MUST`/`SHALL`/`SHOULD`/`MAY`), sanitização anti-injeção de prompt e arquivo [`CONSTITUTION.md`](CONSTITUTION.md) na raiz.
-13. **Memória Contínua Claude-Mem (TypeScript Nativo):** Memória técnica entre sessões sob `.planning/memory/decisions.jsonl` com ranking BM25, decaimento temporal, sanitização de PII e compactação automática — zero dependência de Python ou vector DBs externos.
-14. **Concorrência com Worktrees & Segurança de Junções NTFS:** Isolamento de subagentes em Git worktrees efêmeros (padrão Worktrunk) com Directory Junctions no NTFS, desvinculação defensiva garantida (`fs.unlinkSync`), retentativa exponencial contra travamentos de `index.lock` e preservação de branches/diretórios em conflitos de merge com aborto limpo na raiz.
-15. **Suíte Unificada de Linters de Drift & Especificação de Skills:** 13+ linters de repositório consolidados em pipeline em memória (execução 10x mais rápida) com auditoria de conformidade Anthropic Agent Skills.
-16. **Contratos AST de Tipos Completos & JIT Calibrado:** Extração normalizada de corpos de interfaces, tipos e classes (`meta.contract`) injetados como blocos reais de código TypeScript no prompt JIT, eliminando adivinhação de atributos de objetos com orçamento JIT expandido para 32k tokens.
-17. **Guardião Cognitivo Soberano no System One Engine (JEV + LAYA):** Gates de reflexo ativo pré-mutação (`Noul` verificando invariantes constitucionais, `Score` cruzando métodos contra a AST, `Choice` auditando requisitos RFC 2119 com enumeração canônica de fases) e Active Learning contínuo (`recordSelfHealingLesson`) registrando reparos fail-then-pass.
-18. **Arquitetura Anti-Amnésia & Hardening de Concorrência:** Sincronização multi-alvo de invariantes globais nos prompts de boas-vindas dos agentes, retenção causal de 30 linhas anteriores a falhas no Output Diet, gravações atômicas de memória contínua com tokens técnicos de 2 caracteres e escalonador de risco `--force`.
-19. **Triagem Dinâmica nos Manifestos de Skills:** Roteamento progressivo sob demanda de sub-fluxos, reduzindo o bootstrap de `gsd-plan` de 113.000 para menos de 5.000 tokens, liberando mais de 100k tokens de atenção limpa para o raciocínio da IA.
+```
+    ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+    │ 1. DISCUSS   │ ──> │   2. PLAN    │ ──> │   3. EXEC    │ ──> │  4. REVIEW   │ ──> │   5. SHIP    │
+    │   & SPEC     │     │              │     │  (Auto-Cura) │     │   & VERIFY   │     │              │
+    └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+           │                    │                    │                    │                    │
+           └────────────────────┴────────────────────┼────────────────────┴────────────────────┘
+                                                     ▼
+                                      🧠 SEGUNDO CÉREBRO & INTEL AST
+                          (Obsidian Vault · Grafo 360° Visual · Memória SSOT)
+```
+
+1. **Discuss & Spec (`/gsd:plan --spec`):** Captura a intenção de arquitetura e os requisitos normativos RFC-2119 antes do código ser escrito.
+2. **Plan (`/gsd:plan`):** Decompõe a fase em ondas paralelas de tarefas atômicas com orçamentos JIT de tokens calibrados.
+3. **Execute (`/gsd:exec --auto-heal`):** Executa as tarefas com subagentes em contextos limpos, contratos estáticos de pre-flight e auto-cura em caso de erro.
+4. **Review & Verify (`/gsd:review --fix` & `/gsd:verify`):** Audita o código em busca de complexidade, dead code e anti-padrões de UI com auto-reparo, seguido por verificação UAT interativa.
+5. **Ship (`/gsd:ship`):** Prepara a branch de release, sincroniza a documentação viva, atualiza o Segundo Cérebro e prepara o Pull Request para merge.
 
 ---
 
-## Início rápido
+## 🚀 Os 11 Comandos Canônicos Unificados
+
+O GSD Core Nexus unifica sua superfície em **11 comandos canônicos essenciais**, consistentes em qualquer runtime de IA suportado:
+
+| Comando | Ação & Superpoder | Principais Flags |
+| :--- | :--- | :--- |
+| **`/gsd-status`** | Diagnóstico situacional em tempo real, progresso de fases e saúde do AST | `--sync`, `--refresh`, `--raw` |
+| **`/gsd-plan`** | Planejamento em ondas atômicas com especificações, discussões e JIT | `[fase]`, `--spec`, `--speckit` |
+| **`/gsd-exec`** | Execução paralela em ondas com guardrails estáticos e commits atômicos | `[fase]`, `--auto-heal`, `--force`, `--isolate` |
+| **`/gsd-review`** | Code review profundo (AST, segurança, complexidade, órfãos) com auto-reparo | `[fase]`, `--fix`, `--full`, `--repo` |
+| **`/gsd-verify`** | Validação UAT conversacional de aceitação com auto-pass e checagem RFC-2119 | `[fase]`, `--auto` |
+| **`/gsd-ship`** | Higiene git, preparação de release branch, changelog, sync do vault e PR | `[fase]` |
+| **`/gsd-auto`** | Piloto automático ponta a ponta com checkpoints de segurança e auto-cura | `[fase]` |
+| **`/gsd-tokens`** | Telemetria multi-comando em tempo real, custos em USD e risco de amnésia | `--sessions`, `--cost`, `--all`, `--web`, `--open` |
+| **`/gsd-graph`** | Gerador do Grafo Visual HTML interativo e compilador do Obsidian Vault | `--vault`, `--open`, `--query="<termo>"`, `--canvas` |
+| **`/gsd-migrate`** | Assistente de modernização não-destrutiva de projetos para arquitetura 3.7 | `--dry-run` |
+| **`/gsd-help`** | Guia de referência rápida, sintaxe e manual operacional dos comandos | — |
+
+---
+
+## 💎 Destaques Tecnológicos do GSD Core Nexus 3.7
+
+### 1. 🧠 Segundo Cérebro do Projeto & Motor de Obsidian Vault
+- **Vault Não-Destrutivo (`.planning/vault/`):** Gera automaticamente mais de 600 notas markdown interconectadas com `[[wikilinks]]` cobrindo decisões, fases, módulos e lições aprendidas.
+- **Master Map of Content (`00-Home.md`):** Portal de navegação com visão estruturada dos módulos de produção (`src/`), ferramentas e decisões.
+- **Dois Mapas Visuais em Canvas:**
+  - `00-Vault.canvas`: Mindmap interativo em 2D dos módulos ativos, decisões e fronteiras do sistema.
+  - `01-Roadmap.canvas`: Roteiro visual completo das 37 fases com status colorido.
+- **Busca Instantânea no Segundo Cérebro (`/gsd:graph --query "<termo>"`):** Busca léxica BM25 sub-segundo em decisões, módulos e lições direto do terminal.
+
+### 2. 🌐 Grafo Visual 360° de Conhecimento AST (`graph-view.html`)
+- **Aplicação HTML5 Canvas 2D Force-Directed 100% Offline:** Renderiza toda a topologia do seu código (1.500+ nós, 1.900+ conexões) em `.planning/intel/graph-view.html`.
+- **Conexões Direcionadas de Governança:** Decisões arquiteturais são ligadas aos arquivos de código que elas governam (`governs`); fases são ligadas aos planos correspondentes (`specifies`).
+- **Zero Dependências:** Funciona nativamente em qualquer navegador com animações fluidas, visual dark neon e filtros interativos por tipo e relevância.
+
+### 3. 🛡️ Guardião Cognitivo Soberano no System One Engine (JEV + LAYA)
+- **Avaliador Multi-Head Local:** Triagem especializada em segurança, arquitetura e qualidade de código com incerteza calculada por Entropia de Shannon ($H(P)$) e re-ranking híbrido RRF (BM25 + PageRank).
+- **Gates Pré-Mutação:**
+  - `Noul`: Impede alterações que violem regras de integridade do [`CONSTITUTION.md`](CONSTITUTION.md).
+  - `Score`: Detecta alucinações de métodos ou incompatibilidades de assinaturas com base na AST real.
+  - `Choice`: Audita o cumprimento rigoroso dos requisitos RFC 2119 das especificações da fase.
+- **Memória Contínua Claude-Mem (`decisions.jsonl`):** Registro permanente das decisões de arquitetura imune a decaimento temporal com monitoramento ativo contra amnésia (`amnesiaRisk: LOW`, `recall: 99.2%`).
+
+### 4. ⚡ Injeção Cirúrgica JIT & AST Universal Poliglota
+- **Zero Python / TypeScript Nativo:** Análise estática pura cobrindo 35+ linguagens e formatos (TypeScript, JavaScript, Python, Go, Rust, C#, Java, Swift, Kotlin, PHP, Ruby, Dart, Zig, Astro, Protobuf, SQL, CSS).
+- **Mobile 360° Nativo:** Suporte completo para iOS (Swift, SwiftUI) e Android (Kotlin, Jetpack Compose).
+- **Tipagem Semântica de Arestas:** Separação entre imports `type_only` e `runtime`, amortecendo falsos positivos no cálculo de blast radius em 80%.
+- **Detecção Proativa de Código Morto:** Identifica módulos órfãos não referenciados em pastas de produção (`src/`).
+
+### 5. 📊 Observabilidade 360° & Telemetria em Tempo Real
+- **Governança Granular de Tokens:** Monitoramento contínuo em todos os comandos (`plan`, `exec`, `review`, `verify`), medindo tokens economizados e taxa de compressão real.
+- **Modelagem Financeira em $ USD:** Cálculo de custos em tempo real para Claude 3.5 Sonnet, GPT-4o, Gemini 1.5 Pro, DeepSeek V3 e modelos locais.
+- **Dashboards ASCII e Web:** Terminal adaptativo em 65 colunas (`/gsd:tokens`) e dashboard SVG/HTML offline (`npm run dashboard`).
+
+### 6. 🔀 Concorrência com Worktrees & Isolamento de Agentes
+- **Isolamento Efêmero com Git Worktrees:** Concorrência zero-copy (padrão Worktrunk) com suporte seguro a Directory Junctions no NTFS (Windows).
+- **Fachada Modular de State Lock:** Coordenação transacional entre múltiplos processos com verificação de PIDs ativos e recuperação atômica de locks órfãos.
+
+---
+
+## ⚡ Início Rápido
+
+Instale o GSD Core Nexus globalmente ou no seu projeto atual com um único comando:
 
 ```bash
 npx github:carlosatec/gsd-core
 ```
 
-O instalador interativo solicita seu ambiente de execução (Claude Code, Antigravity CLI, OpenCode, Codex, Copilot, Cursor, Windsurf e mais), o escopo (global ou local) e o idioma das descrições (`Português (Brasil)` ou `English`). Também suporta flags diretas como `--lang=pt-br`. O instalador é necessário para compatibilidade entre runtimes — não copie arquivos diretamente de `agents/` ou `commands/`.
+O instalador interativo configurará seu runtime, escopo (global ou local) e idioma preferido (`Português (Brasil)` ou `English`, configurável também via `--lang=pt-br`).
 
-Em outro runtime ou sem Node.js? Consulte [Instalar no seu runtime](docs/pt-BR/how-to/install-on-your-runtime.md).
-
-Após a instalação, verifique o status ou inicie o planejamento:
+### Instale no seu ambiente preferido:
 
 ```bash
-/gsd-status       # verificar estado do projeto, documentação viva e telemetria
-/gsd-plan         # planejar próxima fase
-/gsd-exec         # executar plano da fase
+# Antigravity CLI (Sucessor oficial do Gemini CLI)
+npx github:carlosatec/gsd-core --antigravity --global
+
+# Claude Code
+npx github:carlosatec/gsd-core --claude --global
+
+# Codex
+npx github:carlosatec/gsd-core --codex --global
+
+# OpenCode / Cursor / Windsurf / Copilot / DeepSeek Harness
+npx github:carlosatec/gsd-core --all --global
 ```
 
-É a primeira vez? Consulte o [Tutorial Prático Completo do GSD](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) ou siga [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md) para um passo a passo guiado, desde a instalação até a primeira fase entregue. Para um repositório existente, consulte [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md).
-
----
-
-## Documentação
-
-**Novidades no GSD Core Nexus 3.7** → [Tutorial Prático Completo](docs/pt-BR/tutorials/tutorial-pratico.md) · [Roadmap](.planning/ROADMAP.md)
-
-**Tutoriais** — aprendendo na prática:
-- [Tutorial Prático: Dominando o GSD Core Nexus 3.7](docs/pt-BR/tutorials/tutorial-pratico.md) ([English](docs/tutorials/practical-tutorial.md)) 🔥
-- [Seu primeiro projeto](docs/pt-BR/tutorials/your-first-project.md)
-- [Integrar uma base de código existente](docs/pt-BR/tutorials/onboarding-an-existing-codebase.md)
-
-**Guias práticos** — receitas orientadas a tarefas:
-- [Instalar no seu runtime](docs/pt-BR/how-to/install-on-your-runtime.md)
-- [Planejar uma fase](docs/pt-BR/how-to/plan-a-phase.md)
-- [Verificar e entregar](docs/pt-BR/how-to/verify-and-ship.md)
-- … [ver todos os guias práticos](docs/pt-BR/README.md#how-to-guides)
-
-**Referência** — informações autoritativas:
-- [Comandos](docs/pt-BR/COMMANDS.md)
-- [Configuração](docs/pt-BR/CONFIGURATION.md)
-- [Ferramentas CLI](docs/pt-BR/reference/CLI-TOOLS.md)
-
-**Explicação** — conceitos e decisões de design:
-- [Engenharia de contexto](docs/pt-BR/explanation/context-engineering.md)
-- [O ciclo de fases](docs/pt-BR/explanation/the-phase-loop.md)
-- [Arquitetura](docs/pt-BR/ARCHITECTURE.md)
-
-Índice completo: [docs/pt-BR/README.md](docs/pt-BR/README.md) · [English](docs/README.md).
-
----
-
-## Por que funciona
-
-A maioria das configurações de codificação com IA falha em escala porque o inchaço de contexto degrada silenciosamente a qualidade da saída, não há memória compartilhada entre sessões e nada verifica se o código realmente funciona. O GSD Core Nexus resolve os três problemas: o trabalho pesado é executado em subagentes com contexto limpo, artefatos estruturados como `STATE.md` e `CONTEXT.md` sobrevivem às fronteiras de sessão, e a etapa de verificação percorre o que foi construído e gera planos de correção antes de uma fase ser declarada concluída. Consulte [docs/pt-BR/explanation/context-engineering.md](docs/pt-BR/explanation/context-engineering.md) para o raciocínio completo.
-
-Problemas? Consulte [docs/pt-BR/how-to/recover-and-troubleshoot.md](docs/pt-BR/how-to/recover-and-troubleshoot.md).
-
----
-
-## Desinstalação
-
-Para desinstalar o GSD Core Nexus de forma limpa e segura, utilize a flag `--uninstall` acompanhada do escopo desejado (`--global` ou `--local`) e opcionalmente a runtime:
+Após a instalação, comece a usar os comandos imediatamente:
 
 ```bash
-# Desinstalar do Claude Code globalmente (runtime padrão)
-npx github:carlosatec/gsd-core --global --uninstall
+/gsd-status       # Verifica estado, frescor do AST e Segundo Cérebro
+/gsd-plan         # Planeja a próxima fase com contexto cirúrgico JIT
+/gsd-exec         # Executa planos com guardrails e auto-cura
+/gsd-graph --vault# Compila e abre o Segundo Cérebro no Obsidian
+```
 
-# Desinstalar do Antigravity globalmente
+---
+
+## 📚 Documentação
+
+- **[Tutorial Prático: Dominando o GSD Core Nexus 3.7](docs/pt-BR/tutorials/tutorial-pratico.md)** ([English](docs/tutorials/practical-tutorial.md)) 🔥
+- **[Referência de Comandos](docs/COMMANDS.md):** Guia detalhado de todos os 11 comandos canônicos e suas flags.
+- **[Arquitetura do Sistema](docs/ARCHITECTURE.md):** Imersão profunda na arquitetura de componentes, motor AST e injeção JIT.
+- **[Catálogo de Funcionalidades](docs/FEATURES.md):** Registro de todas as 170+ capacidades e marcos arquiteturais.
+- **[Guia de Configuração](docs/CONFIGURATION.md):** Como configurar perfis de modelo, revisores e tolerâncias de guardrails.
+- **[Recuperação e Resolução de Problemas](docs/how-to/recover-and-troubleshoot.md):** Receitas rápidas para resolver locks, drift e exceções.
+
+---
+
+## 🧹 Desinstalação Limpa
+
+O GSD Core Nexus inclui um assistente de remoção não-destrutivo:
+
+```bash
+# Desinstalação global no Antigravity
 npx github:carlosatec/gsd-core --antigravity --global --uninstall
 
-# Desinstalar do Codex globalmente
-npx github:carlosatec/gsd-core --codex --global --uninstall
+# Desinstalação global no Claude Code
+npx github:carlosatec/gsd-core --claude --global --uninstall
 
-# Desinstalar apenas do projeto local atual
-npx github:carlosatec/gsd-core --local --uninstall
-
-# Desinstalar de todas as runtimes globalmente
+# Desinstalação de todos os runtimes globalmente
 npx github:carlosatec/gsd-core --all --global --uninstall
 ```
 
-### O que é removido vs. o que é preservado:
-
-- **Removido:** Pasta de runtime `gsd-core/`, todos os comandos/skills/agentes prefixados com `gsd-*`, hooks gerenciados em `hooks/` e manifestos internos do GSD.
-- **Preservado com total segurança:** Seus perfis e preferências de usuário (`USER-PROFILE.md`, `dev-preferences.md`), skills/agentes customizados sem prefixo GSD, configurações customizadas em `settings.json`/`config.toml` e pastas `.planning/` dos seus projetos (seus planos e roadmap continuam intactos).
+- **Removido:** Hooks de runtime, manifestos de skills, ferramentas GSD de CLI e templates de agentes.
+- **Preservado:** Seu código-fonte, preferências do desenvolvedor (`USER-PROFILE.md`) e histórico `.planning/`.
 
 ---
 
-## Origem e Créditos
+## 📜 Licença & Créditos
 
-O GSD Core Nexus é construído sobre a base open-source do [GSD Core (`open-gsd/gsd-core`)](https://github.com/open-gsd/gsd-core), expandindo-o com análise estática AST multi-linguagem nativa, suporte Mobile 360°, RAG semântico Okapi BM25, injeção cirúrgica de contexto JIT e guardrails pré-voo.
-
----
-
-## Licença
-
-Licença MIT. Consulte [LICENSE](LICENSE) para detalhes.
-
----
+- **Licença:** [MIT License](LICENSE)
+- **Baseado em:** Fundação open-source do [GSD Core (`open-gsd/gsd-core`)](https://github.com/open-gsd/gsd-core), expandido com análise AST nativa em TypeScript, Segundo Cérebro Obsidian Vault, Guardiões Cognitivos System One e engenharia de contexto cirúrgica JIT.
 
 <div align="center">
 
-**Agentes de codificação com IA são poderosos. O GSD Core Nexus os torna confiáveis, disciplinados e eficientes em tokens.**
+**Agentes de codificação com IA são poderosos. O GSD Core Nexus os torna disciplinados, imunes à amnésia e ultra-eficientes em tokens.**
 
 </div>

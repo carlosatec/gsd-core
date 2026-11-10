@@ -17,19 +17,19 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 Starting in GSD 3.7, the public command surface is strictly consolidated into **11 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
-| Command | Action & Workflow Step |
-|---------|------------------------|
-| `/gsd-status` | Situational diagnostics, project state, roadmap, and token savings telemetry |
-| `/gsd-plan` | Decompose phase into atomic parallel waves, specs, and discussions (`PLAN.md`, `SPEC.md`) |
-| `/gsd-exec` | Wave-based execution with fresh 200k subagent contexts & Pre-Flight Guardrails |
-| `/gsd-review` | Deep code, architecture, and UI review with autonomous repairs (`--fix`) and dual-mode audit (`--full`/`--repo`) |
-| `/gsd-verify` | Conversational UAT acceptance and verification walkthrough (Auto-Pass enabled) |
-| `/gsd-ship` | Git hygiene, branch preparation, changelog, and Pull Request merge |
-| `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle |
-| `/gsd-tokens` | Real-time multi-command token telemetry dashboard & savings breakdown |
-| `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync |
-| `/gsd-graph` | Interactive HTML canvas and Obsidian-compatible visual knowledge graph exporter |
-| `/gsd-help` | Comprehensive reference and usage guide for all unified commands |
+| Command | Action & Workflow Step | Common Flags |
+|---|---|---|
+| `/gsd-status` | Situational diagnostics, project state, roadmap, AST freshness, and token savings telemetry | `--sync`, `--refresh`, `--raw` |
+| `/gsd-plan` | Decompose phase into atomic parallel waves, specs, and discussions (`PLAN.md`, `SPEC.md`) | `[phase]`, `--spec`, `--speckit` |
+| `/gsd-exec` | Wave-based execution with fresh 200k subagent contexts, Pre-Flight Guardrails & Self-Healing | `[phase]`, `--auto-heal`, `--force`, `--isolate` |
+| `/gsd-review` | Deep code, architecture, UI, dead-code orphan review with autonomous repairs (`--fix`) | `[phase]`, `--fix`, `--full`, `--repo`, `--files` |
+| `/gsd-verify` | Conversational UAT acceptance, RFC 2119 requirement audit, and verification walkthrough | `[phase]`, `--auto` |
+| `/gsd-ship` | Git hygiene, branch preparation, changelog, Second Brain vault sync, and Pull Request merge | `[phase]` |
+| `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle with auto-healing loops | `[phase]` |
+| `/gsd-tokens` | Real-time multi-command token telemetry dashboard, USD financial cost & amnesia metrics | `--sessions`, `--cost`, `--all`, `--web`, `--open` |
+| `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync | `--dry-run` |
+| `/gsd-graph` | Interactive 360° HTML canvas, Obsidian Second Brain Vault compiler & instant BM25 search | `--vault`, `--open`, `--query="<term>"`, `--canvas` |
+| `/gsd-help` | Comprehensive reference and usage guide for all unified commands | — |
 
 ---
 
@@ -89,18 +89,63 @@ node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
 
 ---
 
-### Visual Knowledge Graph Exporter (`/gsd-graph` & `gsd-tools graph`)
+### Visual Knowledge Graph & Project Second Brain Vault (`/gsd-graph` & `gsd-tools graph`)
 
-Exports an interactive HTML visualization and an Obsidian Canvas representation of your project's roadmap, phases, AST dependencies, and architectural state into `.planning/intel/graph-view.html` and `.planning/ROADMAP.canvas`:
+Exports a 100% offline interactive 360° HTML force-graph (`.planning/intel/graph-view.html`) with directed `governs` and `specifies` edges connecting architectural decisions to modules, and generates an isolated, full-featured **Obsidian Second Brain Vault** under `.planning/vault/`:
 
 ```bash
-# Export and automatically launch in default browser
+# Export 360° HTML force-graph and open in default browser
 /gsd-graph
+node gsd-core/bin/gsd-tools.cjs graph
 
-# Export silently or without opening browser
-/gsd-graph --no-open
-node gsd-core/bin/gsd-tools.cjs graph --no-open
+# Compile the complete Project Second Brain Obsidian Vault
+/gsd-graph --vault
+node gsd-core/bin/gsd-tools.cjs graph --vault
+
+# Instant BM25 query across decisions, phases, modules, and lessons
+/gsd-graph --query="Claude-Mem"
+node gsd-core/bin/gsd-tools.cjs graph --query="AST"
+
+# Export visual canvas roadmap only (.planning/ROADMAP.canvas)
+/gsd-graph --canvas
 ```
+
+---
+
+### AST Freshness & Memory Sync (`/gsd-status --sync`)
+
+Forces an on-demand re-scan of the codebase AST topology and synchronizes all architectural decisions to permanent continuous memory (`.planning/memory/decisions.jsonl`), bringing Intel status to `Fresh` and updating `.planning/intel/codebase-graph.json`:
+
+```bash
+/gsd-status --sync
+/gsd-status --refresh
+node gsd-core/bin/gsd-tools.cjs status --sync
+```
+
+---
+
+### Autonomous Self-Healing Guardrails (`/gsd-exec --auto-heal`)
+
+Enables active self-healing during phase execution. If pre-flight guardrails detect error-level violations (such as branch isolation or uncommitted changes), the loop engages automatic repair strategies and records learnings to `.planning/anti-patterns.jsonl`:
+
+```bash
+/gsd-exec 37 --auto-heal
+/gsd-exec --heal
+node gsd-core/bin/gsd-tools.cjs exec --auto-heal
+```
+
+---
+
+### Dead-Code / Orphan Module Detection (`/gsd-review`)
+
+Proactively analyzes the AST dependency graph and flags unreferenced production files (`[Dead-Code/Orphan]`) under `src/` and `lib/` with zero callers, preventing zombie code accumulation:
+
+```bash
+/gsd-review                       # Targeted review flagging orphan modules in touched scope
+/gsd-review --full                # Whole-repository audit identifying all orphan files
+```
+
+---
 
 ---
 
