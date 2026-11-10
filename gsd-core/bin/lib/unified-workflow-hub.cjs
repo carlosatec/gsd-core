@@ -72,7 +72,7 @@ const { releaseAgentLocks } = activeLedgerMod;
 const { processOutputDiet } = outputDietMod;
 const { SessionLogger } = sessionLoggerMod;
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
-const { buildCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
+const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
 const { getTelemetrySummary, recordJitInvocation, LANGUAGE_CHAR_WEIGHTS } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
@@ -479,7 +479,8 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
             let syncMsg = '';
             if (isSync) {
                 try {
-                    buildCodebaseGraph(cwd);
+                    const freshGraph = buildCodebaseGraph(cwd);
+                    saveCodebaseGraph(planningDir, freshGraph);
                     continuousMemory.syncDecisionsToMemory(planningDir, cwd);
                     syncMsg = ' | Synced: AST Intel refreshed & Memory indexed.';
                 }

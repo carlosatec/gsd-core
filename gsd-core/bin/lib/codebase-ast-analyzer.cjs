@@ -2464,12 +2464,12 @@ function analyzeSourceFile(filePath, sourceText, explicitRoot) {
                 rawImports.push({ rawSource, specifiers: [], isTypeOnly: clauseIsTypeOnly, lineIdx: i });
             }
         }
-        // 2. CommonJS require: const ... = require('...')
-        const requireMatch = trimmed.match(/(?:const|let|var)\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/);
+        // 2. CommonJS require: const ... = require('...') or import ... = require('...')
+        const requireMatch = trimmed.match(/(?:(?:const|let|var)\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))|import\s+([a-zA-Z0-9_$]+))\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/);
         if (requireMatch) {
             const namedSpecs = requireMatch[1];
-            const defaultSpec = requireMatch[2];
-            const rawSource = requireMatch[3];
+            const defaultSpec = requireMatch[2] || requireMatch[3];
+            const rawSource = requireMatch[4];
             const specifiers = [];
             if (defaultSpec)
                 specifiers.push(defaultSpec.trim());
