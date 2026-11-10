@@ -318,10 +318,10 @@ Proceed to 3b.
 **IMPORTANT — Discuss must be single-pass in autonomous mode.**
 The discuss step in `--auto` mode MUST NOT loop. If CONTEXT.md already exists after discuss completes, do NOT re-invoke discuss for the same phase. The `has_context` check below is authoritative — once true, discuss is done for this phase regardless of perceived "gaps" in the context file.
 
-**If `INTERACTIVE` is set:** Run the standard discuss-phase skill inline (asks interactive questions, waits for user answers). This preserves user input on all design decisions while keeping plan+execute out of the main context:
+**If `INTERACTIVE` is set:** Run the standard discuss/plan skill inline (asks interactive questions, waits for user answers). This preserves user input on all design decisions while keeping plan+execute out of the main context:
 
 ```
-Skill(skill="gsd-discuss-phase", args="${PHASE_NUM}")
+Skill(skill="gsd-plan", args="${PHASE_NUM} --discuss")
 ```
 
 **If `INTERACTIVE` is NOT set:** Execute the smart_discuss step for this phase (batch table proposals, auto-optimized).
@@ -362,7 +362,7 @@ FLATTEN=$(gsd_run query dispatch-should-flatten --raw 2>/dev/null || echo "true"
   Agent(
     description="Plan phase ${PHASE_NUM}: ${PHASE_NAME}",
     run_in_background=true,
-    prompt="Run plan-phase for phase ${PHASE_NUM}: Skill(skill=\"gsd-plan-phase\", args=\"${PHASE_NUM}\")"
+    prompt="Run plan for phase ${PHASE_NUM}: Skill(skill=\"gsd-plan\", args=\"${PHASE_NUM}\")"
   )
   ```
 
@@ -377,7 +377,7 @@ FLATTEN=$(gsd_run query dispatch-should-flatten --raw 2>/dev/null || echo "true"
   - Otherwise (local planning):
 
   ```
-  Skill(skill="gsd-plan-phase", args="${PHASE_NUM}")
+  Skill(skill="gsd-plan", args="${PHASE_NUM}")
   ```
 
 **If `INTERACTIVE` is NOT set (default):** Run plan inline.
@@ -389,7 +389,7 @@ If `section_manifest` is `null` or `"converge-loop"` is in its `included` list: 
 If `PLAN_STRATEGY=local`, run the regular planner:
 
 ```
-Skill(skill="gsd-plan-phase", args="${PHASE_NUM}")
+Skill(skill="gsd-plan", args="${PHASE_NUM}")
 ```
 
 Verify plan produced output — re-run `init phase-op` and check `has_plans`. If false → go to handle_blocker: "Plan phase ${PHASE_NUM} did not produce any plans."
@@ -408,7 +408,7 @@ FLATTEN=$(gsd_run query dispatch-should-flatten --raw 2>/dev/null || echo "true"
 Agent(
   description="Execute phase ${PHASE_NUM}: ${PHASE_NAME}",
   run_in_background=true,
-  prompt="Run execute-phase for phase ${PHASE_NUM}: Skill(skill=\"gsd-execute-phase\", args=\"${PHASE_NUM} --no-transition\")"
+  prompt="Run execute for phase ${PHASE_NUM}: Skill(skill=\"gsd-exec\", args=\"${PHASE_NUM} --no-transition\")"
 )
 ```
 
@@ -417,13 +417,13 @@ Agent(
 - **Otherwise (`FLATTEN` is `true` — run inline):** Run execute **inline** (do NOT background) so worktree isolation and verification run:
 
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
+Skill(skill="gsd-exec", args="${PHASE_NUM} --no-transition")
 ```
 
 **If `INTERACTIVE` is NOT set (default):** Run execute inline as before.
 
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
+Skill(skill="gsd-exec", args="${PHASE_NUM} --no-transition")
 ```
 
 **3c.5. Code Review and Fix**
@@ -447,7 +447,7 @@ Skill(skill="gsd-${ref.skill}", args="${PHASE_NUM}")
 
 Parse status from REVIEW.md frontmatter. If "clean" or "skipped": proceed to 3d. If findings found after the capability-dispatched review, auto-invoke the consolidated fix entry point:
 ```
-Skill(skill="gsd-code-review", args="${PHASE_NUM} --fix --auto")
+Skill(skill="gsd-review", args="${PHASE_NUM} --fix --auto")
 ```
 
 **Error handling:** If either Skill fails, catch the error, display as non-blocking, and proceed to 3d.
@@ -503,14 +503,14 @@ Ask how to proceed: `Run gap closure` / `Continue without fixing` / `Stop autono
 On **"Run gap closure"**: one gap-closure attempt:
 
 ```
-Skill(skill="gsd-plan-phase", args="${PHASE_NUM} --gaps")
+Skill(skill="gsd-plan", args="${PHASE_NUM} --gaps")
 ```
 
 Re-run `init phase-op ${PHASE_NUM}`; if `has_plans` is false, handle_blocker: "Gap closure planning for phase ${PHASE_NUM} did not produce plans."
 
 Re-execute:
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
+Skill(skill="gsd-exec", args="${PHASE_NUM} --no-transition")
 ```
 
 Re-read verification status:
@@ -675,7 +675,7 @@ Display lifecycle transition banner:
 **5a. Audit**
 
 ```
-Skill(skill="gsd-audit-milestone")
+Skill(skill="gsd-verify")
 ```
 
 After audit completes, detect the result:
@@ -731,7 +731,7 @@ On **"Stop"**: Go to handle_blocker with "User stopped — tech debt to address.
 **5b. Complete Milestone**
 
 ```
-Skill(skill="gsd-complete-milestone", args="${milestone_version}")
+Skill(skill="gsd-ship", args="${milestone_version}")
 ```
 
 After complete-milestone returns, verify it produced output:
@@ -745,7 +745,7 @@ If the archive file does not exist, go to handle_blocker: "Complete milestone di
 **5c. Cleanup**
 
 ```
-Skill(skill="gsd-cleanup")
+Skill(skill="gsd-ship", args="--cleanup")
 ```
 
 Cleanup shows its own dry-run and asks user for approval internally — this is an acceptable pause per CTRL-01 since it's an explicit decision about file deletion.
@@ -820,11 +820,11 @@ When any phase operation fails or a blocker is detected, present 3 options via A
 - [ ] Final completion or stop summary displayed
 - [ ] After all phases complete, lifecycle step is invoked (not manual suggestion)
 - [ ] Lifecycle transition banner displayed before audit
-- [ ] Audit invoked via Skill(skill="gsd-audit-milestone")
+- [ ] Audit invoked via Skill(skill="gsd-verify")
 - [ ] Audit result routing: passed → auto-continue, gaps_found → user decides, tech_debt → user decides
 - [ ] Audit technical failure (no file/no status) routes to handle_blocker
-- [ ] Complete-milestone invoked via Skill() with ${milestone_version} arg
-- [ ] Cleanup invoked via Skill() — internal confirmation is acceptable (CTRL-01)
+- [ ] Complete-milestone invoked via Skill(skill="gsd-ship") with ${milestone_version} arg
+- [ ] Cleanup invoked via Skill(skill="gsd-ship", args="--cleanup") — internal confirmation is acceptable (CTRL-01)
 - [ ] Final completion banner displayed after lifecycle
 - [ ] Progress bar uses phase number / total milestone phases (not position among incomplete), with fallback display when phase numbers exceed total
 - [ ] Smart discuss documents relationship to discuss-phase with CTRL-03 note

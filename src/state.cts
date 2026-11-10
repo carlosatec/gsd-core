@@ -59,6 +59,8 @@ import { findProjectRoot } from './project-root.cjs';
 // it introduces no cycle on this path.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import milestoneLockMod = require('./milestone-lock.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import continuousMemoryMod = require('./continuous-memory.cjs');
 const { transitionCore, applyStatePreservation, sliceCurrentPositionSection } = stateTransitionMod;
 type StateTransitionIntent = stateTransitionMod.StateTransitionIntent;
 type StateTransitionDeps = stateTransitionMod.StateTransitionDeps;
@@ -985,6 +987,15 @@ function cmdStateAddDecision(cwd: string, options: StateAddDecisionOptions, raw:
     created = true;
     return content.trimEnd() + '\n' + scaffold;
   }, cwd);
+
+  try {
+    if (typeof continuousMemoryMod?.syncDecisionsToMemory === 'function') {
+      const planDir = planningDir(cwd);
+      continuousMemoryMod.syncDecisionsToMemory(planDir, cwd);
+    }
+  } catch {
+    // Non-blocking real-time memory sync
+  }
 
   // Auto-create fallback guarantees added === true; no else branch needed.
   const result: Record<string, unknown> = { added: true, decision: entry };

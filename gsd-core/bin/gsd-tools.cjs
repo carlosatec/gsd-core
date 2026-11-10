@@ -3730,6 +3730,25 @@ function routeGraph({ args, cwd, raw }) {
   const isCanvasOnly = args.includes('--canvas');
   const shouldOpen = args.includes('--open');
 
+  const queryArg = args.find(a => a.startsWith('--query=') || a.startsWith('-q='))?.split('=')[1]
+    || (args.includes('--query') ? args[args.indexOf('--query') + 1] : undefined)
+    || (args.includes('-q') ? args[args.indexOf('-q') + 1] : undefined);
+
+  if (queryArg) {
+    const queryRes = secondBrain.querySecondBrain(planningDir, queryArg, cwd);
+    if (raw) {
+      process.stdout.write(JSON.stringify(queryRes, null, 2) + '\n');
+      return;
+    }
+    process.stdout.write(`\n🧠 Second Brain Query Results for "${queryArg}" (${queryRes.totalMatches} matches):\n`);
+    for (const r of queryRes.results) {
+      process.stdout.write(`  • [${r.category.toUpperCase()}] ${r.wikilink} — ${r.title}\n`);
+      process.stdout.write(`    ${r.snippet}\n`);
+    }
+    process.stdout.write('\n');
+    return;
+  }
+
   if (isVault) {
     const report = secondBrain.generateSecondBrainVault(planningDir, cwd);
     if (raw) {

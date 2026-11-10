@@ -605,10 +605,42 @@ function runInternalUnifiedCommand(
         secondBrainMsg = ` | Segundo Cérebro: Ativo (Zero Amnésia: Risco ${risk}, Recall: ${recall}%).`;
       }
 
+      let dynamicNextStep = 'execute next recommended action based on STATE.md';
+      try {
+        const statePath = path.join(planningDir, 'STATE.md');
+        if (fs.existsSync(statePath)) {
+          const stateTxt = fs.readFileSync(statePath, 'utf8');
+          const phaseMatch = stateTxt.match(/Current Phase:.*Phase\s+(\d+)/i);
+          const activePhase = phaseMatch ? phaseMatch[1] : undefined;
+
+          if (activePhase) {
+            const phaseDir = path.join(planningDir, 'phases');
+            if (fs.existsSync(phaseDir)) {
+              const matchedDir = fs.readdirSync(phaseDir).find(d => d.startsWith(`${activePhase}-`) || d === activePhase);
+              if (matchedDir) {
+                const subFiles = fs.readdirSync(path.join(phaseDir, matchedDir));
+                const hasSummary = subFiles.some(f => f.endsWith('-SUMMARY.md'));
+                const hasPlan = subFiles.some(f => f.endsWith('-PLAN.md'));
+
+                if (hasSummary) {
+                  dynamicNextStep = `run /gsd:verify ${activePhase} or /gsd:ship to complete phase`;
+                } else if (hasPlan) {
+                  dynamicNextStep = `run /gsd:exec ${activePhase} to execute phase plan`;
+                } else {
+                  dynamicNextStep = `run /gsd:plan ${activePhase} to create phase plan`;
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+
       return {
         command: 'status',
         action: 'DISPLAY_STATUS',
-        nextStep: 'execute next recommended action based on STATE.md',
+        nextStep: dynamicNextStep,
         data: {
           telemetry,
           intelHealth,
@@ -908,6 +940,32 @@ function runInternalUnifiedCommand(
         }
       }
 
+      let groundingMismatchWarning = '';
+      try {
+        if (typeof systemOneMod.evaluateGroundingScore === 'function') {
+          let diffContent = '';
+          try {
+            diffContent = execSync('git diff HEAD', { cwd, encoding: 'utf8', timeout: 10000 });
+          } catch {
+            // fallback
+          }
+          if (diffContent) {
+            const groundingRes = systemOneMod.evaluateGroundingScore({
+              taskText: `Review phase ${phaseId || 'active'}`,
+              codeDiff: diffContent,
+              rootDir: cwd,
+            });
+            if (!groundingRes.passed && groundingRes.missingSymbols && groundingRes.missingSymbols.length > 0) {
+              const symList = groundingRes.missingSymbols.slice(0, 3).join(', ');
+              groundingMismatchWarning = ` [System One Grounding]: ${groundingRes.missingSymbols.length} símbolos não ancorados na AST detectados (${symList}).`;
+              reviewResult.warnings.push(`[GROUNDING_MISMATCH] Símbolos não ancorados na AST: ${symList}`);
+            }
+          }
+        }
+      } catch {
+        // Non-blocking fallback
+      }
+
       return {
         command: 'review',
         action: hasFixFlag ? 'REVIEW_AND_AUTO_FIX' : 'REVIEW_ONLY',
@@ -917,8 +975,8 @@ function runInternalUnifiedCommand(
         data: reviewResult,
         fixedIssues: reviewResult.fixed,
         message: hasFixFlag
-          ? `Review complete. Automatically repaired ${reviewResult.fixed.length} issue(s).`
-          : `Review complete. Found ${reviewResult.criticalIssues.length} critical issues, ${reviewResult.warnings.length} warnings.${fixHint}`,
+          ? `Review complete. Automatically repaired ${reviewResult.fixed.length} issue(s).${groundingMismatchWarning}`
+          : `Review complete. Found ${reviewResult.criticalIssues.length} critical issues, ${reviewResult.warnings.length} warnings.${fixHint}${groundingMismatchWarning}`,
       };
     }
 
@@ -1054,6 +1112,26 @@ function runInternalUnifiedCommand(
         }
       }
 
+      // System One Choice Strategy: audit RFC 2119 requirements (Phase 37 Wave 11)
+      try {
+        if (typeof systemOneMod.evaluateChoiceStrategy === 'function') {
+          const choiceRes = systemOneMod.evaluateChoiceStrategy({
+            phaseId: phaseId || 'active',
+            planningDir,
+            rootDir: cwd,
+          });
+          if (!choiceRes.passed && choiceRes.gate === 'REQUIREMENT_EVIDENCE_MISSING') {
+            const unverified = choiceRes.unverifiedRequirements && choiceRes.unverifiedRequirements.length > 0
+              ? choiceRes.unverifiedRequirements.slice(0, 2).join('; ')
+              : 'Requisitos mandatórios pendentes';
+            verifyWarnings.push(`[System-One Choice] Requisitos RFC 2119 pendentes: ${unverified}`);
+            systemOneVerified = false;
+          }
+        }
+      } catch {
+        // Non-blocking fallback
+      }
+
       // Auto-record telemetry for verify
       try {
         const summaryPath = path.join(planningDir, 'phases', `${phaseId}-SUMMARY.md`);
@@ -1122,14 +1200,25 @@ function runInternalUnifiedCommand(
     }
 
 
-    case 'ship':
+    case 'ship': {
       initMod.cmdInitCompleteMilestone(cwd, Boolean(options.raw));
+      let vaultSynced = false;
+      try {
+        if (typeof secondBrainMod?.generateSecondBrainVault === 'function') {
+          secondBrainMod.generateSecondBrainVault(planningDir, cwd);
+          vaultSynced = true;
+        }
+      } catch {
+        // Non-blocking
+      }
       return {
         command: 'ship',
         action: 'SHIP_RELEASE',
         nextStep: 'advance to next milestone or phase',
-        message: 'Release prepared, branch cleaned and ready for PR merge.',
+        data: { vaultSynced },
+        message: `Release prepared, branch cleaned and ready for PR merge.${vaultSynced ? ' (Segundo Cérebro sincronizado).' : ''}`,
       };
+    }
 
     case 'migrate': {
       const fromSpecKit = Boolean(options.flags?.['from-speckit'] || options.flags?.['fromSpeckit'] || options.args.includes('--from-speckit'));
@@ -1195,6 +1284,25 @@ function runInternalUnifiedCommand(
     }
 
     case 'graph': {
+      const queryArg = options.args.find(a => a.startsWith('--query=') || a.startsWith('-q='))?.split('=')[1]
+        || (options.args.includes('--query') ? options.args[options.args.indexOf('--query') + 1] : undefined)
+        || (options.args.includes('-q') ? options.args[options.args.indexOf('-q') + 1] : undefined)
+        || (typeof options.flags?.['query'] === 'string' ? options.flags['query'] : undefined);
+
+      if (queryArg) {
+        const queryRes = secondBrainMod.querySecondBrain(planningDir, queryArg, cwd);
+        const formatted = queryRes.results.map(r => `• [${r.category.toUpperCase()}] ${r.wikilink} — ${r.title}`).join('\n');
+        return {
+          command: 'graph',
+          action: 'QUERY_SECOND_BRAIN',
+          nextStep: 'use wikilinks to inspect notes or open .planning/vault in Obsidian',
+          data: queryRes,
+          message: queryRes.totalMatches > 0
+            ? `🧠 Encontradas ${queryRes.totalMatches} correspondências no Segundo Cérebro para "${queryArg}":\n${formatted}`
+            : `🧠 Nenhuma correspondência encontrada no Segundo Cérebro para "${queryArg}".`,
+        };
+      }
+
       const isVault = options.args.includes('--vault') || options.args.includes('--brain') || Boolean(options.flags?.['vault']) || Boolean(options.flags?.['brain']);
       if (isVault) {
         const report = secondBrainMod.generateSecondBrainVault(planningDir, cwd);

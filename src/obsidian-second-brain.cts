@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { platformEnsureDir, platformWriteSync, platformReadSync } from './shell-command-projection.cjs';
+import { escapeRegex } from './pattern.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { loadCodebaseGraph, buildCodebaseGraph } = codebaseAst;
@@ -167,6 +168,18 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
   let totalPhases = 0;
   const phaseList: Array<{ id: string; name: string; isCurrent: boolean }> = [];
   const srcPhasesDir = path.join(planningDir, 'phases');
+  let activePhasePrefix = '37';
+  try {
+    const statePath = path.join(planningDir, 'STATE.md');
+    if (fs.existsSync(statePath)) {
+      const stateContent = fs.readFileSync(statePath, 'utf8');
+      const m = stateContent.match(/Current Phase:.*Phase\s+(\d+)/i);
+      if (m && m[1]) activePhasePrefix = m[1];
+    }
+  } catch {
+    // fallback
+  }
+
   if (fs.existsSync(srcPhasesDir)) {
     const entries = fs.readdirSync(srcPhasesDir, { withFileTypes: true });
     for (const ent of entries) {
@@ -176,7 +189,7 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
         const phaseSub = path.join(srcPhasesDir, pId);
         const subFiles = fs.readdirSync(phaseSub);
 
-        const isCurrent = pId.startsWith('37');
+        const isCurrent = pId.startsWith(activePhasePrefix);
         phaseList.push({ id: pId, name: pId, isCurrent });
 
         const phaseNotePath = path.join(phasesDir, `${pId}.md`);
@@ -184,6 +197,10 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
         const planFiles = subFiles.filter(f => f.endsWith('-PLAN.md'));
         const summaryFile = subFiles.find(f => f.endsWith('-SUMMARY.md'));
         const reviewFile = subFiles.find(f => f.includes('REVIEW'));
+
+        const hasSummary = Boolean(summaryFile);
+        const status = isCurrent ? 'active' : (hasSummary ? 'complete' : 'planned');
+        const statusLabel = isCurrent ? '🟡 Em Execução' : (hasSummary ? '🟢 Concluída' : '📋 Planejada');
 
         const artifactLinks = [
           specFile ? `- **Especificação:** \`.planning/phases/${pId}/${specFile}\`` : '',
@@ -196,7 +213,7 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
           '---',
           `id: ${escapeYamlString(pId)}`,
           `name: ${escapeYamlString(pId)}`,
-          `status: ${isCurrent ? 'active' : 'complete'}`,
+          `status: ${status}`,
           `aliases: [${escapeYamlString(`Phase ${pId.slice(0, 2)}`)}, ${escapeYamlString(pId)}]`,
           'tags: [gsd, phase]',
           '---',
@@ -207,7 +224,7 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
           '',
           `# Fase ${pId}`,
           '',
-          `> **Status:** ${isCurrent ? '🟡 Em Execução' : '🟢 Concluída'}  `,
+          `> **Status:** ${statusLabel}  `,
           '',
           '## Artefatos e Roteiro da Fase',
           artifactLinks || '- Nenhum artefato adicional catalogado.',
@@ -618,6 +635,114 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
   };
 }
 
+interface SecondBrainQueryResultItem {
+  category: 'decision' | 'phase' | 'module' | 'lesson' | 'note';
+  id: string;
+  title: string;
+  wikilink: string;
+  relPath: string;
+  snippet: string;
+  score: number;
+}
+
+interface SecondBrainQueryResult {
+  query: string;
+  totalMatches: number;
+  results: SecondBrainQueryResultItem[];
+}
+
+function querySecondBrain(
+  planningDir: string,
+  queryStr: string,
+  rootDir?: string
+): SecondBrainQueryResult {
+  const root = rootDir || path.resolve(planningDir, '..');
+  const vaultDir = path.join(planningDir, 'vault');
+  const queryTokens = queryStr
+    .toLowerCase()
+    .split(/[\s,;:_-]+/)
+    .map(t => t.trim())
+    .filter(t => t.length > 1);
+
+  if (queryTokens.length === 0) {
+    return { query: queryStr, totalMatches: 0, results: [] };
+  }
+
+  const items: SecondBrainQueryResultItem[] = [];
+
+  if (fs.existsSync(vaultDir)) {
+    const subDirs: Array<{ dir: string; category: 'decision' | 'phase' | 'module' | 'lesson' }> = [
+      { dir: path.join(vaultDir, 'Decisions'), category: 'decision' },
+      { dir: path.join(vaultDir, 'Phases'), category: 'phase' },
+      { dir: path.join(vaultDir, 'Modules'), category: 'module' },
+      { dir: path.join(vaultDir, 'Lessons'), category: 'lesson' },
+    ];
+
+    for (const { dir, category } of subDirs) {
+      if (!fs.existsSync(dir)) continue;
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (!f.endsWith('.md')) continue;
+        const noteId = f.replace(/\.md$/, '');
+        const fullPath = path.join(dir, f);
+        const content = platformReadSync(fullPath) || '';
+        const lowerContent = content.toLowerCase();
+        const lowerName = noteId.toLowerCase();
+
+        let score = 0;
+        for (const token of queryTokens) {
+          if (lowerName === token) {
+            score += 50;
+          } else if (lowerName.includes(token)) {
+            score += 20;
+          }
+
+          const regex = new RegExp(`\\b${escapeRegex(token)}`, 'gi');
+          const matches = lowerContent.match(regex);
+          if (matches) {
+            score += Math.min(30, matches.length * 5);
+          }
+        }
+
+        if (score > 0) {
+          const titleMatch = content.match(/^#\s+(.+)$/m) || content.match(/^title:\s*(.+)$/m);
+          const title = titleMatch ? titleMatch[1].replace(/["']/g, '').trim() : noteId;
+
+          let snippet = '';
+          const firstToken = queryTokens.find(t => lowerContent.includes(t)) || queryTokens[0];
+          const idx = lowerContent.indexOf(firstToken);
+          if (idx >= 0) {
+            const start = Math.max(0, idx - 40);
+            const end = Math.min(content.length, idx + 80);
+            snippet = (start > 0 ? '...' : '') + content.slice(start, end).replace(/\r?\n/g, ' ').trim() + (end < content.length ? '...' : '');
+          } else {
+            snippet = content.slice(0, 100).replace(/\r?\n/g, ' ').trim();
+          }
+
+          items.push({
+            category,
+            id: noteId,
+            title,
+            wikilink: `[[${category.charAt(0).toUpperCase() + category.slice(1)}s/${noteId}|${title}]]`,
+            relPath: path.relative(root, fullPath),
+            snippet,
+            score,
+          });
+        }
+      }
+    }
+  }
+
+  items.sort((a, b) => b.score - a.score);
+
+  return {
+    query: queryStr,
+    totalMatches: items.length,
+    results: items.slice(0, 15),
+  };
+}
+
 export = {
   generateSecondBrainVault,
+  querySecondBrain,
 };

@@ -271,8 +271,10 @@ export function syncDecisionsToMemory(planningDir: string, rootDir?: string): { 
   }
 
   const lines = splitLines(rawState);
-  // Pattern: - **D-01 [Architecture]:** Analisador AST nativo...
+  // Pattern 1: - **D-01 [Architecture]:** Analisador AST nativo...
   const DECISION_REGEX = /^-\s+\*\*(D-\d+)\s+\[([^\]]+)\]:\*\*\s*(.+)$/i;
+  // Pattern 2: - [Phase 37]: Summary or - [Phase 37]: D-999 [Category]: Summary
+  const PHASE_DECISION_REGEX = /^-\s+\[(?:Phase\s+)?([^\]]+)\]:\s*(.+)$/i;
   const extractedDecisions: AgentMemoryEntry[] = [];
 
   for (const line of lines) {
@@ -305,6 +307,39 @@ export function syncDecisionsToMemory(planningDir: string, rootDir?: string): { 
         keywords,
         permanent: true,
       });
+    } else {
+      const phaseMatch = trimmed.match(PHASE_DECISION_REGEX);
+      if (phaseMatch) {
+        const phaseTag = phaseMatch[1].trim();
+        const body = phaseMatch[2].trim();
+        const dMatch = body.match(/^(D-\d+)\s*(?:\[([^\]]+)\])?[:\s]*(.+)$/i);
+        const id = dMatch ? dMatch[1].toUpperCase() : `DEC-${phaseTag}-${extractedDecisions.length + 1}`;
+        const rawCategory = dMatch && dMatch[2] ? dMatch[2].trim() : `Phase ${phaseTag}`;
+        const summary = dMatch ? dMatch[3].trim() : body;
+
+        const fileMatches = summary.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g) || [];
+        const relevantFiles: string[] = [];
+        for (const fm of fileMatches) {
+          const cleanFile = fm.replace(/`/g, '').replace(/\\/g, '/');
+          if (cleanFile.includes('/') || cleanFile.endsWith('.md') || cleanFile.endsWith('.json') || cleanFile.endsWith('.cts') || cleanFile.endsWith('.cjs')) {
+            if (!relevantFiles.includes(cleanFile)) relevantFiles.push(cleanFile);
+          }
+        }
+
+        const keywords = tokenize(`${rawCategory} ${summary}`);
+
+        extractedDecisions.push({
+          id,
+          timestamp: Date.now(),
+          category: 'architecture_decision',
+          phase: phaseTag,
+          summary: sanitizePii(summary, root),
+          details: `Category: ${rawCategory} | Phase: ${phaseTag} | Decision ID: ${id}`,
+          relevantFiles,
+          keywords,
+          permanent: true,
+        });
+      }
     }
   }
 
