@@ -2024,6 +2024,17 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
                     addImport(rawSource, [], clauseIsTypeOnly);
                 }
             }
+            // 1b. ImportEqualsDeclaration: import x = require('...')
+            else if (ts.isImportEqualsDeclaration(statement)) {
+                if (ts.isExternalModuleReference(statement.moduleReference)) {
+                    const expr = statement.moduleReference.expression;
+                    if (expr && ts.isStringLiteral(expr)) {
+                        const rawSource = expr.text;
+                        const importedName = statement.name ? statement.name.text : '';
+                        addImport(rawSource, importedName ? [importedName] : [], false);
+                    }
+                }
+            }
             // 2. FunctionDeclaration
             else if (ts.isFunctionDeclaration(statement) && statement.name) {
                 const name = statement.name.text;
@@ -2228,7 +2239,7 @@ function analyzeWithTypeScriptCompiler(filePath, content, ts, aliases, rootDir =
         // Intra-file Call Graph: collect all referenced identifiers outside import statements
         const referencedIdentifiers = new Set();
         function collectIdentifiers(node) {
-            if (ts.isImportDeclaration(node))
+            if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node))
                 return;
             if (ts.isIdentifier(node)) {
                 referencedIdentifiers.add(node.text);

@@ -10,7 +10,7 @@
 
 <br/>
 
-[![Versão](https://img.shields.io/badge/version-3.7.5-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
+[![Versão](https://img.shields.io/badge/version-3.7.6-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
 [![Testes](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Testes&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-38bdf8?style=for-the-badge)](LICENSE)
 [![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
