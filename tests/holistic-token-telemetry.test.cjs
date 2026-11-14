@@ -262,4 +262,22 @@ describe('Phase 22: Holistic Token Telemetry, Multi-Command Observability & Conc
       cleanup(tmpDir);
     }
   });
+
+  test('Phase 38 REQ-38-12: recordJitInvocation derives non-zero noise/useful token totals when optional args are omitted', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-noise-useful-defaults-'));
+    try {
+      const planningDir = path.join(tmpDir, '.planning');
+      fs.mkdirSync(planningDir, { recursive: true });
+
+      const rec = telemetry.recordJitInvocation(planningDir, ['src/a.ts'], 500, 5000, 'exec');
+      assert.strictEqual(rec.noiseTokensEliminated, 4500);
+      assert.strictEqual(rec.usefulContextTokensInjected, 500);
+
+      const summary = telemetry.getTelemetrySummary(planningDir);
+      assert.strictEqual(summary.totalNoiseTokensEliminated, 4500);
+      assert.strictEqual(summary.totalUsefulTokensInjected, 500);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
 });

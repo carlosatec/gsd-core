@@ -29,6 +29,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
+const { spawnSync } = require('child_process');
 const { scanForInjection } = require('../gsd-core/bin/lib/security.cjs');
 const { runHook } = require('./helpers/process-seam.cjs');
 const { createTempDir, cleanup } = require('./helpers.cjs');
@@ -37,6 +38,42 @@ const { createTempDir, cleanup } = require('./helpers.cjs');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
 const SCAN_SCRIPT = path.join(PROJECT_ROOT, 'scripts', 'prompt-injection-scan.sh');
+
+let cachedBashInterpreter;
+function resolveBashInterpreter() {
+  if (cachedBashInterpreter !== undefined) return cachedBashInterpreter;
+  if (process.platform !== 'win32') {
+    cachedBashInterpreter = 'bash';
+    return cachedBashInterpreter;
+  }
+  const directCheck = spawnSync('bash', ['-c', 'command -v grep >/dev/null 2>&1'], {
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  if (directCheck.status === 0) {
+    cachedBashInterpreter = 'bash';
+    return cachedBashInterpreter;
+  }
+  if (process.env.GSD_BASH_PATH && fs.existsSync(process.env.GSD_BASH_PATH)) {
+    cachedBashInterpreter = process.env.GSD_BASH_PATH;
+    return cachedBashInterpreter;
+  }
+  const whereGit = spawnSync('where.exe', ['git'], { encoding: 'utf8', timeout: 5000 });
+  if (whereGit.status === 0 && whereGit.stdout) {
+    for (const rawLine of whereGit.stdout.split(/\r?\n/)) {
+      const gitExe = rawLine.trim();
+      if (!gitExe) continue;
+      const gitRoot = path.dirname(path.dirname(gitExe));
+      const candidate = path.join(gitRoot, 'bin', 'bash.exe');
+      if (fs.existsSync(candidate)) {
+        cachedBashInterpreter = candidate;
+        return cachedBashInterpreter;
+      }
+    }
+  }
+  cachedBashInterpreter = null;
+  return null;
+}
 
 /**
  * Run scripts/prompt-injection-scan.sh --file <content written to a scratch
@@ -47,11 +84,16 @@ const SCAN_SCRIPT = path.join(PROJECT_ROOT, 'scripts', 'prompt-injection-scan.sh
  * shell script's PATTERNS array.
  */
 function scanContent(t, content) {
+  const interpreter = resolveBashInterpreter();
+  if (!interpreter) {
+    t.skip('POSIX bash interpreter not available on this Windows host');
+    return null;
+  }
   const dir = createTempDir('gsd-3175-pi-scan-');
   t.after(() => cleanup(dir));
   const file = path.join(dir, 'fixture.txt');
   fs.writeFileSync(file, `${content}\n`);
-  const result = runHook(SCAN_SCRIPT, ['--file', file], { interpreter: 'bash', timeoutMs: 10_000 });
+  const result = runHook(SCAN_SCRIPT, ['--file', file], { interpreter, timeoutMs: 10_000 });
   return result;
 }
 

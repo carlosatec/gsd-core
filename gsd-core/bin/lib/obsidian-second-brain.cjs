@@ -23,6 +23,9 @@ const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 const pattern_cjs_1 = require("./pattern.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const planScanMod = require("./plan-scan.cjs");
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { loadCodebaseGraph, buildCodebaseGraph } = codebaseAst;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -114,7 +117,7 @@ function generateSecondBrainVault(planningDir, rootDir) {
     let totalPhases = 0;
     const phaseList = [];
     const srcPhasesDir = node_path_1.default.join(planningDir, 'phases');
-    let activePhasePrefix = '37';
+    let activePhasePrefix = '';
     try {
         const statePath = node_path_1.default.join(planningDir, 'STATE.md');
         if (node_fs_1.default.existsSync(statePath)) {
@@ -135,12 +138,13 @@ function generateSecondBrainVault(planningDir, rootDir) {
                 const pId = ent.name;
                 const phaseSub = node_path_1.default.join(srcPhasesDir, pId);
                 const subFiles = node_fs_1.default.readdirSync(phaseSub);
-                const isCurrent = pId.startsWith(activePhasePrefix);
+                const isCurrent = activePhasePrefix !== '' && new RegExp(`^(?:[A-Z][A-Z0-9]*-)?0*${activePhasePrefix}-`).test(pId);
                 phaseList.push({ id: pId, name: pId, isCurrent });
                 const phaseNotePath = node_path_1.default.join(phasesDir, `${pId}.md`);
+                const phaseScan = scanPhasePlans(phaseSub);
                 const specFile = subFiles.find(f => f.endsWith('-SPEC.md'));
-                const planFiles = subFiles.filter(f => f.endsWith('-PLAN.md'));
-                const summaryFile = subFiles.find(f => f.endsWith('-SUMMARY.md'));
+                const planFiles = phaseScan.planFiles;
+                const summaryFile = phaseScan.summaryFiles[0];
                 const reviewFile = subFiles.find(f => f.includes('REVIEW'));
                 const hasSummary = Boolean(summaryFile);
                 const status = isCurrent ? 'active' : (hasSummary ? 'complete' : 'planned');
@@ -292,7 +296,8 @@ function generateSecondBrainVault(planningDir, rootDir) {
             const raw = (0, shell_command_projection_cjs_1.platformReadSync)(antiPatternsPath);
             if (raw) {
                 const parsed = JSON.parse(raw);
-                const patterns = Array.isArray(parsed) ? parsed : (parsed.antiPatterns || []);
+                // anti-pattern-store persists `{ version, totalRecorded, patterns }`; keep legacy `antiPatterns` readable.
+                const patterns = Array.isArray(parsed) ? parsed : (parsed.patterns || parsed.antiPatterns || []);
                 for (let i = 0; i < Math.min(patterns.length, 30); i++) {
                     const ap = patterns[i];
                     if (ap && (ap.lesson || ap.pattern)) {
@@ -337,6 +342,7 @@ function generateSecondBrainVault(planningDir, rootDir) {
         .filter(m => !m.file.startsWith('src/') && !m.file.startsWith('gsd-core/bin/lib/'))
         .sort((a, b) => b.pageRank - a.pageRank);
     // 7. Generate 00-Home.md (Master Map of Content)
+    const currentPhase = phaseList.find(p => p.isCurrent) ?? phaseList[phaseList.length - 1];
     const homePath = node_path_1.default.join(vaultDir, '00-Home.md');
     const homeContent = [
         '---',
@@ -348,12 +354,14 @@ function generateSecondBrainVault(planningDir, rootDir) {
         '# 🧠 Projeto Segundo Cérebro (GSD Core Nexus 3.7)',
         '',
         '> **Status do Ecossistema:** Ativo  ',
-        '> **Fase Corrente:** [[Phases/37-second-brain-knowledge-graph-obsidian-vault-and-quality-telemetry|Fase 37: Segundo Cérebro Obsidian & Telemetria]]  ',
+        currentPhase
+            ? `> **Fase Corrente:** [[Phases/${currentPhase.id}|Fase ${currentPhase.id}]]  `
+            : '> **Fase Corrente:** —  ',
         `> **Última Atualização:** ${new Date().toISOString()}  `,
         '',
         '## 🗺️ Visualização & Mapas Mentais',
         '- 🎨 **[[00-Vault.canvas|Abrir Canvas do Segundo Cérebro (Mindmap Ativo)]]** — Visão 2D interativa conectando Fase Ativa, Decisões, Módulos e Lições.',
-        '- 🗺️ **[[01-Roadmap.canvas|Abrir Canvas do Roteiro Completo (Linha do Tempo)]]** — Visão panorâmica dos Milestones e das 37 fases organizadas cronologicamente.',
+        `- 🗺️ **[[01-Roadmap.canvas|Abrir Canvas do Roteiro Completo (Linha do Tempo)]]** — Visão panorâmica dos Milestones e das ${totalPhases} fases organizadas cronologicamente.`,
         '- 🌐 [Grafo Visual Interativo de Conhecimento (HTML)](file:///../intel/graph-view.html) — Visualizador gráfico 3D/2D offline com física de partículas.',
         '- 📈 [Dashboard Visual de Observabilidade 360° (HTML)](file:///../intel/dashboard.html) — Painel executivo com simulador de custos e métricas.',
         '',

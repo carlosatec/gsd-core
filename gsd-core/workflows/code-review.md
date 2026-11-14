@@ -26,18 +26,21 @@ PHASE_ARG="${1}"
 # logic (e.g., --all and --auto imply --fix). Resolved BEFORE the init call below so
 # the section-manifest gate forwards the RESOLVED (post-implication) fix decision, not
 # just a literal --fix token check.
-FLAGS_JSON=$(node -e "
-  const { parseCodeReviewFlags } = require('./gsd-core/bin/lib/code-review-flags.cjs');
+GSD_LIB_DIR="${GSD_TOOLS:+${GSD_TOOLS%/*}/lib}"
+GSD_LIB_DIR="${GSD_LIB_DIR:-./gsd-core/bin/lib}"
+FLAGS_JSON=$(GSD_LIB_DIR="$GSD_LIB_DIR" node -e "
+  const path = require('path');
+  const { parseCodeReviewFlags } = require(path.join(process.env.GSD_LIB_DIR, 'code-review-flags.cjs'));
   const flags = parseCodeReviewFlags(process.argv.slice(1));
   process.stdout.write(JSON.stringify(flags));
 " -- "$@" 2>/dev/null)
 
 # Extract individual flag values from the IR
-FIX_FLAG=$(echo "$FLAGS_JSON" | node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')).fix))")
-FIX_ALL=$(echo "$FLAGS_JSON" | node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')).all))")
-FIX_AUTO=$(echo "$FLAGS_JSON" | node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')).auto))")
-DEPTH_OVERRIDE=$(echo "$FLAGS_JSON" | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')).depth)")
-FILES_OVERRIDE=$(echo "$FLAGS_JSON" | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')).files)")
+FIX_FLAG=$(GSD_FLAGS_JSON="$FLAGS_JSON" node -e "process.stdout.write(String(JSON.parse(process.env.GSD_FLAGS_JSON).fix))")
+FIX_ALL=$(GSD_FLAGS_JSON="$FLAGS_JSON" node -e "process.stdout.write(String(JSON.parse(process.env.GSD_FLAGS_JSON).all))")
+FIX_AUTO=$(GSD_FLAGS_JSON="$FLAGS_JSON" node -e "process.stdout.write(String(JSON.parse(process.env.GSD_FLAGS_JSON).auto))")
+DEPTH_OVERRIDE=$(GSD_FLAGS_JSON="$FLAGS_JSON" node -e "process.stdout.write(JSON.parse(process.env.GSD_FLAGS_JSON).depth)")
+FILES_OVERRIDE=$(GSD_FLAGS_JSON="$FLAGS_JSON" node -e "process.stdout.write(JSON.parse(process.env.GSD_FLAGS_JSON).files)")
 
 # Forward the resolved fix decision (--fix itself, or --all/--auto implying it) to
 # init.code-review so section_manifest's flag:--fix gating (dispatch-fix section)
@@ -483,9 +486,12 @@ if [ -n "$FALLOW_JSON_PATH" ] && [ -f "$FALLOW_JSON_PATH" ]; then
   # Normalize fallow's raw report into the compact {summary, findings[]} contract
   # the reviewer consumes (real fallow schema -> normalized findings).
   FALLOW_NORMALIZED_PATH="${PHASE_DIR}/FALLOW-normalized.json"
-  FALLOW_SRC="$FALLOW_JSON_PATH" FALLOW_OUT="$FALLOW_NORMALIZED_PATH" node -e "
+  FALLOW_LIB_DIR="${GSD_TOOLS:+${GSD_TOOLS%/*}/lib}"
+  FALLOW_LIB_DIR="${FALLOW_LIB_DIR:-./gsd-core/bin/lib}"
+  GSD_LIB_DIR="$FALLOW_LIB_DIR" FALLOW_SRC="$FALLOW_JSON_PATH" FALLOW_OUT="$FALLOW_NORMALIZED_PATH" node -e "
     const fs = require('fs');
-    const { normalizeFallowReportFile } = require('./gsd-core/bin/lib/fallow-runner.cjs');
+    const path = require('path');
+    const { normalizeFallowReportFile } = require(path.join(process.env.GSD_LIB_DIR, 'fallow-runner.cjs'));
     const n = normalizeFallowReportFile(process.env.FALLOW_SRC);
     fs.writeFileSync(process.env.FALLOW_OUT, JSON.stringify(n, null, 2));
   " 2>/dev/null && FALLOW_EMBED_PATH="$FALLOW_NORMALIZED_PATH" || FALLOW_EMBED_PATH="$FALLOW_JSON_PATH"

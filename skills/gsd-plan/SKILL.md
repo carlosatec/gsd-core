@@ -1,6 +1,6 @@
 ---
 name: gsd-plan
-description: "Produce a detailed phase plan (PLAN.md) with task waves, verification loop, and surgical JIT context injection"
+description: "Produce a detailed phase plan (PLAN.md) with task waves, verification loop, and JIT context"
 argument-hint: "[phase-number] [--converge] [--reviews]"
 allowed-tools:
   - Read

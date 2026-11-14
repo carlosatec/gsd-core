@@ -184,7 +184,7 @@ Determine the target directory by querying `init.phase-op` for the phase number 
 ```bash
 INIT=$(gsd_run query init.phase-op "{NN}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
-expected_phase_dir=$(echo "$INIT" | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).expected_phase_dir)")
+expected_phase_dir=$(GSD_INIT_JSON="$INIT" node -e "process.stdout.write(JSON.parse(process.env.GSD_INIT_JSON).expected_phase_dir)")
 ```
 
 If the directory does not exist, create it:

@@ -21,6 +21,12 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 const text_lines_cjs_1 = require("./text-lines.cjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const planScanMod = require("./plan-scan.cjs");
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const phaseLocatorMod = require("./phase-locator.cjs");
+const { listMilestonePhaseDirs } = phaseLocatorMod;
 // ─── Constants ───────────────────────────────────────────────────────────────
 const DEFAULT_EXTENSIONS = new Set([
     // TypeScript & JavaScript
@@ -2981,21 +2987,20 @@ function buildCodebaseGraph(rootDir, options = {}) {
     const phasesDir = node_path_1.default.join(planningDir, 'phases');
     if (node_fs_1.default.existsSync(phasesDir)) {
         try {
-            const pDirs = node_fs_1.default.readdirSync(phasesDir, { withFileTypes: true });
-            for (const d of pDirs) {
-                if (d.isDirectory()) {
-                    const pId = d.name;
-                    const phaseSub = node_path_1.default.join(phasesDir, pId);
-                    const entries = node_fs_1.default.readdirSync(phaseSub);
-                    const planPaths = entries.filter(e => e.endsWith('-PLAN.md')).map(e => node_path_1.default.join('.planning/phases', pId, e).replace(/\\/g, '/'));
-                    const specFile = entries.find(e => e.endsWith('-SPEC.md'));
-                    const specPath = specFile ? node_path_1.default.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
-                    const summaryFile = entries.find(e => e.endsWith('-SUMMARY.md'));
-                    const summaryPath = summaryFile ? node_path_1.default.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
-                    if (knowledgeNodes.phases) {
-                        knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
-                        totalKnowledgeNodes++;
-                    }
+            // Canonical owners: phase enumeration (phase-locator) and plan/summary scan (plan-scan).
+            const phaseDirNames = listMilestonePhaseDirs(phasesDir, { cwd: node_path_1.default.dirname(planningDir) }).value;
+            for (const pId of phaseDirNames) {
+                const phaseSub = node_path_1.default.join(phasesDir, pId);
+                const entries = node_fs_1.default.readdirSync(phaseSub);
+                const scan = scanPhasePlans(phaseSub);
+                const planPaths = scan.planFiles.map(e => node_path_1.default.join('.planning/phases', pId, e).replace(/\\/g, '/'));
+                const specFile = entries.find(e => e.endsWith('-SPEC.md'));
+                const specPath = specFile ? node_path_1.default.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
+                const summaryFile = scan.summaryFiles[0];
+                const summaryPath = summaryFile ? node_path_1.default.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
+                if (knowledgeNodes.phases) {
+                    knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
+                    totalKnowledgeNodes++;
                 }
             }
         }

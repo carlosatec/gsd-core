@@ -1321,3 +1321,45 @@ describe('gsd-agent-isolation-guard.js: #3582 cold tree — RuntimeBuildError su
     assert.ok(out.reason.length > 0);
   });
 });
+
+describe('Phase 38 guard fail-closed hardening on non-string cwd ({} / 123)', () => {
+  const WORKTREE_GUARD_PATH = path.join(__dirname, '..', 'hooks', 'gsd-worktree-path-guard.js');
+
+  for (const invalidCwd of [{}, 123]) {
+    test(`gsd-agent-isolation-guard exits 2 with full stderr when data.cwd is ${JSON.stringify(invalidCwd)}`, (t) => {
+      const project = mkProject('gsd-aig-badcwd-');
+      t.after(() => cleanup(project));
+      const payload = {
+        hook_event_name: 'PreToolUse',
+        tool_name: 'Agent',
+        tool_input: { subagent_type: 'gsd-executor', description: 'run phase', prompt: 'do work' },
+        cwd: invalidCwd,
+      };
+      const result = runHook(payload, project);
+      assert.equal(result.status, 2, `expected fail-closed exit 2; stdout=${result.stdout} stderr=${result.stderr}`);
+      const parsed = JSON.parse(result.stdout);
+      assert.equal(parsed.decision, 'block');
+      assert.match(result.stderr, /invalid hook payload field "cwd"/i);
+    });
+
+    test(`gsd-worktree-path-guard exits 2 with full stderr when data.cwd is ${JSON.stringify(invalidCwd)}`, (t) => {
+      const project = mkProject('gsd-wpg-badcwd-');
+      t.after(() => cleanup(project));
+      const payload = {
+        tool_name: 'Edit',
+        tool_input: { file_path: path.join(project, 'foo.txt') },
+        cwd: invalidCwd,
+      };
+      const r = runHookSeam(WORKTREE_GUARD_PATH, [], {
+        input: JSON.stringify(payload),
+        cwd: project,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      });
+      const result = toLegacyResult(r);
+      assert.equal(result.status, 2, `expected fail-closed exit 2; stdout=${result.stdout} stderr=${result.stderr}`);
+      const parsed = JSON.parse(result.stdout);
+      assert.equal(parsed.decision, 'block');
+      assert.match(result.stderr, /invalid hook payload field "cwd"/i);
+    });
+  }
+});

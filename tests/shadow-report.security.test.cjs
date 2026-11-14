@@ -306,7 +306,15 @@ describe('buildShadowReport — the lstatSync symlink guard (B14-B16)', () => {
     // The local config DIR is real; only the manifest FILE inside it is a
     // symlink pointing OUTSIDE the config dir — proves the guard checks the
     // manifest path itself, not merely the directory.
-    fs.symlinkSync(outOfTreeManifest, path.join(localDir, MANIFEST_NAME), 'file');
+    try {
+      fs.symlinkSync(outOfTreeManifest, path.join(localDir, MANIFEST_NAME), 'file');
+    } catch (err) {
+      if (process.platform === 'win32' && err && (err.code === 'EPERM' || err.code === 'ENOTSUP')) {
+        t.skip('Windows file symlinks require Developer Mode or elevated privileges');
+        return;
+      }
+      throw err;
+    }
 
     const report = buildShadowReport('claude', { home, cwd });
     assert.strictEqual(report.shadowed, false, 'a symlinked manifest file must never be followed, even though its target is valid, matching content');

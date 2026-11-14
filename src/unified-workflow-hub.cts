@@ -482,7 +482,7 @@ function resolveActivePhaseId(planningDir: string, explicitPhaseOrArgs?: string[
   try {
     const statePath = path.join(planningDir, 'STATE.md');
     const stateContent = platformReadSync(statePath) || '';
-    const match = stateContent.match(/Current Phase:\s*Phase\s*([0-9a-zA-Z._-]+)/i);
+    const match = stateContent.match(/Current Phase\*{0,2}:\*{0,2}\s*(?:Phase\s+)?([0-9a-zA-Z._-]+)/i);
     if (match) {
       return match[1];
     }
@@ -492,28 +492,39 @@ function resolveActivePhaseId(planningDir: string, explicitPhaseOrArgs?: string[
   return '1';
 }
 
+/**
+ * Resolves a phase subdirectory under `.planning/phases/<NN-slug>/` from an identifier.
+ */
+function resolvePhaseDirectory(planningDir: string, phaseId: string): string | null {
+  if (!phaseId) return null;
+  const phasesRoot = path.join(planningDir, 'phases');
+  if (!fs.existsSync(phasesRoot)) return null;
+  const cleanId = phaseId.replace(/^phase[-_]?/i, '');
+  const paddedId = /^\d+$/.test(cleanId) ? cleanId.padStart(2, '0') : cleanId;
+  const dirs = fs.readdirSync(phasesRoot);
+  const matchingDir = dirs.find(
+    (d) => d === cleanId || d === paddedId || d.startsWith(`${cleanId}-`) || d.startsWith(`${paddedId}-`),
+  );
+  return matchingDir ? path.join(phasesRoot, matchingDir) : null;
+}
+
 function extractTargetFilesFromPhase(planningDir: string, phaseId: string, cwd: string, singlePlanOnly: boolean = false): string[] {
   const targetFiles: string[] = [];
   if (!phaseId) return targetFiles;
 
-  const phaseDirPath = path.join(planningDir, 'phases');
   try {
-    if (fs.existsSync(phaseDirPath)) {
-      const dirs = fs.readdirSync(phaseDirPath);
-      const matchingDir = dirs.find(d => d.startsWith(phaseId) || d.includes(phaseId));
-      if (matchingDir) {
-        const fullDir = path.join(phaseDirPath, matchingDir);
-        const { planFiles } = scanPhasePlans(fullDir);
-        const filesToScan = singlePlanOnly ? (planFiles[0] ? [planFiles[0]] : []) : planFiles;
-        for (const pf of filesToScan) {
-          const planContent = platformReadSync(path.join(fullDir, pf)) || '';
-          const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
-          if (fileMatches) {
-            for (const m of fileMatches) {
-              const clean = m.replace(/`/g, '');
-              if (!clean.endsWith('.md') && !clean.endsWith('.json') && fs.existsSync(path.join(cwd, clean))) {
-                targetFiles.push(clean);
-              }
+    const fullDir = resolvePhaseDirectory(planningDir, phaseId);
+    if (fullDir) {
+      const { planFiles } = scanPhasePlans(fullDir);
+      const filesToScan = singlePlanOnly ? (planFiles[0] ? [planFiles[0]] : []) : planFiles;
+      for (const pf of filesToScan) {
+        const planContent = platformReadSync(path.join(fullDir, pf)) || '';
+        const fileMatches = planContent.match(/(?:`|\b)([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:`|\b)/g);
+        if (fileMatches) {
+          for (const m of fileMatches) {
+            const clean = m.replace(/`/g, '');
+            if (!clean.endsWith('.md') && !clean.endsWith('.json') && fs.existsSync(path.join(cwd, clean))) {
+              targetFiles.push(clean);
             }
           }
         }
@@ -624,7 +635,7 @@ function runInternalUnifiedCommand(
       const isSecondBrainActive = fs.existsSync(vaultPath);
       if (isSecondBrainActive) {
         const risk = telemetry.currentAmnesiaRisk || 'LOW';
-        const recall = (telemetry.averageContextRecallPct ?? 99.2).toFixed(1);
+        const recall = (telemetry.averageContextRecallPct ?? 0).toFixed(1);
         secondBrainMsg = ` | Segundo Cérebro: Ativo (Zero Amnésia: Risco ${risk}, Recall: ${recall}%).`;
       }
 
@@ -632,27 +643,19 @@ function runInternalUnifiedCommand(
       try {
         const statePath = path.join(planningDir, 'STATE.md');
         if (fs.existsSync(statePath)) {
-          const stateTxt = fs.readFileSync(statePath, 'utf8');
-          const phaseMatch = stateTxt.match(/Current Phase:.*Phase\s+(\d+)/i);
-          const activePhase = phaseMatch ? phaseMatch[1] : undefined;
+          const activePhase = resolveActivePhaseId(planningDir);
+          const matchedPhaseDir = resolvePhaseDirectory(planningDir, activePhase);
+          if (matchedPhaseDir) {
+            const phaseScan = scanPhasePlans(matchedPhaseDir);
+            const hasSummary = phaseScan.summaryFiles.length > 0;
+            const hasPlan = phaseScan.planFiles.length > 0;
 
-          if (activePhase) {
-            const phaseDir = path.join(planningDir, 'phases');
-            if (fs.existsSync(phaseDir)) {
-              const matchedDir = fs.readdirSync(phaseDir).find(d => d.startsWith(`${activePhase}-`) || d === activePhase);
-              if (matchedDir) {
-                const subFiles = fs.readdirSync(path.join(phaseDir, matchedDir));
-                const hasSummary = subFiles.some(f => f.endsWith('-SUMMARY.md'));
-                const hasPlan = subFiles.some(f => f.endsWith('-PLAN.md'));
-
-                if (hasSummary) {
-                  dynamicNextStep = `run /gsd:verify ${activePhase} or /gsd:ship to complete phase`;
-                } else if (hasPlan) {
-                  dynamicNextStep = `run /gsd:exec ${activePhase} to execute phase plan`;
-                } else {
-                  dynamicNextStep = `run /gsd:plan ${activePhase} to create phase plan`;
-                }
-              }
+            if (hasSummary) {
+              dynamicNextStep = `run /gsd-verify ${activePhase} or /gsd-ship to complete phase`;
+            } else if (hasPlan) {
+              dynamicNextStep = `run /gsd-exec ${activePhase} to execute phase plan`;
+            } else {
+              dynamicNextStep = `run /gsd-plan ${activePhase} to create phase plan`;
             }
           }
         }
@@ -671,7 +674,7 @@ function runInternalUnifiedCommand(
           secondBrain: isSecondBrainActive ? {
             active: true,
             amnesiaRisk: telemetry.currentAmnesiaRisk || 'LOW',
-            contextRecallPct: telemetry.averageContextRecallPct ?? 99.2,
+            contextRecallPct: telemetry.averageContextRecallPct ?? 0,
           } : undefined,
         },
         message: `GSD Core Nexus 3.7 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}${secondBrainMsg}${syncMsg}`,
@@ -1107,15 +1110,14 @@ function runInternalUnifiedCommand(
       // Interlock 2: Acceptance criteria Noul evaluation (only if tests are green)
       if (testsGreen && !autoPassed) {
         try {
-          const planPath = path.join(
-            planningDir,
-            'phases',
-            phaseId ? `${phaseId}-PLAN.md` : ''
-          );
+          // Plans live inside `phases/<NN-slug>/`; resolve the phase directory, then ask the plan-scan owner.
+          const phaseFolder = resolvePhaseDirectory(planningDir, phaseId);
+          const firstPlan = phaseFolder ? scanPhasePlans(phaseFolder).planFiles[0] : undefined;
+          const planPath = phaseFolder && firstPlan ? path.join(phaseFolder, firstPlan) : '';
           let acceptanceCriteria: string[] = [];
 
           // Extract acceptance criteria from PLAN.md (numbered list under section 4 or "Verification Criteria")
-          if (phaseId && fs.existsSync(planPath)) {
+          if (phaseId && planPath && fs.existsSync(planPath)) {
             const planContent = platformReadSync(planPath) || '';
             const criteriaSection = collectSection(
               planContent,

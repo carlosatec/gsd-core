@@ -302,10 +302,10 @@ VERIFY_STATUS=$?
 **Step 5a: drift check** — even when `VERIFY_STATUS` is 0, the report may signal that one or more files were skipped due to pristine-snapshot drift (Bug #3657) or a missing baseline (Bug #934). Parse the JSON and check:
 
 ```bash
-DRIFTED_COUNT="$(echo "$VERIFY_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(String(d.drifted||0))")"
-DRIFTED_FILES="$(echo "$VERIFY_OUTPUT"  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));(d.drifted_files||[]).forEach(f=>process.stdout.write(f+'\n'))")"
-NO_BASELINE_COUNT="$(echo "$VERIFY_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(String(d.no_baseline||0))")"
-NO_BASELINE_FILES="$(echo "$VERIFY_OUTPUT"  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));(d.no_baseline_files||[]).forEach(f=>process.stdout.write(f+'\n'))")"
+DRIFTED_COUNT="$(VERIFY_OUTPUT="$VERIFY_OUTPUT" node -e "const d=JSON.parse(process.env.VERIFY_OUTPUT);process.stdout.write(String(d.drifted||0))")"
+DRIFTED_FILES="$(VERIFY_OUTPUT="$VERIFY_OUTPUT" node -e "const d=JSON.parse(process.env.VERIFY_OUTPUT);(d.drifted_files||[]).forEach(f=>console.log(f))")"
+NO_BASELINE_COUNT="$(VERIFY_OUTPUT="$VERIFY_OUTPUT" node -e "const d=JSON.parse(process.env.VERIFY_OUTPUT);process.stdout.write(String(d.no_baseline||0))")"
+NO_BASELINE_FILES="$(VERIFY_OUTPUT="$VERIFY_OUTPUT" node -e "const d=JSON.parse(process.env.VERIFY_OUTPUT);(d.no_baseline_files||[]).forEach(f=>console.log(f))")"
 ```
 
 **If `NO_BASELINE_COUNT` is greater than 0**, emit an advisory warning (non-blocking — the gate still exits 0 for these files). Do NOT halt:

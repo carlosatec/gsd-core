@@ -91,4 +91,25 @@ describe('Wave 4: Transactional File Lock & Stale Lock Eviction', () => {
       cleanup(tmpDir);
     }
   });
+
+  it('does not unlink another holder lock on finally if lock ownership changed mid-execution', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-lock-owner-'));
+    try {
+      const targetFile = path.join(tmpDir, 'store.json');
+      const lockFile = targetFile + '.lock';
+      const replacementPayload = JSON.stringify({ pid: process.pid, token: 'other-holder-token', createdAt: Date.now() });
+
+      withFileLockSync(targetFile, () => {
+        // Simulate another process having stolen an expired lock and holding its own lock instance
+        fs.unlinkSync(lockFile);
+        fs.writeFileSync(lockFile, replacementPayload);
+      });
+
+      assert.strictEqual(fs.existsSync(lockFile), true, 'New holder lockfile must remain intact');
+      assert.strictEqual(fs.readFileSync(lockFile, 'utf8'), replacementPayload);
+      fs.unlinkSync(lockFile);
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
 });

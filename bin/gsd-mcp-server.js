@@ -19,6 +19,10 @@
  * are unit-tested in tests/gsd-mcp-server.test.cjs; the process lifecycle
  * (spawn → JSON-RPC → clean exit) in tests/gsd-mcp-server-bin.test.cjs.
  */
+const { ensureRuntimeBuild } = require('../gsd-core/bin/ensure-runtime-build.cjs');
+
+ensureRuntimeBuild();
+
 const { runServer } = require('../gsd-core/bin/lib/mcp-server.cjs');
 
 runServer({

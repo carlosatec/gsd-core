@@ -424,7 +424,16 @@ function evaluateDispatch(data, { clock = Date } = {}) {
     return { action: 'allow' };
   }
 
-  const cwd = data.cwd || process.cwd();
+  if (data.cwd !== undefined && data.cwd !== null && typeof data.cwd !== 'string') {
+    return {
+      action: 'block',
+      reason:
+        `Agent isolation guard: invalid hook payload field "cwd" (expected string, got ${typeof data.cwd}). ` +
+        `Refusing to dispatch subagent_type="${subagentType}" fail-open.`,
+      reasonCode: REASON_CODE.CONFIG_UNREADABLE,
+    };
+  }
+  const cwd = (typeof data.cwd === 'string' && data.cwd.trim()) ? data.cwd : process.cwd();
   // #3045 SECURITY F2: best-effort plan/phase extraction from this
   // dispatch's own description text, so a fresh sentinel that disagrees
   // with THIS dispatch is treated as inapplicable rather than trusted.
@@ -473,6 +482,17 @@ function evaluateDispatch(data, { clock = Date } = {}) {
   return { action: 'block', reason, reasonCode: REASON_CODE.HARNESS_FLAG_MISSING };
 }
 
+function emitBlockOutput(out) {
+  try {
+    fs.writeSync(1, JSON.stringify(out));
+    // Kimi feeds stderr (not stdout) back to the model on exit 2.
+    fs.writeSync(2, out.reason);
+  } catch {
+    // Emission failed; fail-closed decision still stands.
+  }
+  process.exit(2);
+}
+
 /* istanbul ignore next -- stdin adapter, exercised via spawnSync in tests */
 function main() {
   let input = '';
@@ -481,22 +501,28 @@ function main() {
   process.stdin.on('data', (chunk) => { input += chunk; });
   process.stdin.on('end', () => {
     clearTimeout(stdinTimeout);
+    let data;
     try {
-      const data = JSON.parse(input);
+      data = JSON.parse(input);
+    } catch {
+      // Malformed payload before applicability could be determined.
+      process.exit(0);
+    }
+    try {
       const decision = evaluateDispatch(data);
       if (decision.action === 'block') {
         const out = { decision: 'block', reason: decision.reason, reason_code: decision.reasonCode };
-        process.stdout.write(JSON.stringify(out));
-        // Kimi feeds stderr (not stdout) back to the model on exit 2.
-        process.stderr.write(decision.reason);
-        process.exit(2);
+        emitBlockOutput(out);
       }
       process.exit(0);
-    } catch {
-      // Silent fail — never block valid tool calls due to hook errors
-      // (malformed payload, etc.). This is distinct from resolveIsolationState's
-      // internal error handling, which DOES deny — this outer catch only
-      // covers payload parsing before applicability could even be determined.
+    } catch (err) {
+      const subagentType = data && data.tool_input && typeof data.tool_input.subagent_type === 'string'
+        ? data.tool_input.subagent_type
+        : '';
+      if (EXECUTOR_SUBAGENT_TYPES.has(subagentType)) {
+        const reason = `Agent isolation guard: unexpected validation error (${err && err.message ? err.message : String(err)}). Failing closed.`;
+        emitBlockOutput({ decision: 'block', reason, reason_code: REASON_CODE.CONFIG_UNREADABLE });
+      }
       process.exit(0);
     }
   });

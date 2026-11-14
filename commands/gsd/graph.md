@@ -1,6 +1,6 @@
 ---
 name: gsd:graph
-description: Export and visualize interactive HTML knowledge graph, Obsidian canvas, and Project Second Brain Vault
+description: Export interactive HTML knowledge graph, Obsidian canvas, and Second Brain Vault
 argument-hint: "[--vault] [--canvas] [--open] [--no-open]"
 allowed-tools:
   - Read

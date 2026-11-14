@@ -61,6 +61,17 @@ function computeQualityMetrics(planningDir) {
             // non-blocking
         }
     }
+    let stateDecisionsCount = 0;
+    const statePath = node_path_1.default.join(planningDir, 'STATE.md');
+    if (node_fs_1.default.existsSync(statePath)) {
+        try {
+            const stateContent = (0, shell_command_projection_cjs_1.platformReadSync)(statePath) || '';
+            stateDecisionsCount = (stateContent.match(/(?:^|\n)\s*[-*]\s*\*\*D-\d+/g) || []).length;
+        }
+        catch {
+            // non-blocking
+        }
+    }
     let totalFiles = 0;
     let mappedFiles = 0;
     const graphPath = node_path_1.default.join(planningDir, 'intel', 'codebase-graph.json');
@@ -77,8 +88,13 @@ function computeQualityMetrics(planningDir) {
             // non-blocking
         }
     }
-    const brainCoveragePct = totalFiles > 0 ? Number(((mappedFiles / totalFiles) * 100).toFixed(1)) : (activeDecisionsLoaded > 0 ? 98.5 : 0);
-    const contextRecallPct = activeDecisionsLoaded > 0 ? 99.2 : 75.0;
+    const brainCoveragePct = totalFiles > 0 ? Number(Math.min(100, (mappedFiles / totalFiles) * 100).toFixed(1)) : 0;
+    const decisionRatio = stateDecisionsCount > 0
+        ? Math.min(1, activeDecisionsLoaded / stateDecisionsCount)
+        : (activeDecisionsLoaded > 0 ? 1 : 0);
+    const graphRatio = totalFiles > 0 ? Math.min(1, mappedFiles / totalFiles) : 0;
+    // Weight architectural decision retention (60%) alongside AST codebase coverage (40%).
+    const contextRecallPct = Number(((decisionRatio * 0.6 + graphRatio * 0.4) * 100).toFixed(1));
     const amnesiaRisk = (activeDecisionsLoaded >= 50 && brainCoveragePct >= 80)
         ? 'LOW'
         : (activeDecisionsLoaded > 0 ? 'MED' : 'HIGH');
@@ -145,10 +161,10 @@ function loadTelemetry(planningDir) {
             peakInvocationTokens: parsed.peakInvocationTokens || 0,
             totalNoiseTokensEliminated,
             totalUsefulTokensInjected,
-            averageContextRecallPct: parsed.averageContextRecallPct ?? quality.contextRecallPct,
-            currentAmnesiaRisk: parsed.currentAmnesiaRisk ?? quality.amnesiaRisk,
-            brainCoveragePct: parsed.brainCoveragePct ?? quality.brainCoveragePct,
-            activeDecisionsLoaded: parsed.activeDecisionsLoaded ?? quality.activeDecisionsLoaded,
+            averageContextRecallPct: quality.contextRecallPct,
+            currentAmnesiaRisk: quality.amnesiaRisk,
+            brainCoveragePct: quality.brainCoveragePct,
+            activeDecisionsLoaded: quality.activeDecisionsLoaded,
             commandBreakdown: parsed.commandBreakdown || {},
             phaseBreakdown: parsed.phaseBreakdown || {},
             records,
@@ -184,7 +200,7 @@ function saveTelemetry(planningDir, data) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
     const telemetryPath = node_path_1.default.join(intelDir, 'telemetry.json');
-    data.version = '2.0.0';
+    data.version = '2.1.0';
     (0, shell_command_projection_cjs_1.platformWriteSync)(telemetryPath, JSON.stringify(data, null, 2));
 }
 /**
@@ -230,6 +246,12 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
             compressionRatio = Number(Math.max(1.0, effectiveFull / Math.max(1, sanitizedJit)).toFixed(1));
         }
         const quality = computeQualityMetrics(planningDir);
+        const derivedNoiseTokens = typeof noiseTokensEliminated === 'number' && !Number.isNaN(noiseTokensEliminated)
+            ? Math.max(0, Math.floor(noiseTokensEliminated))
+            : Math.max(0, effectiveFull - sanitizedJit);
+        const derivedUsefulTokens = typeof usefulContextTokensInjected === 'number' && !Number.isNaN(usefulContextTokensInjected)
+            ? Math.max(0, Math.floor(usefulContextTokensInjected))
+            : sanitizedJit;
         const record = {
             timestamp: new Date().toISOString(),
             command: sanitizedCmd,
@@ -249,8 +271,8 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
             brainCoveragePct: quality.brainCoveragePct,
             activeDecisionsCount: quality.activeDecisionsLoaded,
             ...(workflowContext ? { workflowContext } : {}),
-            ...(noiseTokensEliminated ? { noiseTokensEliminated } : {}),
-            ...(usefulContextTokensInjected ? { usefulContextTokensInjected } : {}),
+            noiseTokensEliminated: derivedNoiseTokens,
+            usefulContextTokensInjected: derivedUsefulTokens,
         };
         data.records.push(record);
         // Keep last 100 records
@@ -261,8 +283,8 @@ function recordJitInvocation(planningDir, targetFiles, jitTokens, fullRepoTokens
         data.totalTokensSaved += tokensSaved;
         data.totalJitTokensUsed += sanitizedJit;
         data.totalMonolithicTokensAvoided += effectiveFull;
-        data.totalNoiseTokensEliminated = (data.totalNoiseTokensEliminated || 0) + (noiseTokensEliminated || 0);
-        data.totalUsefulTokensInjected = (data.totalUsefulTokensInjected || 0) + (usefulContextTokensInjected || 0);
+        data.totalNoiseTokensEliminated = (data.totalNoiseTokensEliminated || 0) + derivedNoiseTokens;
+        data.totalUsefulTokensInjected = (data.totalUsefulTokensInjected || 0) + derivedUsefulTokens;
         if (sanitizedJit > data.peakInvocationTokens) {
             data.peakInvocationTokens = sanitizedJit;
         }
@@ -334,10 +356,10 @@ function getTelemetrySummary(planningDir) {
         peakInvocationTokens: data.peakInvocationTokens,
         totalNoiseTokensEliminated: data.totalNoiseTokensEliminated,
         totalUsefulTokensInjected: data.totalUsefulTokensInjected,
-        averageContextRecallPct: data.averageContextRecallPct ?? quality.contextRecallPct,
-        currentAmnesiaRisk: data.currentAmnesiaRisk ?? quality.amnesiaRisk,
-        brainCoveragePct: data.brainCoveragePct ?? quality.brainCoveragePct,
-        activeDecisionsLoaded: data.activeDecisionsLoaded ?? quality.activeDecisionsLoaded,
+        averageContextRecallPct: quality.contextRecallPct,
+        currentAmnesiaRisk: quality.amnesiaRisk,
+        brainCoveragePct: quality.brainCoveragePct,
+        activeDecisionsLoaded: quality.activeDecisionsLoaded,
         commandBreakdown: data.commandBreakdown,
         phaseBreakdown: data.phaseBreakdown,
         lastInvocation: data.records.length > 0 ? data.records[data.records.length - 1] : undefined,

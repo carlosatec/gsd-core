@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import defaultGsd from '../index.mjs';
+import * as mcp from '../gsd-core/bin/lib/mcp-server.mjs';
 import * as speckit from '../gsd-core/bin/lib/speckit-interop.mjs';
 import * as memory from '../gsd-core/bin/lib/continuous-memory.mjs';
 import * as worktree from '../gsd-core/bin/lib/worktree-isolation.mjs';
@@ -9,6 +10,15 @@ import * as hub from '../gsd-core/bin/lib/unified-workflow-hub.mjs';
 
 test('ESM Dual-Package: root default export', () => {
   assert.ok(defaultGsd, 'Root default export must exist');
+});
+
+test('ESM Dual-Package: mcp named exports', () => {
+  assert.equal(typeof mcp.runMcpServer, 'function');
+  assert.equal(typeof mcp.dispatchMcpTool, 'function');
+  assert.equal(typeof mcp.runServer, 'function');
+  assert.equal(typeof mcp.handleMessage, 'function');
+  assert.equal(typeof mcp.PROTOCOL_VERSION, 'string');
+  assert.equal(typeof mcp.SERVER_NAME, 'string');
 });
 
 test('ESM Dual-Package: speckit interop named exports', () => {
@@ -33,6 +43,4 @@ test('ESM Dual-Package: worktree isolation named exports', () => {
 
 test('ESM Dual-Package: hub named exports', () => {
   assert.equal(typeof hub.dispatchUnifiedCommand, 'function');
-  assert.equal(typeof hub.normalizeCommandName, 'function');
 });
-

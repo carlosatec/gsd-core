@@ -1,6 +1,6 @@
 {
   "name": "@opengsd/gsd-core",
-  "version": "3.7.6",
+  "version": "3.7.7",
   "description": "GSD Core Nexus is a meta-prompting, context engineering, native static analysis, and spec-driven development system for AI coding agents.",
   "main": ".opencode/plugins/gsd-core.js",
   "exports": {
@@ -33,7 +33,7 @@
   "bin": {
     "gsd-core": "bin/install.js",
     "gsd-tools": "gsd-core/bin/gsd-tools.cjs",
-    "gsd_run": "gsd-core/bin/gsd_run",
+    "gsd_run": "bin/gsd-run.js",
     "gsd-mcp-server": "bin/gsd-mcp-server.js"
   },
   "files": [
@@ -48,15 +48,13 @@
     ".opencode",
     "GEMINI.md",
     "hooks",
-    "scripts",
-    "!scripts/gen-emitted-baseline.cjs",
-    "!scripts/qa-smell-ratchet.cjs",
-    "!scripts/live-config-guard.cjs",
-    "!scripts/run-tests.cjs",
-    "!scripts/affected-tests-lib.cjs",
-    "!scripts/run-affected-tests.cjs",
-    "!scripts/lint-no-adhoc-regex-escape.cjs",
-    "!scripts/lint-allow-test-rule-refs.cjs",
+    "scripts/build-hooks.js",
+    "scripts/ensure-build-lib.cjs",
+    "scripts/fix-slash-commands.cjs",
+    "scripts/gen-capability-registry.cjs",
+    "scripts/gen-loop-host-contract.cjs",
+    "scripts/changeset",
+    "scripts/lib",
     "vscode"
   ],
   "keywords": [
@@ -87,13 +85,12 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.84",
-    "ws": "^8.21.0"
+    "@anthropic-ai/claude-agent-sdk": "^0.2.84"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@stryker-mutator/core": "^9.6.1",
-    "@types/node": "^22.19.19",
+    "@types/node": "^24.0.0",
     "c8": "^11.0.0",
     "eslint": "^9.39.4",
     "eslint-plugin-n": "^17.24.0",
@@ -156,7 +153,7 @@
     "lint:table-schema-drift": "node scripts/lint-table-schema-drift.cjs",
     "lint:frontmatter-scalar-broad-grep": "node scripts/lint-frontmatter-scalar-broad-grep.cjs",
     "lint:removed-but-needed": "node scripts/lint-removed-but-needed.cjs",
-    "lint:ci": "npm run lint && npm run lint:skill-deps && npm run lint:generated-sync && node scripts/lint-test-file-count.cjs && node scripts/lint-command-contract.cjs && node scripts/lint-pr-check-project-dir.cjs && npm run lint:legacy-name && node scripts/lint-regression-test-names.cjs && node scripts/lint-allow-test-rule-refs.cjs && node scripts/lint-resolution-provenance.cjs && node scripts/lint-portable-timeout.cjs && node scripts/validate-registry.cjs && node scripts/lint-fix-has-regression-test.cjs && node scripts/lint-example-parser-parity.cjs && node scripts/lint-docs-command-form.cjs && node scripts/lint-completion-ratio-drift.cjs && node scripts/lint-health-diagnostic-rule-table.cjs && node scripts/lint-frontmatter-scalar-broad-grep.cjs && node scripts/lint-removed-but-needed.cjs && node scripts/lint-no-adhoc-regex-escape.cjs && node scripts/lint-vendored-deps.cjs && npm run lint:hooks-runtime-build-seam && node scripts/check-contract-drift.cjs && node scripts/lint-unified-suite.cjs",
+    "lint:ci": "npm run lint && npm run lint:skill-deps && npm run lint:generated-sync && node scripts/lint-test-file-count.cjs && node scripts/lint-command-contract.cjs && node scripts/lint-pr-check-project-dir.cjs && npm run lint:legacy-name && node scripts/lint-regression-test-names.cjs && node scripts/lint-allow-test-rule-refs.cjs && node scripts/lint-resolution-provenance.cjs && node scripts/lint-portable-timeout.cjs && node scripts/validate-registry.cjs && node scripts/lint-fix-has-regression-test.cjs && node scripts/lint-example-parser-parity.cjs && node scripts/lint-docs-command-form.cjs && node scripts/lint-completion-ratio-drift.cjs && node scripts/lint-health-diagnostic-rule-table.cjs && node scripts/lint-frontmatter-scalar-broad-grep.cjs && node scripts/lint-removed-but-needed.cjs && node scripts/lint-no-adhoc-regex-escape.cjs && node scripts/lint-vendored-deps.cjs && npm run lint:hooks-runtime-build-seam && node scripts/check-contract-drift.cjs && node scripts/lint-unified-suite.cjs && npm run check:alias-drift && npm run check:identity-drift && npm run check:phase-id-drift && npm run lint:descriptions && node scripts/lint-eslint-glob-coverage.cjs && npm run version:check && npm run docs:check",
     "lint:unified-suite": "node scripts/lint-unified-suite.cjs",
     "lint:allow-test-rule-refs": "node scripts/lint-allow-test-rule-refs.cjs",
     "lint:regression-names": "node scripts/lint-regression-test-names.cjs",

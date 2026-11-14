@@ -150,7 +150,8 @@ function queryAntiPatterns(planningDir: string, opts: QueryAntiPatternOptions = 
 
   if (opts.file) {
     const norm = opts.file.replace(/\\/g, '/');
-    results = results.filter(p => !p.file || p.file.replace(/\\/g, '/').includes(norm));
+    // File-scoped queries only match records bound to that file; global learnings stay cross-cutting.
+    results = results.filter(p => (p.file ? p.file.replace(/\\/g, '/').includes(norm) : p.id.startsWith('global-')));
   }
 
   if (opts.rule) {

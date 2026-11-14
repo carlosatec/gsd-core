@@ -364,10 +364,22 @@ function isAllowedStatePath(targetPath: string, cwd: string): { safe: boolean; r
     const isExactRoot = process.platform === 'win32' || process.platform === 'darwin'
       ? parentDir.toLowerCase() === resolvedCwd.toLowerCase()
       : parentDir === resolvedCwd;
-    const isTmpDir = parentDir.toLowerCase().startsWith(path.resolve(os.tmpdir()).toLowerCase());
+    const osTmp = path.resolve(os.tmpdir());
+    const osTmpWithSep = osTmp.endsWith(path.sep) ? osTmp : osTmp + path.sep;
+    const parentCompare = process.platform === 'win32' || process.platform === 'darwin'
+      ? parentDir.toLowerCase()
+      : parentDir;
+    const tmpCompare = process.platform === 'win32' || process.platform === 'darwin'
+      ? osTmp.toLowerCase()
+      : osTmp;
+    const tmpWithSepCompare = process.platform === 'win32' || process.platform === 'darwin'
+      ? osTmpWithSep.toLowerCase()
+      : osTmpWithSep;
+    const isTmpDir = parentCompare === tmpCompare || parentCompare.startsWith(tmpWithSepCompare);
 
     if (isExactRoot || isTmpDir) {
-      const rootCheck = validatePath(resolved, parentDir, { allowAbsolute: true });
+      const confinementBase = isExactRoot ? resolvedCwd : osTmp;
+      const rootCheck = validatePath(resolved, confinementBase, { allowAbsolute: true });
       if (rootCheck.safe) {
         return { safe: true, resolved };
       }
@@ -701,6 +713,8 @@ export function handleMessage(request: JsonRpcRequest, ctx: McpContext = {}): Re
  * input ends. Errors in handleMessage are caught and emitted as JSON-RPC error
  * responses (the loop never crashes).
  */
+export const MAX_MCP_BUFFER_BYTES = 16 * 1024 * 1024;
+
 export async function runServer({
   input,
   output,
@@ -711,8 +725,27 @@ export async function runServer({
   ctx?: McpContext;
 }): Promise<void> {
   let buffer = '';
+  let discardingOversizedLine = false;
   for await (const chunk of input as AsyncIterable<Buffer>) {
-    buffer += chunk.toString('utf-8');
+    const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf-8');
+    if (discardingOversizedLine) {
+      const nlIdx = chunkStr.indexOf('\n');
+      if (nlIdx === -1) continue;
+      discardingOversizedLine = false;
+      buffer = chunkStr.slice(nlIdx + 1);
+    } else {
+      buffer += chunkStr;
+    }
+    if (Buffer.byteLength(buffer, 'utf-8') > MAX_MCP_BUFFER_BYTES) {
+      buffer = '';
+      discardingOversizedLine = true;
+      output.write(
+        JSON.stringify(
+          errorResponse(null, INVALID_REQUEST, `Request exceeds maximum buffer limit of ${MAX_MCP_BUFFER_BYTES} bytes.`),
+        ) + '\n',
+      );
+      continue;
+    }
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() ?? '';
     for (const line of lines) {
@@ -736,3 +769,6 @@ export async function runServer({
 
 // handleMessage + runServer are exported above (export function); PROTOCOL_VERSION
 // + SERVER_NAME are exported above (export const).
+export { callTool };
+export const runMcpServer = runServer;
+export const dispatchMcpTool = callTool;

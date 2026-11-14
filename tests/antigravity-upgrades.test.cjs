@@ -235,7 +235,17 @@ test('UPGRADE 2: gsd-mcp-server companion is reachable — spawn, initialize, to
   const toolNames = lines[1].result.tools.map((t) => t.name).sort();
   assert.deepStrictEqual(
     toolNames,
-    ['gsd_invoke_command', 'gsd_read_state', 'gsd_write_state'],
+    [
+      'gsd_feasibility_check',
+      'gsd_invoke_command',
+      'gsd_jit_context',
+      'gsd_memory_recall',
+      'gsd_memory_record',
+      'gsd_preflight_check',
+      'gsd_read_state',
+      'gsd_verify_step',
+      'gsd_write_state',
+    ],
     'the companion the mcp_config.json entry connects to advertises the real GSD tool surface',
   );
 });

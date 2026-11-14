@@ -169,23 +169,21 @@ function buildTargetDir(commandsGsd) {
  *  `null` means converter:null (identity — claude, kimi-code). */
 const EXPECTED_CONVERTER_NAME_BY_RUNTIME = {
   claude: null,
+  'deepseek-harness': null,
   'kimi-code': null,
   cline: 'convertClaudeAgentToClineAgent',
   codex: 'convertClaudeAgentToCodexAgent',
-  hermes: 'convertClaudeAgentToHermesAgent',
-  kilo: 'convertClaudeToKiloFrontmatter',
   opencode: 'convertClaudeToOpencodeFrontmatter',
+  qwen: 'convertClaudeAgentToQwenAgent',
 };
 
 /** Converter functions callable by name — bin/install.js still owns
- *  cline/codex/kilo/opencode's (never migrated to runtime-artifact-conversion.cjs);
- *  hermes's is descriptor-native (#2875 Part 2 / J9-J10). */
+ *  cline/codex/opencode's; qwen's is exported from runtime-artifact-conversion.cjs. */
 const NAMED_CONVERTERS = {
   convertClaudeAgentToClineAgent: installBin.convertClaudeAgentToClineAgent,
   convertClaudeAgentToCodexAgent: installBin.convertClaudeAgentToCodexAgent,
-  convertClaudeAgentToHermesAgent: runtimeArtifactConversion.convertClaudeAgentToHermesAgent,
-  convertClaudeToKiloFrontmatter: installBin.convertClaudeToKiloFrontmatter,
   convertClaudeToOpencodeFrontmatter: installBin.convertClaudeToOpencodeFrontmatter,
+  convertClaudeAgentToQwenAgent: runtimeArtifactConversion.convertClaudeAgentToQwenAgent,
 };
 
 /** kilo/opencode take an options bag (`{isAgent, modelOverride}`), resolved
@@ -290,10 +288,10 @@ const RUNTIME_SCOPE_PAIRS = [
   ['claude', 'global'], ['claude', 'local'],
   ['cline', 'global'], ['cline', 'local'],
   ['codex', 'global'], ['codex', 'local'],
-  ['hermes', 'global'], ['hermes', 'local'],
-  ['kilo', 'global'], ['kilo', 'local'],
+  ['deepseek-harness', 'global'], ['deepseek-harness', 'local'],
   ['opencode', 'global'], ['opencode', 'local'],
   ['kimi-code', 'global'], ['kimi-code', 'local'],
+  ['qwen', 'global'], ['qwen', 'local'],
 ];
 
 /** Model override literal shared by J8's two `_stageWithModelOverride` calls. */
@@ -396,14 +394,14 @@ test('agent-descriptor-parity: H7 — a filename-only divergence fails the harne
 // ---------------------------------------------------------------------------
 
 test('agent-descriptor-parity: H8 — a deliberately-wrong (but real, allowlisted) expected converter turns the harness RED', (t) => {
-  // Hermes's REAL capability.json declares convertClaudeAgentToHermesAgent.
+  // Cline's REAL capability.json declares convertClaudeAgentToClineAgent.
   // Feed the ORACLE a different, real, allowlisted converter name
   // (convertClaudeAgentToCodexAgent) instead — simulating exactly the failure
   // mode row H exists to catch: capability.json's declared converter silently
   // diverging from the correct one. The REAL descriptor path is untouched and
-  // still uses hermes's real (correct) converter, so this proves: IF
+  // still uses cline's real (correct) converter, so this proves: IF
   // capability.json ever regressed to the wrong name, THIS harness's H row
-  // for hermes would go red exactly like this.
+  // for cline would go red exactly like this.
   const { commandsGsd, agentsDir, root } = buildSourceTree(SAMPLE_AGENTS);
   const targetDir = buildTargetDir(commandsGsd);
   t.after(() => {
@@ -411,8 +409,8 @@ test('agent-descriptor-parity: H8 — a deliberately-wrong (but real, allowliste
     cleanup(targetDir);
   });
   const ctx = { pathPrefix: `${targetDir}/`, attribution: undefined, targetDir };
-  const wrongExpected = computeExpectedOutput('hermes', agentsDir, ctx, 'convertClaudeAgentToCodexAgent');
-  const realActual = runRealDescriptorPath('hermes', 'global', targetDir, ctx);
+  const wrongExpected = computeExpectedOutput('cline', agentsDir, ctx, 'convertClaudeAgentToCodexAgent');
+  const realActual = runRealDescriptorPath('cline', 'global', targetDir, ctx);
   let threw = false;
   let observedDiff = null;
   try {
@@ -537,16 +535,7 @@ test('agent-descriptor-parity: J7 — neither configured resolves to null (omit)
   assert.doesNotMatch(contentWithoutModelOverride, /^model:/m, 'an omitted override must not appear as a model: key at all');
 });
 
-test('agent-descriptor-parity: J8 — kilo and opencode both resolve model overrides through the REAL descriptor path (installAgentsKindStandalone), proving ONE shared resolution path, not a tautology', () => {
-  // #2875 Part 2 defect fix: a prior revision of this row called
-  // resolveAgentModelOverride TWICE with identical arguments and asserted
-  // equality — true of ANY pure function regardless of whether kilo/opencode
-  // are actually wired to it. This revision drives BOTH runtimes through the
-  // REAL production entry point with a REAL .planning/config.json
-  // model_overrides block and asserts BOTH staged outputs carry the SAME
-  // resolved model — which only happens if both are genuinely wired to the
-  // one shared installModelOverrideResolver.resolveAgentModelOverride.
-  const kiloOut = _stageWithModelOverride('kilo', J8_OVERRIDE_MODEL);
+test('agent-descriptor-parity: J8 — opencode resolves model overrides through the REAL descriptor path (installAgentsKindStandalone)', () => {
   const opencodeOut = _stageWithModelOverride('opencode', J8_OVERRIDE_MODEL);
   // J8_OVERRIDE_MODEL is a fixed constant: assert the exact expected
   // frontmatter line, matched line-wise, rather than building a RegExp from
@@ -554,42 +543,41 @@ test('agent-descriptor-parity: J8 — kilo and opencode both resolve model overr
   // metachar-bearing value would silently widen the match).
   const expectedModelLine = `model: ${J8_OVERRIDE_MODEL}`;
   assert.ok(
-    kiloOut.get('gsd-planner.md').split('\n').some((line) => line.trim() === expectedModelLine),
-    'kilo must apply the shared model override via the real descriptor path',
-  );
-  assert.ok(
     opencodeOut.get('gsd-planner.md').split('\n').some((line) => line.trim() === expectedModelLine),
-    'opencode must apply the SAME shared model override via the real descriptor path',
+    'opencode must apply the shared model override via the real descriptor path',
   );
+  // Also verify shared resolver contract feeds convertClaudeToOpencodeFrontmatter directly.
+  const directResolved = installModelOverrideResolver.resolveAgentModelOverride(
+    'gsd-planner',
+    { 'gsd-planner': J8_OVERRIDE_MODEL },
+    null,
+  );
+  assert.equal(directResolved, J8_OVERRIDE_MODEL);
 });
 
 // ---------------------------------------------------------------------------
-// J9-J10 — hermes branding converter
+// J9-J10 — descriptor-driven branding converter (qwen)
 // ---------------------------------------------------------------------------
 
-test('agent-descriptor-parity: J9 — hermes branding converter is byte-identical to the shared generic branding-rewrite function, including \\bClaude Code\\b word-boundary semantics', () => {
+test('agent-descriptor-parity: J9 — applyAgentBrandingRewrites enforces \\bClaude Code\\b word-boundary semantics from qwen descriptor', () => {
   const content = 'Claude Code and ClaudeCodeExtra and CLAUDE.md and .claude/foo and reClaude Code.\n';
-  const viaSharedFn = runtimeArtifactConversion.applyAgentBrandingRewrites(content, 'hermes');
-  const viaNamedConverter = runtimeArtifactConversion.convertClaudeAgentToHermesAgent(content);
-  assert.equal(viaSharedFn, viaNamedConverter, 'the named converter must be a pure delegate to the generic branding-rewrite function');
-  // \bClaude Code\b: neither "ClaudeCodeExtra" (no space/boundary between
+  const viaSharedFn = runtimeArtifactConversion.applyAgentBrandingRewrites(content, 'qwen');
+  // \\bClaude Code\\b: neither "ClaudeCodeExtra" (no space/boundary between
   // "Claude" and "Code") nor "reClaude Code" (no boundary between the 'e' of
   // "re" and the 'C' of "Claude" — both word chars) satisfy the word-boundary
   // requirement, so BOTH are left untouched; only the standalone occurrence is
   // rewritten.
-  assert.match(viaSharedFn, /Hermes Agent and ClaudeCodeExtra and HERMES\.md and \.hermes\/foo and reClaude Code\./);
+  assert.match(viaSharedFn, /Qwen Code and ClaudeCodeExtra and QWEN\.md and \.qwen\/foo and reClaude Code\./);
 });
 
-test('agent-descriptor-parity: J10 — the branding converter is descriptor-data-driven, not hardcoded to hermes strings', () => {
+test('agent-descriptor-parity: J10 — the branding converter is descriptor-data-driven, not hardcoded to one runtime', () => {
   const content = 'Claude Code uses CLAUDE.md under .claude/.\n';
   // A runtime with NO brandingRewrites declared gets nothing rewritten.
   assert.equal(runtimeArtifactConversion.applyAgentBrandingRewrites(content, 'claude'), content);
-  // hermes (the only runtime with brandingRewrites AND no dedicated converter
-  // pre-#2875) gets ITS OWN declared rewrite table applied — proving the
-  // function reads the runtime's descriptor rather than a hermes-hardcoded literal.
-  const hermesOut = runtimeArtifactConversion.applyAgentBrandingRewrites(content, 'hermes');
-  assert.notEqual(hermesOut, content);
-  assert.match(hermesOut, /Hermes Agent uses HERMES\.md under \.hermes\/\./);
+  // qwen declares hostBehaviors.brandingRewrites in capabilities/qwen/capability.json.
+  const qwenOut = runtimeArtifactConversion.applyAgentBrandingRewrites(content, 'qwen');
+  assert.notEqual(qwenOut, content);
+  assert.match(qwenOut, /Qwen Code uses QWEN\.md under \.qwen\/\./);
 });
 
 // ---------------------------------------------------------------------------

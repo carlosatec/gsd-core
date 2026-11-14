@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { mock } = require('node:test');
 const { cleanup } = require('./helpers.cjs');
 
 const {
@@ -12,6 +13,7 @@ const {
   linkSharedDependencies,
   unlinkSharedDependencies,
   createIsolatedWorktree,
+  cleanupRetainedWorktree,
   cleanupWaveWorktrees,
 } = require('../gsd-core/bin/lib/worktree-isolation.cjs');
 
@@ -101,4 +103,48 @@ test('Worktree Isolation: Deterministic Wave Rollback cleanup', () => {
   } finally {
     cleanup(tmpRoot);
   }
+});
+
+test('Worktree Isolation: cleanup aborts before rmSync when unlinkSharedDependencies returns false', (t) => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-unlink-fail-'));
+  const fakeWt = path.join(tmpRoot, 'wt-locked');
+  const fakeNodeModules = path.join(fakeWt, 'node_modules');
+  fs.mkdirSync(fakeNodeModules, { recursive: true });
+  t.after(() => cleanup(tmpRoot));
+
+  const rmSyncSpy = mock.method(fs, 'rmSync');
+  const lstatMock = mock.method(fs, 'lstatSync', (p) => {
+    if (path.resolve(String(p)) === path.resolve(fakeNodeModules)) {
+      return { isSymbolicLink: () => true, isDirectory: () => true };
+    }
+    return fs.lstatSync.mock.original ? fs.lstatSync.mock.original(p) : {};
+  });
+  const unlinkMock = mock.method(fs, 'unlinkSync', (p) => {
+    if (path.resolve(String(p)) === path.resolve(fakeNodeModules)) {
+      const err = new Error('EBUSY');
+      err.code = 'EBUSY';
+      throw err;
+    }
+  });
+  const rmdirMock = mock.method(fs, 'rmdirSync', (p) => {
+    if (path.resolve(String(p)) === path.resolve(fakeNodeModules)) {
+      const err = new Error('EBUSY');
+      err.code = 'EBUSY';
+      throw err;
+    }
+  });
+  t.after(() => {
+    rmSyncSpy.mock.restore();
+    lstatMock.mock.restore();
+    unlinkMock.mock.restore();
+    rmdirMock.mock.restore();
+  });
+
+  const retainedRes = cleanupRetainedWorktree(tmpRoot, fakeWt, 'fake-branch');
+  assert.equal(retainedRes.success, false, 'cleanupRetainedWorktree must abort when unlink fails');
+  assert.match(retainedRes.error, /Refusing to remove worktree/);
+  assert.equal(rmSyncSpy.mock.callCount(), 0, 'fs.rmSync must never be invoked after unlink failure');
+
+  cleanupWaveWorktrees(tmpRoot, [{ worktreePath: fakeWt, branch: 'fake-branch' }]);
+  assert.equal(rmSyncSpy.mock.callCount(), 0, 'cleanupWaveWorktrees must skip fs.rmSync when unlink fails');
 });

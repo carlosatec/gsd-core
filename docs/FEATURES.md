@@ -3506,8 +3506,8 @@ Cross-session technical memory in `.planning/memory/decisions.jsonl` with `perma
 
 **Behavior:**
 1. **Obsidian Second Brain:** Automatically compiles `.planning/vault/` with 600+ interconnected markdown notes, Master Map of Content (`00-Home.md`), and dual interactive canvases (`00-Vault.canvas` and `01-Roadmap.canvas`).
-2. **Sub-Second Search:** Instant BM25 query across decisions, phases, modules, and lessons via `/gsd:graph --query`.
+2. **Sub-Second Search:** Instant BM25 query across decisions, phases, modules, and lessons via `/gsd-graph --query`.
 3. **360° Visual Knowledge Graph:** Offline HTML Canvas (`.planning/intel/graph-view.html`) connecting 1,585 nodes with directed `governs` and `specifies` edges.
 4. **Quality-First Telemetry:** Real-time anti-amnesia governance tracking 99.2% context recall and zero context loss.
-5. **Self-Healing Loop:** `/gsd:exec --auto-heal` engages autonomous repairs on guardrail violations, and `/gsd:status --sync` rebuilds and persists the AST and memory index on demand.
+5. **Self-Healing Loop:** `/gsd-exec --auto-heal` engages autonomous repairs on guardrail violations, and `/gsd-status --sync` rebuilds and persists the AST and memory index on demand.
 

@@ -1,6 +1,6 @@
 ---
 name: gsd:tokens
-description: Display quality-first token telemetry dashboard, anti-amnesia metrics, savings breakdown, and JIT context efficiency
+description: Display quality-first token telemetry dashboard, anti-amnesia metrics, and JIT efficiency
 argument-hint: "[--sessions] [--cost] [--all] [--web] [--open] [--json] [--reset]"
 allowed-tools:
   - Read

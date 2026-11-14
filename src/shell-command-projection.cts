@@ -13,6 +13,7 @@
 
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 // Use non-destructured namespace import so test-time mock.method(childProcess, 'spawnSync')
 // can intercept calls from this seam — destructured imports capture references
 // at load time and become un-mockable.
@@ -1241,9 +1242,23 @@ export interface FileLockOptions {
   staleMs?: number;
 }
 
+let _lockStealSeq = 0;
+
+function readLockMetadata(lockPath: string): { pid?: number; token?: string; createdAt?: number } | null {
+  try {
+    const raw = fs.readFileSync(lockPath, 'utf-8');
+    const parsed = JSON.parse(raw) as { pid?: number; token?: string; createdAt?: number };
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Execute a critical section wrapped with an atomic cooperative file lock.
- * Automatically evicts stale locks (TTL expired or dead PID) to prevent deadlocks.
+ * Uses temp-file + link/exclusive create, (dev, ino, token) ownership checks,
+ * and atomic rename eviction so stale-lock cleanup cannot steal or unlink
+ * another holder's live lock.
  */
 export function withFileLockSync<T>(
   filePath: string,
@@ -1254,59 +1269,99 @@ export function withFileLockSync<T>(
   const staleMs = options.staleMs ?? 5000;
   const lockPath = filePath + '.lock';
   const startTime = Date.now();
+  const ownerToken = crypto.randomBytes(12).toString('hex');
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
+  let ownerDev: number | undefined;
+  let ownerIno: number | undefined;
   let acquired = false;
 
   while (!acquired) {
+    const payload = JSON.stringify({ pid: process.pid, token: ownerToken, createdAt: Date.now() });
+    const tmpPath = `${lockPath}.tmp-${process.pid}-${crypto.randomBytes(6).toString('hex')}`;
     try {
-      const fd = fs.openSync(lockPath, 'wx');
-      const payload = JSON.stringify({ pid: process.pid, createdAt: Date.now() });
-      fs.writeSync(fd, payload, undefined, 'utf-8');
-      fs.closeSync(fd);
+      const fd = fs.openSync(tmpPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY, 0o600);
+      try {
+        fs.writeSync(fd, payload, undefined, 'utf-8');
+      } finally {
+        fs.closeSync(fd);
+      }
+      try {
+        fs.linkSync(tmpPath, lockPath);
+      } catch (linkErr: unknown) {
+        const le = linkErr as NodeJS.ErrnoException;
+        if (le.code === 'EPERM' || le.code === 'EXDEV' || le.code === 'ENOTSUP') {
+          const exclFd = fs.openSync(lockPath, 'wx');
+          try {
+            fs.writeSync(exclFd, payload, undefined, 'utf-8');
+          } finally {
+            fs.closeSync(exclFd);
+          }
+        } else {
+          throw linkErr;
+        }
+      }
+      const stat = fs.statSync(lockPath);
+      ownerDev = stat.dev;
+      ownerIno = stat.ino;
       acquired = true;
       break;
     } catch (err: unknown) {
       const e = err as NodeJS.ErrnoException;
       if (e.code === 'EEXIST') {
-        // Inspect lock file for staleness
         let isStale = false;
+        let stat: fs.Stats | null = null;
+        let data: { pid?: number; token?: string; createdAt?: number } | null = null;
         try {
-          const raw = fs.readFileSync(lockPath, 'utf-8');
-          const data = JSON.parse(raw) as { pid?: number; createdAt?: number };
-          const age = Date.now() - (data.createdAt || 0);
-          if (age > staleMs) {
-            isStale = true;
-          } else if (data.pid && typeof data.pid === 'number') {
-            try {
-              process.kill(data.pid, 0);
-            } catch (kErr: unknown) {
-              const ke = kErr as NodeJS.ErrnoException;
-              if (ke.code === 'ESRCH') {
-                isStale = true;
+          stat = fs.statSync(lockPath);
+          data = readLockMetadata(lockPath);
+          if (data) {
+            const age = typeof data.createdAt === 'number' ? Date.now() - data.createdAt : Date.now() - stat.mtimeMs;
+            if (age > staleMs) {
+              isStale = true;
+            } else if (data.pid && typeof data.pid === 'number') {
+              try {
+                process.kill(data.pid, 0);
+              } catch (kErr: unknown) {
+                const ke = kErr as NodeJS.ErrnoException;
+                if (ke.code === 'ESRCH') {
+                  isStale = true;
+                }
               }
             }
+          } else if (Date.now() - stat.mtimeMs > staleMs) {
+            isStale = true;
           }
         } catch {
-          // If lock file is unreadable or empty, check file modification time
-          try {
-            const stat = fs.statSync(lockPath);
-            if (Date.now() - stat.mtimeMs > staleMs) {
-              isStale = true;
-            }
-          } catch {
-            // Already gone
-          }
+          // Already gone
         }
 
-        if (isStale) {
+        if (isStale && stat) {
           try {
-            fs.unlinkSync(lockPath);
+            const confirmStat = fs.statSync(lockPath);
+            const confirmData = readLockMetadata(lockPath);
+            const sameInode =
+              typeof stat.dev === 'number' &&
+              typeof stat.ino === 'number' &&
+              confirmStat.dev === stat.dev &&
+              confirmStat.ino === stat.ino;
+            const sameIdentity =
+              (data?.token ?? null) === (confirmData?.token ?? null) &&
+              (data?.pid ?? null) === (confirmData?.pid ?? null);
+            if (sameInode && sameIdentity) {
+              const stolenPath = `${lockPath}.stale-${process.pid}-${Date.now()}-${_lockStealSeq++}`;
+              retryRenameSync(lockPath, stolenPath);
+              try {
+                fs.rmSync(stolenPath, { force: true });
+              } catch {
+                // Best-effort cleanup of renamed stale lock
+              }
+              continue;
+            }
           } catch {
-            // Ignore race on unlink
+            // Lost stale-eviction race or lock already removed; retry
           }
-          continue;
         }
 
         if (Date.now() - startTime >= timeoutMs) {
@@ -1317,6 +1372,12 @@ export function withFileLockSync<T>(
       } else {
         throw err;
       }
+    } finally {
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        // Best-effort temp cleanup
+      }
     }
   }
 
@@ -1324,9 +1385,27 @@ export function withFileLockSync<T>(
     return fn();
   } finally {
     try {
-      fs.unlinkSync(lockPath);
+      const curStat = fs.statSync(lockPath);
+      const curData = readLockMetadata(lockPath);
+      const sameOwner =
+        curStat.dev === ownerDev &&
+        curStat.ino === ownerIno &&
+        curData?.token === ownerToken;
+      if (sameOwner) {
+        const relPath = `${lockPath}.rel-${process.pid}-${Date.now()}-${_lockStealSeq++}`;
+        try {
+          retryRenameSync(lockPath, relPath);
+          fs.rmSync(relPath, { force: true });
+        } catch {
+          try {
+            fs.unlinkSync(lockPath);
+          } catch {
+            // Lock already removed
+          }
+        }
+      }
     } catch {
-      // Ignore cleanup error
+      // Lock already removed
     }
   }
 }

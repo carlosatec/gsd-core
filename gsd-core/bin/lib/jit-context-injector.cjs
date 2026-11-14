@@ -11,6 +11,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const phase_lifecycle_cjs_1 = require("./phase-lifecycle.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
@@ -288,7 +289,7 @@ function assembleJitContext(options) {
                     if (fileNames.some(fn => fn.includes(qt)))
                         matches++;
                 }
-                relevanceScore = Number(Math.min(100, Math.round((matches / queryTokens.length) * 100)).toFixed(1));
+                relevanceScore = Number((0, phase_lifecycle_cjs_1.clampPercentFromFraction)(matches / queryTokens.length).toFixed(1));
             }
         }
         catch {

@@ -190,7 +190,9 @@ function createIsolatedWorktree(options) {
         fs.mkdirSync(worktreesBase, { recursive: true });
         // Clean up existing stale worktree if present
         if (fs.existsSync(worktreePath)) {
-            unlinkSharedDependencies(worktreePath);
+            if (!unlinkSharedDependencies(worktreePath)) {
+                throw new Error(`Refusing to remove worktree '${worktreePath}' while shared node_modules link could not be unlinked`);
+            }
             execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
             try {
                 fs.rmSync(worktreePath, { recursive: true, force: true });
@@ -315,7 +317,14 @@ function mergeAndCleanupWorktree(options) {
             commitHash = revRes.stdout.trim();
         }
         // 5. Cleanup EXCLUSIVELY on successful merge path
-        unlinkSharedDependencies(worktreePath);
+        if (!unlinkSharedDependencies(worktreePath)) {
+            return {
+                success: false,
+                error: `Refusing to remove worktree '${worktreePath}' while shared node_modules link could not be unlinked`,
+                recoveryBranch: branch,
+                recoveryWorktreeDir: worktreePath,
+            };
+        }
         execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
         execGitWithRetry(['branch', '-D', branch], { cwd: rootDir });
         if (fs.existsSync(worktreePath)) {
@@ -345,7 +354,12 @@ function mergeAndCleanupWorktree(options) {
  */
 function cleanupRetainedWorktree(rootDir, worktreePath, branch) {
     try {
-        unlinkSharedDependencies(worktreePath);
+        if (!unlinkSharedDependencies(worktreePath)) {
+            return {
+                success: false,
+                error: `Refusing to remove worktree '${worktreePath}' while shared node_modules link could not be unlinked`,
+            };
+        }
         execGitWithRetry(['worktree', 'remove', '--force', worktreePath], { cwd: rootDir });
         execGitWithRetry(['branch', '-D', branch], { cwd: rootDir });
         if (fs.existsSync(worktreePath)) {
@@ -373,7 +387,9 @@ function cleanupWaveWorktrees(rootDir, worktrees) {
         if (wt.worktreePath === rootDir)
             continue;
         try {
-            unlinkSharedDependencies(wt.worktreePath);
+            if (!unlinkSharedDependencies(wt.worktreePath)) {
+                continue;
+            }
             execGitWithRetry(['worktree', 'remove', '--force', wt.worktreePath], { cwd: rootDir });
             execGitWithRetry(['branch', '-D', wt.branch], { cwd: rootDir });
             if (fs.existsSync(wt.worktreePath)) {

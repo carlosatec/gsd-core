@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.7.7] - 2026-11-14
+
+### Security
+- **MCP Server Path Confinement & Stdin Ceiling (`src/mcp-server.cts`):** Enforced trailing `path.sep` boundary validation in `isTmpDir` (`resolved === osTmp || resolved.startsWith(osTmpWithSep)`), confined `validatePath` to the resolved workspace/planning root, and added `MAX_MCP_BUFFER_BYTES` (16 MiB) framing protection on `stdin`.
+- **Worktree Unlink Fail-Closed Guard (`src/worktree-isolation.cts`):** Aborts cleanup before recursive `fs.rmSync` whenever `unlinkSharedDependencies()` returns `false`, protecting shared `node_modules` junctions/symlinks.
+- **Atomic File Locking (`src/shell-command-projection.cts`):** Replaced TOCTOU `withFileLockSync` with atomic temp-file + `renameSync` creation and PID/inode/dev ownership checks matching `src/state-lock.cts`.
+- **Fail-Closed Execution Hooks (`hooks/gsd-agent-isolation-guard.js`, `hooks/gsd-worktree-path-guard.js`):** Validated `data.cwd` strictly as non-empty string, forced fail-closed `process.exit(2)` on unexpected guard errors, and switched final error output to synchronous `fs.writeSync(2, ...)`.
+
+### Fixed
+- **Broken Entrypoints & Linters (`package.json`, `bin/gsd-mcp-server.js`, `bin/gsd-run.js`, `gsd-core/bin/lib/mcp-server.mjs`, `eslint.config.mjs`):** Restored `./mcp` ESM named exports (`runMcpServer`, `dispatchMcpTool`), ensured `ensureRuntimeBuild()` runs in `bin/gsd-mcp-server.js`, added cross-platform Node shim `bin/gsd-run.js` for `gsd_run`, and aligned ESLint `.mjs` test coverage (`0` uncovered files).
+- **Strict Multi-Runtime Installer (`bin/install.js`, `src/runtime-artifact-conversion.cts`):** Rejected retired CLI flags (`--kilo`, `--kimi`, `--augment`, `--trae`, `--hermes`, `--codebuddy`, `--zcode`, `--pi`, `--gemini`) without silent fallback to `claude`, aligned Antigravity global path rewrites to `~/.gemini/config/`, gated Kimi `hooks.toml` cleanup with `if (isGlobal)`, propagated failure rollback cleanly, removed `// @ts-nocheck` from `src/runtime-artifact-conversion.cts`, and deduplicated runtime converters in `bin/install.js`.
+- **Portable Workflows & Copilot Emission (`gsd-core/workflows/code-review.md`, `import.md`, `reapply-patches.md`):** Replaced `/dev/stdin` and hardcoded `./gsd-core/` requires with cross-platform Node argument/temp-file handling and runtime root resolution, and fixed Copilot artifact conversion.
+- **Planning & JIT Telemetry Alignment (`.planning/config.json`, `.planning/STATE.md`, `src/jit-telemetry.cts`):** Reconciled `config.json` schema (`unknown config key(s): 0`), restored Phase 26 in `STATE.md`, and accumulated default `noiseTokensEliminated` / `usefulContextTokensInjected` counts automatically in `recordJitInvocation`.
+
+### Changed
+- **CI Parity, Windows QA Parallelism & Dependency Hygiene (`.github/workflows/test.yml`, `package.json`, `scripts/`, `tests/`):** Added CI lint/drift/version/docs parity and `build:hooks` to `lint-tests`, sped up Windows `lint:qa-smells` via bounded parallel workers (`--worker-scenario`) in `tests/qa/run-report.cjs`, eliminated `[DEP0190]` warnings via `scripts/win-spawn.cjs`, removed unused `ws`, upgraded `@types/node` to `^24.0.0`, pruned non-runtime `scripts/` from `package.json` `files`, and added `tests/phase38-untested-modules.test.cjs` covering 7 previously untested `src/*.cts` modules.
+
 ## [2.4.0] - 2026-08-23
 
 ### Added

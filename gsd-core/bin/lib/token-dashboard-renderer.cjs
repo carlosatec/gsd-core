@@ -216,13 +216,13 @@ function renderTokenDashboard(planningDir, options) {
     }
     // ── Quality & Anti-Amnesia Section (Top) ──────────────────────────────────
     lines.push(formatBoxLine(' 🧠 Second Brain & Context Quality (Zero Amnesia):'));
-    const recallPct = summary.averageContextRecallPct ?? 99.2;
+    const recallPct = summary.averageContextRecallPct ?? 0;
     const recallBar = makeProgressBar(recallPct, 12);
     lines.push(formatBoxLine(` • Context Recall:        [${recallBar}] ${recallPct.toFixed(1)}%`));
     const riskLabel = summary.currentAmnesiaRisk || 'LOW';
     const riskEmoji = riskLabel === 'LOW' ? '🟢 LOW (Safe)' : (riskLabel === 'MED' ? '🟡 MED' : '🔴 HIGH');
     lines.push(formatBoxLine(` • Amnesia Risk Index:    ${riskEmoji}`));
-    const coveragePct = summary.brainCoveragePct ?? 100.0;
+    const coveragePct = summary.brainCoveragePct ?? 0;
     const coverageBar = makeProgressBar(coveragePct, 12);
     lines.push(formatBoxLine(` • Second Brain Coverage: [${coverageBar}] ${coveragePct.toFixed(1)}%`));
     if (typeof summary.activeDecisionsLoaded === 'number' && summary.activeDecisionsLoaded > 0) {

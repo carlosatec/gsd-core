@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Observability 360° Offline HTML Dashboard Generator — GSD Core Nexus 3.4
+ * Observability 360° Offline HTML Dashboard Generator — GSD Core Nexus
  *
  * Generates a self-contained, 100% offline interactive dashboard in `.planning/intel/dashboard.html`.
  * Features responsive dark-mode glassmorphism cards, pure SVG charts, real-time client-side
@@ -11,10 +11,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_path_1 = __importDefault(require("node:path"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
+const capability_loader_cjs_1 = require("./capability-loader.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const aggregatorMod = require("./observability-aggregator.cjs");
 const { getObservabilitySnapshot, STANDARD_PRICING_TABLE, } = aggregatorMod;
 // ─── Sanitization & Helpers ───────────────────────────────────────────────────
+/**
+ * Serializes JSON safely for embedding inside an HTML `<script>` block.
+ */
+function serializeJsonForScript(value) {
+    return JSON.stringify(value)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+}
 function escapeHtml(str) {
     if (str === null || str === undefined)
         return '';
@@ -162,7 +174,11 @@ function generateDashboardHtml(snapshot) {
         <span class="lang-count">${count} (${pct}%)</span>
       </div>`;
     }).join('');
-    const pricingTableJson = JSON.stringify(STANDARD_PRICING_TABLE);
+    const pricingTableJson = serializeJsonForScript(STANDARD_PRICING_TABLE);
+    const hostVersion = (0, capability_loader_cjs_1.readHostVersion)();
+    const displayVersion = hostVersion && hostVersion !== '0.0.0' ? hostVersion : '3.7';
+    const safeTotalUsed = Number.isFinite(Number(telemetry.totalJitTokensUsed)) ? Number(telemetry.totalJitTokensUsed) : 0;
+    const safeTotalAvoided = Number.isFinite(Number(telemetry.totalMonolithicTokensAvoided)) ? Number(telemetry.totalMonolithicTokensAvoided) : 0;
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -432,7 +448,7 @@ function generateDashboardHtml(snapshot) {
     </div>
 
     <footer>
-      ⚡ GSD Core Nexus 3.4 • Generated ${escapeHtml(timestamp)} • 100% Offline Standalone Architecture
+      ⚡ GSD Core Nexus ${escapeHtml(displayVersion)} • Generated ${escapeHtml(timestamp)} • 100% Offline Standalone Architecture
     </footer>
   </div>
 
@@ -440,8 +456,8 @@ function generateDashboardHtml(snapshot) {
   <script>
     (function() {
       const PRICING_TABLE = ${pricingTableJson};
-      const totalUsed = ${telemetry.totalJitTokensUsed || 0};
-      const totalAvoided = ${telemetry.totalMonolithicTokensAvoided || 0};
+      const totalUsed = ${safeTotalUsed};
+      const totalAvoided = ${safeTotalAvoided};
 
       function formatMoney(amount) {
         if (amount === 0) return '$ 0.00';

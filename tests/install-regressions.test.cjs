@@ -22,10 +22,6 @@ const { runNode } = require('./helpers/process-seam.cjs');
 const { throwIfFailed } = require('./helpers/git-fixture.cjs');
 
 const { createTempDir, cleanup } = require('./helpers.cjs');
-const {
-  loadSkillsManifest,
-  resolveProfile,
-} = require('../gsd-core/bin/lib/install-profiles.cjs');
 
 // Load install exports via GSD_TEST_MODE to skip CLI main()
 const savedTestMode = process.env.GSD_TEST_MODE;
@@ -41,7 +37,6 @@ try {
 const { install, mergeClaudePermissions, GSD_CLAUDE_ALLOW_PERMISSIONS, GSD_CLAUDE_LEGACY_ALLOW_PERMISSIONS, GSD_CLAUDE_DENY_PERMISSIONS, copyWithPathReplacement } = installExports || {};
 
 const {
-  installRuntimeArtifacts,
   uninstallRuntimeArtifacts,
 } = require('../gsd-core/bin/lib/install-engine.cjs');
 
@@ -55,9 +50,6 @@ const INSTALL_SCRIPT = path.join(__dirname, '..', 'bin', 'install.js');
 // #3145: class-norm timeout, not a per-suite value — see helpers/timeouts.cjs.
 const { INSTALL_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
 const HOOKS_SRC = path.join(__dirname, '..', 'hooks');
-const REAL_COMMANDS_DIR = path.join(__dirname, '..', 'commands', 'gsd');
-const MANIFEST = loadSkillsManifest(REAL_COMMANDS_DIR);
-const RESOLVED_CORE = resolveProfile({ modes: ['core'], manifest: MANIFEST });
 
 /**
  * Stub managed GSD hook files into targetDir/hooks/ so that
@@ -113,49 +105,8 @@ describe('#2429 regression: Codex local skills stay project-scoped', () => {
   });
 });
 
-// ─── Defect #1 — Hermes upgrade: bare-stem dirs from #3664 era become stale ──
-//
-// #947 REVERSES #3664: the canonical layout is now skills/gsd/gsd-<stem>/ again.
-// The migration now removes bare-stem dirs (from #3664: prefix='') and writes
-// the gsd-prefixed layout. Pre-existing gsd-prefixed dirs (the "intermediate"
-// layout from before #3664) are now the CANONICAL dirs and are kept / updated.
-
-describe('Defect #1 regression (#3664 reversed by #947): bare-stem dirs removed, gsd- prefix written', () => {
-  test('installRuntimeArtifacts removes bare-stem skills/gsd/<stem>/ dirs and writes gsd- prefixed layout', (t) => {
-    const configDir = createTempDir('gsd-hermes-reg1-');
-    t.after(() => cleanup(configDir));
-
-    assert.strictEqual(typeof installRuntimeArtifacts, 'function',
-      'installRuntimeArtifacts must be exported from install-engine.cjs');
-
-    // Pre-create #3664-era bare-stem Hermes layout (no gsd- prefix, now stale).
-    // Use real GSD command stems (help, quick) that readGsdCommandNames() knows about.
-    const nestedGsdDir = path.join(configDir, 'skills', 'gsd');
-    fs.mkdirSync(path.join(nestedGsdDir, 'help'), { recursive: true });
-    fs.writeFileSync(path.join(nestedGsdDir, 'help', 'SKILL.md'), '# legacy bare-stem help\n');
-    fs.mkdirSync(path.join(nestedGsdDir, 'quick'), { recursive: true });
-    fs.writeFileSync(path.join(nestedGsdDir, 'quick', 'SKILL.md'), '# legacy bare-stem quick\n');
-
-    // Sibling non-gsd dir inside skills/gsd/ must survive
-    const userContentDir = path.join(nestedGsdDir, 'user-content');
-    fs.mkdirSync(userContentDir, { recursive: true });
-    fs.writeFileSync(path.join(userContentDir, 'SKILL.md'), '# user content\n');
-
-    installRuntimeArtifacts('hermes', configDir, 'global', RESOLVED_CORE);
-
-    // Bare-stem dirs from #3664 must be cleaned
-    assert.ok(!fs.existsSync(path.join(nestedGsdDir, 'help')),
-      'skills/gsd/help/ (bare-stem from #3664) must be removed (#947)');
-    assert.ok(!fs.existsSync(path.join(nestedGsdDir, 'quick')),
-      'skills/gsd/quick/ (bare-stem from #3664) must be removed (#947)');
-    // Canonical gsd- prefixed layout must be written
-    assert.ok(fs.existsSync(path.join(nestedGsdDir, 'gsd-help', 'SKILL.md')),
-      'skills/gsd/gsd-help/SKILL.md must exist after install (#947 canonical layout)');
-    // User content preserved
-    assert.ok(fs.existsSync(path.join(userContentDir, 'SKILL.md')),
-      'user-content must be preserved');
-  });
-});
+// Defect #1 and U3 (Hermes bare-stem cleanup / uninstall migration) were
+// retired in Phase 24 when Hermes was removed from active runtimes.
 
 // ─── Defect #2 — --qwen --profile=core falls through to wrong path ────────────
 
@@ -191,64 +142,35 @@ describe('Defect #2 regression (Qwen, #3664): --qwen --profile=core writes skill
   });
 });
 
-describe('Defect #2 regression (Hermes, #3664): --hermes --profile=core writes skills/gsd/, not commands/gsd/', () => {
-  test('spawn --hermes --global --profile=core: skills/gsd/ written, no commands/gsd/', (t) => {
-    const root = createTempDir('gsd-hermes-reg2-');
-    t.after(() => cleanup(root));
+describe('Phase 38 REQ-38-08: retired runtime CLI flags are explicitly rejected without Claude fallback', () => {
+  for (const retiredFlag of ['--kilo', '--kimi', '--augment', '--trae', '--hermes', '--codebuddy', '--zcode', '--pi']) {
+    test(`${retiredFlag} --local exits non-zero and does not install .claude`, (t) => {
+      const root = createTempDir('gsd-retired-flag-local-');
+      t.after(() => cleanup(root));
 
-    const result = runNode(
-      [INSTALL_SCRIPT, '--hermes', '--global', '--config-dir', root, '--profile=core'],
-      { env: { ...process.env, HOME: root, USERPROFILE: root }, timeoutMs: INSTALL_TIMEOUT_MS },
-    );
+      const result = runNode(
+        [INSTALL_SCRIPT, retiredFlag, '--local'],
+        { cwd: root, env: { ...process.env, HOME: root, USERPROFILE: root }, timeoutMs: INSTALL_TIMEOUT_MS },
+      );
 
-    assert.strictEqual(result.exitCode, 0,
-      `installer exited ${result.exitCode}\n${result.stdout}\n${result.stderr}`);
+      assert.strictEqual(result.exitCode, 1, `${retiredFlag} --local must exit 1`);
+      assert.match(result.stderr, /Unsupported\/retired runtime flag/, `stderr must explain rejection for ${retiredFlag}`);
+      assert.ok(!fs.existsSync(path.join(root, '.claude')), `${retiredFlag} must not silently install .claude`);
+    });
 
-    const hermesSkillsGsd = path.join(root, 'skills', 'gsd');
-    assert.ok(fs.existsSync(hermesSkillsGsd));
+    test(`${retiredFlag} --uninstall --global exits non-zero cleanly`, (t) => {
+      const root = createTempDir('gsd-retired-flag-uninstall-');
+      t.after(() => cleanup(root));
 
-    const skillDirs = fs.readdirSync(hermesSkillsGsd, { withFileTypes: true })
-      .filter(e => e.isDirectory());
-    assert.ok(skillDirs.length >= 1);
-    assert.ok(
-      skillDirs.some(e => fs.existsSync(path.join(hermesSkillsGsd, e.name, 'SKILL.md'))),
-    );
+      const result = runNode(
+        [INSTALL_SCRIPT, retiredFlag, '--uninstall', '--global'],
+        { cwd: root, env: { ...process.env, HOME: root, USERPROFILE: root }, timeoutMs: INSTALL_TIMEOUT_MS },
+      );
 
-    const commandsGsd = path.join(root, 'commands', 'gsd');
-    if (fs.existsSync(commandsGsd)) {
-      const mdFiles = fs.readdirSync(commandsGsd).filter(f => f.endsWith('.md'));
-      assert.strictEqual(mdFiles.length, 0, `commands/gsd/ must not contain .md files (Defect #2). Found: ${mdFiles.join(', ')}`);
-    }
-  });
-});
-
-// ─── M1 — Hermes minimal-mode migrates dev-preferences (#2973) ───────────────
-
-describe('M1 (#2973, #947): --hermes --global --profile=core migrates dev-preferences → skills/gsd/gsd-dev-preferences/SKILL.md', () => {
-  test('dev-preferences migrated to nested Hermes location, legacy source removed', (t) => {
-    const root = createTempDir('gsd-hermes-m1-');
-    t.after(() => cleanup(root));
-
-    const legacyDir = path.join(root, 'commands', 'gsd');
-    fs.mkdirSync(legacyDir, { recursive: true });
-    fs.writeFileSync(path.join(legacyDir, 'dev-preferences.md'), '# my hermes prefs\n');
-
-    const result = runNode(
-      [INSTALL_SCRIPT, '--hermes', '--global', '--config-dir', root, '--profile=core'],
-      { env: { ...process.env, HOME: root, USERPROFILE: root }, timeoutMs: INSTALL_TIMEOUT_MS },
-    );
-
-    assert.strictEqual(result.exitCode, 0,
-      `installer exited ${result.exitCode}\n${result.stdout}\n${result.stderr}`);
-
-    // #947: Hermes uses prefix='gsd-' so dev-preferences lands at gsd-dev-preferences/ (not dev-preferences/)
-    const skillFile = path.join(root, 'skills', 'gsd', 'gsd-dev-preferences', 'SKILL.md');
-    assert.ok(fs.existsSync(skillFile),
-      'skills/gsd/gsd-dev-preferences/SKILL.md must exist (M1+#947: gsd- prefix, nested)');
-    assert.strictEqual(fs.readFileSync(skillFile, 'utf8'), '# my hermes prefs\n');
-    assert.ok(!fs.existsSync(path.join(legacyDir, 'dev-preferences.md')),
-      'legacy source must be removed');
-  });
+      assert.strictEqual(result.exitCode, 1, `${retiredFlag} --uninstall must exit 1`);
+      assert.match(result.stderr, /Unsupported\/retired runtime flag/, `stderr must explain rejection on uninstall for ${retiredFlag}`);
+    });
+  }
 });
 
 // ─── M2 — Qwen minimal-mode migrates dev-preferences (#2973) ────────────────
@@ -354,31 +276,7 @@ describe('U2 (#2973): uninstallRuntimeArtifacts claude/global migrates dev-prefe
   });
 });
 
-// ─── U3 — Hermes uninstall migrates dev-preferences to NESTED location (#2973) ─
-
-describe('U3 (#2973, #947): uninstallRuntimeArtifacts hermes migrates dev-preferences → skills/gsd/gsd-dev-preferences/SKILL.md', () => {
-  test('commands/gsd/ NOT recreated, dev-preferences at nested Hermes location with gsd- prefix', (t) => {
-    const configDir = createTempDir('gsd-hermes-uninstall-u3-');
-    t.after(() => cleanup(configDir));
-
-    assert.strictEqual(typeof uninstallRuntimeArtifacts, 'function');
-
-    const legacyDir = path.join(configDir, 'commands', 'gsd');
-    fs.mkdirSync(legacyDir, { recursive: true });
-    fs.writeFileSync(path.join(legacyDir, 'dev-preferences.md'), '# my hermes prefs\n');
-
-    uninstallRuntimeArtifacts('hermes', configDir, 'global');
-
-    assert.ok(!fs.existsSync(path.join(legacyDir, 'dev-preferences.md')),
-      'commands/gsd/dev-preferences.md must not exist after hermes uninstall (U3)');
-
-    // #947: Hermes uses prefix='gsd-' so dev-preferences lands at gsd-dev-preferences/ (not dev-preferences/)
-    const skillFile = path.join(configDir, 'skills', 'gsd', 'gsd-dev-preferences', 'SKILL.md');
-    assert.ok(fs.existsSync(skillFile),
-      'skills/gsd/gsd-dev-preferences/SKILL.md must exist at HERMES nested location (U3+#947)');
-    assert.strictEqual(fs.readFileSync(skillFile, 'utf8'), '# my hermes prefs\n');
-  });
-});
+// U3 (Hermes uninstall migration) retired with Hermes runtime removal in Phase 24.
 
 // ─── #768 — mergeClaudePermissions: pre-populate permissions.allow/deny ──────
 

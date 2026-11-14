@@ -131,22 +131,47 @@ function normalizeKimiPayload(data) {
   return data;
 }
 
+function emitBlockOutput(output) {
+  try {
+    fs.writeSync(1, JSON.stringify(output));
+    // Kimi feeds stderr (not stdout) back to the model on exit 2.
+    fs.writeSync(2, output.reason);
+  } catch {
+    // Emission failed; fail-closed decision still stands.
+  }
+  process.exit(2);
+}
+
 let input = '';
 const stdinTimeout = setTimeout(() => process.exit(0), 3000);
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', () => {
   clearTimeout(stdinTimeout);
+  let data;
   try {
-    const data = normalizeKimiPayload(JSON.parse(input));
-    const toolName = data.tool_name;
+    data = normalizeKimiPayload(JSON.parse(input));
+  } catch {
+    process.exit(0);
+  }
+  if (!data || typeof data !== 'object') {
+    process.exit(0);
+  }
+  const toolName = data.tool_name;
 
-    // Only guard Edit, Write, and MultiEdit tool calls
-    if (toolName !== 'Edit' && toolName !== 'Write' && toolName !== 'MultiEdit') {
-      process.exit(0);
+  // Only guard Edit, Write, and MultiEdit tool calls
+  if (toolName !== 'Edit' && toolName !== 'Write' && toolName !== 'MultiEdit') {
+    process.exit(0);
+  }
+
+  try {
+    if (data.cwd !== undefined && data.cwd !== null && typeof data.cwd !== 'string') {
+      emitBlockOutput({
+        decision: 'block',
+        reason: `Worktree path guard: invalid hook payload field "cwd" (expected string, got ${typeof data.cwd}). Refusing to proceed fail-open.`,
+      });
     }
-
-    const cwd = data.cwd || process.cwd();
+    const cwd = (typeof data.cwd === 'string' && data.cwd.trim()) ? data.cwd : process.cwd();
 
     // Detect whether CWD is inside a linked git worktree by inspecting
     // the git-dir path. In a linked worktree, git rev-parse --git-dir
@@ -271,10 +296,7 @@ process.stdin.on('end', () => {
             `not the active worktree at '${wtTopRaw}'. Writing to repository internals via an ` +
             `absolute path is not permitted from an isolated executor worktree. Use a relative path.`,
         };
-        process.stdout.write(JSON.stringify(output));
-        // Kimi feeds stderr (not stdout) back to the model on exit 2.
-        process.stderr.write(output.reason);
-        process.exit(2);
+        emitBlockOutput(output);
       }
       // Outside all git repositories — fail open (#1342).
       process.exit(0);
@@ -299,12 +321,11 @@ process.stdin.on('end', () => {
         `(hook cwd: '${cwd}').`,
     };
 
-    process.stdout.write(JSON.stringify(output));
-    // Kimi feeds stderr (not stdout) back to the model on exit 2.
-    process.stderr.write(output.reason);
-    process.exit(2);
-  } catch {
-    // Silent fail — never block valid tool calls due to hook errors
-    process.exit(0);
+    emitBlockOutput(output);
+  } catch (err) {
+    emitBlockOutput({
+      decision: 'block',
+      reason: `Worktree path guard: unexpected validation error (${err && err.message ? err.message : String(err)}). Failing closed.`,
+    });
   }
 });

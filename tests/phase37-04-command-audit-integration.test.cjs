@@ -82,12 +82,12 @@ describe('Phase 37 — Plan 04: Command Ecosystem Harmonization & Cognitive Sent
     // Case A: Plan exists, no summary -> suggest exec
     fs.writeFileSync(path.join(phasesDir, '37-01-PLAN.md'), '# Plan 01');
     const resPlan = unifiedHub.dispatchUnifiedCommand('status', { args: [], cwd: tmp });
-    assert.ok(resPlan.nextStep.includes('/gsd:exec 37'), `Expected /gsd:exec in nextStep, got: ${resPlan.nextStep}`);
+    assert.ok(resPlan.nextStep.includes('/gsd-exec 37'), `Expected /gsd-exec in nextStep, got: ${resPlan.nextStep}`);
 
     // Case B: Summary exists -> suggest verify or ship
     fs.writeFileSync(path.join(phasesDir, '37-SUMMARY.md'), '# Summary 37');
     const resSummary = unifiedHub.dispatchUnifiedCommand('status', { args: [], cwd: tmp });
-    assert.ok(resSummary.nextStep.includes('/gsd:verify 37') || resSummary.nextStep.includes('/gsd:ship'), `Expected /gsd:verify or /gsd:ship in nextStep, got: ${resSummary.nextStep}`);
+    assert.ok(resSummary.nextStep.includes('/gsd-verify 37') || resSummary.nextStep.includes('/gsd-ship'), `Expected /gsd-verify or /gsd-ship in nextStep, got: ${resSummary.nextStep}`);
   });
 
   it('4. unified-workflow-hub /gsd:ship auto-synchronizes Second Brain vault', () => {

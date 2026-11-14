@@ -1537,12 +1537,18 @@ function evaluateGroundingScore(options: GroundingScoreOptions): GroundingScoreR
     'existsSync', 'readFileSync', 'writeFileSync', 'mkdirSync', 'statSync', 'unlinkSync'
   ]);
 
+  const activeDiffText = codeDiff
+    .split(/\r?\n/)
+    .filter((line) => !line.startsWith('-') && !line.startsWith('+++') && !line.startsWith('@@') && !line.startsWith('diff --git ') && !line.startsWith('index '))
+    .map((line) => (line.startsWith('+') ? line.slice(1) : line))
+    .join('\n');
+
   const invocationRegex = /\.([a-zA-Z_$][a-zA-Z0-9_$]+)\s*\(/g;
   const missing: string[] = [];
   let totalInvocations = 0;
 
   let match: RegExpExecArray | null;
-  while ((match = invocationRegex.exec(codeDiff)) !== null) {
+  while ((match = invocationRegex.exec(activeDiffText)) !== null) {
     const method = match[1];
     if (BUILTIN_METHODS.has(method) || method.length <= 2) continue;
     totalInvocations++;

@@ -41,6 +41,7 @@ const RUNTIME_INSTALL_CONTRACTS = {
   codex: { surface: 'flat-skills', settings: false, hooksPackageJson: true, codexConfig: true },
   copilot: { surface: 'flat-skills', settings: false, hooksPackageJson: false, copilotInstructions: true },
   cursor: { surface: 'flat-skills', settings: false, hooksPackageJson: true },
+  'deepseek-harness': { surface: 'flat-skills', settings: true, hooksPackageJson: true },
   gemini: { surface: 'commands-gsd', settings: true, hooksPackageJson: true },
   hermes: { surface: 'hermes-skills', settings: true, hooksPackageJson: true },
   kimi: { surface: 'kimi-skills-agents', settings: false, hooksPackageJson: false },

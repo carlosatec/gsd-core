@@ -8,6 +8,7 @@
 
 import path from 'node:path';
 import { platformReadSync } from './shell-command-projection.cjs';
+import { clampPercentFromFraction } from './phase-lifecycle.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
@@ -375,7 +376,7 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
         for (const qt of queryTokens) {
           if (fileNames.some(fn => fn.includes(qt))) matches++;
         }
-        relevanceScore = Number(Math.min(100, Math.round((matches / queryTokens.length) * 100)).toFixed(1));
+        relevanceScore = Number(clampPercentFromFraction(matches / queryTokens.length).toFixed(1));
       }
     } catch {
       // Non-blocking fallback

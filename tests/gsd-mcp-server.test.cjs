@@ -148,3 +148,43 @@ function createTempDirClean() {
   const os = require('node:os');
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-cwd-'));
 }
+
+test('isAllowedStatePath (via gsd_read_state): rejects prefix-collision sibling of os.tmpdir()', () => {
+  const os = require('node:os');
+  const tmpBase = path.resolve(os.tmpdir());
+  const prefixEvil = tmpBase.endsWith(path.sep) ? `${tmpBase.slice(0, -1)}-evil` : `${tmpBase}-evil`;
+  const evilTarget = path.join(prefixEvil, 'state.md');
+  const cwd = createTempDirClean();
+  try {
+    const res = handleMessage(
+      { jsonrpc: '2.0', id: 21, method: 'tools/call', params: { name: 'gsd_read_state', arguments: { path: evilTarget } } },
+      { cwd },
+    );
+    assert.strictEqual(res.result.isError, true, 'prefix-collision path outside os.tmpdir() must be rejected');
+    assert.match(res.result.content[0].text, /Access denied/);
+  } finally {
+    cleanup(cwd);
+  }
+});
+
+test('runServer: rejects oversized stdin buffer exceeding 16 MiB and recovers on next valid request', async () => {
+  const { MAX_MCP_BUFFER_BYTES } = require('../gsd-core/bin/lib/mcp-server.cjs');
+  const chunkSize = 1024 * 1024;
+  const totalOverLimit = Math.ceil((MAX_MCP_BUFFER_BYTES + 1024) / chunkSize);
+  const chunks = [];
+  const spacer = 'a'.repeat(chunkSize);
+  for (let i = 0; i < totalOverLimit; i++) {
+    chunks.push(spacer);
+  }
+  chunks.push('\n' + JSON.stringify({ jsonrpc: '2.0', id: 22, method: 'initialize' }) + '\n');
+
+  const out = [];
+  const output = { write: (s) => { out.push(s); return true; } };
+  await runServer({ input: Readable.from(chunks), output });
+  const responses = out.join('').trim().split('\n').map((l) => JSON.parse(l));
+  assert.strictEqual(responses.length, 2);
+  assert.strictEqual(responses[0].error.code, -32600, 'oversized payload must emit JSON-RPC invalid request error');
+  assert.match(responses[0].error.message, /maximum buffer limit/i);
+  assert.strictEqual(responses[1].id, 22);
+  assert.strictEqual(responses[1].result.protocolVersion, PROTOCOL_VERSION, 'server recovers for subsequent request');
+});

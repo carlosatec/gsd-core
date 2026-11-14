@@ -67,7 +67,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { runAllScenarios } = require('../tests/qa/run-report.cjs');
+const { runAllScenariosParallel } = require('../tests/qa/run-report.cjs');
 const { buildReport } = require('../tests/qa/report.cjs');
 const { fingerprint } = require('../tests/qa/smell-fingerprint.cjs');
 const { ExitError, runMain } = require('./lib/cli-exit.cjs');
@@ -534,10 +534,15 @@ function buildStepSummaryMarkdown({ smells, violations, expectationFailures, new
   return lines.join('\n');
 }
 
-function main() {
+async function main() {
   const { update, jsonOut, keep } = parseArgs(process.argv.slice(2));
 
-  const scenarioReports = runAllScenarios({ keep });
+  const scenarioReports = await runAllScenariosParallel({
+    keep,
+    onProgress: ({ done, total, file, elapsedMs }) => {
+      process.stderr.write(`[qa-smells] ${done}/${total} ${file} (${elapsedMs}ms)\n`);
+    },
+  });
   const meta = {
     nodeVersion: process.version,
     platform: process.platform,

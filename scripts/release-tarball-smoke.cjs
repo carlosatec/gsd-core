@@ -41,12 +41,13 @@
 
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { PACKAGE_NAME } = require('../gsd-core/bin/lib/package-identity.cjs');
 const { ExitError, runMain } = require('./lib/cli-exit.cjs');
+const { execBinInvocation, spawnNpm } = require('./win-spawn.cjs');
 // 120 s proved too tight for cold-cache `npm install -g` of a 1499-file tarball:
 // spawnSync fires SIGTERM at the deadline and returns { status: null, stdout: '',
 // stderr: '' } (Node docs: status is null when a subprocess is terminated by a
@@ -312,15 +313,13 @@ function runSmoke({
   }
 
   // --- Install the tarball into the temp prefix ----------------------------
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   // Use the caller-supplied npmEnv if provided (allows HOME isolation on Docker
   // hosts where HOME may be unwritable — same pattern as runNpm() in helpers.cjs).
   // Falls back to process.env to preserve existing CLI / programmatic behaviour. (#131)
   const effectiveNpmEnv = { ...(npmEnv !== undefined ? npmEnv : process.env), ...QUIET_NPM_ENV };
-  const installResult = spawnSync(
-    npmCmd,
+  const installResult = spawnNpm(
     ['install', '-g', '--prefix', installPrefix, tarballPath],
-    { encoding: 'utf-8', shell: process.platform === 'win32', timeout: CHILD_TIMEOUT_MS, env: effectiveNpmEnv },
+    { encoding: 'utf-8', timeout: CHILD_TIMEOUT_MS, env: effectiveNpmEnv },
   );
 
   if (installResult.status !== 0) {
@@ -353,10 +352,9 @@ function runSmoke({
   // Use effectiveNpmEnv so the installed binary sees an isolated HOME on Docker
   // hosts where HOME may be unwritable (same isolation as the npm install). (#131)
   const versionInvocation = binInvocation(actualBin, ['--help']);
-  const versionResult = spawnSync(
-    versionInvocation.command,
-    versionInvocation.args,
-    { encoding: 'utf-8', timeout: CHILD_TIMEOUT_MS, env: effectiveNpmEnv, shell: versionInvocation.shell },
+  const versionResult = execBinInvocation(
+    versionInvocation,
+    { encoding: 'utf-8', timeout: CHILD_TIMEOUT_MS, env: effectiveNpmEnv },
   );
 
   if (versionResult.status !== 0) {
@@ -417,9 +415,8 @@ function runSmoke({
     delete initEnv.GSD_TEST_MODE;
 
     const initInvocation = binInvocation(installerBin, ['--local', '--claude']);
-    const initResult = spawnSync(
-      initInvocation.command,
-      initInvocation.args,
+    const initResult = execBinInvocation(
+      initInvocation,
       {
         encoding: 'utf-8',
         cwd: fixtureDir,
@@ -427,7 +424,6 @@ function runSmoke({
         stdio: ['pipe', 'pipe', 'pipe'],
         env: initEnv,
         timeout: CHILD_TIMEOUT_MS,
-        shell: initInvocation.shell,
       },
     );
 

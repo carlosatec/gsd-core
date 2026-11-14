@@ -330,7 +330,6 @@ export default tseslint.config(
       'gsd-core/bin/lib/living-docs-engine.cjs',
       'gsd-core/bin/lib/preflight-guardrails.cjs',
       'gsd-core/bin/lib/session-context-hook.cjs',
-      'gsd-core/bin/lib/state-markdown-parser.cjs',
       'gsd-core/bin/lib/test-scaffold-engine.cjs',
       'gsd-core/bin/lib/token-dashboard-renderer.cjs',
       'gsd-core/bin/lib/unified-workflow-hub.cjs',
@@ -431,7 +430,7 @@ export default tseslint.config(
   // bin/install.js is ~12k lines of generated code; the ADR's mandate is the
   // portability defect surface, not a broader generated-code style sweep.
   {
-    files: ['bin/install.js', 'bin/gsd-mcp-server.js', 'scripts/build-hooks.js'],
+    files: ['bin/install.js', 'bin/gsd-mcp-server.js', 'bin/gsd-run.js', 'scripts/build-hooks.js'],
     plugins: {
       local: localPlugin,
     },
@@ -607,6 +606,19 @@ export default tseslint.config(
     files: ['*.mjs'],
     languageOptions: { sourceType: 'module', globals: { ...globals.node } },
     rules: { ...js.configs.recommended.rules },
+  },
+
+  // ── tests/**/*.mjs ESM test files ───────────────────────────────────────────
+  {
+    files: ['tests/**/*.mjs'],
+    plugins: {
+      'no-only-tests': noOnlyTests,
+    },
+    languageOptions: { sourceType: 'module', globals: { ...globals.node } },
+    rules: {
+      ...js.configs.recommended.rules,
+      'no-only-tests/no-only-tests': 'error',
+    },
   },
 
   // ── tests/**/*.test.cjs ─────────────────────────────────────────────────────

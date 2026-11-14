@@ -18,6 +18,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { platformReadSync, platformWriteSync, platformEnsureDir, execGit } from './shell-command-projection.cjs';
 import { splitLines } from './text-lines.cjs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import planScanMod = require('./plan-scan.cjs');
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import phaseLocatorMod = require('./phase-locator.cjs');
+const { listMilestonePhaseDirs } = phaseLocatorMod;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -3331,21 +3337,20 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
   const phasesDir = path.join(planningDir, 'phases');
   if (fs.existsSync(phasesDir)) {
     try {
-      const pDirs = fs.readdirSync(phasesDir, { withFileTypes: true });
-      for (const d of pDirs) {
-        if (d.isDirectory()) {
-          const pId = d.name;
-          const phaseSub = path.join(phasesDir, pId);
-          const entries = fs.readdirSync(phaseSub);
-          const planPaths = entries.filter(e => e.endsWith('-PLAN.md')).map(e => path.join('.planning/phases', pId, e).replace(/\\/g, '/'));
-          const specFile = entries.find(e => e.endsWith('-SPEC.md'));
-          const specPath = specFile ? path.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
-          const summaryFile = entries.find(e => e.endsWith('-SUMMARY.md'));
-          const summaryPath = summaryFile ? path.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
-          if (knowledgeNodes.phases) {
-            knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
-            totalKnowledgeNodes++;
-          }
+      // Canonical owners: phase enumeration (phase-locator) and plan/summary scan (plan-scan).
+      const phaseDirNames = listMilestonePhaseDirs(phasesDir, { cwd: path.dirname(planningDir) }).value;
+      for (const pId of phaseDirNames) {
+        const phaseSub = path.join(phasesDir, pId);
+        const entries = fs.readdirSync(phaseSub);
+        const scan = scanPhasePlans(phaseSub);
+        const planPaths = scan.planFiles.map(e => path.join('.planning/phases', pId, e).replace(/\\/g, '/'));
+        const specFile = entries.find(e => e.endsWith('-SPEC.md'));
+        const specPath = specFile ? path.join('.planning/phases', pId, specFile).replace(/\\/g, '/') : undefined;
+        const summaryFile = scan.summaryFiles[0];
+        const summaryPath = summaryFile ? path.join('.planning/phases', pId, summaryFile).replace(/\\/g, '/') : undefined;
+        if (knowledgeNodes.phases) {
+          knowledgeNodes.phases[pId] = { id: pId, name: pId, specPath, planPaths, summaryPath };
+          totalKnowledgeNodes++;
         }
       }
     } catch {

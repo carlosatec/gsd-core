@@ -1,12 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment,
-                  @typescript-eslint/no-require-imports,
-                  @typescript-eslint/no-unsafe-assignment,
-                  @typescript-eslint/no-unsafe-member-access,
-                  @typescript-eslint/no-unsafe-return,
-                  @typescript-eslint/no-unsafe-call,
-                  @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Mechanical extraction from bin/install.js; keep behavior parity before typing.
-// @ts-nocheck
+/* Strict TypeScript checking enabled (Phase 38) */
 'use strict';
 /**
  * Runtime Artifact Conversion Module.
@@ -32,7 +26,29 @@ import commandRoster = require('./command-roster.cjs');
 const { readGsdCommandNames, transformContentToHyphen } = commandRoster;
 import runtimeNamePolicy = require('./runtime-name-policy.cjs');
 const { getDirName } = runtimeNamePolicy;
-import capabilityRegistry = require('./capability-registry.cjs');
+
+interface RuntimeHostBehaviors {
+  agentFileExtension?: string;
+  skillPriorityFrontmatter?: boolean;
+  hyphenNameAgentBody?: boolean;
+  noPathRewrite?: boolean;
+  commandBodyConverter?: string;
+  brandingRewrites?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+interface CapabilityRegistryShape {
+  runtimes: Record<string, {
+    runtime?: {
+      hostBehaviors?: RuntimeHostBehaviors;
+      hostIntegration?: { dispatch?: { isolation?: string } };
+      harnessIsolationFlag?: string;
+      orchestratorExec?: Parameters<typeof hostIntegration.resolveOrchestratorExec>[0];
+    };
+  }>;
+}
+
+const capabilityRegistry = require('./capability-registry.cjs') as CapabilityRegistryShape;
 import hostIntegration = require('./host-integration.cjs');
 import { posixNormalize } from './shell-command-projection.cjs';
 import { escapeRegex as escapeRegExp } from './pattern.cjs';
@@ -40,7 +56,7 @@ import { scanFencedBlocks } from './markdown-sectionizer.cjs';
 // #2870: install-scope.cts is a leaf-tier sibling (imports only
 // runtime-homes.cjs + node builtins, never this module) — no cycle. See the
 // isGlobal sites below for why the boolean projection is centralized here too.
-import { isGlobalScope } from './install-scope.cjs';
+import { isGlobalScope, type InstallScope } from './install-scope.cjs';
 // #2875 Part 2: install-effort-resolver.cjs is a leaf-tier sibling (#2071) —
 // used by applyAgentFrontmatterExtensions below to read the SAME merged
 // effort config the install-time Claude .md injection has always read,
@@ -78,7 +94,7 @@ function resolveVersionFrom(libDir: string): string {
     if (SEMVER_PREFIX.test(v)) return v;
   } catch { /* not an installed tree (no gsd-core/VERSION) */ }
   try {
-    const pkg = require(path.join(libDir, '..', '..', '..', 'package.json'));
+    const pkg = require(path.join(libDir, '..', '..', '..', 'package.json')) as { version?: unknown };
     if (pkg && typeof pkg.version === 'string' && SEMVER_PREFIX.test(pkg.version)) return pkg.version;
   } catch { /* runtime root has no package.json (e.g. Codex) */ }
   return '';
@@ -100,7 +116,8 @@ function gsdVersion(): string {
  * `capabilityRegistry` statically (see NON_CLAUDE_RUNTIMES below), so this
  * reads it directly rather than re-require()-ing inside a try/catch.
  */
-function _hostBehaviors(runtime: string): Record<string, unknown> {
+function _hostBehaviors(runtime: string | null | undefined): RuntimeHostBehaviors {
+  if (!runtime) return {};
   return (
     (capabilityRegistry &&
       capabilityRegistry.runtimes &&
@@ -127,7 +144,7 @@ function agentFileExtensionFor(runtime: string): string | undefined {
 }
 
 
-const colorNameToHex = {
+const colorNameToHex: Record<string, string> = {
   cyan: '#00FFFF',
   red: '#FF0000',
   green: '#00FF00',
@@ -145,7 +162,7 @@ const colorNameToHex = {
 
 // Tool name mapping from Claude Code to OpenCode
 // OpenCode uses lowercase tool names; special mappings for renamed tools
-const claudeToOpencodeTools = {
+const claudeToOpencodeTools: Record<string, string> = {
   AskUserQuestion: 'question',
   SlashCommand: 'skill',
   TodoWrite: 'todowrite',
@@ -158,7 +175,7 @@ const claudeToOpencodeTools = {
  * - Applies special mappings (AskUserQuestion -> question, etc.)
  * - Converts to lowercase (except MCP tools which keep their format)
  */
-function convertToolName(claudeTool) {
+function convertToolName(claudeTool: string): string {
   // Check for special mapping first
   if (claudeToOpencodeTools[claudeTool]) {
     return claudeToOpencodeTools[claudeTool];
@@ -180,7 +197,7 @@ function convertToolName(claudeTool) {
  * @param {string} content - Source content to convert
  * @param {boolean} [isGlobal=false] - Whether this is a global install
  */
-function convertClaudeToCopilotContent(content, isGlobal = false) {
+function convertClaudeToCopilotContent(content: string, isGlobal = false): string {
   let c = content;
   // CONV-06: Path replacement — most specific first to avoid substring matches.
   // Handle both `~/.claude/foo` (trailing slash) and bare `~/.claude` forms in
@@ -210,7 +227,13 @@ function convertClaudeToCopilotContent(content, isGlobal = false) {
  * Skills keep original tool names (no mapping) per CONTEXT.md decision.
  */
 // isGlobal is the 5th positional arg (3rd/4th are runtime/cmdNames passed by the skills wrapper). See runtime-artifact-layout skillsKind.
-function convertClaudeCommandToCopilotSkill(content, skillName, _runtime = null, _cmdNames = null, isGlobal = false) {
+function convertClaudeCommandToCopilotSkill(
+  content: string,
+  skillName: string,
+  _runtime: string | null = null,
+  _cmdNames: string[] | null = null,
+  isGlobal = false,
+): string {
   const converted = convertClaudeToCopilotContent(content, isGlobal);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   if (!frontmatter) return converted;
@@ -225,7 +248,7 @@ function convertClaudeCommandToCopilotSkill(content, skillName, _runtime = null,
   if (toolsMatch) {
     const tools = toolsMatch[1].match(/^\s+-\s+(.+)/gm);
     if (tools) {
-      toolsLine = tools.map(t => t.replace(/^\s+-\s+/, '').trim()).join(', ');
+      toolsLine = tools.map((t: string) => t.replace(/^\s+-\s+/, '').trim()).join(', ');
     }
   }
 
@@ -256,7 +279,7 @@ function convertClaudeCommandToCopilotSkill(content, skillName, _runtime = null,
  * Codex must NOT use this helper: its adapter invokes skills as `$gsd-<cmd>`
  * (shell-var syntax) — hyphen form is already correct there.
  */
-function skillFrontmatterName(skillDirName) {
+function skillFrontmatterName(skillDirName: string): string {
   if (typeof skillDirName !== 'string') return skillDirName;
   // Return the hyphen form as-is (gsd-<cmd>) — canonical since #2808.
   return skillDirName;
@@ -278,7 +301,7 @@ function skillFrontmatterName(skillDirName) {
  * utilities, so we implement the spec-correct direction (core = high) instead.
  * Keyed by command stem (skill dir is `gsd-<stem>`).
  */
-const QWEN_SKILL_PRIORITY = Object.freeze({
+const QWEN_SKILL_PRIORITY: Readonly<Record<string, number>> = Object.freeze({
   'new-project': 100,
   'discuss-phase': 95,
   'plan-phase': 90,
@@ -303,7 +326,12 @@ const QWEN_SKILL_PRIORITY = Object.freeze({
  * Emits `name: gsd-<cmd>` (hyphen) so Skill(skill="gsd-<cmd>") calls and
  * tab autocomplete use the canonical command namespace.
  */
-function convertClaudeCommandToClaudeSkill(content, skillName, runtime = null, cmdNames = null) {
+function convertClaudeCommandToClaudeSkill(
+  content: string,
+  skillName: string,
+  runtime: string | null = null,
+  cmdNames: string[] | null = null,
+): string {
   const { frontmatter, body } = extractFrontmatterAndBody(content);
   if (!frontmatter) return content;
 
@@ -420,7 +448,7 @@ const WORKFLOW_SPEC_ROOT_INCLUDE_RE = /^@~\/\.claude\/gsd-core\/workflows\/([A-Z
  * opener's delimiter character and have run length >= the opener's), so a
  * mismatched delimiter is fence CONTENT, not a boundary. #2873 review.
  */
-function resolveSpecRootReference(body) {
+function resolveSpecRootReference(body: string): string {
   if (typeof body !== 'string' || body.length === 0) return body;
   if (!body.includes('@~/.claude/gsd-core/workflows/')) return body;
 
@@ -428,7 +456,7 @@ function resolveSpecRootReference(body) {
   // blocks so matches inside them are skipped. An unterminated trailing
   // fence covers to the end of the string (still "inside a fence").
   const lines = body.split('\n');
-  const lineStartOffsets = [];
+  const lineStartOffsets: number[] = [];
   {
     let offset = 0;
     for (const line of lines) {
@@ -436,16 +464,16 @@ function resolveSpecRootReference(body) {
       offset += line.length + 1; // +1 for the '\n' separator
     }
   }
-  const fenceRanges = scanFencedBlocks(lines).map(({ openLineIdx, closeLineIdx }) => {
+  const fenceRanges: Array<[number, number]> = scanFencedBlocks(lines).map(({ openLineIdx, closeLineIdx }) => {
     const start = lineStartOffsets[openLineIdx];
     const end = closeLineIdx === -1
       ? body.length
       : lineStartOffsets[closeLineIdx] + lines[closeLineIdx].length;
     return [start, end];
   });
-  const isInsideFence = (offset) => fenceRanges.some(([start, end]) => offset >= start && offset < end);
+  const isInsideFence = (offset: number): boolean => fenceRanges.some(([start, end]) => offset >= start && offset < end);
 
-  return body.replace(WORKFLOW_SPEC_ROOT_INCLUDE_RE, (match, stem, cr, offset) => {
+  return body.replace(WORKFLOW_SPEC_ROOT_INCLUDE_RE, (match, stem: string, cr: string, offset: number) => {
     if (isInsideFence(offset)) return match;
     return (
       `To load this command's workflow spec: check for ` +
@@ -458,7 +486,7 @@ function resolveSpecRootReference(body) {
   });
 }
 
-function normalizeKimiSkillName(skillName) {
+function normalizeKimiSkillName(skillName: string): string {
   let text = String(skillName || '').trim().toLowerCase();
   if (text.startsWith('/')) text = text.slice(1);
   if (text.startsWith('$')) text = text.slice(1);
@@ -468,7 +496,7 @@ function normalizeKimiSkillName(skillName) {
   return text || 'gsd-command';
 }
 
-function convertGsdCommandReferencesToKimiSkillInvocations(content, cmdNames) {
+function convertGsdCommandReferencesToKimiSkillInvocations(content: string, cmdNames: string[]): string {
   if (!Array.isArray(cmdNames) || cmdNames.length === 0) return content;
   const commands = [...cmdNames].sort((a, b) => b.length - a.length).map(escapeRegExp);
   const commandGroup = commands.join('|');
@@ -476,8 +504,8 @@ function convertGsdCommandReferencesToKimiSkillInvocations(content, cmdNames) {
   const hyphenPattern = new RegExp(`(?:/|\\$)gsd-(${commandGroup})(?=[^A-Za-z0-9_-]|$)`, 'g');
 
   return content
-    .replace(colonPattern, (_, cmd) => `/skill:gsd-${cmd}`)
-    .replace(hyphenPattern, (_, cmd) => `/skill:gsd-${cmd}`);
+    .replace(colonPattern, (_, cmd: string) => `/skill:gsd-${cmd}`)
+    .replace(hyphenPattern, (_, cmd: string) => `/skill:gsd-${cmd}`);
 }
 
 /**
@@ -492,7 +520,12 @@ function convertGsdCommandReferencesToKimiSkillInvocations(content, cmdNames) {
  * Registered as `convertClaudeCommandToKimiCodeSkill` in the capabilities/
  * kimi-code/capability.json `artifactLayout` `converter` field (#2454 PR 2).
  */
-function convertClaudeCommandToKimiCodeSkill(content, skillName, _runtime = null, cmdNames = null) {
+function convertClaudeCommandToKimiCodeSkill(
+  content: string,
+  skillName: string,
+  _runtime: string | null = null,
+  cmdNames: string[] | null = null,
+): string {
   const { frontmatter, body } = extractFrontmatterAndBody(content);
   const kimiSkillName = normalizeKimiSkillName(skillName);
   const names = cmdNames || readGsdCommandNames();
@@ -516,7 +549,7 @@ function convertClaudeCommandToKimiCodeSkill(content, skillName, _runtime = null
  * @param {string} content - Source content to convert
  * @param {boolean} [isGlobal=false] - Whether this is a global install
  */
-function convertClaudeToAntigravityContent(content, isGlobal = false) {
+function convertClaudeToAntigravityContent(content: string, isGlobal = false): string {
   let c = content;
   if (isGlobal) {
     c = c.replace(/\$HOME\/\.claude\//g, '$HOME/.gemini/config/');
@@ -546,7 +579,13 @@ function convertClaudeToAntigravityContent(content, isGlobal = false) {
  * Body passes through with path/command conversions applied.
  */
 // isGlobal is the 5th positional arg (3rd/4th are runtime/cmdNames passed by the skills wrapper). See runtime-artifact-layout skillsKind.
-function convertClaudeCommandToAntigravitySkill(content, skillName, _runtime = null, _cmdNames = null, isGlobal = false) {
+function convertClaudeCommandToAntigravitySkill(
+  content: string,
+  skillName: string,
+  _runtime: string | null = null,
+  _cmdNames: string[] | null = null,
+  isGlobal = false,
+): string {
   const converted = convertClaudeToAntigravityContent(content, isGlobal);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   if (!frontmatter) return converted;
@@ -555,7 +594,7 @@ function convertClaudeCommandToAntigravitySkill(content, skillName, _runtime = n
   let description = extractFrontmatterField(frontmatter, 'description') || '';
 
   // Localized description if GSD_LANG is configured
-  const currentLang = normalizeLanguage(process.env.GSD_LANG);
+  const currentLang = normalizeLanguage(process.env['GSD_LANG']);
   const localized = getCommandDescription(name, currentLang);
   if (localized) {
     description = localized;
@@ -567,15 +606,15 @@ function convertClaudeCommandToAntigravitySkill(content, skillName, _runtime = n
   return `${fm}\n${body}`;
 }
 
-function toSingleLine(value) {
+function toSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function yamlQuote(value) {
+function yamlQuote(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function yamlIdentifier(value) {
+function yamlIdentifier(value: unknown): string {
   const text = String(value).trim();
   if (/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(text)) {
     return text;
@@ -583,7 +622,7 @@ function yamlIdentifier(value) {
   return yamlQuote(text);
 }
 
-function extractFrontmatterAndBody(content) {
+function extractFrontmatterAndBody(content: string): { frontmatter: string | null; body: string } {
   if (!content.startsWith('---')) {
     return { frontmatter: null, body: content };
   }
@@ -599,20 +638,20 @@ function extractFrontmatterAndBody(content) {
   };
 }
 
-function extractFrontmatterField(frontmatter, fieldName) {
+function extractFrontmatterField(frontmatter: string, fieldName: string): string | null {
   const regex = new RegExp(`^${fieldName}:\\s*(.+)$`, 'm');
   const match = frontmatter.match(regex);
   if (!match) return null;
   return match[1].trim().replace(/^['"]|['"]$/g, '');
 }
 
-function convertSlashCommandsToCursorSkillMentions(content) {
+function convertSlashCommandsToCursorSkillMentions(content: string): string {
   // Keep leading "/" for slash commands; only normalize gsd: -> gsd-.
   // This preserves rendered "next step" commands like "/gsd-execute-phase 17".
   return content.replace(/gsd:/gi, 'gsd-');
 }
 
-function convertClaudeToCursorMarkdown(content) {
+function convertClaudeToCursorMarkdown(content: string): string {
   let converted = convertSlashCommandsToCursorSkillMentions(content);
   // Replace tool name references in body text
   converted = converted.replace(/\bBash\(/g, 'Shell(');
@@ -636,7 +675,7 @@ function convertClaudeToCursorMarkdown(content) {
   return converted;
 }
 
-function getCursorSkillAdapterHeader(skillName) {
+function getCursorSkillAdapterHeader(skillName: string): string {
   return `<cursor_skill_adapter>
 ## A. Skill Invocation
 - This skill is invoked when the user mentions \`${skillName}\` or describes a task matching this skill.
@@ -662,7 +701,7 @@ When the workflow needs to spawn a subagent:
 </cursor_skill_adapter>`;
 }
 
-function convertClaudeCommandToCursorSkill(content, skillName) {
+function convertClaudeCommandToCursorSkill(content: string, skillName: string): string {
   const converted = convertClaudeToCursorMarkdown(content);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   let description = `Run GSD workflow ${skillName}.`;
@@ -697,12 +736,12 @@ function convertClaudeCommandToCursorSkill(content, skillName) {
 // brand-swap only the gap text between (and around) matches, then rejoin
 // gap+block alternately — no placeholder/sentinel token involved.
 const RUNTIME_COMPATIBILITY_BLOCK_RE = /<runtime_compatibility>[\s\S]*?<\/runtime_compatibility>/g;
-function applyClaudeCodeBrandSwap(content, brandName) {
+function applyClaudeCodeBrandSwap(content: string, brandName: string): string {
   if (!brandName) return content;
   let result = '';
   let lastIndex = 0;
   RUNTIME_COMPATIBILITY_BLOCK_RE.lastIndex = 0; // reset shared global-regex state before each use
-  let m;
+  let m: RegExpExecArray | null;
   while ((m = RUNTIME_COMPATIBILITY_BLOCK_RE.exec(content))) {
     const gap = content.slice(lastIndex, m.index);
     result += gap.replace(/\bClaude Code\b/g, brandName);
@@ -713,12 +752,12 @@ function applyClaudeCodeBrandSwap(content, brandName) {
   return result;
 }
 
-function convertSlashCommandsToWindsurfSkillMentions(content) {
+function convertSlashCommandsToWindsurfSkillMentions(content: string): string {
   // Keep leading "/" for slash commands; only normalize gsd: -> gsd-.
   return content.replace(/gsd:/gi, 'gsd-');
 }
 
-function convertClaudeToWindsurfMarkdown(content) {
+function convertClaudeToWindsurfMarkdown(content: string): string {
   let converted = convertSlashCommandsToWindsurfSkillMentions(content);
   // Replace tool name references in body text
   converted = converted.replace(/\bBash\(/g, 'Shell(');
@@ -750,7 +789,7 @@ function convertClaudeToWindsurfMarkdown(content) {
   return converted;
 }
 
-function getWindsurfSkillAdapterHeader(skillName) {
+function getWindsurfSkillAdapterHeader(skillName: string): string {
   return `<windsurf_skill_adapter>
 ## A. Skill Invocation
 - This skill is invoked when the user mentions \`${skillName}\` or describes a task matching this skill.
@@ -776,7 +815,7 @@ When the workflow needs to spawn a subagent:
 </windsurf_skill_adapter>`;
 }
 
-function convertClaudeCommandToWindsurfSkill(content, skillName) {
+function convertClaudeCommandToWindsurfSkill(content: string, skillName: string): string {
   const converted = convertClaudeToWindsurfMarkdown(content);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   let description = `Run GSD workflow ${skillName}.`;
@@ -805,7 +844,7 @@ function convertClaudeCommandToWindsurfSkill(content, skillName) {
 // there is exactly one code-point-safe truncation idiom, not two.
 const WINDSURF_WORKFLOW_DESCRIPTION_MAX = 180;
 
-function truncateWindsurfWorkflowDescription(description) {
+function truncateWindsurfWorkflowDescription(description: string): string {
   // Multi-byte safe: slice by Unicode code points (`Array.from`), never by
   // raw UTF-16 index — an index-based slice can bisect a surrogate pair and
   // emit a lone surrogate / U+FFFD on re-encode. See #2931.
@@ -831,7 +870,7 @@ function truncateWindsurfWorkflowDescription(description) {
 // `gsd-plan-review-convergence` at 27 characters.
 const WINDSURF_COMMAND_NAME_MAX = 128;
 
-function convertClaudeCommandToWindsurfWorkflow(content, commandName) {
+function convertClaudeCommandToWindsurfWorkflow(content: string, commandName: string): string {
   // #1615 security: commandName flows unsanitized into a markdown body that
   // Windsurf loads as an LLM-readable workflow. Validate at entry to prevent
   // (a) prompt injection via newlines / markdown structure in the filename,
@@ -884,7 +923,7 @@ const COMMAND_BODY_CONVERTERS: Record<string, (content: string) => string> = {};
 
 // ── Cline converters ────────────────────────────────────────────────────────
 
-function convertClaudeToCliineMarkdown(content) {
+function convertClaudeToCliineMarkdown(content: string): string {
   let converted = content;
   // Cline uses the same tool names as Claude Code — no tool name conversion needed
   converted = converted.replace(/`\.\/CLAUDE\.md`/g, '`.clinerules`');
@@ -917,7 +956,12 @@ function convertClaudeToCliineMarkdown(content) {
  * Cline uses Claude-Code-compatible tool names, so no adapter header is needed.
  * Targets ~/.cline/skills/<name>/SKILL.md for Cline >= v3.48.0.
  */
-function convertClaudeCommandToClineSkill(content, skillName, _runtime = null, cmdNames = null) {
+function convertClaudeCommandToClineSkill(
+  content: string,
+  skillName: string,
+  _runtime: string | null = null,
+  cmdNames: string[] | null = null,
+): string {
   const { frontmatter, body } = extractFrontmatterAndBody(content);
   if (!frontmatter) return content;
 
@@ -946,9 +990,9 @@ function convertClaudeCommandToClineSkill(content, skillName, _runtime = null, c
 
 // ── End Cline converters ─────────────────────────────────────────────────────
 
-function convertSlashCommandsToCodexSkillMentions(content) {
+function convertSlashCommandsToCodexSkillMentions(content: string): string {
   // Colon-style /gsd: never appears as a filesystem path segment, so no boundary guard is needed (unlike the hyphen-style below).
-  let converted = content.replace(/\/gsd:([a-z0-9-]+)/gi, (_, commandName) => {
+  let converted = content.replace(/\/gsd:([a-z0-9-]+)/gi, (_, commandName: string) => {
     return `$gsd-${String(commandName).toLowerCase()}`;
   });
   // Convert hyphen-style command references (workflow output) to Codex $ prefix.
@@ -962,7 +1006,7 @@ function convertSlashCommandsToCodexSkillMentions(content) {
   //      `(?![a-z0-9/-])` also blocks regex backtracking to a shorter command.
   // This converts backtick-wrapped MENTIONS (`/gsd-foo`) while leaving backtick-
   // wrapped PATHS (`/gsd-core/workflows/update.md`) untouched (#712).
-  converted = converted.replace(/(?<=^|[\s`"'([])\/gsd-([a-z0-9-]+)(?![a-z0-9/-])/gi, (_, commandName) => {
+  converted = converted.replace(/(?<=^|[\s`"'([])\/gsd-([a-z0-9-]+)(?![a-z0-9/-])/gi, (_, commandName: string) => {
     return `$gsd-${String(commandName).toLowerCase()}`;
   });
   return converted;
@@ -970,7 +1014,7 @@ function convertSlashCommandsToCodexSkillMentions(content) {
 
 const CODEX_GSD_TOOLS_INVOCATION = 'node "$HOME/.codex/gsd-core/bin/gsd-tools.cjs"';
 
-function rewriteBareGsdToolsCommandsForCodex(content) {
+function rewriteBareGsdToolsCommandsForCodex(content: string): string {
   return content
     .replace(/(^[ \t]*)gsd-tools(?=\s)/gm, `$1${CODEX_GSD_TOOLS_INVOCATION}`)
     .replace(/(\$\(\s*)gsd-tools(?=\s)/g, `$1${CODEX_GSD_TOOLS_INVOCATION}`)
@@ -978,7 +1022,7 @@ function rewriteBareGsdToolsCommandsForCodex(content) {
     .replace(/((?:&&|\|\||[;|])\s*)gsd-tools(?=\s)/g, `$1${CODEX_GSD_TOOLS_INVOCATION}`);
 }
 
-function convertClaudeToCodexMarkdown(content) {
+function convertClaudeToCodexMarkdown(content: string): string {
   let converted = convertSlashCommandsToCodexSkillMentions(content);
   converted = converted.replace(/\$ARGUMENTS\b/g, '{{GSD_ARGS}}');
   // Remove /clear references — Codex has no equivalent command
@@ -1012,7 +1056,7 @@ function convertClaudeToCodexMarkdown(content) {
   return converted;
 }
 
-function getCodexSkillAdapterHeader(skillName) {
+function getCodexSkillAdapterHeader(skillName: string): string {
   const invocation = `$${skillName}`;
   return `<codex_skill_adapter>
 ## A. Skill Invocation
@@ -1112,7 +1156,7 @@ Result parsing:
 </codex_skill_adapter>`;
 }
 
-function convertClaudeCommandToCodexSkill(content, skillName) {
+function convertClaudeCommandToCodexSkill(content: string, skillName: string): string {
   const converted = convertClaudeToCodexMarkdown(content);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   let description = `Run GSD workflow ${skillName}.`;
@@ -1129,7 +1173,7 @@ function convertClaudeCommandToCodexSkill(content, skillName) {
   return `---\nname: ${yamlQuote(skillName)}\ndescription: ${yamlQuote(description)}\nmetadata:\n  short-description: ${yamlQuote(shortDescription)}\n---\n\n${adapter}\n\n${body.trimStart()}`;
 }
 
-function neutralizeAgentReferences(content, instructionFile) {
+function neutralizeAgentReferences(content: string, instructionFile: string): string {
   let c = content;
   // Replace standalone "Claude" (the agent) but preserve product/model names.
   // Negative lookahead avoids: Claude Code, Claude Opus/Sonnet/Haiku, Claude native, Claude-based
@@ -1138,12 +1182,40 @@ function neutralizeAgentReferences(content, instructionFile) {
   if (instructionFile) {
     c = c.replace(/CLAUDE\.md/g, instructionFile);
   }
-  // Remove instructions that conflict with AGENTS.md-based runtimes
-  c = c.replace(/Do NOT load full `AGENTS\.md` files[^\n]*/g, '');
-  return c;
+  // Remove instructions that conflict with AGENTS.md-based runtimes.
+  // When embedded as a numbered/bulleted list item (e.g. "4. Do NOT load full `AGENTS.md` files..."),
+  // remove the entire list item line and renumber subsequent consecutive numbered items
+  // rather than leaving an empty "4. " bullet.
+  const lines = c.split('\n');
+  const out: string[] = [];
+  let renumberOffset = 0;
+  for (const line of lines) {
+    if (/^[ \t]*\d+\.\s+Do NOT load full `AGENTS\.md` files[^\r\n]*\r?$/.test(line)) {
+      renumberOffset++;
+      continue;
+    }
+    if (/^[ \t]*[-*]\s+Do NOT load full `AGENTS\.md` files[^\r\n]*\r?$/.test(line)) {
+      continue;
+    }
+    if (renumberOffset > 0) {
+      const nextNumMatch = /^([ \t]*)(\d+)(\.\s+[^\r\n]*\r?)$/.exec(line);
+      if (nextNumMatch) {
+        const oldNum = Number(nextNumMatch[2]);
+        const newNum = Math.max(1, oldNum - renumberOffset);
+        out.push(`${nextNumMatch[1]}${newNum}${nextNumMatch[3]}`);
+        continue;
+      }
+      renumberOffset = 0;
+    }
+    out.push(line.replace(/Do NOT load full `AGENTS\.md` files[^\r\n]*/g, ''));
+  }
+  return out.join('\n');
 }
 
-function convertClaudeToOpencodeFrontmatter(content, { isAgent = false, modelOverride = null } = {}) {
+function convertClaudeToOpencodeFrontmatter(
+  content: string,
+  { isAgent = false, modelOverride = null }: { isAgent?: boolean; modelOverride?: string | null } = {},
+): string {
   // Replace tool name references in content (applies to all files)
   let convertedContent = content;
   convertedContent = convertedContent.replace(/\bAskUserQuestion\b/g, 'question');
@@ -1308,7 +1380,7 @@ function convertClaudeToOpencodeFrontmatter(content, { isAgent = false, modelOve
 
 // Copilot tool name mapping — Claude Code tools to GitHub Copilot tools
 // Tool mapping applies ONLY to agents, NOT to skills (per CONTEXT.md decision)
-const claudeToCopilotTools = {
+const claudeToCopilotTools: Record<string, string> = {
   Read: 'read',
   Write: 'edit',
   Edit: 'edit',
@@ -1325,7 +1397,7 @@ const claudeToCopilotTools = {
 
 // Tool name mapping from Claude Code to Gemini CLI
 // Gemini CLI uses snake_case built-in tool names
-const claudeToGeminiTools = {
+const claudeToGeminiTools: Record<string, string> = {
   Read: 'read_file',
   Write: 'write_file',
   Edit: 'replace',
@@ -1344,7 +1416,7 @@ const claudeToGeminiTools = {
  * - Filters out Task/Agent — agents are auto-registered as tools in Gemini
  * @returns {string|null} Gemini tool name, or null if tool should be excluded
  */
-function convertGeminiToolName(claudeTool) {
+function convertGeminiToolName(claudeTool: string): string | null {
   // MCP tools: exclude — auto-discovered from mcpServers config at runtime
   if (claudeTool.startsWith('mcp__')) {
     return null;
@@ -1380,7 +1452,7 @@ function convertGeminiToolName(claudeTool) {
  * - Handles mcp__context7__* prefix → io.github.upstash/context7/*
  * - Falls back to lowercase for unknown tools
  */
-function convertCopilotToolName(claudeTool) {
+function convertCopilotToolName(claudeTool: string): string {
   // mcp__context7__* wildcard → io.github.upstash/context7/*
   if (claudeTool.startsWith('mcp__context7__')) {
     return 'io.github.upstash/context7/' + claudeTool.slice('mcp__context7__'.length);
@@ -1399,7 +1471,7 @@ function convertCopilotToolName(claudeTool) {
  * Convert a Claude agent (.md) to a GitHub Copilot agent.
  * CONV-04: JSON array format. CONV-05: Tool name mapping.
  */
-function convertClaudeAgentToCopilotAgent(content, isGlobal = false) {
+function convertClaudeAgentToCopilotAgent(content: string, isGlobal = false): string {
   const converted = convertClaudeToCopilotContent(content, isGlobal);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   if (!frontmatter) return converted;
@@ -1431,7 +1503,7 @@ function convertClaudeAgentToCopilotAgent(content, isGlobal = false) {
  * Convert a Claude agent (.md) to an Antigravity agent.
  * Uses Gemini tool names since Antigravity runs on Gemini 3 backend.
  */
-function convertClaudeAgentToAntigravityAgent(content, isGlobal = false) {
+function convertClaudeAgentToAntigravityAgent(content: string, isGlobal = false): string {
   const converted = convertClaudeToAntigravityContent(content, isGlobal);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   if (!frontmatter) return converted;
@@ -1458,7 +1530,7 @@ function convertClaudeAgentToAntigravityAgent(content, isGlobal = false) {
  * Strips frontmatter fields Cursor doesn't support (color, skills),
  * converts tool references, and adds a role context header.
  */
-function convertClaudeAgentToCursorAgent(content) {
+function convertClaudeAgentToCursorAgent(content: string): string {
   const converted = convertClaudeToCursorMarkdown(content);
 
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
@@ -1477,7 +1549,7 @@ function convertClaudeAgentToCursorAgent(content) {
  * Strips frontmatter fields Windsurf doesn't support (color, skills),
  * converts tool references, and adds a role context header.
  */
-function convertClaudeAgentToWindsurfAgent(content) {
+function convertClaudeAgentToWindsurfAgent(content: string): string {
   const converted = convertClaudeToWindsurfMarkdown(content);
 
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
@@ -1491,7 +1563,7 @@ function convertClaudeAgentToWindsurfAgent(content) {
   return `${cleanFrontmatter}\n${body}`;
 }
 
-function parseFrontmatterTools(frontmatter) {
+function parseFrontmatterTools(frontmatter: string): string[] {
   if (!frontmatter) return [];
   const lines = frontmatter.split(/\r?\n/);
   const tools = [];
@@ -1571,7 +1643,7 @@ function parseFrontmatterTools(frontmatter) {
  * convertClaudeToTraeMarkdown orders its bare-form rewrites after the slash
  * forms to avoid double-rewriting the same substring.
  */
-function convertClaudeAgentToQwenAgent(content) {
+function convertClaudeAgentToQwenAgent(content: string): string {
   const _b = _hostBehaviors('qwen').brandingRewrites || {};
   let converted = content;
   if (_b['CLAUDE.md']) converted = converted.replace(/CLAUDE\.md/g, _b['CLAUDE.md']);
@@ -1603,7 +1675,7 @@ function convertClaudeAgentToQwenAgent(content) {
 }
 
 
-function convertClaudeAgentToClineAgent(content) {
+function convertClaudeAgentToClineAgent(content: string): string {
   const converted = convertClaudeToCliineMarkdown(content);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   if (!frontmatter) return converted;
@@ -1631,7 +1703,7 @@ function convertClaudeAgentToClineAgent(content) {
  * branch, including plain (non-word-boundary) `.replace(/\bClaude Code\b/g, ...)`
  * semantics — J9.
  */
-function applyAgentBrandingRewrites(content, runtime) {
+function applyAgentBrandingRewrites(content: string, runtime: string): string {
   const _b = _hostBehaviors(runtime).brandingRewrites;
   if (!_b) return content;
   let converted = content;
@@ -1647,7 +1719,7 @@ function applyAgentBrandingRewrites(content, runtime) {
  * Applies base markdown conversions, then adds a <codex_agent_role> header
  * and cleans up frontmatter (removes tools/color fields).
  */
-function convertClaudeAgentToCodexAgent(content) {
+function convertClaudeAgentToCodexAgent(content: string): string {
   const converted = convertClaudeToCodexMarkdown(content);
 
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
@@ -1689,7 +1761,11 @@ purpose: ${toSingleLine(description)}
  * @param {(content: string) => string} frontmatterConverter - runtime command converter
  * @returns {string} SKILL.md content
  */
-function convertClaudeCommandToOpencodeFamilySkill(content, skillName, frontmatterConverter) {
+function convertClaudeCommandToOpencodeFamilySkill(
+  content: string,
+  skillName: string,
+  frontmatterConverter: (c: string) => string,
+): string {
   const converted = frontmatterConverter(content);
   const { frontmatter, body } = extractFrontmatterAndBody(converted);
   let description = `Run GSD workflow ${skillName}.`;
@@ -1714,11 +1790,11 @@ function convertClaudeCommandToOpencodeFamilySkill(content, skillName, frontmatt
  * Convert a Claude command (.md) to an OpenCode skill (SKILL.md).
  * Thin wrapper over the shared OpenCode-family writer.
  */
-function convertClaudeCommandToOpencodeSkill(content, skillName) {
+function convertClaudeCommandToOpencodeSkill(content: string, skillName: string): string {
   return convertClaudeCommandToOpencodeFamilySkill(
     content,
     skillName,
-    (c) => convertClaudeToOpencodeFrontmatter(c),
+    (c: string) => convertClaudeToOpencodeFrontmatter(c),
   );
 }
 
@@ -1737,7 +1813,15 @@ function convertClaudeCommandToOpencodeSkill(content, skillName) {
  *
  * @private — exported as `_computePathPrefix` for tests.
  */
-function computePathPrefix({ isGlobal, isOpencode, isWindowsHost: _isWindowsHost, resolvedTarget, homeDir }) {
+interface ComputePathPrefixOptions {
+  isGlobal: boolean;
+  isOpencode: boolean;
+  isWindowsHost?: boolean;
+  resolvedTarget: string;
+  homeDir?: string | null;
+}
+
+function computePathPrefix({ isGlobal, isOpencode, isWindowsHost: _isWindowsHost, resolvedTarget, homeDir }: ComputePathPrefixOptions): string {
   // #1615: normalize Windows backslashes to forward slashes. This prefix is
   // substituted into markdown @-references (e.g. Windsurf workflow files),
   // which use POSIX paths universally. Idempotent on POSIX (no backslashes).
@@ -1745,8 +1829,8 @@ function computePathPrefix({ isGlobal, isOpencode, isWindowsHost: _isWindowsHost
   // leaks into markdown content and breaks cross-platform substring checks.
   // See DEFECT.WINDOWS-PATH-LEAK-IN-MARKDOWN-CONTENT in CONTEXT.md.
   const posixTarget = posixNormalize(String(resolvedTarget));
-  const posixHome = homeDir ? posixNormalize(String(homeDir)) : homeDir;
-  if (isGlobal && posixTarget.startsWith(posixHome) && !isOpencode) {
+  const posixHome = homeDir ? posixNormalize(String(homeDir)) : '';
+  if (isGlobal && posixHome && posixTarget.startsWith(posixHome) && !isOpencode) {
     return '$HOME' + posixTarget.slice(posixHome.length) + '/';
   }
   return `${posixTarget}/`;
@@ -1909,7 +1993,7 @@ function _stampNonClaudeRuntimeDefaults(content: string, runtime: string): strin
  * @private — exported as `_restoreClaudeGlobalAtRefTilde` for tests and for
  * bin/install.js's `copyWithPathReplacement`.
  */
-function restoreClaudeGlobalAtRefTilde(content, pathPrefix) {
+function restoreClaudeGlobalAtRefTilde(content: string, pathPrefix: string): string {
   if (typeof pathPrefix !== 'string' || !pathPrefix.startsWith('$HOME')) return content;
   const tildeEquivalent = '~' + pathPrefix.slice('$HOME'.length);
   const atRefRe = new RegExp(`(?<!["'])@${escapeRegExp(pathPrefix)}`, 'g');
@@ -1926,7 +2010,13 @@ function restoreClaudeGlobalAtRefTilde(content, pathPrefix) {
  *
  * @private — exported as `_applyRuntimeRewrites` for tests.
  */
-function _applyRuntimeRewrites(content, runtime, pathPrefix, isGlobal = false, attribution = undefined) {
+function _applyRuntimeRewrites(
+  content: string,
+  runtime: string,
+  pathPrefix: string,
+  isGlobal = false,
+  attribution: string | null | undefined = undefined,
+): string {
   const dirName = getDirName(runtime);
   const normalizedPathPrefix = pathPrefix.replace(/\/$/, '');
 
@@ -2060,10 +2150,16 @@ function _applyRuntimeRewrites(content, runtime, pathPrefix, isGlobal = false, a
  * @param isGlobal     true for global scope installs
  * @param attribution  Co-Authored-By value (string | null | undefined)
  */
-function applyRuntimeContentRewritesInPlace(stagedDir, runtime, pathPrefix, isGlobal = false, attribution = undefined) {
+function applyRuntimeContentRewritesInPlace(
+  stagedDir: string,
+  runtime: string,
+  pathPrefix: string,
+  isGlobal = false,
+  attribution: string | null | undefined = undefined,
+): void {
   if (!installFs().existsSync(stagedDir)) return;
 
-  const walkAndRewrite = (dir) => {
+  const walkAndRewrite = (dir: string): void => {
     for (const entry of installFs().readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -2096,7 +2192,13 @@ function applyRuntimeContentRewritesInPlace(stagedDir, runtime, pathPrefix, isGl
  * @param attribution  Co-Authored-By value (string | null | undefined)
  * @returns {string} path to the temp dir (caller is responsible for cleanup)
  */
-function applyRuntimeContentRewritesForCommandsInPlace(stagedDir, runtime, pathPrefix, isGlobal = false, attribution = undefined) {
+function applyRuntimeContentRewritesForCommandsInPlace(
+  stagedDir: string,
+  runtime: string,
+  pathPrefix: string,
+  isGlobal = false,
+  attribution: string | null | undefined = undefined,
+): string {
   if (!installFs().existsSync(stagedDir)) return stagedDir;
 
   const tempDir = mkInstallTempDir('gsd-cmd-rewrites-');
@@ -2135,9 +2237,9 @@ function applyRuntimeContentRewritesForCommandsInPlace(stagedDir, runtime, pathP
  * `@~/.claude/gsd-core/workflows/<stem>.md` include line (which survives the
  * pass above intact via its own `@`-guarded restore).
  */
-function applySpecRootReferenceToStagedSkills(stagedDir) {
+function applySpecRootReferenceToStagedSkills(stagedDir: string): void {
   if (!installFs().existsSync(stagedDir)) return;
-  const walk = (dir) => {
+  const walk = (dir: string): void => {
     for (const entry of installFs().readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -2166,7 +2268,16 @@ function applySpecRootReferenceToStagedSkills(stagedDir) {
  * @param opts.platform         optional platform string (injectable for tests; defaults to process.platform)
  * @param opts.resolveAttribution  optional fn(runtime)→string|null|undefined; called once per invocation
  */
-function rewriteStagedSkillBodies(stagedDir, opts) {
+interface RewriteStagedOptions {
+  runtime: string;
+  configDir: string;
+  scope?: InstallScope;
+  homedir?: () => string;
+  platform?: string;
+  resolveAttribution?: (runtime: string) => string | null | undefined;
+}
+
+function rewriteStagedSkillBodies(stagedDir: string, opts: RewriteStagedOptions): void {
   const {
     runtime,
     configDir,
@@ -2218,7 +2329,7 @@ function rewriteStagedSkillBodies(stagedDir, opts) {
  *
  * @returns {string} path to the temp dir (caller is responsible for cleanup)
  */
-function rewriteStagedCommandBodies(stagedDir, opts) {
+function rewriteStagedCommandBodies(stagedDir: string, opts: RewriteStagedOptions): string {
   const {
     runtime,
     configDir,

@@ -27,13 +27,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 
 const { ExitError, runMain } = require('./lib/cli-exit.cjs');
-
-// On Windows, npm ships as npm.cmd (a batch wrapper); spawnSync without
-// shell:true requires the exact filename including extension.
-const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const { spawnNpm } = require('./win-spawn.cjs');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -182,7 +178,7 @@ function main() {
   const enginesNpm = pkgField('engines.npm', PROJECT_ROOT);
   let currentNpm = '';
   try {
-    const res = spawnSync(npmCmd, ['--version'], { encoding: 'utf8', timeout: 10_000, shell: process.platform === 'win32' });
+    const res = spawnNpm(['--version'], { encoding: 'utf8', timeout: 10_000 });
     if (res.status === 0 && res.stdout) {
       currentNpm = res.stdout.trim();
     }
@@ -219,10 +215,10 @@ function main() {
       // build. Without it, npm would run the `prepare` lifecycle (build:lib via
       // tsc) — which fails when check:env runs before deps are installed (tsc
       // absent), misreporting an out-of-sync lockfile. ADR-457 build-at-publish.
-      const res = spawnSync(npmCmd, ['ci', '--dry-run', '--ignore-scripts'], {
+      const res = spawnNpm(['ci', '--dry-run', '--ignore-scripts'], {
         cwd: PROJECT_ROOT,
         encoding: 'utf8',
-        shell: process.platform === 'win32',
+        timeout: 30_000,
       });
       if (res.status === 0) {
         addCheck('lockfile-sync', 'pass', 'package-lock.json is in sync with package.json');

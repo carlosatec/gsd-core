@@ -20,6 +20,9 @@ import path from 'node:path';
 import { platformEnsureDir, platformWriteSync, platformReadSync } from './shell-command-projection.cjs';
 import { escapeRegex } from './pattern.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+import planScanMod = require('./plan-scan.cjs');
+const { scanPhasePlans } = planScanMod;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
 const { loadCodebaseGraph, buildCodebaseGraph } = codebaseAst;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -168,7 +171,7 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
   let totalPhases = 0;
   const phaseList: Array<{ id: string; name: string; isCurrent: boolean }> = [];
   const srcPhasesDir = path.join(planningDir, 'phases');
-  let activePhasePrefix = '37';
+  let activePhasePrefix = '';
   try {
     const statePath = path.join(planningDir, 'STATE.md');
     if (fs.existsSync(statePath)) {
@@ -189,13 +192,14 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
         const phaseSub = path.join(srcPhasesDir, pId);
         const subFiles = fs.readdirSync(phaseSub);
 
-        const isCurrent = pId.startsWith(activePhasePrefix);
+        const isCurrent = activePhasePrefix !== '' && new RegExp(`^(?:[A-Z][A-Z0-9]*-)?0*${activePhasePrefix}-`).test(pId);
         phaseList.push({ id: pId, name: pId, isCurrent });
 
         const phaseNotePath = path.join(phasesDir, `${pId}.md`);
+        const phaseScan = scanPhasePlans(phaseSub);
         const specFile = subFiles.find(f => f.endsWith('-SPEC.md'));
-        const planFiles = subFiles.filter(f => f.endsWith('-PLAN.md'));
-        const summaryFile = subFiles.find(f => f.endsWith('-SUMMARY.md'));
+        const planFiles = phaseScan.planFiles;
+        const summaryFile = phaseScan.summaryFiles[0];
         const reviewFile = subFiles.find(f => f.includes('REVIEW'));
 
         const hasSummary = Boolean(summaryFile);
@@ -371,8 +375,9 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
           occurrences?: number;
           details?: string;
         }
-        const parsed = JSON.parse(raw) as AntiPatternItem[] | { antiPatterns?: AntiPatternItem[] };
-        const patterns: AntiPatternItem[] = Array.isArray(parsed) ? parsed : (parsed.antiPatterns || []);
+        const parsed = JSON.parse(raw) as AntiPatternItem[] | { patterns?: AntiPatternItem[]; antiPatterns?: AntiPatternItem[] };
+        // anti-pattern-store persists `{ version, totalRecorded, patterns }`; keep legacy `antiPatterns` readable.
+        const patterns: AntiPatternItem[] = Array.isArray(parsed) ? parsed : (parsed.patterns || parsed.antiPatterns || []);
         for (let i = 0; i < Math.min(patterns.length, 30); i++) {
           const ap = patterns[i];
           if (ap && (ap.lesson || ap.pattern)) {
@@ -420,6 +425,7 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
     .sort((a, b) => b.pageRank - a.pageRank);
 
   // 7. Generate 00-Home.md (Master Map of Content)
+  const currentPhase = phaseList.find(p => p.isCurrent) ?? phaseList[phaseList.length - 1];
   const homePath = path.join(vaultDir, '00-Home.md');
   const homeContent = [
     '---',
@@ -431,12 +437,14 @@ function generateSecondBrainVault(planningDir: string, rootDir?: string): Second
     '# 🧠 Projeto Segundo Cérebro (GSD Core Nexus 3.7)',
     '',
     '> **Status do Ecossistema:** Ativo  ',
-    '> **Fase Corrente:** [[Phases/37-second-brain-knowledge-graph-obsidian-vault-and-quality-telemetry|Fase 37: Segundo Cérebro Obsidian & Telemetria]]  ',
+    currentPhase
+      ? `> **Fase Corrente:** [[Phases/${currentPhase.id}|Fase ${currentPhase.id}]]  `
+      : '> **Fase Corrente:** —  ',
     `> **Última Atualização:** ${new Date().toISOString()}  `,
     '',
     '## 🗺️ Visualização & Mapas Mentais',
     '- 🎨 **[[00-Vault.canvas|Abrir Canvas do Segundo Cérebro (Mindmap Ativo)]]** — Visão 2D interativa conectando Fase Ativa, Decisões, Módulos e Lições.',
-    '- 🗺️ **[[01-Roadmap.canvas|Abrir Canvas do Roteiro Completo (Linha do Tempo)]]** — Visão panorâmica dos Milestones e das 37 fases organizadas cronologicamente.',
+    `- 🗺️ **[[01-Roadmap.canvas|Abrir Canvas do Roteiro Completo (Linha do Tempo)]]** — Visão panorâmica dos Milestones e das ${totalPhases} fases organizadas cronologicamente.`,
     '- 🌐 [Grafo Visual Interativo de Conhecimento (HTML)](file:///../intel/graph-view.html) — Visualizador gráfico 3D/2D offline com física de partículas.',
     '- 📈 [Dashboard Visual de Observabilidade 360° (HTML)](file:///../intel/dashboard.html) — Painel executivo com simulador de custos e métricas.',
     '',

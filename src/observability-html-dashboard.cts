@@ -1,5 +1,5 @@
 /**
- * Observability 360° Offline HTML Dashboard Generator — GSD Core Nexus 3.4
+ * Observability 360° Offline HTML Dashboard Generator — GSD Core Nexus
  *
  * Generates a self-contained, 100% offline interactive dashboard in `.planning/intel/dashboard.html`.
  * Features responsive dark-mode glassmorphism cards, pure SVG charts, real-time client-side
@@ -8,6 +8,7 @@
 
 import path from 'node:path';
 import { platformEnsureDir, platformWriteSync } from './shell-command-projection.cjs';
+import { readHostVersion } from './capability-loader.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import aggregatorMod = require('./observability-aggregator.cjs');
 
@@ -17,6 +18,18 @@ const {
 } = aggregatorMod;
 
 // ─── Sanitization & Helpers ───────────────────────────────────────────────────
+
+/**
+ * Serializes JSON safely for embedding inside an HTML `<script>` block.
+ */
+function serializeJsonForScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
 
 function escapeHtml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -187,7 +200,11 @@ function generateDashboardHtml(snapshot: ReturnType<typeof getObservabilitySnaps
       </div>`;
   }).join('');
 
-  const pricingTableJson = JSON.stringify(STANDARD_PRICING_TABLE);
+  const pricingTableJson = serializeJsonForScript(STANDARD_PRICING_TABLE);
+  const hostVersion = readHostVersion();
+  const displayVersion = hostVersion && hostVersion !== '0.0.0' ? hostVersion : '3.7';
+  const safeTotalUsed = Number.isFinite(Number(telemetry.totalJitTokensUsed)) ? Number(telemetry.totalJitTokensUsed) : 0;
+  const safeTotalAvoided = Number.isFinite(Number(telemetry.totalMonolithicTokensAvoided)) ? Number(telemetry.totalMonolithicTokensAvoided) : 0;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -458,7 +475,7 @@ function generateDashboardHtml(snapshot: ReturnType<typeof getObservabilitySnaps
     </div>
 
     <footer>
-      ⚡ GSD Core Nexus 3.4 • Generated ${escapeHtml(timestamp)} • 100% Offline Standalone Architecture
+      ⚡ GSD Core Nexus ${escapeHtml(displayVersion)} • Generated ${escapeHtml(timestamp)} • 100% Offline Standalone Architecture
     </footer>
   </div>
 
@@ -466,8 +483,8 @@ function generateDashboardHtml(snapshot: ReturnType<typeof getObservabilitySnaps
   <script>
     (function() {
       const PRICING_TABLE = ${pricingTableJson};
-      const totalUsed = ${telemetry.totalJitTokensUsed || 0};
-      const totalAvoided = ${telemetry.totalMonolithicTokensAvoided || 0};
+      const totalUsed = ${safeTotalUsed};
+      const totalAvoided = ${safeTotalAvoided};
 
       function formatMoney(amount) {
         if (amount === 0) return '$ 0.00';
