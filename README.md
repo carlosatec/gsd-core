@@ -10,7 +10,7 @@
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-3.8.0-06b6d4?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![Version](https://img.shields.io/badge/version-3.8.1-06b6d4?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
 [![License](https://img.shields.io/badge/license-MIT-38bdf8?style=for-the-badge)](LICENSE)
 [![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
@@ -31,8 +31,8 @@ Most AI coding setups fail in medium-to-large codebases because of three critica
 3. **Unguarded Edits & Silent Breakages:** Agents mutate files without static safety validation, breaking downstream types, violating constitutional invariants, and leaving hidden regressions.
 
 **GSD Core Nexus fundamentally eliminates these flaws:**
-- 🧠 **Project Second Brain:** Automatically transforms your codebase, roadmap, and 170+ architectural decisions into a navigable **Obsidian Vault** (`.planning/vault/`) and interactive 2D canvases.
-- ⚡ **Quality-First JIT Context:** Slashes token consumption by **80% to 95%** by injecting surgical, language-weighted type closures and active decisions directly into agent prompts.
+- 🧠 **Persistent Project Knowledge:** Keeps project state and decisions across sessions. The Obsidian vault, codebase maps, and visual exports are generated only when requested.
+- ⚡ **Bounded JIT Context:** Retrieves relevant code and documentation chunks with file and line provenance, local ranking, and explicit context-budget limits.
 - 🛡️ **Sovereign Cognitive Sentinels:** System One risk evaluation (`SecurityHead`, `ArchitectureHead`, `QualityHead`), constitutional `Noul` invariants, and AST grounding checks run 100% locally with zero external API latency.
 - 🔄 **Self-Healing Loop:** Pre-flight guardrails block regressions before edits, while automated test-repair loops diagnose and auto-fix failures.
 
@@ -54,46 +54,46 @@ Every project milestone is broken down into structured, test-backed phases execu
                             (Obsidian Vault · 360° Visual Graph · Memory SSOT)
 ```
 
-1. **Discuss & Spec (`/gsd:plan --spec`):** Capture architectural intent and RFC-2119 requirements before touching code.
+1. **Discuss & Spec (`/gsd:plan`):** Capture requirements and implementation decisions before execution.
 2. **Plan (`/gsd:plan`):** Decompose work into atomic parallel task waves with verified JIT context budgets.
-3. **Execute (`/gsd:exec --auto-heal`):** Execute wave tasks in isolated subagents with pre-flight AST contracts and self-healing error recovery.
+3. **Execute (`/gsd:exec`):** Execute plan tasks with pre-flight checks and configured self-healing recovery.
 4. **Review & Verify (`/gsd:review --fix` & `/gsd:verify`):** Audit code for complexity, dead code, and UI anti-patterns with auto-repair, followed by conversational UAT acceptance.
-5. **Ship (`/gsd:ship`):** Prepare release branch, sync living documentation, auto-commit, update the Second Brain vault, and create clean PRs.
+5. **Ship (`/gsd:ship`):** Verify release readiness and prepare the requested delivery workflow.
 
 ---
 
-## 🚀 The 11 Canonical Unified Commands
+## 🚀 Canonical Commands
 
-GSD Core Nexus strictly unifies its interface into **11 canonical commands** available across all supported AI coding environments:
+The primary workflow has six commands, with `auto` for autonomous execution and four supporting commands:
 
 | Command | Action & Superpower | Common Flags |
 | :--- | :--- | :--- |
-| **`/gsd-status`** | Real-time situational diagnostic, phase progress, context drift & AST health | `--sync`, `--refresh`, `--raw` |
-| **`/gsd-plan`** | Decompose phase into atomic waves, specs, discussions and JIT budgets | `[phase]`, `--spec`, `--speckit` |
-| **`/gsd-exec`** | Parallel wave execution with Pre-Flight guardrails and atomic commits | `[phase]`, `--auto-heal`, `--force`, `--isolate` |
-| **`/gsd-review`** | Deep AST, security, complexity, UI and dead-code review with auto-repair | `[phase]`, `--fix`, `--full`, `--repo` |
-| **`/gsd-verify`** | Acceptance verification walkthrough, RFC-2119 gate and auto-pass UAT | `[phase]`, `--auto` |
-| **`/gsd-ship`** | Git hygiene, branch preparation, changelog, second brain sync and PR merge | `[phase]` |
-| **`/gsd-auto`** | Autonomous end-to-end phase cycle with safety checkpoints and auto-healing | `[phase]` |
-| **`/gsd-tokens`** | Multi-command token telemetry dashboard, USD financial cost & amnesia metrics | `--sessions`, `--cost`, `--all`, `--web`, `--open` |
-| **`/gsd-graph`** | Interactive HTML force-graph and Obsidian Second Brain Vault compiler | `--vault`, `--open`, `--query="<term>"`, `--canvas` |
-| **`/gsd-migrate`** | One-click non-destructive legacy project upgrade to GSD 3.7 architecture | `--dry-run` |
-| **`/gsd-help`** | Command quick reference, syntax guide and operational manual | — |
+| **`/gsd:status`** | Read project progress, artifact freshness, and telemetry; `--sync` or `--refresh` explicitly refreshes derived data | `--sync`, `--refresh` |
+| **`/gsd:plan`** | Create or update a phase plan with requirements, task waves, and JIT context | `[phase]` |
+| **`/gsd:exec`** | Execute phase plans with pre-flight checks and verification | `[phase]` |
+| **`/gsd:review`** | Review implementation and identify actionable issues | `[phase]` |
+| **`/gsd:verify`** | Check phase requirements and verification evidence | `[phase]` |
+| **`/gsd:ship`** | Prepare completed work for delivery | `[phase]` |
+| **`/gsd:auto`** | Run the phase workflow autonomously with safety checkpoints | `[phase]` |
+| **`/gsd:tokens`** | Inspect token and JIT telemetry | options vary by runtime |
+| **`/gsd:graph`** | Build the canonical graph and requested exports; vault generation is opt-in | `--vault`, `--canvas`, `--open` |
+| **`/gsd:migrate`** | Migrate a legacy project to the current GSD layout | `--dry-run` |
+| **`/gsd:help`** | Show command guidance | — |
 
 ---
 
 ## 💎 GSD Core Nexus 3.8 Flagship Capabilities
 
 ### 1. 🧠 Project Second Brain & Obsidian Vault Engine
-- **Non-Destructive Vault (`.planning/vault/`):** Automatically compiles your project's decisions, phases, modules, and lessons learned into 600+ interconnected markdown notes with native `[[wikilinks]]`.
+- **Opt-in Vault (`.planning/vault/`):** The explicit `/gsd:graph --vault` command exports project decisions, phases, modules, and lessons into linked Markdown notes.
 - **Master Map of Content (`00-Home.md`):** High-level navigation portal connecting active work, core production modules (`src/`), tooling, and decisions.
-- **Dual Visual Canvases:**
+- **Optional Visual Canvases:**
   - `00-Vault.canvas`: Interactive 2D mindmap of active modules, decisions, and system boundaries.
-  - `01-Roadmap.canvas`: Complete 37-phase visual roadmap with color-coded status badges.
-- **Instant Second Brain Search (`/gsd:graph --query "<term>"`):** Sub-second BM25 search across decisions, lessons, and modules from any terminal.
+  - `01-Roadmap.canvas`: Optional visual export of the current roadmap.
+- **Persistent Memory:** User-recorded memories and architectural decisions remain durable across sessions.
 
 ### 2. 🌐 360° Visual Knowledge Graph AST (`graph-view.html`)
-- **100% Offline Force-Directed HTML5 Graph:** Renders your entire codebase topology (1,500+ nodes, 1,900+ links) in `.planning/intel/graph-view.html`.
+- **Offline Force-Directed HTML5 Graph:** An explicitly requested export renders codebase topology in `.planning/intel/graph-view.html`.
 - **Directed Governance Edges:** Explicit `governs` links connect architectural decisions to production modules; `specifies` links connect phases to plan files.
 - **Zero External Dependencies:** Runs natively in any browser with smooth physics, dark neon aesthetics, and real-time node filtering.
 
@@ -103,20 +103,25 @@ GSD Core Nexus strictly unifies its interface into **11 canonical commands** ava
   - `Noul`: Blocks modifications violating constitutional invariants (`CONSTITUTION.md`).
   - `Score`: Flags hallucinated methods or symbol signature mismatches against the AST index.
   - `Choice`: Audits RFC 2119 requirement fulfillment with canonical phase enumeration.
-- **Continuous Memory Claude-Mem (`decisions.jsonl`):** Permanent architectural memory with zero temporal decay and active anti-amnesia monitoring (`amnesiaRisk: LOW`, `recall: 99.2%`).
+- **Continuous Memory (`decisions.jsonl`):** Durable architectural decisions and recorded lessons are available across sessions.
 
 ### 4. ⚡ Quality-First JIT Context & Polyglot AST Engine
-- **Zero Python / Native TypeScript:** Static code analysis across 35+ file extensions (TypeScript, JavaScript, Python, Go, Rust, C#, Java, Swift, Kotlin, PHP, Ruby, Dart, Zig, Astro, Protobuf, SQL, CSS).
-- **Mobile 360° Coverage:** First-class AST support for iOS (Swift, SwiftUI) and Android (Kotlin, Jetpack Compose).
-- **Semantic Edge Typing:** Distinguishes between `type_only` and `runtime` imports, damping false-positive blast radiuses by 80%.
+- **Zero Python / Native TypeScript:** Static analysis supports TypeScript, JavaScript, Python, Go, Rust, C#, Java, Swift, Kotlin, PHP, Ruby, Dart, Zig, Astro, Protobuf, SQL, CSS, and additional formats.
+- **Mobile Coverage:** AST analysis supports Swift and Kotlin source files.
+- **Semantic Edge Typing:** Distinguishes between `type_only` and `runtime` imports when calculating dependency impact.
 - **Proactive Dead-Code Detection:** Accurately detects unreferenced orphan modules in production directories (`src/`).
 
-### 5. 📊 Observability 360° & Real-Time Token Telemetry
+### 5. 📚 Offline Chunk Retrieval and Artifact Freshness
+- The semantic index stores bounded code and Markdown chunks with file, line, language, and symbol or section provenance.
+- Content fingerprints detect edits even when file size and modification time stay the same. The canonical AST graph is `.planning/intel/codebase-graph.json`.
+- `/gsd:status` reports artifact freshness without writing files. Maps, vaults, and visual exports remain opt-in.
+
+### 6. 📊 Observability & Token Telemetry
 - **Granular Token Governance:** Tracks token usage across all commands (`plan`, `exec`, `review`, `verify`), reporting JIT savings, noise elimination, and compression ratios.
 - **Financial Modeling ($ USD):** Live cost estimation across Claude 3.5 Sonnet, GPT-4o, Gemini 1.5 Pro, DeepSeek V3, and local models.
 - **Real-Time ASCII & HTML Dashboards:** Adaptive 65-column terminal view (`/gsd:tokens`) and offline interactive SVG web dashboard (`npm run dashboard`).
 
-### 6. 🔀 Concurrency Isolation & Git Worktrees
+### 7. 🔀 Concurrency Isolation & Git Worktrees
 - **Ephemeral Worktree Engine:** Zero-copy worktree concurrency (Worktrunk pattern) with NTFS directory junction safety for Windows.
 - **Cooperative State Lock Facade:** Multi-process lock coordination with PID liveness verification, atomic steal recovery, and transactional release.
 
@@ -151,10 +156,10 @@ npx github:carlosatec/gsd-core --all --global
 Once installed, bootstrap your workflow immediately:
 
 ```bash
-/gsd-status       # Check project state, AST freshness & Second Brain status
-/gsd-plan         # Plan next phase with surgical JIT context
-/gsd-exec         # Execute phase plans with Pre-Flight guardrails
-/gsd-graph --vault# Compile & open your Obsidian Project Second Brain
+/gsd:status       # Read project state and artifact freshness
+/gsd:plan         # Plan the next phase with JIT context
+/gsd:exec         # Execute phase plans with pre-flight checks
+/gsd:graph --vault # Explicitly export the Obsidian Project Second Brain
 ```
 
 ---
@@ -162,7 +167,7 @@ Once installed, bootstrap your workflow immediately:
 ## 📚 Documentation
 
 - **[Practical Tutorial: Mastering GSD Core Nexus 3.8](docs/tutorials/practical-tutorial.md)** ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
-- **[Command Reference](docs/COMMANDS.md):** Complete guide to all 11 canonical commands, flags, and workflows.
+- **[Command Reference](docs/COMMANDS.md):** Guide to canonical commands, flags, and workflows.
 - **[System Architecture](docs/ARCHITECTURE.md):** Comprehensive deep dive into the component architecture, AST engine, and JIT context injector.
 - **[Feature Reference](docs/FEATURES.md):** Full catalog of 170+ capabilities and architectural milestones.
 - **[Configuration Guide](docs/CONFIGURATION.md):** Customize model profiles, reviewer instances, and guardrail tolerances.

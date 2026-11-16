@@ -10,10 +10,6 @@ allowed-tools:
 Display quality-first telemetry metrics (Context Recall %, Amnesia Risk Index, Second Brain Coverage %, Active Decisions Injected), operational sessions reliability, financial cost calculations ($ USD), interactive HTML web dashboard export, and JIT context efficiency.
 </objective>
 
-<execution_context>
-@~/.claude/gsd-core/workflows/analyze-dependencies.md
-</execution_context>
-
 <context>
 Arguments: $ARGUMENTS
 </context>

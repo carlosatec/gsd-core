@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.8.1] - 2026-11-16
+
+### Added
+- Chunk-aware offline semantic retrieval with bounded indexing, content-based freshness, metadata filters, optional local ranking, and source provenance in JIT context.
+- Read-only artifact lifecycle diagnostics for project state, derived indexes, durable memory, telemetry, and opt-in exports.
+
+### Changed
+- Updated the English and Portuguese project READMEs and architecture documentation to describe current command and artifact-generation behavior.
+- Aligned package, capability, installer, and user-visible release metadata to 3.8.1.
+
 ## [3.8.0] - 2026-11-16
 
 ### Security

@@ -1,0 +1,27 @@
+diff --git a/commands/gsd/graph.md b/commands/gsd/graph.md
+index 7ed17218..5e278376 100644
+--- a/commands/gsd/graph.md
++++ b/commands/gsd/graph.md
+@@ -11 +11 @@ allowed-tools:
+-Export interactive HTML visual graph representation, Obsidian canvas, or full Project Second Brain Obsidian Vault mapping AST dependencies, phases, requirements, and architectural state.
++Build the canonical AST graph and explicitly requested HTML, canvas, or Second Brain Vault exports. The canonical graph is `.planning/intel/codebase-graph.json`; visual and vault exports remain opt-in.
+@@ -26,0 +23,2 @@ Arguments: $ARGUMENTS
++
++The AST graph build reports and writes `.planning/intel/codebase-graph.json`. It does not create `.planning/graphs/graph.json`; legacy files there are read compatibility only. Do not generate the vault, canvas, or visualizer unless the invocation requests that export.
+diff --git a/skills/gsd-graph/SKILL.md b/skills/gsd-graph/SKILL.md
+index 8774a023..1c9cacdd 100644
+--- a/skills/gsd-graph/SKILL.md
++++ b/skills/gsd-graph/SKILL.md
+@@ -12 +12 @@ allowed-tools:
+-Export interactive HTML visual graph representation, Obsidian canvas, or full Project Second Brain Obsidian Vault mapping AST dependencies, phases, requirements, and architectural state.
++Build the canonical AST graph and explicitly requested HTML, canvas, or Second Brain Vault exports. The canonical graph is `.planning/intel/codebase-graph.json`; visual and vault exports remain opt-in.
+@@ -27,0 +24,2 @@ Arguments: $ARGUMENTS
++
++The AST graph build reports and writes `.planning/intel/codebase-graph.json`. It does not create `.planning/graphs/graph.json`; legacy files there are read compatibility only. Do not generate the vault, canvas, or visualizer unless the invocation requests that export.
+diff --git a/gsd-core/workflows/progress.md b/gsd-core/workflows/progress.md
+index a1845678..ae278bed 100644
+--- a/gsd-core/workflows/progress.md
++++ b/gsd-core/workflows/progress.md
+@@ -102,0 +103,2 @@ Use this instead of manually reading/parsing ROADMAP.md.
++
++Read `.planning/intel/codebase-graph.json`, `.planning/intel/semantic-index.json`, memory, telemetry, living docs, map, and export presence through the artifact lifecycle registry when available. Status stays read-only: report freshness and the registry's refresh command, and never create, rewrite, or remove artifacts as part of this report.

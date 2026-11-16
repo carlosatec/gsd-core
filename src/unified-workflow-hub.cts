@@ -64,14 +64,17 @@ import continuousMemory = require('./continuous-memory.cjs');
 import worktreeIsolation = require('./worktree-isolation.cjs');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import antiPatternMod = require('./anti-pattern-store.cjs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import artifactLifecycleMod = require('./artifact-lifecycle.cjs');
 
 const { checkIntelHealth } = intelMod;
+const { inspectArtifactLifecycle } = artifactLifecycleMod;
 const { releaseAgentLocks } = activeLedgerMod;
 const { processOutputDiet } = outputDietMod;
 const { SessionLogger } = sessionLoggerMod;
 
 const { verifyDocsAgainstCode, syncLivingDocs } = livingDocs;
-const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
+const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, computeCodebaseContentFingerprint, queryTopCentralFiles, calculateBlastRadius } = codebaseAst;
 const { runAutoUpgrade } = autoUpgrade;
 const { getTelemetrySummary, recordJitInvocation, LANGUAGE_CHAR_WEIGHTS } = jitTelemetry;
 const { renderTokenDashboard } = tokenDashboard;
@@ -547,24 +550,25 @@ function dispatchUnifiedCommand(rawCommand: string, options: UnifiedCommandOptio
   const planningDir = path.join(cwd, '.planning');
   const hasFixFlag = Boolean(options.flags?.['fix'] || options.args.includes('--fix'));
 
-  // Sync session context handshake on command dispatch (D-30)
-  syncSessionContext(planningDir, cwd);
-
   if (!canonicalName) {
     throw new Error(
       `Unknown or retired command "${rawCommand}". GSD Core strictly supports only the 11 unified canonical commands: status, plan, exec, review, verify, ship, auto, tokens, migrate, graph, help.`
     );
   }
 
-  const logger = new SessionLogger({ planningDir });
-  logger.startSession({ command: canonicalName, args: options.args });
+  // Status is a read-only inspection unless the caller explicitly requested
+  // --sync/--refresh; it must not rewrite session context or create telemetry.
+  if (canonicalName !== 'status') syncSessionContext(planningDir, cwd);
+
+  const logger = canonicalName === 'status' ? undefined : new SessionLogger({ planningDir });
+  logger?.startSession({ command: canonicalName, args: options.args });
 
   try {
     const result = runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, hasFixFlag);
-    logger.endSession('completed', { action: result.action });
+    logger?.endSession('completed', { action: result.action });
     return result;
   } catch (err) {
-    logger.endSession('failed', { error: (err as Error).message });
+    logger?.endSession('failed', { error: (err as Error).message });
     throw err;
   }
 }
@@ -610,6 +614,7 @@ function runInternalUnifiedCommand(
       }
 
       const telemetry = getTelemetrySummary(planningDir);
+      const artifactLifecycle = inspectArtifactLifecycle(planningDir, cwd);
       let intelHealth: unknown = undefined;
       let intelMsg = '';
       try {
@@ -670,6 +675,7 @@ function runInternalUnifiedCommand(
         data: {
           telemetry,
           intelHealth,
+          artifactLifecycle,
           synced: isSync,
           secondBrain: isSecondBrainActive ? {
             active: true,
@@ -1362,6 +1368,13 @@ function runInternalUnifiedCommand(
             ? `🧠 Encontradas ${queryRes.totalMatches} correspondências no Segundo Cérebro para "${queryArg}":\n${formatted}`
             : `🧠 Nenhuma correspondência encontrada no Segundo Cérebro para "${queryArg}".`,
         };
+      }
+
+      // The graph command is an explicit request for graph-derived output. Keep
+      // all exports anchored to the canonical graph and current source contents.
+      const graph = loadCodebaseGraph(planningDir);
+      if (!graph || graph.stats?.contentFingerprint !== computeCodebaseContentFingerprint(cwd)) {
+        saveCodebaseGraph(planningDir, buildCodebaseGraph(cwd));
       }
 
       const isVault = options.args.includes('--vault') || options.args.includes('--brain') || Boolean(options.flags?.['vault']) || Boolean(options.flags?.['brain']);

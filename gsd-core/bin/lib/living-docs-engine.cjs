@@ -89,6 +89,17 @@ function generateApiSurfaceDoc(graph) {
             lines.push('');
         }
     }
+    lines.push('## Retrieval API', '');
+    lines.push('The CommonJS runtime in `gsd-core/bin/lib/hybrid-semantic-rag.cjs` is generated from `src/hybrid-semantic-rag.cts`.');
+    lines.push('');
+    lines.push('| Function | Contract |');
+    lines.push('|---|---|');
+    lines.push('| `querySemanticSimilarFiles(query, planningDir, rootDir?, limit?)` | Backwards-compatible unique-file results: `{ file, score, preview }`. |');
+    lines.push('| `querySemanticChunks(query, planningDir, rootDir?, options?)` | Chunk results include `chunkId`, `content`, `file`, `language`, `startLine`, `endLine`, optional `symbol`/`section`, `score`, and `preview`. |');
+    lines.push('| `buildSemanticIndex(rootDir, planningDir?)` | Builds/reconciles schema `3.0.0-chunks`; content fingerprints determine freshness and writes are locked and atomic. |');
+    lines.push('');
+    lines.push('Query options support bounded `limit`/`topK`, `paths`/`languages`/`fileKinds`/`symbols`/`sections` filters, opt-in `diversity`, and optional synchronous `semanticProvider`/`reranker` callbacks. Provider errors fall back to local BM25 + graph/PageRank RRF. The opt-in `diagnostics` callback reports lifecycle and stage counts without query or source contents.');
+    lines.push('');
     return lines.join('\n');
 }
 // ─── Sync & Verification Engine ───────────────────────────────────────────────

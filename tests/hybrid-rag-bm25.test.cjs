@@ -73,7 +73,7 @@ def authenticate_user(token: str) -> bool:
   it('should build BM25 index with avgdl and index Swift, Kotlin, and Python files', () => {
     const index = buildSemanticIndex(tmpDir, planningDir);
 
-    assert.equal(index.version, '2.0.0-bm25');
+    assert.equal(index.version, '3.0.0-chunks');
     assert.equal(index.totalDocs >= 3, true);
     assert.equal(typeof index.avgdl, 'number');
     assert.equal(index.avgdl > 0, true);
@@ -82,6 +82,24 @@ def authenticate_user(token: str) -> bool:
     assert.equal(files.some(f => f.endsWith('UserRepository.swift')), true);
     assert.equal(files.some(f => f.endsWith('HomeScreen.kt')), true);
     assert.equal(files.some(f => f.endsWith('auth_service.py')), true);
+    assert.ok(Object.values(index.chunks).every(chunk => chunk.id && chunk.file && chunk.startLine >= 1 && chunk.endLine >= chunk.startLine));
+  });
+
+  it('creates bounded structural chunks with stable provenance and reconciles content changes', () => {
+    const file = path.join(tmpDir, 'service.ts');
+    fs.writeFileSync(file, 'export function alphaHandler() { return "alpha"; }\n\nexport function betaHandler() { return "beta"; }\n');
+    const first = buildSemanticIndex(tmpDir, planningDir);
+    const firstChunks = Object.values(first.chunks).filter(chunk => chunk.file === 'service.ts');
+    assert.equal(firstChunks.length, 2);
+    assert.deepEqual(firstChunks.map(chunk => chunk.symbol), ['alphaHandler', 'betaHandler']);
+    assert.ok(firstChunks.every(chunk => chunk.language === 'ts' && chunk.startLine > 0 && chunk.endLine >= chunk.startLine));
+
+    const originalMtime = fs.statSync(file).mtime;
+    fs.writeFileSync(file, 'export function alphaHandler() { return "omega"; }\n\nexport function betaHandler() { return "beta"; }\n');
+    fs.utimesSync(file, originalMtime, originalMtime);
+    const refreshed = buildSemanticIndex(tmpDir, planningDir);
+    assert.ok(Object.values(refreshed.chunks).some(chunk => chunk.file === 'service.ts' && chunk.content.includes('omega')));
+    assert.ok(!Object.values(refreshed.chunks).some(chunk => chunk.file === 'service.ts' && chunk.content.includes('alpha"')));
   });
 
   it('should query and rank files matching concepts using BM25', () => {

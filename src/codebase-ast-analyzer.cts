@@ -16,6 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { platformReadSync, platformWriteSync, platformEnsureDir, execGit } from './shell-command-projection.cjs';
 import { splitLines } from './text-lines.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -132,6 +133,7 @@ interface FileAnalysisResult {
   hasErrors?: boolean;
   mtime?: number;
   size?: number;
+  contentFingerprint?: string;
   unusedImports?: string[];
   role?: string;
   isOrphan?: boolean;
@@ -170,6 +172,7 @@ interface CodebaseGraph {
     scanDurationMs: number;
     filesByLanguage?: Record<string, number>;
     gitCommitSha?: string | null;
+    contentFingerprint?: string;
     totalKnowledgeNodes?: number;
   };
   files: Record<string, FileAnalysisResult>;
@@ -277,6 +280,50 @@ const DEFAULT_EXCLUDES = [
 
 function toPosixPath(filePath: string): string {
   return filePath.replace(/\\/g, '/');
+}
+
+/** Hashes supported project files without parsing them, including uncommitted edits. */
+function computeCodebaseContentFingerprint(rootDir: string, options: BuildGraphOptions = {}): string {
+  const root = path.resolve(rootDir);
+  const maxFiles = options.maxFiles ?? 2000;
+  const allowedExtensions = options.includeExtensions ? new Set(options.includeExtensions) : DEFAULT_EXTENSIONS;
+  const excludePatterns = options.excludePatterns ?? DEFAULT_EXCLUDES;
+  const entries: Array<[string, string]> = [];
+  const visited = new Set<string>();
+  const excluded = (relPath: string): boolean => {
+    const normalized = toPosixPath(relPath);
+    return excludePatterns.some(pattern => typeof pattern === 'string'
+      ? normalized === pattern || normalized.startsWith(pattern + '/') || normalized.includes('/' + pattern + '/')
+      : pattern.test(normalized));
+  };
+  const scan = (dir: string): void => {
+    if (entries.length >= maxFiles) return;
+    let real = dir;
+    try { real = fs.realpathSync(dir); } catch { /* use input path */ }
+    if (visited.has(real)) return;
+    visited.add(real);
+    let children: fs.Dirent[];
+    try { children = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)); }
+    catch { return; }
+    for (const child of children) {
+      if (entries.length >= maxFiles) break;
+      const full = path.join(dir, child.name);
+      const rel = toPosixPath(path.relative(root, full));
+      if (excluded(rel)) continue;
+      if (child.isDirectory()) scan(full);
+      else if (child.isFile()) {
+        const base = child.name.toLowerCase();
+        if (!allowedExtensions.has(path.extname(base)) && !SPECIAL_FILENAMES.has(base) && !base.includes('dockerfile')) continue;
+        try { entries.push([rel, crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex')]); }
+        catch { /* unreadable files are excluded from both graph and fingerprint */ }
+      }
+    }
+  };
+  scan(root);
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  const hash = crypto.createHash('sha256');
+  for (const [file, fingerprint] of entries) hash.update(`${file}\0${fingerprint}\n`);
+  return hash.digest('hex');
 }
 
 // ─── Semantic Security & Topology Helpers ─────────────────────────────────────
@@ -3110,24 +3157,27 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
 
           let mtime = 0;
           let size = 0;
+          let sourceFingerprint = '';
           try {
             const stat = fs.statSync(fullPath);
             mtime = Math.floor(stat.mtimeMs);
             size = stat.size;
+            sourceFingerprint = crypto.createHash('sha256').update(fs.readFileSync(fullPath)).digest('hex');
           } catch {
             // Non-blocking
           }
 
           let result: FileAnalysisResult;
           const prevFile = options.previousGraph?.files?.[relKey];
-          if (prevFile && prevFile.mtime && prevFile.mtime === mtime && prevFile.size === size) {
-            // Incremental AST cache hit via mtime + size
+          if (prevFile && prevFile.contentFingerprint === sourceFingerprint && sourceFingerprint) {
+            // Content fingerprints catch same-size edits and restored mtimes.
             result = prevFile;
           } else {
             result = analyzeSourceFile(fullPath, undefined, rootDir);
             result.filePath = relKey;
             result.mtime = mtime;
             result.size = size;
+            result.contentFingerprint = sourceFingerprint;
           }
 
           const lang = result.language || 'unknown';
@@ -3371,6 +3421,8 @@ function buildCodebaseGraph(rootDir: string, options: BuildGraphOptions = {}): C
       scanDurationMs: duration,
       filesByLanguage,
       gitCommitSha,
+      // Fingerprint the full supported source set even when analysis is capped.
+      contentFingerprint: computeCodebaseContentFingerprint(rootDir),
       totalKnowledgeNodes,
     },
     files: filesMap,
@@ -3483,6 +3535,7 @@ export = {
   buildCodebaseGraph,
   querySymbolLocations,
   queryFileDependencies,
+  computeCodebaseContentFingerprint,
   queryTopCentralFiles,
   saveCodebaseGraph,
   loadCodebaseGraph,

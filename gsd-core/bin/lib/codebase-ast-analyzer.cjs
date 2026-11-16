@@ -19,6 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 const text_lines_cjs_1 = require("./text-lines.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -109,6 +110,65 @@ const DEFAULT_EXCLUDES = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toPosixPath(filePath) {
     return filePath.replace(/\\/g, '/');
+}
+/** Hashes supported project files without parsing them, including uncommitted edits. */
+function computeCodebaseContentFingerprint(rootDir, options = {}) {
+    const root = node_path_1.default.resolve(rootDir);
+    const maxFiles = options.maxFiles ?? 2000;
+    const allowedExtensions = options.includeExtensions ? new Set(options.includeExtensions) : DEFAULT_EXTENSIONS;
+    const excludePatterns = options.excludePatterns ?? DEFAULT_EXCLUDES;
+    const entries = [];
+    const visited = new Set();
+    const excluded = (relPath) => {
+        const normalized = toPosixPath(relPath);
+        return excludePatterns.some(pattern => typeof pattern === 'string'
+            ? normalized === pattern || normalized.startsWith(pattern + '/') || normalized.includes('/' + pattern + '/')
+            : pattern.test(normalized));
+    };
+    const scan = (dir) => {
+        if (entries.length >= maxFiles)
+            return;
+        let real = dir;
+        try {
+            real = node_fs_1.default.realpathSync(dir);
+        }
+        catch { /* use input path */ }
+        if (visited.has(real))
+            return;
+        visited.add(real);
+        let children;
+        try {
+            children = node_fs_1.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+        }
+        catch {
+            return;
+        }
+        for (const child of children) {
+            if (entries.length >= maxFiles)
+                break;
+            const full = node_path_1.default.join(dir, child.name);
+            const rel = toPosixPath(node_path_1.default.relative(root, full));
+            if (excluded(rel))
+                continue;
+            if (child.isDirectory())
+                scan(full);
+            else if (child.isFile()) {
+                const base = child.name.toLowerCase();
+                if (!allowedExtensions.has(node_path_1.default.extname(base)) && !SPECIAL_FILENAMES.has(base) && !base.includes('dockerfile'))
+                    continue;
+                try {
+                    entries.push([rel, node_crypto_1.default.createHash('sha256').update(node_fs_1.default.readFileSync(full)).digest('hex')]);
+                }
+                catch { /* unreadable files are excluded from both graph and fingerprint */ }
+            }
+        }
+    };
+    scan(root);
+    entries.sort(([a], [b]) => a.localeCompare(b));
+    const hash = node_crypto_1.default.createHash('sha256');
+    for (const [file, fingerprint] of entries)
+        hash.update(`${file}\0${fingerprint}\n`);
+    return hash.digest('hex');
 }
 // ─── Semantic Security & Topology Helpers ─────────────────────────────────────
 const SECURITY_PATTERNS = {
@@ -2772,18 +2832,20 @@ function buildCodebaseGraph(rootDir, options = {}) {
                     const relKey = toPosixPath(relPath);
                     let mtime = 0;
                     let size = 0;
+                    let sourceFingerprint = '';
                     try {
                         const stat = node_fs_1.default.statSync(fullPath);
                         mtime = Math.floor(stat.mtimeMs);
                         size = stat.size;
+                        sourceFingerprint = node_crypto_1.default.createHash('sha256').update(node_fs_1.default.readFileSync(fullPath)).digest('hex');
                     }
                     catch {
                         // Non-blocking
                     }
                     let result;
                     const prevFile = options.previousGraph?.files?.[relKey];
-                    if (prevFile && prevFile.mtime && prevFile.mtime === mtime && prevFile.size === size) {
-                        // Incremental AST cache hit via mtime + size
+                    if (prevFile && prevFile.contentFingerprint === sourceFingerprint && sourceFingerprint) {
+                        // Content fingerprints catch same-size edits and restored mtimes.
                         result = prevFile;
                     }
                     else {
@@ -2791,6 +2853,7 @@ function buildCodebaseGraph(rootDir, options = {}) {
                         result.filePath = relKey;
                         result.mtime = mtime;
                         result.size = size;
+                        result.contentFingerprint = sourceFingerprint;
                     }
                     const lang = result.language || 'unknown';
                     filesByLanguage[lang] = (filesByLanguage[lang] || 0) + 1;
@@ -3021,6 +3084,8 @@ function buildCodebaseGraph(rootDir, options = {}) {
             scanDurationMs: duration,
             filesByLanguage,
             gitCommitSha,
+            // Fingerprint the full supported source set even when analysis is capped.
+            contentFingerprint: computeCodebaseContentFingerprint(rootDir),
             totalKnowledgeNodes,
         },
         files: filesMap,
@@ -3115,6 +3180,7 @@ module.exports = {
     buildCodebaseGraph,
     querySymbolLocations,
     queryFileDependencies,
+    computeCodebaseContentFingerprint,
     queryTopCentralFiles,
     saveCodebaseGraph,
     loadCodebaseGraph,

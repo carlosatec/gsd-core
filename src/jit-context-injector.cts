@@ -11,13 +11,13 @@ import { platformReadSync } from './shell-command-projection.cjs';
 import { clampPercentFromFraction } from './phase-lifecycle.cjs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
-const { loadCodebaseGraph, buildCodebaseGraph, queryFileDependencies } = codebaseAst;
+const { loadCodebaseGraph, buildCodebaseGraph, saveCodebaseGraph, computeCodebaseContentFingerprint, queryFileDependencies } = codebaseAst;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import jitTelemetry = require('./jit-telemetry.cjs');
 const { recordJitInvocation, LANGUAGE_CHAR_WEIGHTS, estimateTokens } = jitTelemetry;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import semanticRag = require('./hybrid-semantic-rag.cjs');
-const { querySemanticSimilarFiles } = semanticRag;
+const { querySemanticChunks } = semanticRag;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import hostDetection = require('./host-runtime-detection.cjs');
 const { detectHostRuntime } = hostDetection;
@@ -336,8 +336,10 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   const { targetFiles } = options;
 
   let graph = loadCodebaseGraph(resolvedPlanningDir);
-  if (!graph) {
+  const currentGraphFingerprint = computeCodebaseContentFingerprint(root);
+  if (!graph || graph.stats?.contentFingerprint !== currentGraphFingerprint) {
     graph = buildCodebaseGraph(root);
+    saveCodebaseGraph(resolvedPlanningDir, graph);
   }
 
   let allNeighbors: NeighborSymbolInfo[] = [];
@@ -512,13 +514,20 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   }
 
   // Query semantic RAG if a query or task prompt was provided
-  const semanticallyRelated: Array<{ file: string; score: number; preview: string }> = [];
+  const semanticallyRelated: Array<{ file: string; score: number; preview: string; content: string; startLine: number; endLine: number; language: string; symbol?: string; section?: string }> = [];
   if (options.query) {
-    const hits = querySemanticSimilarFiles(options.query, resolvedPlanningDir, root, 3);
+    const hits = querySemanticChunks(options.query, resolvedPlanningDir, root, { limit: 6, topK: 80, diversity: true });
+    let relatedChars = 0;
+    const relatedCharBudget = Math.max(0, Math.min(8000, Math.floor(maxTokens * 4 * 0.15)));
     for (const h of hits) {
-      if (!targetFiles.includes(h.file) && !allNeighbors.some(n => n.file === h.file)) {
-        semanticallyRelated.push(h);
-      }
+      if (targetFiles.includes(h.file) || allNeighbors.some(n => n.file === h.file)) continue;
+      if (semanticallyRelated.some(existing => existing.file === h.file && existing.startLine <= h.endLine && h.startLine <= existing.endLine)) continue;
+      const remaining = relatedCharBudget - relatedChars;
+      if (remaining <= 0) break;
+      const content = h.content.slice(0, Math.min(2400, remaining));
+      if (!content.trim()) continue;
+      semanticallyRelated.push({ ...h, content });
+      relatedChars += content.length + h.file.length + 48;
     }
   }
 
@@ -688,7 +697,11 @@ function assembleJitContext(options: AssembleJitContextOptions): JitContextPacka
   if (semanticallyRelated.length > 0) {
     lines.push('#### Semantically Related Modules:');
     for (const r of semanticallyRelated) {
-      lines.push(`- **${r.file}** (similarity: ${r.score}): ${r.preview}`);
+      const attribution = r.symbol ? `symbol: ${r.symbol}` : r.section ? `section: ${r.section}` : 'chunk';
+      lines.push(`- **${r.file}:${r.startLine}-${r.endLine}** (${attribution}; score: ${r.score.toFixed(4)})`);
+      lines.push('```' + r.language);
+      lines.push(r.content);
+      lines.push('```');
     }
     lines.push('');
   }

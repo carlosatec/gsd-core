@@ -301,7 +301,7 @@ describe('graphify graph_path override — diff & snapshot', () => {
   });
 });
 
-// ─── build (graphs_dir honors the key) ────────────────────────────────────────
+// ─── build reports the canonical graph persistence path ───────────────────────
 
 describe('graphify graph_path override — build', () => {
   let tmpDir, planningDir, cfgDir, env;
@@ -330,24 +330,25 @@ describe('graphify graph_path override — build', () => {
     env.restore();
   });
 
-  test('set → build stays project-scoped (graphs_dir is the default; umbrella graph is built in the umbrella project)', () => {
-    // graphify.graph_path is a READ-path override only (#1825). Build always cp's
-    // into the project's `.planning/graphs/` (the build skill hardcodes that dest),
-    // so graphs_dir must reflect the real destination even when graph_path is set.
+  test('configured read path does not change the canonical graph build destination', () => {
     const umbrellaDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-umbrella-build-'));
     try {
       const abs = path.join(umbrellaDir, 'graph.json');
       setGraphPath(planningDir, abs);
 
       const result = graphifyBuild(tmpDir);
-      assert.strictEqual(result.graphs_dir, path.join(planningDir, 'graphs'));
+      assert.strictEqual(result.graph_path, path.join(planningDir, 'intel', 'codebase-graph.json'));
+      assert.strictEqual(result.graphify_out, result.graph_path);
+      assert.deepStrictEqual(result.artifacts, ['.planning/intel/codebase-graph.json']);
     } finally {
       cleanup(umbrellaDir);
     }
   });
 
-  test('unset → graphs_dir is the default .planning/graphs (byte-identical)', () => {
+  test('unset → build reports and writes the same canonical graph path', () => {
     const result = graphifyBuild(tmpDir);
-    assert.strictEqual(result.graphs_dir, path.join(planningDir, 'graphs'));
+    assert.strictEqual(result.graph_path, path.join(planningDir, 'intel', 'codebase-graph.json'));
+    assert.strictEqual(result.graphify_out, result.graph_path);
+    assert.ok(fs.existsSync(result.graph_path));
   });
 });

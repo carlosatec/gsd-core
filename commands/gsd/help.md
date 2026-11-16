@@ -21,6 +21,7 @@ Output ONLY the reference content of the chosen tier. Do NOT add:
 
 <load_on_demand>
 Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/update.md
 - workflows/manager.md
 - workflows/thread.md
 - workflows/note.md

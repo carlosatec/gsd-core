@@ -69,7 +69,7 @@ GSD Core is a **meta-prompting framework** that sits between the user and AI cod
 │       NEXUS STATIC INTELLIGENCE, AST v2.1 & PROJECT SECOND BRAIN (Fases 1, 5, 16, 27, 31, 37)                           │
 │   src/codebase-ast-analyzer.cts ── Polyglot AST Engine (35+ extensões) + PageRank + Tipagem Semântica + KnowledgeNodes   │
 │   .planning/intel/codebase-graph.json ── Grafo SSOT Ancorado por Git Commit SHA + Arestas type_only vs runtime           │
-│   src/obsidian-second-brain.cts ── Motor do Segundo Cérebro Obsidian (.planning/vault/ MOC 00-Home.md & 600+ notas)     │
+│   src/obsidian-second-brain.cts ── Optional Obsidian Second Brain export (.planning/vault/)                            │
 │   src/visual-graph-exporter.cts ── Grafo Visual 360° HTML Canvas 2D/3D (1.585 nós, governs & specifies)                 │
 │   src/canvas-roadmap-generator.cts ── Gerador de Dual Canvas (00-Vault.canvas Mindmap & 01-Roadmap.canvas 37 Fases)      │
 │   src/obsidian-interop.cts ── Resolução de [[wikilinks]] com zero alvos órfãos (.planning/intel/backlinks.json)         │
@@ -372,7 +372,7 @@ Agents always return a `RESEARCH.md` path, never raw fetched content. Context di
 
 ### Session Intelligence & Deterministic Replay Engine (`src/session-logger.cts`, `src/session-replay.cts`, Phase 14 — D-54, D-55, D-56, D-58)
 
-The Session Intelligence subsystem provides causal observability and deterministic reproduction of AI coding agent runs across all 11 canonical commands:
+The Session Intelligence subsystem provides causal observability and deterministic reproduction of instrumented AI coding command runs:
 
 1. **Append-Only JSON Lines Stream (`src/session-logger.cts`):**
    - Emits structured events to `.planning/intel/sessions/session_<timestamp>_<uuid>.jsonl`.
@@ -1080,7 +1080,7 @@ Introduced in Phase 22 to extend telemetry beyond execution waves across the ent
 - **Transactional Cooperative Locking (`withFileLockSync` — D-111):** Envelopes all mutations to `.planning/intel/telemetry.json` with synchronous filesystem locks and 5-second TTL stale-lock eviction, guaranteeing atomic writes even under intense parallel subagent workloads.
 - **Idempotency Deduplication (`invocationId` — D-112):** Guarantees that duplicate hook executions or re-runs with the same invocation identifier do not double-count saved or used tokens.
 - **Dual-Mode Review Architecture (D-113, D-121):**
-  - **Targeted Review (`targeted`):** Evaluates phase-scoped changes or explicit files, computing surgical JIT context savings (80% to 95%).
+  - **Targeted Review (`targeted`):** Evaluates phase-scoped changes or explicit files. JIT context savings vary by project and task.
   - **Full-Repo Audit (`full-repo`):** Activated via `--full` or `--repo`. Runs zero-cost local AST static analysis over the complete repository, queries PageRank centrality hubs (`queryTopCentralFiles`), and transparently records `scopeMode: 'full-repo'`, `tokensSaved = 0`, and `efficiencyPct = 0%` for absolute metric honesty.
 - **Unified CLI Seam (`HOST_COMMAND_ROUTERS` — D-117):** Direct router dispatch for canonical commands (`plan`, `exec`, `review`, `verify`, `ship`, `auto`, `status`, `tokens`) in `gsd-tools.cjs`.
 - **Physical File Auto-Estimator (D-114):** Inspects actual files and phase plans to determine accurate character and token weights without relying on unexpanded shell variables.
@@ -1134,7 +1134,7 @@ Introduced in Phase 31, unifying the knowledge graph architecture, eliminating m
   - Backwards-compatible resolution (`resolveGraphLocation`) seamlessly falls back to legacy locations if present.
 - **Git Commit Pinning & Ecosystem Health (`checkIntelHealth`):**
   - Anchors `graph.stats.gitCommitSha` via `git rev-parse HEAD` upon graph construction.
-  - Exposes an $O(1)$ health check in `/gsd-status` comparing the pinned SHA with the active Git HEAD, signaling when the graph requires rebuilding.
+  - `/gsd-status` compares a content-derived fingerprint of supported source files, including uncommitted edits; the Git SHA is lineage metadata and cannot alone declare the graph current.
 - **Semantic Edge Typing & Blast Radius Damping (`dependencyKinds`):**
   - Labels graph edges as `'runtime'`, `'type_only'`, or `'infra'`.
   - In `calculateBlastRadius`, applies a 0.2 damping factor to direct counts, transitive dependents, and PageRank weights when dependents only consume types (`type_only`), eliminating false-positive critical blast radius alerts during type refactoring.
@@ -1231,6 +1231,33 @@ Introduced in Phase 35, prioritizing code quality, runtime stability, full AST s
   - Dynamic skill manifest triage in `commands/gsd/plan.md` and `skills/gsd-plan/SKILL.md`, reducing bootstrap overhead from 113k to <5k tokens via progressive on-demand routing.
 
 ---
+
+### 12. Chunk-Aware Offline Retrieval (Phase 39)
+
+The local retrieval engine in `src/hybrid-semantic-rag.cts` keeps the zero-dependency, offline-first contract. Schema `3.0.0-chunks` indexes bounded code/document chunks with a stable ID, relative file path, language, line range, optional AST symbol or Markdown section, content fingerprint, and a file-level compatibility projection. Source symbols come from the native AST analyzer; Markdown headings define sections; deterministic line chunks are the fallback.
+
+Every supported file is content-hashed during reconciliation. Size and mtime are metadata only and cannot declare content current. Added, changed, removed, renamed, corrupt, unsupported-schema, and project-root changes are reconciled before a query consumes the index. The index is written under `.planning/intel/semantic-index.json` through the cooperative file lock and atomic write seam. Symlink entries and paths escaping the project root are excluded.
+
+Indexing and retrieval have deterministic resource limits: 256 KiB per file, 32 MiB per index, 8 KiB or 80 lines per chunk, 64 chunks per file, 24 query terms, a candidate pool capped at 200, and at most 200 returned chunks. Oversized files are skipped and per-file chunk overflow is truncated; diagnostics expose counts without source text. The default retrieval path is BM25 plus PageRank and reciprocal-rank fusion. An optional local semantic scorer and deterministic reranker are accepted only when explicitly supplied; errors fall back to local ranking. Metadata filters for path, language, file kind, symbol, and section run before scoring. MMR-style diversity is opt-in.
+
+`querySemanticSimilarFiles(query, planningDir, rootDir?, limit?)` retains its legacy `{file, score, preview}` result shape. `querySemanticChunks(query, planningDir, rootDir?, options?)` returns chunk content and provenance for richer callers. JIT uses the richer API, removes overlapping/irrelevant hits, includes `file:start-end` and symbol/section attribution, and caps the retrieval contribution at 15% of the configured context budget (up to 8,000 characters).
+
+### Knowledge artifact lifecycle and command triggers
+
+| Artifact | Class and owner | Freshness | Creation and refresh | Retention |
+| --- | --- | --- | --- | --- |
+| `STATE.md`, `ROADMAP.md`, `PROJECT.md`, phase research/plans | Authoritative; user and planning workflow | User-maintained state | `/gsd:plan` or direct edits | Preserve user content |
+| `intel/codebase-graph.json` | Derived; native AST analyzer | SHA-256 fingerprint of supported source contents, including uncommitted edits | `/gsd:graph`; JIT refreshes when required | Replace derived cache |
+| `intel/semantic-index.json` | Derived; offline RAG indexer | Per-file content fingerprints and schema | Retrieval refreshes when required by plan/exec/JIT | Replace derived cache |
+| `intel/telemetry.json` | Derived measurements; JIT telemetry | Freshness not applicable | JIT invocation | Retain cumulative measurements |
+| `codebase/ARCHITECTURE.md`, `APIS.md` | Derived; living docs generator | Explicit generator run | Explicit docs sync | Regenerable output |
+| `memory/decisions.jsonl` and archives | Durable knowledge; user and memory engine | Freshness not applicable | Explicit memory record, decision sync, verified repair lesson | Preserve user-authored records; architecture decisions persist |
+| Codebase map, vault, graph/visual exports | Optional; explicit map/export commands | Generation time | User selection or explicit command; `--vault` stays opt-in | Retain user-managed exports |
+| `.planning/tmp/` | Transient; active workflow | Active operation | Workflow-specific | Remove only known tool-owned temporary files |
+
+`/gsd:status` reads this lifecycle and never builds, rewrites, or cleans artifacts. It reports rebuildable derived data as current, stale, or missing; state and memory use presence; opt-in exports remain absent until requested. The graph has one canonical persistence path: `.planning/intel/codebase-graph.json`. `graphifyBuild` reports that exact path and no longer advertises a duplicate `.planning/graphs/graph.json` artifact. Optional maps, vaults, and visual exports are never generated implicitly.
+
+The offline labeled fixture separates development and held-out queries across exact identifiers, conceptual retrieval, multilingual documentation, and hard negatives. At K=3, the recorded run measured Recall 0.75, Precision 0.25, and MRR 0.75 on both splits for the chunk pipeline and the whole-file baseline. The fixture index was 80,585 bytes and built in 213 ms; average query time was 3.69 ms (development) and 4.11 ms (held-out) for chunk retrieval, compared with 0.91 ms and 1.13 ms for the whole-file projection. These timings are environment-specific and the corpus is intentionally small; retrieval metrics do not measure answer quality or groundedness. Opt-in diagnostics report index state/age, rebuild and query timings, and stage counts, never raw query or source content.
 
 ## Related
 

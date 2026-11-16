@@ -67,7 +67,8 @@ export class UserService {
 
     assert.equal(buildRes.action, 'completed');
     assert.equal(buildRes.version, '2.3-native');
-    assert.equal(buildRes.artifacts.includes('codebase-graph.json'), true);
+    assert.deepEqual(buildRes.artifacts, ['.planning/intel/codebase-graph.json']);
+    assert.equal(buildRes.graph_path, path.join(planningDir, 'intel', 'codebase-graph.json'));
 
     const graphFile = path.join(planningDir, 'intel', 'codebase-graph.json');
     assert.equal(fs.existsSync(graphFile), true);

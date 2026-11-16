@@ -10,7 +10,7 @@
 
 <br/>
 
-[![Versão](https://img.shields.io/badge/version-3.8.0-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
+[![Versão](https://img.shields.io/badge/version-3.8.1-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
 [![Testes](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Testes&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-38bdf8?style=for-the-badge)](LICENSE)
 [![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
@@ -31,8 +31,8 @@ A maioria dos fluxos de trabalho com IA em projetos médios e grandes falha devi
 3. **Edições Sem Salvaguarda & Regressões Silenciosas:** Os agentes alteram arquivos sem validação estática prévia, quebrando contratos de tipos, violando regras de negócio e introduzindo bugs em cascata.
 
 **O GSD Core Nexus elimina essas falhas na raiz:**
-- 🧠 **Segundo Cérebro do Projeto (Obsidian Vault):** Transforma automaticamente seu código, roteiro de fases e 170+ decisões de arquitetura em um **Obsidian Vault** estruturado (`.planning/vault/`) com mindmaps interativos em 2D.
-- ⚡ **Injeção de Contexto JIT Cirúrgica:** Economiza de **80% a 95%** de tokens ao injetar apenas os tipos, dependências e decisões ativas pertinentes no prompt do subagente.
+- 🧠 **Conhecimento Persistente do Projeto:** Preserva o estado do projeto e as decisões entre sessões. O vault Obsidian, os mapas do código e as exportações visuais só são gerados quando solicitados.
+- ⚡ **Contexto JIT com Limites:** Recupera trechos relevantes de código e documentação com origem em arquivo e linhas, ranking local e limites explícitos de contexto.
 - 🛡️ **Guardiões Cognitivos Soberanos:** Avaliação de risco System One (`SecurityHead`, `ArchitectureHead`, `QualityHead`), invariantes constitucionais `Noul` e checagem de aterramento AST 100% locais, sem dependência de APIs externas.
 - 🔄 **Loop de Auto-Cura:** Guardrails pré-voo barram mutações perigosas antes das alterações, enquanto loops automáticos de teste diagnosticam e auto-reparam falhas de execução.
 
@@ -54,46 +54,46 @@ Cada marco do projeto é dividido em fases testáveis e orquestradas através de
                           (Obsidian Vault · Grafo 360° Visual · Memória SSOT)
 ```
 
-1. **Discuss & Spec (`/gsd:plan --spec`):** Captura a intenção de arquitetura e os requisitos normativos RFC-2119 antes do código ser escrito.
+1. **Discuss & Spec (`/gsd:plan`):** Registra requisitos e decisões de implementação antes da execução.
 2. **Plan (`/gsd:plan`):** Decompõe a fase em ondas paralelas de tarefas atômicas com orçamentos JIT de tokens calibrados.
-3. **Execute (`/gsd:exec --auto-heal`):** Executa as tarefas com subagentes em contextos limpos, contratos estáticos de pre-flight e auto-cura em caso de erro.
+3. **Execute (`/gsd:exec`):** Executa as tarefas dos planos com verificações prévias e recuperação automática configurada.
 4. **Review & Verify (`/gsd:review --fix` & `/gsd:verify`):** Audita o código em busca de complexidade, dead code e anti-padrões de UI com auto-reparo, seguido por verificação UAT interativa.
-5. **Ship (`/gsd:ship`):** Prepara a branch de release, sincroniza a documentação viva, atualiza o Segundo Cérebro e prepara o Pull Request para merge.
+5. **Ship (`/gsd:ship`):** Verifica a prontidão da entrega e prepara o fluxo solicitado.
 
 ---
 
-## 🚀 Os 11 Comandos Canônicos Unificados
+## 🚀 Comandos Canônicos
 
-O GSD Core Nexus unifica sua superfície em **11 comandos canônicos essenciais**, consistentes em qualquer runtime de IA suportado:
+O fluxo principal tem seis comandos, com `auto` para execução autônoma e quatro comandos de suporte:
 
 | Comando | Ação & Superpoder | Principais Flags |
 | :--- | :--- | :--- |
-| **`/gsd-status`** | Diagnóstico situacional em tempo real, progresso de fases e saúde do AST | `--sync`, `--refresh`, `--raw` |
-| **`/gsd-plan`** | Planejamento em ondas atômicas com especificações, discussões e JIT | `[fase]`, `--spec`, `--speckit` |
-| **`/gsd-exec`** | Execução paralela em ondas com guardrails estáticos e commits atômicos | `[fase]`, `--auto-heal`, `--force`, `--isolate` |
-| **`/gsd-review`** | Code review profundo (AST, segurança, complexidade, órfãos) com auto-reparo | `[fase]`, `--fix`, `--full`, `--repo` |
-| **`/gsd-verify`** | Validação UAT conversacional de aceitação com auto-pass e checagem RFC-2119 | `[fase]`, `--auto` |
-| **`/gsd-ship`** | Higiene git, preparação de release branch, changelog, sync do vault e PR | `[fase]` |
-| **`/gsd-auto`** | Piloto automático ponta a ponta com checkpoints de segurança e auto-cura | `[fase]` |
-| **`/gsd-tokens`** | Telemetria multi-comando em tempo real, custos em USD e risco de amnésia | `--sessions`, `--cost`, `--all`, `--web`, `--open` |
-| **`/gsd-graph`** | Gerador do Grafo Visual HTML interativo e compilador do Obsidian Vault | `--vault`, `--open`, `--query="<termo>"`, `--canvas` |
-| **`/gsd-migrate`** | Assistente de modernização não-destrutiva de projetos para arquitetura 3.7 | `--dry-run` |
-| **`/gsd-help`** | Guia de referência rápida, sintaxe e manual operacional dos comandos | — |
+| **`/gsd:status`** | Lê o progresso, a atualidade dos artefatos e a telemetria; `--sync` ou `--refresh` atualiza dados derivados explicitamente | `--sync`, `--refresh` |
+| **`/gsd:plan`** | Cria ou atualiza um plano de fase com requisitos, ondas e contexto JIT | `[fase]` |
+| **`/gsd:exec`** | Executa os planos da fase com verificações prévias e validação | `[fase]` |
+| **`/gsd:review`** | Analisa a implementação e identifica problemas acionáveis | `[fase]` |
+| **`/gsd:verify`** | Confere requisitos da fase e evidências de validação | `[fase]` |
+| **`/gsd:ship`** | Prepara o trabalho concluído para entrega | `[fase]` |
+| **`/gsd:auto`** | Executa o fluxo de fase com checkpoints de segurança | `[fase]` |
+| **`/gsd:tokens`** | Consulta telemetria de tokens e JIT | opções variam por runtime |
+| **`/gsd:graph`** | Gera o grafo canônico e as exportações solicitadas; o vault é opcional | `--vault`, `--canvas`, `--open` |
+| **`/gsd:migrate`** | Migra um projeto legado para o layout GSD atual | `--dry-run` |
+| **`/gsd:help`** | Exibe orientações dos comandos | — |
 
 ---
 
 ## 💎 Destaques Tecnológicos do GSD Core Nexus 3.8
 
 ### 1. 🧠 Segundo Cérebro do Projeto & Motor de Obsidian Vault
-- **Vault Não-Destrutivo (`.planning/vault/`):** Gera automaticamente mais de 600 notas markdown interconectadas com `[[wikilinks]]` cobrindo decisões, fases, módulos e lições aprendidas.
+- **Vault opcional (`.planning/vault/`):** O comando explícito `/gsd:graph --vault` exporta decisões, fases, módulos e lições em notas Markdown interligadas.
 - **Master Map of Content (`00-Home.md`):** Portal de navegação com visão estruturada dos módulos de produção (`src/`), ferramentas e decisões.
 - **Dois Mapas Visuais em Canvas:**
   - `00-Vault.canvas`: Mindmap interativo em 2D dos módulos ativos, decisões e fronteiras do sistema.
-  - `01-Roadmap.canvas`: Roteiro visual completo das 37 fases com status colorido.
-- **Busca Instantânea no Segundo Cérebro (`/gsd:graph --query "<termo>"`):** Busca léxica BM25 sub-segundo em decisões, módulos e lições direto do terminal.
+  - `01-Roadmap.canvas`: Exportacao visual opcional do roteiro atual do projeto.
+- **Memória persistente:** Memórias registradas pelo usuário e decisões arquiteturais permanecem entre sessões.
 
 ### 2. 🌐 Grafo Visual 360° de Conhecimento AST (`graph-view.html`)
-- **Aplicação HTML5 Canvas 2D Force-Directed 100% Offline:** Renderiza toda a topologia do seu código (1.500+ nós, 1.900+ conexões) em `.planning/intel/graph-view.html`.
+- **Grafo HTML5 Offline:** Uma exportação solicitada gera a topologia do código em `.planning/intel/graph-view.html`.
 - **Conexões Direcionadas de Governança:** Decisões arquiteturais são ligadas aos arquivos de código que elas governam (`governs`); fases são ligadas aos planos correspondentes (`specifies`).
 - **Zero Dependências:** Funciona nativamente em qualquer navegador com animações fluidas, visual dark neon e filtros interativos por tipo e relevância.
 
@@ -103,20 +103,25 @@ O GSD Core Nexus unifica sua superfície em **11 comandos canônicos essenciais*
   - `Noul`: Impede alterações que violem regras de integridade do [`CONSTITUTION.md`](CONSTITUTION.md).
   - `Score`: Detecta alucinações de métodos ou incompatibilidades de assinaturas com base na AST real.
   - `Choice`: Audita o cumprimento rigoroso dos requisitos RFC 2119 das especificações da fase.
-- **Memória Contínua Claude-Mem (`decisions.jsonl`):** Registro permanente das decisões de arquitetura imune a decaimento temporal com monitoramento ativo contra amnésia (`amnesiaRisk: LOW`, `recall: 99.2%`).
+- **Memória Contínua Claude-Mem (`decisions.jsonl`):** Registro durável de decisões arquiteturais e lições registradas para uso entre sessões.
 
 ### 4. ⚡ Injeção Cirúrgica JIT & AST Universal Poliglota
-- **Zero Python / TypeScript Nativo:** Análise estática pura cobrindo 35+ linguagens e formatos (TypeScript, JavaScript, Python, Go, Rust, C#, Java, Swift, Kotlin, PHP, Ruby, Dart, Zig, Astro, Protobuf, SQL, CSS).
-- **Mobile 360° Nativo:** Suporte completo para iOS (Swift, SwiftUI) e Android (Kotlin, Jetpack Compose).
-- **Tipagem Semântica de Arestas:** Separação entre imports `type_only` e `runtime`, amortecendo falsos positivos no cálculo de blast radius em 80%.
+- **Zero Python / TypeScript Nativo:** A análise estática suporta TypeScript, JavaScript, Python, Go, Rust, C#, Java, Swift, Kotlin, PHP, Ruby, Dart, Zig, Astro, Protobuf, SQL, CSS e outros formatos.
+- **Mobile 360° Nativo:** A análise AST suporta arquivos de código Swift e Kotlin.
+- **Tipagem Semântica de Arestas:** Distingue imports `type_only` e `runtime` no cálculo de blast radius.
 - **Detecção Proativa de Código Morto:** Identifica módulos órfãos não referenciados em pastas de produção (`src/`).
 
-### 5. 📊 Observabilidade 360° & Telemetria em Tempo Real
+### 5. 📚 Recuperação Local por Trechos e Atualidade dos Artefatos
+- O índice semântico armazena trechos limitados de código e Markdown com origem, linhas, linguagem e símbolo ou seção.
+- Fingerprints de conteúdo detectam edições mesmo quando tamanho e data de modificação não mudam. O grafo AST canônico fica em `.planning/intel/codebase-graph.json`.
+- `/gsd:status` informa a atualidade sem gravar arquivos. Mapas, vaults e exportações visuais continuam opcionais.
+
+### 6. 📊 Observabilidade 360° & Telemetria em Tempo Real
 - **Governança Granular de Tokens:** Monitoramento contínuo em todos os comandos (`plan`, `exec`, `review`, `verify`), medindo tokens economizados e taxa de compressão real.
 - **Modelagem Financeira em $ USD:** Cálculo de custos em tempo real para Claude 3.5 Sonnet, GPT-4o, Gemini 1.5 Pro, DeepSeek V3 e modelos locais.
 - **Dashboards ASCII e Web:** Terminal adaptativo em 65 colunas (`/gsd:tokens`) e dashboard SVG/HTML offline (`npm run dashboard`).
 
-### 6. 🔀 Concorrência com Worktrees & Isolamento de Agentes
+### 7. 🔀 Concorrência com Worktrees & Isolamento de Agentes
 - **Isolamento Efêmero com Git Worktrees:** Concorrência zero-copy (padrão Worktrunk) com suporte seguro a Directory Junctions no NTFS (Windows).
 - **Fachada Modular de State Lock:** Coordenação transacional entre múltiplos processos com verificação de PIDs ativos e recuperação atômica de locks órfãos.
 
@@ -151,10 +156,10 @@ npx github:carlosatec/gsd-core --all --global
 Após a instalação, comece a usar os comandos imediatamente:
 
 ```bash
-/gsd-status       # Verifica estado, frescor do AST e Segundo Cérebro
-/gsd-plan         # Planeja a próxima fase com contexto cirúrgico JIT
-/gsd-exec         # Executa planos com guardrails e auto-cura
-/gsd-graph --vault# Compila e abre o Segundo Cérebro no Obsidian
+/gsd:status       # Le o estado do projeto e a atualidade dos artefatos
+/gsd:plan         # Planeja a proxima fase com contexto JIT
+/gsd:exec         # Executa planos de fase com verificacoes previas
+/gsd:graph --vault # Exporta explicitamente o Segundo Cerebro no Obsidian
 ```
 
 ---
@@ -162,7 +167,7 @@ Após a instalação, comece a usar os comandos imediatamente:
 ## 📚 Documentação
 
 - **[Tutorial Prático: Dominando o GSD Core Nexus 3.8](docs/pt-BR/tutorials/tutorial-pratico.md)** ([English](docs/tutorials/practical-tutorial.md)) 🔥
-- **[Referência de Comandos](docs/COMMANDS.md):** Guia detalhado de todos os 11 comandos canônicos e suas flags.
+- **[Referência de Comandos](docs/COMMANDS.md):** Guia de comandos canônicos, flags e fluxos de trabalho.
 - **[Arquitetura do Sistema](docs/ARCHITECTURE.md):** Imersão profunda na arquitetura de componentes, motor AST e injeção JIT.
 - **[Catálogo de Funcionalidades](docs/FEATURES.md):** Registro de todas as 170+ capacidades e marcos arquiteturais.
 - **[Guia de Configuração](docs/CONFIGURATION.md):** Como configurar perfis de modelo, revisores e tolerâncias de guardrails.

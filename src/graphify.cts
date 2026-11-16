@@ -663,21 +663,19 @@ function graphifyBuild(cwd: string): unknown {
   const intelDir = path.join(planningDir, 'intel');
   fs.mkdirSync(intelDir, { recursive: true });
 
-  const graphsDir = path.join(planningDir, 'graphs');
-  fs.mkdirSync(graphsDir, { recursive: true });
-
   const graph = buildCodebaseGraph(cwd);
   const outPath = path.join(intelDir, 'codebase-graph.json');
   platformWriteSync(outPath, JSON.stringify(graph, null, 2));
 
   return {
     action: 'completed',
-    graphs_dir: graphsDir,
-    graphify_out: graphsDir,
+    graph_path: outPath,
+    graphs_dir: intelDir,
+    graphify_out: outPath,
     timeout_seconds: 0,
     version: '2.3-native',
     version_warning: null,
-    artifacts: ['codebase-graph.json', 'graph.json'],
+    artifacts: ['.planning/intel/codebase-graph.json'],
     node_count: graph.stats.totalSymbols,
     file_count: graph.stats.totalFiles,
   };

@@ -19,16 +19,16 @@ Starting in GSD 3.8, the public command surface is strictly consolidated into **
 
 | Command | Action & Workflow Step | Common Flags |
 |---|---|---|
-| `/gsd-status` | Situational diagnostics, project state, roadmap, AST freshness, and token savings telemetry | `--sync`, `--refresh`, `--raw` |
-| `/gsd-plan` | Decompose phase into atomic parallel waves, specs, and discussions (`PLAN.md`, `SPEC.md`) | `[phase]`, `--spec`, `--speckit` |
-| `/gsd-exec` | Wave-based execution with fresh 200k subagent contexts, Pre-Flight Guardrails & Self-Healing | `[phase]`, `--auto-heal`, `--force`, `--isolate` |
+| `/gsd-status` | Read-only project progress, knowledge artifact freshness, and token telemetry; `--sync`/`--refresh` explicitly write derived data | `--sync`, `--refresh` |
+| `/gsd-plan` | Create or update phase plans, requirements, task waves, and JIT context | `[phase]` |
+| `/gsd-exec` | Execute phase plans with pre-flight checks and verification | `[phase]` |
 | `/gsd-review` | Deep code, architecture, UI, dead-code orphan review with autonomous repairs (`--fix`) | `[phase]`, `--fix`, `--full`, `--repo`, `--files` |
 | `/gsd-verify` | Conversational UAT acceptance, RFC 2119 requirement audit, and verification walkthrough | `[phase]`, `--auto` |
-| `/gsd-ship` | Git hygiene, branch preparation, changelog, Second Brain vault sync, and Pull Request merge | `[phase]` |
+| `/gsd-ship` | Prepare completed work for delivery | `[phase]` |
 | `/gsd-auto` | End-to-end autonomous autopilot across complete phase lifecycle with auto-healing loops | `[phase]` |
 | `/gsd-tokens` | Real-time multi-command token telemetry dashboard, USD financial cost & amnesia metrics | `--sessions`, `--cost`, `--all`, `--web`, `--open` |
 | `/gsd-migrate` | One-click non-destructive legacy project upgrade & living docs graph sync | `--dry-run` |
-| `/gsd-graph` | Interactive 360° HTML canvas, Obsidian Second Brain Vault compiler & instant BM25 search | `--vault`, `--open`, `--query="<term>"`, `--canvas` |
+| `/gsd-graph` | Build the canonical AST graph and requested exports; vault generation is opt-in | `--vault`, `--canvas`, `--open` |
 | `/gsd-help` | Comprehensive reference and usage guide for all unified commands | — |
 
 ---
@@ -37,7 +37,7 @@ Starting in GSD 3.8, the public command surface is strictly consolidated into **
 
 GSD 3.3 introduces an explicit architectural distinction between surgical phase reviews and whole-repository audits:
 
-- **Targeted Mode (`targeted` — default):** Audits changed files derived from git diff or active phase plans (`--files=...`, `[phase]`). Leverages language-calibrated JIT context injection to achieve 80% to 95% token savings versus the full repository baseline.
+- **Targeted Mode (`targeted` — default):** Audits changed files derived from git diff or active phase plans (`--files=...`, `[phase]`). JIT context is assembled from relevant code and documentation chunks under configured token budgets; savings vary by project and task.
 - **Whole-Repository Mode (`full-repo` — `--full` / `--repo`):** Performs a comprehensive static audit of the entire codebase AST at cost zero. Identifies architectural hotspots using PageRank centrality hubs (`queryTopCentralFiles`), reporting transparent metrics (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) with absolute metric honesty.
 - **Autonomous Repair (`--fix`):** Automatically resolves living documentation drift, aligns AST dependency graphs, and fixes linter whitespace/casing inconsistencies.
 
@@ -53,7 +53,7 @@ GSD 3.3 introduces an explicit architectural distinction between surgical phase 
 
 ### Holistic Token Telemetry & Observability 360° CLI (`/gsd-tokens` & `gsd-tools tokens`)
 
-Token telemetry in GSD 3.5 tracks context economy and agent operations across **all** workflow steps — including `plan`, `exec`, `review`, and `verify`. Telemetry persistence is strictly protected by atomic file locking (`withFileLockSync`) and deduplication (`invocationId`).
+Token telemetry tracks context economy for instrumented workflow operations, including `plan`, `exec`, `review`, and `verify`. The read-only `/gsd-status` command does not create session or telemetry artifacts. Telemetry persistence is protected by atomic file locking (`withFileLockSync`) and deduplication (`invocationId`).
 
 The Observability 360° suite provides operational metrics (sessions, latency, reliability), adaptive financial calculations ($ USD across Claude, GPT, Gemini, DeepSeek, and Local models), and an interactive 100% offline standalone HTML dashboard:
 
@@ -89,12 +89,12 @@ node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
 
 ---
 
-### Visual Knowledge Graph & Project Second Brain Vault (`/gsd-graph` & `gsd-tools graph`)
+### Knowledge Graph and Explicit Exports (`/gsd-graph` & `gsd-tools graph`)
 
-Exports a 100% offline interactive 360° HTML force-graph (`.planning/intel/graph-view.html`) with directed `governs` and `specifies` edges connecting architectural decisions to modules, and generates an isolated, full-featured **Obsidian Second Brain Vault** under `.planning/vault/`:
+The canonical AST graph is stored at `.planning/intel/codebase-graph.json`. The command can also export an offline HTML graph, roadmap canvas, or Obsidian vault. Vault and canvas exports are generated only when requested:
 
 ```bash
-# Export 360° HTML force-graph and open in default browser
+# Build the graph and its default view
 /gsd-graph
 node gsd-core/bin/gsd-tools.cjs graph
 
@@ -102,7 +102,7 @@ node gsd-core/bin/gsd-tools.cjs graph
 /gsd-graph --vault
 node gsd-core/bin/gsd-tools.cjs graph --vault
 
-# Instant BM25 query across decisions, phases, modules, and lessons
+# Query graph data
 /gsd-graph --query="Claude-Mem"
 node gsd-core/bin/gsd-tools.cjs graph --query="AST"
 
@@ -112,9 +112,9 @@ node gsd-core/bin/gsd-tools.cjs graph --query="AST"
 
 ---
 
-### AST Freshness & Memory Sync (`/gsd-status --sync`)
+### Artifact Freshness and Explicit Sync (`/gsd-status`)
 
-Forces an on-demand re-scan of the codebase AST topology and synchronizes all architectural decisions to permanent continuous memory (`.planning/memory/decisions.jsonl`), bringing Intel status to `Fresh` and updating `.planning/intel/codebase-graph.json`:
+Status reads the artifact lifecycle registry and reports authoritative state, rebuildable derived data as current/stale/missing, durable memory presence, telemetry presence, and optional exports. It does not build or rewrite artifacts. `--sync` and `--refresh` explicitly rebuild the AST graph and synchronize decisions to memory:
 
 ```bash
 /gsd-status --sync

@@ -20,6 +20,7 @@ Create a detailed, executable phase plan in .planning/phases/<phase_dir>/<phase>
 
 <load_on_demand>
 Progressive on-demand sub-workflows (loaded as needed by orchestrator or specialized subagents):
+- workflows/analyze-dependencies.md
 - workflows/spec-phase.md
 - workflows/discuss-phase.md
 - workflows/discuss-phase-assumptions.md

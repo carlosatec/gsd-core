@@ -531,7 +531,7 @@ describe('#3131 re-wired workflows: standalone command files must not exist', ()
   const rewired = [
     ['list-phase-assumptions', 'routed via plan.md <load_on_demand>'],
     ['session-report',         'routed via status.md <load_on_demand>'],
-    ['analyze-dependencies',   'routed via graph.md <execution_context>'],
+    ['analyze-dependencies',   'routed via plan.md <load_on_demand>'],
     ['from-gsd2',              'routed via migrate.md <load_on_demand> workflows/import.md'],
   ];
 
@@ -562,8 +562,12 @@ describe('#3131 & Phase 12 re-wired workflows: canonical commands route sub-work
     assert.ok(bodyContains('status', 'map-codebase.md'), 'status.md must route map-codebase.md');
   });
 
-  test('graph.md references analyze-dependencies.md', () => {
-    assert.ok(bodyContains('graph', 'analyze-dependencies.md'), 'graph.md must reference analyze-dependencies.md');
+  test('graph.md does not load unrelated phase-dependency analysis', () => {
+    assert.ok(!bodyContains('graph', 'analyze-dependencies.md'), 'graph.md must use its graph export process directly');
+  });
+
+  test('plan.md routes analyze-dependencies.md on demand', () => {
+    assert.ok(bodyContains('plan', 'analyze-dependencies.md'), 'plan.md must load phase-dependency analysis on demand');
   });
 
   test('migrate.md routes import.md, settings.md, and sync-skills.md', () => {

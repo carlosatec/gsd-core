@@ -10,6 +10,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const node_crypto_1 = __importDefault(require("node:crypto"));
 const shell_command_projection_cjs_1 = require("./shell-command-projection.cjs");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codebaseAst = require("./codebase-ast-analyzer.cjs");
@@ -58,16 +59,187 @@ const IGNORED_DIRS = new Set([
     'node_modules', '.git', 'dist', 'build', 'coverage', '.next', '.turbo', '.planning', 'vendor',
     'Pods', '.gradle', 'DerivedData', '.build', 'xcuserdata', '.swiftpm', '__pycache__', '.venv', 'venv'
 ]);
+const INDEX_VERSION = '3.0.0-chunks';
+const MAX_FILE_BYTES = 256 * 1024;
+const MAX_TOTAL_INDEXED_BYTES = 32 * 1024 * 1024;
+const MAX_CHUNK_BYTES = 8 * 1024;
+const MAX_CHUNK_LINES = 80;
+const MAX_CHUNKS_PER_FILE = 64;
+function globToRegExp(pattern) {
+    let source = '';
+    for (let i = 0; i < pattern.length; i++) {
+        const char = pattern[i];
+        if (char === '*' && pattern[i + 1] === '*') {
+            i++;
+            if (pattern[i + 1] === '/') {
+                i++;
+                source += '(?:.*/)?';
+            }
+            else
+                source += '.*';
+        }
+        else if (char === '*')
+            source += '[^/]*';
+        else if (char === '?')
+            source += '[^/]';
+        else
+            source += char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
+    }
+    return new RegExp(source);
+}
+function readIgnoreRules(dir, root, inherited) {
+    const ignorePath = node_path_1.default.join(dir, '.gitignore');
+    let content = '';
+    try {
+        content = node_fs_1.default.readFileSync(ignorePath, 'utf8');
+    }
+    catch {
+        return inherited;
+    }
+    const base = node_path_1.default.relative(root, dir).replace(/\\/g, '/');
+    const rules = [...inherited];
+    for (const raw of content.split(/\r?\n/)) {
+        const trimmed = raw.trim();
+        if (!trimmed || trimmed.startsWith('#'))
+            continue;
+        const negate = trimmed.startsWith('!');
+        let pattern = negate ? trimmed.slice(1) : trimmed;
+        if (!pattern)
+            continue;
+        if (pattern.startsWith('\\#') || pattern.startsWith('\\!'))
+            pattern = pattern.slice(1);
+        pattern = pattern.replace(/\\ /g, ' ').replace(/\/$/, '');
+        const anchored = pattern.startsWith('/');
+        if (anchored)
+            pattern = pattern.slice(1);
+        const hasSlash = pattern.includes('/');
+        const glob = globToRegExp(pattern).source;
+        const regex = hasSlash || anchored ? new RegExp(`^${glob}(?:/.*)?$`) : new RegExp(`(?:^|/)${glob}(?:/.*)?$`);
+        rules.push({ base, regex, negate });
+    }
+    return rules;
+}
+function isIgnored(relPath, rules) {
+    const normalized = relPath.replace(/\\/g, '/');
+    let ignored = false;
+    for (const rule of rules) {
+        const relative = rule.base ? node_path_1.default.posix.relative(rule.base, normalized) : normalized;
+        if (relative === '..' || relative.startsWith('../'))
+            continue;
+        if (rule.regex.test(relative))
+            ignored = !rule.negate;
+    }
+    return ignored;
+}
+function contentFingerprint(content) {
+    return node_crypto_1.default.createHash('sha256').update(content).digest('hex');
+}
+function languageFor(file) {
+    return node_path_1.default.extname(file).slice(1).toLowerCase() || 'text';
+}
+function makeChunks(file, content) {
+    const lines = content.split(/\r?\n/);
+    const ext = node_path_1.default.extname(file).toLowerCase();
+    const structural = [];
+    if (ext === '.md') {
+        lines.forEach((line, i) => {
+            const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+            if (heading)
+                structural.push({ name: heading[1], line: i + 1 });
+        });
+    }
+    else if (SUPPORTED_EXTS.has(ext)) {
+        try {
+            const analysis = codebaseAst.analyzeSourceFile(file, content);
+            for (const symbol of analysis.symbols || []) {
+                if (Number.isInteger(symbol.line) && symbol.line > 0 && symbol.line <= lines.length) {
+                    structural.push({ name: symbol.name, line: symbol.line });
+                }
+            }
+        }
+        catch { /* bounded line fallback below */ }
+    }
+    structural.sort((a, b) => a.line - b.line || a.name.localeCompare(b.name));
+    const boundaries = structural.filter((item, i) => i === 0 || structural[i - 1].line !== item.line);
+    const units = [];
+    if (boundaries.length > 0) {
+        const prefixEnd = Math.max(0, boundaries[0].line - 1);
+        if (prefixEnd > 0)
+            units.push({ start: 1, end: prefixEnd });
+        boundaries.forEach((item, i) => {
+            units.push({ start: item.line, end: (boundaries[i + 1]?.line || lines.length + 1) - 1, label: item.name, isSymbol: ext !== '.md' });
+        });
+    }
+    else if (ext === '.md') {
+        const headingLines = lines.map((line, i) => /^\s{0,3}#{1,6}\s+/.test(line) ? i + 1 : 0).filter(Boolean);
+        if (headingLines.length) {
+            const prefixEnd = headingLines[0] - 1;
+            if (prefixEnd > 0)
+                units.push({ start: 1, end: prefixEnd });
+            headingLines.forEach((start, i) => units.push({ start, end: (headingLines[i + 1] || lines.length + 1) - 1, label: lines[start - 1].replace(/^\s*#+\s*/, '').trim() }));
+        }
+    }
+    if (units.length === 0) {
+        for (let start = 1; start <= lines.length; start += MAX_CHUNK_LINES) {
+            units.push({ start, end: Math.min(lines.length, start + MAX_CHUNK_LINES - 1) });
+        }
+    }
+    const chunks = [];
+    for (const unit of units) {
+        let start = unit.start;
+        while (start <= unit.end && chunks.length < MAX_CHUNKS_PER_FILE) {
+            let end = Math.min(unit.end, start + MAX_CHUNK_LINES - 1);
+            while (end > start && Buffer.byteLength(lines.slice(start - 1, end).join('\n'), 'utf8') > MAX_CHUNK_BYTES)
+                end--;
+            if (end === start && Buffer.byteLength(lines[start - 1] || '', 'utf8') > MAX_CHUNK_BYTES) {
+                const line = lines[start - 1];
+                const pieces = [];
+                let piece = '';
+                for (const char of line) {
+                    if (piece && Buffer.byteLength(piece + char, 'utf8') > MAX_CHUNK_BYTES) {
+                        pieces.push(piece);
+                        piece = '';
+                    }
+                    piece += char;
+                }
+                if (piece)
+                    pieces.push(piece);
+                pieces.forEach((part, index) => {
+                    const startLine = start;
+                    const id = contentFingerprint(`${file}\0${startLine}\0${part}`).slice(0, 24);
+                    chunks.push({ id, file, symbol: unit.isSymbol ? unit.label : undefined, section: unit.isSymbol ? undefined : unit.label, language: languageFor(file), startLine, endLine: startLine, content: part, preview: part.slice(0, 150).replace(/\s+/g, ' ').trim() });
+                });
+                start++;
+                continue;
+            }
+            const text = lines.slice(start - 1, end).join('\n');
+            if (text.trim()) {
+                const id = contentFingerprint(`${file}\0${start}\0${text}`).slice(0, 24);
+                chunks.push({ id, file, symbol: unit.isSymbol ? unit.label : undefined, section: unit.isSymbol ? undefined : unit.label, language: languageFor(file), startLine: start, endLine: end, content: text, preview: text.slice(0, 150).replace(/\s+/g, ' ').trim() });
+            }
+            start = end + 1;
+        }
+        if (chunks.length >= MAX_CHUNKS_PER_FILE)
+            break;
+    }
+    return chunks;
+}
 // ─── Index Construction & Persistence ─────────────────────────────────────────
 /**
  * Builds the BM25 inverted index across supported workspace files.
  */
 function buildSemanticIndex(rootDir, planningDir) {
     const resolvedRoot = node_path_1.default.resolve(rootDir);
+    const previous = planningDir ? loadSemanticIndex(planningDir) : null;
     const docs = Object.create(null);
+    const chunks = Object.create(null);
+    const files = Object.create(null);
     const docFreq = Object.create(null);
     let totalTermLength = 0;
-    function scan(dir) {
+    let indexedBytes = 0;
+    let skippedFiles = 0;
+    let truncatedFiles = 0;
+    function scan(dir, inheritedRules = []) {
         let entries = [];
         try {
             entries = node_fs_1.default.readdirSync(dir, { withFileTypes: true });
@@ -75,41 +247,68 @@ function buildSemanticIndex(rootDir, planningDir) {
         catch {
             return;
         }
+        entries.sort((a, b) => a.name.localeCompare(b.name));
+        const ignoreRules = readIgnoreRules(dir, resolvedRoot, inheritedRules);
         for (const e of entries) {
             if (IGNORED_DIRS.has(e.name))
                 continue;
             const full = node_path_1.default.join(dir, e.name);
             const rel = node_path_1.default.relative(resolvedRoot, full).replace(/\\/g, '/');
+            if (rel.startsWith('../') || node_path_1.default.isAbsolute(rel))
+                continue;
+            if (isIgnored(rel, ignoreRules))
+                continue;
             if (e.isDirectory()) {
-                scan(full);
+                scan(full, ignoreRules);
             }
             else if (e.isFile()) {
                 const ext = node_path_1.default.extname(e.name).toLowerCase();
                 if (SUPPORTED_EXTS.has(ext)) {
                     try {
-                        const content = node_fs_1.default.readFileSync(full, 'utf8');
-                        const tokens = tokenize(content);
-                        if (tokens.length === 0)
+                        const stat = node_fs_1.default.statSync(full);
+                        if (!stat.isFile() || stat.size > MAX_FILE_BYTES || indexedBytes + stat.size > MAX_TOTAL_INDEXED_BYTES) {
+                            skippedFiles++;
                             continue;
-                        const termCounts = Object.create(null);
-                        const seenInDoc = new Set();
-                        for (const t of tokens) {
-                            termCounts[t] = (termCounts[t] || 0) + 1;
-                            if (!seenInDoc.has(t)) {
-                                seenInDoc.add(t);
-                                docFreq[t] = (docFreq[t] || 0) + 1;
+                        }
+                        const content = node_fs_1.default.readFileSync(full, 'utf8');
+                        const fingerprint = contentFingerprint(content);
+                        const priorFile = previous?.rootPath === resolvedRoot ? previous.files?.[rel] : undefined;
+                        let fileChunks = [];
+                        if (priorFile?.fingerprint === fingerprint && priorFile.size === stat.size) {
+                            fileChunks = priorFile.chunkIds.map(id => previous?.chunks?.[id]).filter((chunk) => Boolean(chunk));
+                        }
+                        if (fileChunks.length === 0 && tokenize(content).length > 0) {
+                            const contentChunks = makeChunks(rel, content);
+                            fileChunks = contentChunks.map(chunk => {
+                                const tokens = tokenize(chunk.content);
+                                const terms = Object.create(null);
+                                for (const token of tokens)
+                                    terms[token] = (terms[token] || 0) + 1;
+                                return { ...chunk, terms, totalTerms: tokens.length, termCount: Object.keys(terms).length };
+                            });
+                        }
+                        if (fileChunks.length >= MAX_CHUNKS_PER_FILE)
+                            truncatedFiles++;
+                        if (fileChunks.length === 0)
+                            continue;
+                        const fileTerms = Object.create(null);
+                        const fileSeen = new Set();
+                        let fileLength = 0;
+                        for (const chunk of fileChunks) {
+                            chunks[chunk.id] = chunk;
+                            fileLength += chunk.totalTerms;
+                            for (const [term, count] of Object.entries(chunk.terms)) {
+                                fileTerms[term] = (fileTerms[term] || 0) + count;
+                                if (!fileSeen.has(term)) {
+                                    fileSeen.add(term);
+                                    docFreq[term] = (docFreq[term] || 0) + 1;
+                                }
                             }
                         }
-                        // Extract first 150 non-empty characters as summary preview
-                        const preview = content.slice(0, 150).replace(/\s+/g, ' ').trim();
-                        totalTermLength += tokens.length;
-                        docs[rel] = {
-                            file: rel,
-                            terms: termCounts,
-                            totalTerms: tokens.length,
-                            termCount: Object.keys(termCounts).length,
-                            preview,
-                        };
+                        docs[rel] = { file: rel, terms: fileTerms, totalTerms: fileLength, termCount: Object.keys(fileTerms).length, preview: fileChunks[0].preview };
+                        files[rel] = { fingerprint, size: stat.size, mtimeMs: stat.mtimeMs, chunkIds: fileChunks.map(chunk => chunk.id) };
+                        indexedBytes += stat.size;
+                        totalTermLength += fileLength;
                     }
                     catch {
                         // Ignore unreadable files
@@ -122,12 +321,16 @@ function buildSemanticIndex(rootDir, planningDir) {
     const totalDocs = Object.keys(docs).length;
     const avgdl = totalDocs > 0 ? Number((totalTermLength / totalDocs).toFixed(2)) : 50;
     const indexData = {
-        version: '2.0.0-bm25',
+        version: INDEX_VERSION,
         createdAt: new Date().toISOString(),
         totalDocs,
         avgdl,
         docFreq,
         docs,
+        chunks,
+        files,
+        rootPath: resolvedRoot,
+        diagnostics: { skippedFiles, truncatedFiles, indexedBytes },
     };
     if (planningDir) {
         saveSemanticIndex(planningDir, indexData);
@@ -141,7 +344,7 @@ function saveSemanticIndex(planningDir, data) {
     const intelDir = node_path_1.default.join(planningDir, 'intel');
     (0, shell_command_projection_cjs_1.platformEnsureDir)(intelDir);
     const outPath = node_path_1.default.join(intelDir, 'semantic-index.json');
-    (0, shell_command_projection_cjs_1.platformWriteSync)(outPath, JSON.stringify(data));
+    (0, shell_command_projection_cjs_1.withFileLockSync)(outPath, () => (0, shell_command_projection_cjs_1.platformWriteSync)(outPath, JSON.stringify(data)));
 }
 /**
  * Loads index from `.planning/intel/semantic-index.json` (Lazy Load).
@@ -152,17 +355,106 @@ function loadSemanticIndex(planningDir) {
         const raw = (0, shell_command_projection_cjs_1.platformReadSync)(indexPath);
         if (!raw)
             return null;
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (parsed.version !== INDEX_VERSION || !parsed.docs || !parsed.chunks || !parsed.files || !Number.isFinite(parsed.totalDocs))
+            return null;
+        return parsed;
     }
     catch {
         return null;
     }
 }
+function indexIsFresh(rootDir, index) {
+    const root = node_path_1.default.resolve(rootDir);
+    if (index.rootPath !== root)
+        return false;
+    const current = new Map();
+    let bytes = 0;
+    function scan(dir, inheritedRules = []) {
+        let entries;
+        try {
+            entries = node_fs_1.default.readdirSync(dir, { withFileTypes: true });
+        }
+        catch {
+            return;
+        }
+        entries.sort((a, b) => a.name.localeCompare(b.name));
+        const ignoreRules = readIgnoreRules(dir, root, inheritedRules);
+        for (const entry of entries) {
+            if (IGNORED_DIRS.has(entry.name))
+                continue;
+            const full = node_path_1.default.join(dir, entry.name);
+            const rel = node_path_1.default.relative(root, full).replace(/\\/g, '/');
+            if (rel.startsWith('../') || node_path_1.default.isAbsolute(rel))
+                continue;
+            if (isIgnored(rel, ignoreRules))
+                continue;
+            if (entry.isDirectory()) {
+                scan(full, ignoreRules);
+                continue;
+            }
+            if (!entry.isFile() || !SUPPORTED_EXTS.has(node_path_1.default.extname(entry.name).toLowerCase()))
+                continue;
+            try {
+                const stat = node_fs_1.default.statSync(full);
+                if (stat.size > MAX_FILE_BYTES || bytes + stat.size > MAX_TOTAL_INDEXED_BYTES)
+                    continue;
+                const content = node_fs_1.default.readFileSync(full, 'utf8');
+                if (!tokenize(content).length)
+                    continue;
+                current.set(rel, { fingerprint: contentFingerprint(content), size: stat.size });
+                bytes += stat.size;
+            }
+            catch { /* unreadable inputs stay out of the freshness manifest */ }
+        }
+    }
+    scan(root);
+    const indexedPaths = Object.keys(index.files || {});
+    if (current.size !== indexedPaths.length)
+        return false;
+    for (const [file, value] of current) {
+        const indexed = index.files[file];
+        if (!indexed || indexed.fingerprint !== value.fingerprint || indexed.size !== value.size)
+            return false;
+    }
+    return true;
+}
+function getFileKind(file) {
+    const ext = node_path_1.default.extname(file).toLowerCase();
+    if (['.md', '.mdx', '.txt', '.rst'].includes(ext))
+        return 'docs';
+    if (['.css', '.scss', '.sass', '.less'].includes(ext))
+        return 'styles';
+    if (['.sql', '.prisma', '.graphql', '.gql'].includes(ext))
+        return 'database';
+    if (['.yaml', '.yml', '.sh', '.bash', '.zsh', '.dockerfile'].includes(ext) || /(^|\/)(Dockerfile|Makefile|Justfile)$/i.test(file))
+        return 'infra';
+    if (['.json', '.toml', '.ini', '.xml'].includes(ext))
+        return 'config';
+    if (['.ts', '.tsx', '.cts', '.mts', '.js', '.jsx', '.cjs', '.mjs', '.swift', '.m', '.mm', '.dart', '.py', '.go', '.rs', '.cs', '.java', '.kt', '.php', '.rb', '.c', '.cpp', '.h', '.hpp', '.html', '.htm', '.vue', '.svelte'].includes(ext))
+        return 'source';
+    return 'other';
+}
+function validateFilters(filters) {
+    if (!filters)
+        return {};
+    const validKinds = new Set(['source', 'docs', 'config', 'styles', 'database', 'infra', 'other']);
+    for (const key of ['paths', 'languages', 'symbols', 'sections']) {
+        const values = filters[key];
+        if (values !== undefined && (!Array.isArray(values) || values.length > 100 || values.some(value => typeof value !== 'string' || value.length > 256))) {
+            throw new TypeError(`Invalid RAG ${key} filter: expected up to 100 strings of at most 256 characters`);
+        }
+    }
+    if (filters.fileKinds !== undefined && (!Array.isArray(filters.fileKinds) || filters.fileKinds.some(kind => !validKinds.has(kind)))) {
+        throw new TypeError('Invalid RAG fileKinds filter');
+    }
+    return filters;
+}
 // ─── Query Engine ─────────────────────────────────────────────────────────────
 /**
  * Queries the semantic index for files matching a natural language query or concept using Okapi BM25.
  */
-function querySemanticSimilarFiles(query, planningDir, rootDir, limit = 5) {
+function querySemanticSimilarFilesLegacy(query, planningDir, rootDir, limit = 5) {
     const queryTokens = tokenize(query);
     if (queryTokens.length === 0)
         return [];
@@ -248,10 +540,178 @@ function querySemanticSimilarFiles(query, planningDir, rootDir, limit = 5) {
     });
     return scoredFiles.sort((a, b) => b.score - a.score).slice(0, limit);
 }
+function querySemanticChunks(query, planningDir, rootDir, options = {}) {
+    const queryStarted = Date.now();
+    const queryTokens = [...new Set(tokenize(query))].slice(0, 24);
+    if (queryTokens.length === 0)
+        return [];
+    let index = loadSemanticIndex(planningDir);
+    const previousIndex = index;
+    const fresh = Boolean(index && rootDir && indexIsFresh(rootDir, index));
+    const indexState = !index ? 'missing' : (rootDir && !fresh ? 'stale' : 'current');
+    let rebuildMs = 0;
+    if (rootDir && (!index || !fresh)) {
+        const rebuildStarted = Date.now();
+        index = buildSemanticIndex(rootDir, planningDir);
+        rebuildMs = Date.now() - rebuildStarted;
+    }
+    const diagnostics = (filteredChunks, candidatePool, returnedChunks) => {
+        if (!options.diagnostics)
+            return;
+        const createdAt = Date.parse(index?.createdAt || '');
+        options.diagnostics({
+            indexState, indexAgeMs: Number.isFinite(createdAt) ? Math.max(0, Date.now() - createdAt) : null,
+            rebuilt: Boolean(rootDir && (!previousIndex || !fresh)), rebuildMs, queryMs: Date.now() - queryStarted,
+            indexedChunks: Object.keys(index?.chunks || {}).length, filteredChunks, candidatePool, returnedChunks,
+        });
+    };
+    if (!index || !Object.keys(index.chunks).length) {
+        diagnostics(0, 0, 0);
+        return [];
+    }
+    const filters = validateFilters(options.filters);
+    const matchesFilters = (chunk) => {
+        if (filters.paths?.length && !filters.paths.some(prefix => chunk.file === prefix || chunk.file.startsWith(prefix.replace(/\\/g, '/').replace(/\/$/, '') + '/')))
+            return false;
+        if (filters.languages?.length && !filters.languages.some(language => language.toLowerCase() === chunk.language))
+            return false;
+        if (filters.fileKinds?.length && !filters.fileKinds.includes(getFileKind(chunk.file)))
+            return false;
+        if (filters.symbols?.length && !filters.symbols.some(symbol => chunk.symbol?.toLowerCase().includes(symbol.toLowerCase())))
+            return false;
+        if (filters.sections?.length && !filters.sections.some(section => chunk.section?.toLowerCase().includes(section.toLowerCase())))
+            return false;
+        return true;
+    };
+    const allChunks = Object.values(index.chunks).filter(matchesFilters);
+    if (allChunks.length === 0) {
+        diagnostics(0, 0, 0);
+        return [];
+    }
+    const N = allChunks.length;
+    const avgdl = allChunks.reduce((sum, chunk) => sum + Math.max(1, chunk.totalTerms), 0) / N;
+    const df = Object.create(null);
+    for (const chunk of allChunks)
+        for (const term of new Set(Object.keys(chunk.terms)))
+            df[term] = (df[term] || 0) + 1;
+    let graph = null;
+    try {
+        graph = loadCodebaseGraph(planningDir);
+    }
+    catch { /* local lexical fallback */ }
+    const pageRank = graph?.pageRankScores || {};
+    const candidates = allChunks.map(chunk => {
+        let bm25 = 0;
+        let matching = 0;
+        for (const term of queryTokens) {
+            const tf = chunk.terms[term] || 0;
+            if (!tf)
+                continue;
+            matching++;
+            const termDf = df[term] || 0;
+            const idf = Math.log(1 + (N - termDf + 0.5) / (termDf + 0.5));
+            const k1 = 1.5;
+            const b = 0.75;
+            const dl = Math.max(1, chunk.totalTerms);
+            bm25 += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avgdl));
+        }
+        if (!matching)
+            return null;
+        const jaccard = matching / Math.max(1, queryTokens.length + Object.keys(chunk.terms).length - matching);
+        const graphFile = graph?.files[chunk.file];
+        const exportBonus = graphFile && graphFile.exports.length ? Math.min(2, graphFile.exports.length * 0.2) : 0;
+        return { chunk, lexicalScore: bm25 * 10 + jaccard * 10 + exportBonus, pageRank: pageRank[chunk.file] || 0 };
+    }).filter((item) => item !== null);
+    if (!candidates.length) {
+        diagnostics(allChunks.length, 0, 0);
+        return [];
+    }
+    const lexical = [...candidates].sort((a, b) => b.lexicalScore - a.lexicalScore || a.chunk.file.localeCompare(b.chunk.file) || a.chunk.startLine - b.chunk.startLine || a.chunk.id.localeCompare(b.chunk.id));
+    const topK = Math.max(1, Math.min(200, Math.floor(options.topK ?? 80)));
+    const pool = lexical.slice(0, topK);
+    const topo = [...pool].sort((a, b) => b.pageRank - a.pageRank || a.chunk.file.localeCompare(b.chunk.file) || a.chunk.startLine - b.chunk.startLine);
+    const topoRank = new Map(topo.map((item, i) => [item.chunk.id, i + 1]));
+    const lexicalRank = new Map(pool.map((item, i) => [item.chunk.id, i + 1]));
+    let results = pool.map(item => {
+        const lexRank = lexicalRank.get(item.chunk.id) || 1;
+        const graphRank = item.pageRank > 0 ? (topoRank.get(item.chunk.id) || lexRank) : lexRank;
+        const result = {
+            file: item.chunk.file, score: 1 / (60 + lexRank) + 0.5 / (60 + graphRank),
+            preview: item.chunk.preview, chunkId: item.chunk.id, content: item.chunk.content,
+            startLine: item.chunk.startLine, endLine: item.chunk.endLine, language: item.chunk.language,
+            symbol: item.chunk.symbol, section: item.chunk.section,
+        };
+        let score = result.score;
+        if (options.semanticProvider) {
+            try {
+                const value = options.semanticProvider.score(query, result);
+                if (Number.isFinite(value))
+                    score += Math.max(-1, Math.min(1, value)) * 0.01;
+            }
+            catch { /* deterministic fallback */ }
+        }
+        if (options.reranker) {
+            try {
+                const value = options.reranker(query, result);
+                if (Number.isFinite(value))
+                    score = value;
+            }
+            catch { /* deterministic fallback */ }
+        }
+        return { ...result, score };
+    }).sort((a, b) => b.score - a.score || a.file.localeCompare(b.file) || a.startLine - b.startLine || a.chunkId.localeCompare(b.chunkId));
+    if (options.diversity) {
+        const lambda = typeof options.diversity === 'object' && Number.isFinite(options.diversity.lambda) ? Math.max(0, Math.min(1, options.diversity.lambda)) : 0.72;
+        const remaining = [...results];
+        const selected = [];
+        const tokens = new Map(remaining.map(hit => [hit.chunkId, new Set(tokenize(hit.content))]));
+        const similarity = (a, b) => {
+            if (a.file === b.file && a.startLine <= b.endLine && b.startLine <= a.endLine)
+                return 1;
+            const left = tokens.get(a.chunkId) || new Set();
+            const right = tokens.get(b.chunkId) || new Set();
+            let intersection = 0;
+            for (const term of left)
+                if (right.has(term))
+                    intersection++;
+            return intersection / Math.max(1, left.size + right.size - intersection);
+        };
+        const count = Math.max(0, Math.min(200, Math.floor(options.limit ?? 5)));
+        while (remaining.length && selected.length < count) {
+            let best = 0;
+            let bestValue = -Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                const relevance = remaining[i].score / Math.max(...results.map(item => item.score), 1e-9);
+                const redundancy = selected.length ? Math.max(...selected.map(item => similarity(remaining[i], item))) : 0;
+                const value = lambda * relevance - (1 - lambda) * redundancy;
+                if (value > bestValue) {
+                    bestValue = value;
+                    best = i;
+                }
+            }
+            selected.push(remaining.splice(best, 1)[0]);
+        }
+        results = selected;
+    }
+    const output = results.slice(0, Math.max(0, Math.min(200, Math.floor(options.limit ?? 5))));
+    diagnostics(allChunks.length, pool.length, output.length);
+    return output;
+}
+function querySemanticSimilarFiles(query, planningDir, rootDir, limit = 5) {
+    const hits = querySemanticChunks(query, planningDir, rootDir, { limit: Math.max(80, limit), topK: Math.max(80, limit) });
+    const unique = new Map();
+    for (const hit of hits)
+        if (!unique.has(hit.file))
+            unique.set(hit.file, { file: hit.file, score: hit.score, preview: hit.preview });
+    return [...unique.values()].slice(0, Math.max(0, limit));
+}
 module.exports = {
     tokenize,
     buildSemanticIndex,
     saveSemanticIndex,
     loadSemanticIndex,
     querySemanticSimilarFiles,
+    querySemanticChunks,
+    indexIsFresh,
+    querySemanticSimilarFilesLegacy,
 };

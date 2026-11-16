@@ -1,6 +1,6 @@
 ---
 name: gsd-status
-description: "Unified situational command: check progress, context drift, living docs, and token telemetry savings"
+description: "Unified situational command: check progress, knowledge artifact freshness, living docs, and token telemetry savings"
 argument-hint: "[--next [--auto]] [--drift] [--json]"
 allowed-tools:
   - Read
@@ -11,7 +11,7 @@ allowed-tools:
 ---
 
 <objective>
-Check project progress, inspect active phase in .planning/STATE.md and .planning/ROADMAP.md, verify living documentation drift against the real codebase AST, inspect token telemetry savings, and intelligently route to the next action.
+Check project progress, inspect active phase in .planning/STATE.md and .planning/ROADMAP.md, report knowledge artifact lifecycle and freshness without writing files, inspect token telemetry savings, and intelligently route to the next action.
 </objective>
 
 <execution_context>
@@ -40,5 +40,6 @@ Arguments: $ARGUMENTS
 <process>
 1. Inspect .planning/STATE.md and .planning/ROADMAP.md.
 2. Check token telemetry efficiency via JIT Telemetry.
-3. Display current progress and recommend next step.
+3. Display authoritative state, derived artifact freshness, durable memory presence, optional exports, and safe refresh commands. This inspection is read-only.
+4. Display current progress and recommend next step.
 </process>

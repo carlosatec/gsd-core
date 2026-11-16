@@ -6,8 +6,7 @@ Reference example for [ADR-1671](../../docs/adr/1671-dynamic-context-management-
 > **This is a non-shipping reference example.** It lives outside the build
 > (`src/` → `bin/lib/`), the npm package `files[]`, the installer, and the CI
 > test suite (`tests/`). Nothing here is compiled into or installed with GSD.
-> The production implementation lands in a later phase of the
-> [Dynamic Context Management epic (#1671)](https://github.com/open-gsd/gsd-core/issues/1671).
+> The production parser and selector now live in `src/context-predicates.cts`; this directory remains a standalone reference implementation and parity fixture.
 
 ## What it demonstrates
 

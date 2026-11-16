@@ -24,7 +24,7 @@ const { isCapabilityActive } = capabilityStateMod;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import codebaseAst = require('./codebase-ast-analyzer.cjs');
-const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, querySymbolLocations, queryFileDependencies } = codebaseAst;
+const { buildCodebaseGraph, saveCodebaseGraph, loadCodebaseGraph, querySymbolLocations, queryFileDependencies, computeCodebaseContentFingerprint } = codebaseAst;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -748,6 +748,7 @@ interface IntelHealthReport {
   gitCommitSha: string | null;
   currentGitHead: string | null;
   stale: boolean;
+  contentFreshness?: 'current' | 'stale' | 'unknown';
   totalFiles?: number;
   totalSymbols?: number;
   message: string;
@@ -755,7 +756,7 @@ interface IntelHealthReport {
 
 /**
  * Validates the freshness and integrity of the AST knowledge graph (.planning/intel/codebase-graph.json).
- * Compares graph.stats.gitCommitSha against the current Git HEAD in O(1) time.
+ * Compares the graph content fingerprint with the current supported source set.
  */
 function checkIntelHealth(planningDir: string, rootDir: string = process.cwd()): IntelHealthReport {
   const graph = loadCodebaseGraph(planningDir);
@@ -781,11 +782,18 @@ function checkIntelHealth(planningDir: string, rootDir: string = process.cwd()):
   }
 
   const graphCommit = graph.stats?.gitCommitSha || null;
-  const isStale = Boolean(currentHead && graphCommit && currentHead !== graphCommit);
+  const graphFingerprint = graph.stats?.contentFingerprint;
+  const contentFingerprint = computeCodebaseContentFingerprint(rootDir);
+  const contentFreshness: IntelHealthReport['contentFreshness'] = graphFingerprint
+    ? graphFingerprint === contentFingerprint ? 'current' : 'stale'
+    : 'unknown';
+  const isStale = contentFreshness === 'stale' || Boolean(currentHead && graphCommit && currentHead !== graphCommit);
 
   let message = 'Grafo AST saudável e sincronizado com o Git HEAD ativo.';
   if (isStale) {
-    message = `Grafo AST defasado em relação ao Git HEAD ativo (grafo em ${graphCommit?.slice(0, 7)}, HEAD em ${currentHead?.slice(0, 7)}). Execute /gsd:graphify build para atualizar.`;
+    message = contentFreshness === 'stale'
+      ? 'Grafo AST defasado em relação ao conteúdo atual do projeto. Execute /gsd:graph para atualizar.'
+      : `Grafo AST defasado em relação ao Git HEAD ativo (grafo em ${graphCommit?.slice(0, 7)}, HEAD em ${currentHead?.slice(0, 7)}). Execute /gsd:graph para atualizar.`;
   } else if (!graphCommit) {
     message = 'Grafo AST presente sem commit SHA ancorado. Execute /gsd:graphify build para registrar a linhagem.';
   }
@@ -796,6 +804,7 @@ function checkIntelHealth(planningDir: string, rootDir: string = process.cwd()):
     gitCommitSha: graphCommit,
     currentGitHead: currentHead,
     stale: isStale,
+    contentFreshness,
     totalFiles: graph.stats?.totalFiles,
     totalSymbols: graph.stats?.totalSymbols,
     message,

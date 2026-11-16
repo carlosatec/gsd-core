@@ -426,9 +426,9 @@ describe('reapply-patches pristine baseline detection (#2424)', () => {
     assert.ok(!fs.existsSync(oldPath), 'reapply-patches.md should be absent');
   });
 
-  test('canonical migrate command wires workflows/update.md', () => {
+  test('canonical migrate command does not invoke the GSD package self-updater', () => {
     const content = fs.readFileSync(UPDATE_MD, 'utf-8');
-    assert.ok(content.includes('workflows/update.md'), 'migrate.md must reference workflows/update.md');
+    assert.ok(!content.includes('workflows/update.md'), 'migrate.md must not reference workflows/update.md');
   });
 
   test('update.md workflow references backup-meta.json for pristine-hash baseline', () => {
@@ -454,8 +454,8 @@ describe('reapply-patches pristine baseline detection (#2424)', () => {
     const content = fs.readFileSync(UPDATE_MD, 'utf-8');
     const argHint = parseFrontmatterField(content, 'argument-hint');
     assert.ok(
-      argHint && argHint.includes('--sync') && argHint.includes('--reapply'),
-      `update.md argument-hint must declare both --sync and --reapply; got: ${argHint || '(none)'}`
+      argHint && argHint.includes('--dry-run') && argHint.includes('--force') && !argHint.includes('--reapply'),
+      `migrate.md argument-hint must declare --dry-run and --force only; got: ${argHint || '(none)'}`
     );
   });
 });

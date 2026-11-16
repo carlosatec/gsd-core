@@ -253,6 +253,7 @@
       "agent-install-check.cjs",
       "anti-pattern-store.cjs",
       "api-coverage.cjs",
+      "artifact-lifecycle.cjs",
       "artifacts.cjs",
       "assumption-delta.cjs",
       "audit-command-router.cjs",

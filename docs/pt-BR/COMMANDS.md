@@ -19,7 +19,7 @@ A partir do GSD 3.8, a superfície pública de comandos foi estritamente consoli
 
 | Comando | Ação e Etapa do Fluxo de Trabalho |
 |---------|-----------------------------------|
-| `/gsd-status` | Diagnóstico situacional, estado do projeto, roadmap e telemetria de tokens |
+| `/gsd-status` | Lê progresso, atualidade dos artefatos e telemetria; é somente leitura por padrão (`--sync`/`--refresh` atualizam dados derivados) |
 | `/gsd-plan` | Decomposição da fase em ondas paralelas atômicas, especificações e discussões (`PLAN.md`, `SPEC.md`) |
 | `/gsd-exec` | Execução paralela em ondas com subagentes de 200k tokens e Pre-Flight Guardrails |
 | `/gsd-review` | Análise profunda de código e UI com auto-correção autônoma (`--fix`) e modo duplo (`--full`/`--repo`) |
@@ -28,7 +28,7 @@ A partir do GSD 3.8, a superfície pública de comandos foi estritamente consoli
 | `/gsd-auto` | Piloto automático ponta a ponta através de todo o ciclo da fase |
 | `/gsd-tokens` | Painel visual de telemetria multi-comando e economia de tokens em tempo real |
 | `/gsd-migrate` | Modernização não-destrutiva de projetos legados em um clique |
-| `/gsd-graph` | Exportador de grafo de conhecimento visual interativo HTML e compatível com Obsidian |
+| `/gsd-graph` | Constrói o grafo AST canônico e exportações solicitadas; o vault é opcional |
 | `/gsd-help` | Guia de uso e referência rápida para todos os comandos unificados |
 
 ---
@@ -37,7 +37,7 @@ A partir do GSD 3.8, a superfície pública de comandos foi estritamente consoli
 
 O GSD 3.3 introduz uma distinção explícita entre revisões seletivas focadas na fase e auditorias globais de todo o repositório:
 
-- **Modo Seletivo (`targeted` — padrão):** Audita os arquivos modificados identificados via git diff ou pelos planos da fase ativa (`--files=...`, `[fase]`). Utiliza a injeção JIT calibrada por linguagem para atingir de 80% a 95% de economia de tokens contra o repositório completo.
+- **Modo Seletivo (`targeted` — padrão):** Audita os arquivos modificados identificados via git diff ou pelos planos da fase ativa (`--files=...`, `[fase]`). O contexto JIT é montado com trechos relevantes dentro dos limites configurados; a economia varia conforme o projeto e a tarefa.
 - **Modo Global do Repositório (`full-repo` — `--full` / `--repo`):** Executa auditoria estática abrangente de todo o AST do projeto a custo zero de tokens locais. Identifica gargalos arquiteturais priorizando os hubs centrais de PageRank (`queryTopCentralFiles`), registrando métricas transparentes (`tokensSaved = 0`, `efficiencyPct = 0%`, `compressionRatio = 1.0`) com honestidade métrica rigorosa.
 - **Reparo Autônomo (`--fix`):** Sincroniza e resolve divergências na documentação viva, alinha grafos de dependência AST e corrige formatações e convenções de linter.
 
@@ -89,9 +89,9 @@ node gsd-core/bin/gsd-tools.cjs telemetry record --command plan --from-phase 22
 
 ---
 
-### Exportador Visual de Grafo de Conhecimento (`/gsd-graph` & `gsd-tools graph`)
+### Grafo de Conhecimento e Exportações Explícitas (`/gsd-graph` & `gsd-tools graph`)
 
-Exporta uma visualização interativa em HTML e uma representação em Obsidian Canvas do roadmap, fases, dependências AST e arquitetura do projeto para `.planning/intel/graph-view.html` e `.planning/ROADMAP.canvas`:
+O grafo AST canônico fica em `.planning/intel/codebase-graph.json`. O comando também pode exportar uma visualização HTML, o canvas do roadmap ou um vault Obsidian. Vault e canvas só são gerados quando solicitados:
 
 ```bash
 # Exportar e abrir automaticamente no navegador padrão
@@ -100,6 +100,9 @@ Exporta uma visualização interativa em HTML e uma representação em Obsidian 
 # Exportar silenciosamente sem abrir o navegador
 /gsd-graph --no-open
 node gsd-core/bin/gsd-tools.cjs graph --no-open
+
+# Exportar explicitamente o vault Obsidian
+/gsd-graph --vault
 ```
 
 ---
