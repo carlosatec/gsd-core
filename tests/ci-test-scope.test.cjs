@@ -348,6 +348,7 @@ describe('INERT_WORKFLOWS allowlist integrity guard', () => {
   // Must stay in sync with PROTECTED_WORKFLOWS in scripts/ci-test-scope.cjs.
   const KNOWN_PIPELINE = [
     'test.yml',
+    'test-full.yml',
     'install-smoke.yml',
     'mutation.yml',
     'security-scan.yml',
@@ -390,9 +391,10 @@ describe('INERT_WORKFLOWS allowlist integrity guard', () => {
   // Explicit per-workflow guard: each of the five protected workflows must route to
   // the full matrix. This documents intent and proves that PROTECTED_WORKFLOWS
   // enforcement is covered end-to-end via the spawn helper.
-  test('all five PROTECTED_WORKFLOWS individually route to full matrix (tamper-evidence)', () => {
+  test('all PROTECTED_WORKFLOWS individually route to full matrix (tamper-evidence)', () => {
     const protected_ = [
       'test.yml',
+      'test-full.yml',
       'install-smoke.yml',
       'mutation.yml',
       'security-scan.yml',
@@ -465,7 +467,7 @@ describe('test-full shard matrix parity (#1212)', () => {
   const yaml = require('js-yaml');
 
   function loadTestFull() {
-    const text = fs.readFileSync(path.join(WORKFLOWS_DIR, 'test.yml'), 'utf8');
+    const text = fs.readFileSync(path.join(WORKFLOWS_DIR, 'test-full.yml'), 'utf8');
     const doc = yaml.load(text);
     return { text, job: doc.jobs['test-full'] };
   }
@@ -539,17 +541,19 @@ describe('test-full shard matrix parity (#1212)', () => {
     const SHA = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678';
 
     test('every rebase-check step pins CI_REBASE_BASE_SHA', () => {
-      const doc = yaml.load(fs.readFileSync(path.join(WORKFLOWS_DIR, 'test.yml'), 'utf8'));
-      const steps = Object.values(doc.jobs)
-        .flatMap(j => j.steps || [])
-        .filter(s => typeof s.run === 'string' && s.run.includes('ci-rebase-check.cjs'));
-      assert.ok(steps.length > 0, 'expected at least one rebase-check step');
-      for (const s of steps) {
-        assert.ok(
-          s.env && typeof s.env.CI_REBASE_BASE_SHA === 'string' && s.env.CI_REBASE_BASE_SHA.includes('base.sha'),
-          'each rebase-check step must pin CI_REBASE_BASE_SHA to the PR base sha; '
-          + 'an unpinned job can merge a different tree than its siblings',
-        );
+      for (const wfName of ['test.yml', 'test-full.yml']) {
+        const doc = yaml.load(fs.readFileSync(path.join(WORKFLOWS_DIR, wfName), 'utf8'));
+        const steps = Object.values(doc.jobs)
+          .flatMap(j => j.steps || [])
+          .filter(s => typeof s.run === 'string' && s.run.includes('ci-rebase-check.cjs'));
+        assert.ok(steps.length > 0, `${wfName}: expected at least one rebase-check step`);
+        for (const s of steps) {
+          assert.ok(
+            s.env && typeof s.env.CI_REBASE_BASE_SHA === 'string' && s.env.CI_REBASE_BASE_SHA.includes('base.sha'),
+            `${wfName}: each rebase-check step must pin CI_REBASE_BASE_SHA to the PR base sha; `
+            + 'an unpinned job can merge a different tree than its siblings',
+          );
+        }
       }
     });
 
@@ -584,18 +588,25 @@ describe('test-full shard matrix parity (#1212)', () => {
     }
   });
 
-  test('required-tests fan-in still needs test-full and keeps the protected name', () => {
+  test('required-tests fan-in keeps the protected name in test.yml and needs test-full in test-full.yml', () => {
     // Hyrum's Law: branch protection requires a status check literally named
-    // "Required tests". Renaming it (or dropping test-full from its needs)
-    // would silently break the gate. Pin both.
-    const text = fs.readFileSync(path.join(WORKFLOWS_DIR, 'test.yml'), 'utf8');
-    const doc = yaml.load(text);
-    const fanIn = doc.jobs['required-tests'];
-    assert.ok(fanIn, 'required-tests job must exist');
-    assert.strictEqual(fanIn.name, 'Required tests', 'the branch-protection check name must stay "Required tests"');
+    // "Required tests". Pin both the fast gate and full-suite workflows.
+    const fastDoc = yaml.load(fs.readFileSync(path.join(WORKFLOWS_DIR, 'test.yml'), 'utf8'));
+    const fastFanIn = fastDoc.jobs['required-tests'];
+    assert.ok(fastFanIn, 'test.yml: required-tests job must exist');
+    assert.strictEqual(fastFanIn.name, 'Required tests', 'test.yml: check name must stay "Required tests"');
     assert.ok(
-      Array.isArray(fanIn.needs) && fanIn.needs.includes('test-full'),
-      'required-tests must `needs: test-full` so all shard legs aggregate into the gate',
+      Array.isArray(fastFanIn.needs) && fastFanIn.needs.includes('test') && fastFanIn.needs.includes('lint-tests'),
+      'test.yml: required-tests must aggregate test and lint-tests',
+    );
+
+    const fullDoc = yaml.load(fs.readFileSync(path.join(WORKFLOWS_DIR, 'test-full.yml'), 'utf8'));
+    const fullFanIn = fullDoc.jobs['required-tests'];
+    assert.ok(fullFanIn, 'test-full.yml: required-tests job must exist');
+    assert.strictEqual(fullFanIn.name, 'Required tests', 'test-full.yml: check name must stay "Required tests"');
+    assert.ok(
+      Array.isArray(fullFanIn.needs) && fullFanIn.needs.includes('test-full'),
+      'test-full.yml: required-tests must `needs: test-full` so all shard legs aggregate into the gate',
     );
   });
 });
@@ -872,275 +883,275 @@ describe('code_changed=false implies clean output invariant', () => {
 {
   const { describe: __foldDescribe } = require('node:test');
   __foldDescribe("folded:bug-641-files-from-suite-token (consolidation epic #1969 B6 #1975)", () => {
-// Regression test for issue #641:
-// `--files-from` with a bare suite token (e.g. "unit") crashes with
-// "requested test file(s) not found: unit" instead of expanding the token
-// to the matching suite's files.
-//
-// The bug: selectExplicitFiles() checked `available.has('unit')` against the
-// set of *.test.cjs filenames. 'unit' is not a filename, so it landed in
-// `missing` and caused exit 2. The fix teaches selectExplicitFiles() to
-// delegate bare SUITES members to selectFiles() before the path-existence
-// check.
-'use strict';
+    // Regression test for issue #641:
+    // `--files-from` with a bare suite token (e.g. "unit") crashes with
+    // "requested test file(s) not found: unit" instead of expanding the token
+    // to the matching suite's files.
+    //
+    // The bug: selectExplicitFiles() checked `available.has('unit')` against the
+    // set of *.test.cjs filenames. 'unit' is not a filename, so it landed in
+    // `missing` and caused exit 2. The fix teaches selectExplicitFiles() to
+    // delegate bare SUITES members to selectFiles() before the path-existence
+    // check.
+    'use strict';
 
-const { describe, test, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
+    const { describe, test, beforeEach, afterEach } = require('node:test');
+    const assert = require('node:assert/strict');
+    const fs = require('fs');
+    const path = require('path');
 
-const { createTempDir, cleanup } = require('./helpers.cjs');
-const { runNode } = require('./helpers/process-seam.cjs');
-const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
-// Exported so the suite-token resolution contract below can be asserted
-// in-process rather than through a timed subprocess spawn (see evidence
-// comment above describe('bug #641 ...')).
-const {
-  walkTestFiles,
-  selectExplicitFiles,
-  selectFiles,
-  parseArgs,
-} = require('../scripts/run-tests.cjs');
+    const { createTempDir, cleanup } = require('./helpers.cjs');
+    const { runNode } = require('./helpers/process-seam.cjs');
+    const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
+    // Exported so the suite-token resolution contract below can be asserted
+    // in-process rather than through a timed subprocess spawn (see evidence
+    // comment above describe('bug #641 ...')).
+    const {
+      walkTestFiles,
+      selectExplicitFiles,
+      selectFiles,
+      parseArgs,
+    } = require('../scripts/run-tests.cjs');
 
-const PASS_BODY = `'use strict';
+    const PASS_BODY = `'use strict';
 const { test } = require('node:test');
 test('noop', () => {});
 `;
 
-function seed(dir, names) {
-  for (const name of names) {
-    fs.writeFileSync(path.join(dir, name), PASS_BODY, 'utf8');
-  }
-}
-
-// Mirrors scripts/run-tests.cjs main()'s selection path (parseArgs ->
-// walkTestFiles -> selectExplicitFiles/selectFiles) exactly, called
-// in-process instead of through a spawned child that then spawns a nested
-// `node --test`. See the evidence comment above describe('bug #641 ...').
-function selectInProcess(testDir, args) {
-  const parsed = parseArgs(args);
-  if (parsed.error) return parsed;
-  const allFiles = walkTestFiles(testDir, '').sort();
-  const usingExplicitFiles = parsed.files !== null || parsed.filesFrom !== null;
-  if (usingExplicitFiles) {
-    return selectExplicitFiles(allFiles, parsed.files, parsed.filesFrom);
-  }
-  return { files: selectFiles(allFiles, parsed.suite) };
-}
-
-// Redesign evidence (2026-08-08): these probes originally spawned
-// scripts/run-tests.cjs as a real child — which itself spawns a NESTED
-// `node --test` — under a fixed PROBE_TIMEOUT_MS=15000 wall-clock budget,
-// concurrently with the ~31k-test full suite running in the same container.
-// On the remote runner this produced intermittent failures shaped
-// `null !== 0` (r.status === null: the child was KILLED at the timeout),
-// never a failed assertion about suite-token resolution. Reproduced on
-// `next` alone (sha e705652ba): 5 failures on linux-node22, 0 failures on
-// linux-node24. The victim subset varied by run and by lane, and the
-// failure count went DOWN (7 -> 4 unique failures) as an unrelated diff got
-// heavier — a resource collision, not a flake. The subject under test is
-// suite-TOKEN RESOLUTION (parseArgs / selectExplicitFiles / selectFiles),
-// not test execution; running the seeded trivial fixture files was
-// incidental and was the entire timeout surface. These probes now call the
-// exported selection functions in-process — removing the wall-clock budget
-// around a nested spawn, not raising its number. Real end-to-end coverage of
-// run-tests.cjs spawning and running to completion (exit 0 from a real
-// harness run) already exists in tests/run-tests-harness.test.cjs (e.g. 'no
-// flag runs ALL test files', '--suite unit excludes marked suites',
-// 'non-zero from node:test propagates through harness'), so no execution
-// coverage is lost by converting the "(tests run successfully)" probe below.
-describe('bug #641 — --files-from with bare suite token', () => {
-  let tmpDir;
-
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-641-suite-token-');
-  });
-
-  afterEach(() => {
-    cleanup(tmpDir);
-  });
-
-  test('--files-from with bare "unit" token expands to unit suite, does not exit 2', () => {
-    // Seed a mix: one unit file, one security file.
-    seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
-    const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
-    fs.writeFileSync(listPath, 'unit\n', 'utf8');
-
-    const r = selectInProcess(tmpDir, ['--files-from', listPath]);
-
-    // Must NOT be the "not found" error shape (the old exit-2 crash).
-    assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
-    // The unit suite file (a.test.cjs) must appear in the resolution.
-    assert.ok(
-      r.files.includes('a.test.cjs'),
-      `Expected a.test.cjs (unit suite) to be selected. Resolved: ${r.files}`,
-    );
-    // The security suite file must NOT be included (unit token = unit only).
-    assert.ok(
-      !r.files.includes('b.security.test.cjs'),
-      `Expected b.security.test.cjs (security suite) to be excluded. Resolved: ${r.files}`,
-    );
-  });
-
-  test('--files-from with bare "unit" token exits 0 (tests run successfully)', () => {
-    // "Exits 0" is determined entirely by selection succeeding with a
-    // non-empty list — the seeded fixture is a trivial no-op, so executing
-    // it contributes nothing this in-process call doesn't already prove.
-    // End-to-end execution coverage of run-tests.cjs lives in
-    // tests/run-tests-harness.test.cjs (see the evidence comment above).
-    seed(tmpDir, ['a.test.cjs']);
-    const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
-    fs.writeFileSync(listPath, 'unit\n', 'utf8');
-
-    const r = selectInProcess(tmpDir, ['--files-from', listPath]);
-
-    assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
-    assert.deepStrictEqual(r.files, ['a.test.cjs']);
-  });
-
-  test('--files with bare "unit" token also resolves correctly', () => {
-    seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
-    const r = selectInProcess(tmpDir, ['--files', 'unit']);
-
-    assert.strictEqual(r.error, undefined, `Expected exit 0, got error: ${r.error}`);
-    assert.ok(r.files.includes('a.test.cjs'), `a.test.cjs must be selected. Resolved: ${r.files}`);
-    assert.ok(!r.files.includes('b.security.test.cjs'), `security file must not be selected. Resolved: ${r.files}`);
-  });
-
-  test('mixed: suite token "unit" alongside an explicit file resolves both', () => {
-    seed(tmpDir, ['a.test.cjs', 'b.test.cjs', 'c.security.test.cjs']);
-    const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
-    // 'unit' expands to [a.test.cjs, b.test.cjs]; b.test.cjs is explicit too.
-    fs.writeFileSync(listPath, 'unit\nb.test.cjs\n', 'utf8');
-
-    const r = selectInProcess(tmpDir, ['--files-from', listPath]);
-
-    assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
-    // Both unit files present exactly once (the union dedupes them); security not.
-    assert.ok(r.files.includes('a.test.cjs'), `a.test.cjs must be selected. Resolved: ${r.files}`);
-    assert.ok(r.files.includes('b.test.cjs'), `b.test.cjs must be selected. Resolved: ${r.files}`);
-    assert.ok(!r.files.includes('c.security.test.cjs'), `c.security.test.cjs must be excluded. Resolved: ${r.files}`);
-    assert.strictEqual(r.files.length, 2, `expected no duplicate b.test.cjs. Resolved: ${r.files}`);
-  });
-
-  test('#408 fallback: ci-test-scope "unit" sentinel does not crash run-tests', () => {
-    // This test simulates the end-to-end #408 fallback path:
-    // ci-test-scope produces "unit" (the fallback sentinel for "code changed
-    // but no rule matched any test"), ci-prepare-test-scope writes it verbatim,
-    // and run-tests must resolve it rather than crash.
-    seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
-    // Simulate what ci-prepare-test-scope writes: "unit\n"
-    const listPath = path.join(tmpDir, '.ci-selected-tests.txt');
-    fs.writeFileSync(listPath, 'unit\n', 'utf8');
-
-    const r = selectInProcess(tmpDir, ['--files-from', listPath]);
-
-    assert.strictEqual(r.error, undefined, `#408 fallback: expected a resolved file list, got error: ${r.error}`);
-    assert.ok(r.files.includes('a.test.cjs'), `unit test must resolve. Resolved: ${r.files}`);
-  });
-});
-
-// Regression test for issue #1329:
-// ci-prepare-test-scope's empty-detection FALLBACK hardcoded an explicit file
-// list that included tests/core.test.cjs — a file deleted in #1291. Every
-// scoped lane (scope=targeted|windows) that hit the fallback wrote the stale
-// path into .ci-selected-tests.txt and crashed run-tests with
-// "requested test file(s) not found: core.test.cjs". The fix: existence-filter
-// the fallback at write time, fall back to the 'unit' suite sentinel when
-// nothing survives, and guard the FALLBACK constant against disk reality.
-describe('bug #1329 — ci-prepare-test-scope fallback never emits a deleted file', () => {
-  const { FALLBACK, FALLBACK_SENTINEL, SUITE_SENTINELS, resolveSelection } =
-    require('../scripts/ci-prepare-test-scope.cjs');
-  const REPO_ROOT = path.join(__dirname, '..');
-
-  // Generative parity guard (DEFECT.GENERATIVE-FIX): the FALLBACK constant and
-  // the test files on disk are two surfaces that must stay in sync. This fails
-  // the instant a refactor deletes a file still named in FALLBACK — which is
-  // precisely what #1291 did and CI did not catch.
-  test('every FALLBACK entry resolves on disk or is a known suite sentinel', () => {
-    for (const entry of FALLBACK) {
-      const isSentinel = SUITE_SENTINELS.includes(entry);
-      const exists = fs.existsSync(path.join(REPO_ROOT, entry));
-      assert.ok(
-        isSentinel || exists,
-        `FALLBACK entry "${entry}" is neither an existing test file nor a suite sentinel — stale reference will crash scoped CI lanes (see #1329).`,
-      );
-    }
-  });
-
-  let tmpDir;
-  beforeEach(() => {
-    tmpDir = createTempDir('gsd-1329-fallback-');
-    fs.mkdirSync(path.join(tmpDir, 'tests'), { recursive: true });
-  });
-  afterEach(() => {
-    cleanup(tmpDir);
-  });
-
-  test('empty detection drops a non-existent fallback entry instead of emitting it', () => {
-    // Create all but the last FALLBACK file under a controlled root, simulating
-    // a since-deleted test (the #1329 mechanism), independent of which files
-    // FALLBACK happens to name today.
-    const present = FALLBACK.slice(0, -1);
-    const absent = FALLBACK[FALLBACK.length - 1];
-    for (const f of present) {
-      fs.writeFileSync(path.join(tmpDir, f), PASS_BODY, 'utf8');
+    function seed(dir, names) {
+      for (const name of names) {
+        fs.writeFileSync(path.join(dir, name), PASS_BODY, 'utf8');
+      }
     }
 
-    const lines = resolveSelection({ scope: 'targeted', targeted: '', windows: '', root: tmpDir });
-
-    assert.ok(!lines.includes(absent), `absent file "${absent}" must be filtered out, got: ${lines.join(', ')}`);
-    for (const f of present) {
-      assert.ok(lines.includes(f), `present file "${f}" must survive, got: ${lines.join(', ')}`);
+    // Mirrors scripts/run-tests.cjs main()'s selection path (parseArgs ->
+    // walkTestFiles -> selectExplicitFiles/selectFiles) exactly, called
+    // in-process instead of through a spawned child that then spawns a nested
+    // `node --test`. See the evidence comment above describe('bug #641 ...').
+    function selectInProcess(testDir, args) {
+      const parsed = parseArgs(args);
+      if (parsed.error) return parsed;
+      const allFiles = walkTestFiles(testDir, '').sort();
+      const usingExplicitFiles = parsed.files !== null || parsed.filesFrom !== null;
+      if (usingExplicitFiles) {
+        return selectExplicitFiles(allFiles, parsed.files, parsed.filesFrom);
+      }
+      return { files: selectFiles(allFiles, parsed.suite) };
     }
-  });
 
-  test('empty detection with no surviving fallback files falls back to the unit sentinel', () => {
-    // tmpDir/tests exists but contains none of the FALLBACK files.
-    const lines = resolveSelection({ scope: 'windows', targeted: '', windows: '', root: tmpDir });
-    assert.deepStrictEqual(lines, [FALLBACK_SENTINEL]);
-  });
+    // Redesign evidence (2026-08-08): these probes originally spawned
+    // scripts/run-tests.cjs as a real child — which itself spawns a NESTED
+    // `node --test` — under a fixed PROBE_TIMEOUT_MS=15000 wall-clock budget,
+    // concurrently with the ~31k-test full suite running in the same container.
+    // On the remote runner this produced intermittent failures shaped
+    // `null !== 0` (r.status === null: the child was KILLED at the timeout),
+    // never a failed assertion about suite-token resolution. Reproduced on
+    // `next` alone (sha e705652ba): 5 failures on linux-node22, 0 failures on
+    // linux-node24. The victim subset varied by run and by lane, and the
+    // failure count went DOWN (7 -> 4 unique failures) as an unrelated diff got
+    // heavier — a resource collision, not a flake. The subject under test is
+    // suite-TOKEN RESOLUTION (parseArgs / selectExplicitFiles / selectFiles),
+    // not test execution; running the seeded trivial fixture files was
+    // incidental and was the entire timeout surface. These probes now call the
+    // exported selection functions in-process — removing the wall-clock budget
+    // around a nested spawn, not raising its number. Real end-to-end coverage of
+    // run-tests.cjs spawning and running to completion (exit 0 from a real
+    // harness run) already exists in tests/run-tests-harness.test.cjs (e.g. 'no
+    // flag runs ALL test files', '--suite unit excludes marked suites',
+    // 'non-zero from node:test propagates through harness'), so no execution
+    // coverage is lost by converting the "(tests run successfully)" probe below.
+    describe('bug #641 — --files-from with bare suite token', () => {
+      let tmpDir;
 
-  test('detected list passes through verbatim — files and suite sentinels preserved, not existence-filtered', () => {
-    // The detected list is already filtered by affected-tests-lib and may carry
-    // a suite sentinel; ci-prepare-test-scope must not touch it.
-    const lines = resolveSelection({
-      scope: 'targeted',
-      targeted: 'tests/does-not-exist.test.cjs unit',
-      windows: '',
-      root: tmpDir,
+      beforeEach(() => {
+        tmpDir = createTempDir('gsd-641-suite-token-');
+      });
+
+      afterEach(() => {
+        cleanup(tmpDir);
+      });
+
+      test('--files-from with bare "unit" token expands to unit suite, does not exit 2', () => {
+        // Seed a mix: one unit file, one security file.
+        seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
+        const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
+        fs.writeFileSync(listPath, 'unit\n', 'utf8');
+
+        const r = selectInProcess(tmpDir, ['--files-from', listPath]);
+
+        // Must NOT be the "not found" error shape (the old exit-2 crash).
+        assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
+        // The unit suite file (a.test.cjs) must appear in the resolution.
+        assert.ok(
+          r.files.includes('a.test.cjs'),
+          `Expected a.test.cjs (unit suite) to be selected. Resolved: ${r.files}`,
+        );
+        // The security suite file must NOT be included (unit token = unit only).
+        assert.ok(
+          !r.files.includes('b.security.test.cjs'),
+          `Expected b.security.test.cjs (security suite) to be excluded. Resolved: ${r.files}`,
+        );
+      });
+
+      test('--files-from with bare "unit" token exits 0 (tests run successfully)', () => {
+        // "Exits 0" is determined entirely by selection succeeding with a
+        // non-empty list — the seeded fixture is a trivial no-op, so executing
+        // it contributes nothing this in-process call doesn't already prove.
+        // End-to-end execution coverage of run-tests.cjs lives in
+        // tests/run-tests-harness.test.cjs (see the evidence comment above).
+        seed(tmpDir, ['a.test.cjs']);
+        const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
+        fs.writeFileSync(listPath, 'unit\n', 'utf8');
+
+        const r = selectInProcess(tmpDir, ['--files-from', listPath]);
+
+        assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
+        assert.deepStrictEqual(r.files, ['a.test.cjs']);
+      });
+
+      test('--files with bare "unit" token also resolves correctly', () => {
+        seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
+        const r = selectInProcess(tmpDir, ['--files', 'unit']);
+
+        assert.strictEqual(r.error, undefined, `Expected exit 0, got error: ${r.error}`);
+        assert.ok(r.files.includes('a.test.cjs'), `a.test.cjs must be selected. Resolved: ${r.files}`);
+        assert.ok(!r.files.includes('b.security.test.cjs'), `security file must not be selected. Resolved: ${r.files}`);
+      });
+
+      test('mixed: suite token "unit" alongside an explicit file resolves both', () => {
+        seed(tmpDir, ['a.test.cjs', 'b.test.cjs', 'c.security.test.cjs']);
+        const listPath = path.join(tmpDir, 'ci-selected-tests.txt');
+        // 'unit' expands to [a.test.cjs, b.test.cjs]; b.test.cjs is explicit too.
+        fs.writeFileSync(listPath, 'unit\nb.test.cjs\n', 'utf8');
+
+        const r = selectInProcess(tmpDir, ['--files-from', listPath]);
+
+        assert.strictEqual(r.error, undefined, `Expected a resolved file list, got error: ${r.error}`);
+        // Both unit files present exactly once (the union dedupes them); security not.
+        assert.ok(r.files.includes('a.test.cjs'), `a.test.cjs must be selected. Resolved: ${r.files}`);
+        assert.ok(r.files.includes('b.test.cjs'), `b.test.cjs must be selected. Resolved: ${r.files}`);
+        assert.ok(!r.files.includes('c.security.test.cjs'), `c.security.test.cjs must be excluded. Resolved: ${r.files}`);
+        assert.strictEqual(r.files.length, 2, `expected no duplicate b.test.cjs. Resolved: ${r.files}`);
+      });
+
+      test('#408 fallback: ci-test-scope "unit" sentinel does not crash run-tests', () => {
+        // This test simulates the end-to-end #408 fallback path:
+        // ci-test-scope produces "unit" (the fallback sentinel for "code changed
+        // but no rule matched any test"), ci-prepare-test-scope writes it verbatim,
+        // and run-tests must resolve it rather than crash.
+        seed(tmpDir, ['a.test.cjs', 'b.security.test.cjs']);
+        // Simulate what ci-prepare-test-scope writes: "unit\n"
+        const listPath = path.join(tmpDir, '.ci-selected-tests.txt');
+        fs.writeFileSync(listPath, 'unit\n', 'utf8');
+
+        const r = selectInProcess(tmpDir, ['--files-from', listPath]);
+
+        assert.strictEqual(r.error, undefined, `#408 fallback: expected a resolved file list, got error: ${r.error}`);
+        assert.ok(r.files.includes('a.test.cjs'), `unit test must resolve. Resolved: ${r.files}`);
+      });
     });
-    assert.deepStrictEqual(lines, ['tests/does-not-exist.test.cjs', 'unit']);
-  });
 
-  test('end-to-end: the real script writes a fallback list whose every entry resolves', () => {
-    // Run the real script (subprocess) with empty detection inside an isolated
-    // root that holds the FALLBACK files, then verify every line it wrote into
-    // .ci-selected-tests.txt resolves — the exact scoped-lane path that crashed
-    // in #1329. Hermetic: the temp root is removed by afterEach's cleanup().
-    for (const f of FALLBACK) {
-      fs.writeFileSync(path.join(tmpDir, f), PASS_BODY, 'utf8');
-    }
-    const prep = runNode(
-      [path.join(REPO_ROOT, 'scripts', 'ci-prepare-test-scope.cjs')],
-      {
-        cwd: tmpDir,
-        env: { ...process.env, TEST_SCOPE: 'targeted', TARGETED_TESTS: '', WINDOWS_TESTS: '' },
-        timeoutMs: PROBE_TIMEOUT_MS,
-      },
-    );
-    assert.strictEqual(prep.exitCode, 0, `prepare step failed: ${prep.stderr}`);
+    // Regression test for issue #1329:
+    // ci-prepare-test-scope's empty-detection FALLBACK hardcoded an explicit file
+    // list that included tests/core.test.cjs — a file deleted in #1291. Every
+    // scoped lane (scope=targeted|windows) that hit the fallback wrote the stale
+    // path into .ci-selected-tests.txt and crashed run-tests with
+    // "requested test file(s) not found: core.test.cjs". The fix: existence-filter
+    // the fallback at write time, fall back to the 'unit' suite sentinel when
+    // nothing survives, and guard the FALLBACK constant against disk reality.
+    describe('bug #1329 — ci-prepare-test-scope fallback never emits a deleted file', () => {
+      const { FALLBACK, FALLBACK_SENTINEL, SUITE_SENTINELS, resolveSelection } =
+        require('../scripts/ci-prepare-test-scope.cjs');
+      const REPO_ROOT = path.join(__dirname, '..');
 
-    const selected = fs.readFileSync(path.join(tmpDir, '.ci-selected-tests.txt'), 'utf8');
-    for (const line of selected.split(/\r?\n/).filter(Boolean)) {
-      const isSentinel = SUITE_SENTINELS.includes(line);
-      assert.ok(
-        isSentinel || fs.existsSync(path.join(tmpDir, line)),
-        `selected entry "${line}" does not resolve — would crash run-tests (#1329)`,
-      );
-    }
-    assert.doesNotMatch(selected, /core\.test\.cjs/, 'deleted core.test.cjs must never be selected');
-  });
-});
+      // Generative parity guard (DEFECT.GENERATIVE-FIX): the FALLBACK constant and
+      // the test files on disk are two surfaces that must stay in sync. This fails
+      // the instant a refactor deletes a file still named in FALLBACK — which is
+      // precisely what #1291 did and CI did not catch.
+      test('every FALLBACK entry resolves on disk or is a known suite sentinel', () => {
+        for (const entry of FALLBACK) {
+          const isSentinel = SUITE_SENTINELS.includes(entry);
+          const exists = fs.existsSync(path.join(REPO_ROOT, entry));
+          assert.ok(
+            isSentinel || exists,
+            `FALLBACK entry "${entry}" is neither an existing test file nor a suite sentinel — stale reference will crash scoped CI lanes (see #1329).`,
+          );
+        }
+      });
+
+      let tmpDir;
+      beforeEach(() => {
+        tmpDir = createTempDir('gsd-1329-fallback-');
+        fs.mkdirSync(path.join(tmpDir, 'tests'), { recursive: true });
+      });
+      afterEach(() => {
+        cleanup(tmpDir);
+      });
+
+      test('empty detection drops a non-existent fallback entry instead of emitting it', () => {
+        // Create all but the last FALLBACK file under a controlled root, simulating
+        // a since-deleted test (the #1329 mechanism), independent of which files
+        // FALLBACK happens to name today.
+        const present = FALLBACK.slice(0, -1);
+        const absent = FALLBACK[FALLBACK.length - 1];
+        for (const f of present) {
+          fs.writeFileSync(path.join(tmpDir, f), PASS_BODY, 'utf8');
+        }
+
+        const lines = resolveSelection({ scope: 'targeted', targeted: '', windows: '', root: tmpDir });
+
+        assert.ok(!lines.includes(absent), `absent file "${absent}" must be filtered out, got: ${lines.join(', ')}`);
+        for (const f of present) {
+          assert.ok(lines.includes(f), `present file "${f}" must survive, got: ${lines.join(', ')}`);
+        }
+      });
+
+      test('empty detection with no surviving fallback files falls back to the unit sentinel', () => {
+        // tmpDir/tests exists but contains none of the FALLBACK files.
+        const lines = resolveSelection({ scope: 'windows', targeted: '', windows: '', root: tmpDir });
+        assert.deepStrictEqual(lines, [FALLBACK_SENTINEL]);
+      });
+
+      test('detected list passes through verbatim — files and suite sentinels preserved, not existence-filtered', () => {
+        // The detected list is already filtered by affected-tests-lib and may carry
+        // a suite sentinel; ci-prepare-test-scope must not touch it.
+        const lines = resolveSelection({
+          scope: 'targeted',
+          targeted: 'tests/does-not-exist.test.cjs unit',
+          windows: '',
+          root: tmpDir,
+        });
+        assert.deepStrictEqual(lines, ['tests/does-not-exist.test.cjs', 'unit']);
+      });
+
+      test('end-to-end: the real script writes a fallback list whose every entry resolves', () => {
+        // Run the real script (subprocess) with empty detection inside an isolated
+        // root that holds the FALLBACK files, then verify every line it wrote into
+        // .ci-selected-tests.txt resolves — the exact scoped-lane path that crashed
+        // in #1329. Hermetic: the temp root is removed by afterEach's cleanup().
+        for (const f of FALLBACK) {
+          fs.writeFileSync(path.join(tmpDir, f), PASS_BODY, 'utf8');
+        }
+        const prep = runNode(
+          [path.join(REPO_ROOT, 'scripts', 'ci-prepare-test-scope.cjs')],
+          {
+            cwd: tmpDir,
+            env: { ...process.env, TEST_SCOPE: 'targeted', TARGETED_TESTS: '', WINDOWS_TESTS: '' },
+            timeoutMs: PROBE_TIMEOUT_MS,
+          },
+        );
+        assert.strictEqual(prep.exitCode, 0, `prepare step failed: ${prep.stderr}`);
+
+        const selected = fs.readFileSync(path.join(tmpDir, '.ci-selected-tests.txt'), 'utf8');
+        for (const line of selected.split(/\r?\n/).filter(Boolean)) {
+          const isSentinel = SUITE_SENTINELS.includes(line);
+          assert.ok(
+            isSentinel || fs.existsSync(path.join(tmpDir, line)),
+            `selected entry "${line}" does not resolve — would crash run-tests (#1329)`,
+          );
+        }
+        assert.doesNotMatch(selected, /core\.test\.cjs/, 'deleted core.test.cjs must never be selected');
+      });
+    });
   });
 }

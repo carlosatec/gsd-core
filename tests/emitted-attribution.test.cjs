@@ -2243,10 +2243,15 @@ test('#2854: the gate is pinned to the SAME base the tree was merged with', () =
   // Two surfaces read one value, which is the generative-divergence shape this repo
   // has been bitten by before, so the parity is asserted rather than assumed.
   const yaml = require('js-yaml');
-  const wf = yaml.load(fs.readFileSync(path.join(REPO_ROOT, '.github/workflows/test.yml'), 'utf8'));
-
-  const jobsUnderTest = Object.entries(wf.jobs).filter(([, job]) =>
-    (job.steps || []).some((s) => typeof s.run === 'string' && s.run.includes('ci-rebase-check.cjs')));
+  const jobsUnderTest = [];
+  for (const wfName of ['test.yml', 'test-full.yml']) {
+    const wf = yaml.load(fs.readFileSync(path.join(REPO_ROOT, '.github/workflows', wfName), 'utf8'));
+    for (const [name, job] of Object.entries(wf.jobs)) {
+      if ((job.steps || []).some((s) => typeof s.run === 'string' && s.run.includes('ci-rebase-check.cjs'))) {
+        jobsUnderTest.push([`${wfName}:${name}`, job]);
+      }
+    }
+  }
 
   assert.ok(jobsUnderTest.length >= 2,
     `expected the rebase-pinned jobs to be found, got ${jobsUnderTest.length}`);
@@ -2539,8 +2544,10 @@ test('property: every moved key lands in exactly one bucket', () => {
   // hole in the very invariant ADR-2719 asserts — and it is the failure a hand-written
   // example set is least likely to find.
   const keys = [WORKFLOW_KEY, SKILL_KEY, 'agents/gsd-planner.md', 'scripts/lib/cli-exit.cjs'];
-  const sources = { [WORKFLOW_KEY]: WORKFLOW_SRC, [SKILL_KEY]: SKILL_SRC,
-    'agents/gsd-planner.md': 'agents/gsd-planner.md', 'scripts/lib/cli-exit.cjs': 'scripts/lib/cli-exit.cjs' };
+  const sources = {
+    [WORKFLOW_KEY]: WORKFLOW_SRC, [SKILL_KEY]: SKILL_SRC,
+    'agents/gsd-planner.md': 'agents/gsd-planner.md', 'scripts/lib/cli-exit.cjs': 'scripts/lib/cli-exit.cjs'
+  };
 
   fc.assert(
     fc.property(
@@ -2658,43 +2665,46 @@ test('rejects an added family with no runtime-registry change, naming it', () =>
 });
 
 test('permits a dropped family attributed to a runtime-registry change', () => {
-  const without = ALL_FAMILIES.filter((n) => n !== 'trae');
+  const dropTarget = ALL_FAMILIES[0];
+  const without = ALL_FAMILIES.filter((n) => n !== dropTarget);
   const r = reconcileWith({
     derivedNames: without,
     baselineNames: ALL_FAMILIES,
     currentNames: without,
     changedPaths: REGISTRY_CHANGE,
-    minimum: 18,
+    minimum: MINIMUM_MANIFEST_FAMILIES - 1,
   });
   assert.deepEqual(r, { ok: true, errors: [] });
 });
 
 test('rejects a silently dropped family, naming it', () => {
-  const without = ALL_FAMILIES.filter((n) => n !== 'trae');
+  const dropTarget = ALL_FAMILIES[0];
+  const without = ALL_FAMILIES.filter((n) => n !== dropTarget);
   const r = reconcileWith({
     derivedNames: without,
     baselineNames: ALL_FAMILIES,
     currentNames: without,
     changedPaths: CONTENT_ONLY_CHANGE,
-    minimum: 18,
+    minimum: MINIMUM_MANIFEST_FAMILIES - 1,
   });
   assert.equal(r.ok, false);
-  assert.deepEqual(r.errors, [{ code: FAMILY_REASON.DROPPED_UNATTRIBUTED, family: 'trae' }]);
+  assert.deepEqual(r.errors, [{ code: FAMILY_REASON.DROPPED_UNATTRIBUTED, family: dropTarget }]);
 });
 
 test('attribution is the ONLY permission path, symmetrically', () => {
   // No ack-style bypass on either side: a one-sided escape hatch would make removals
   // easier to wave through than additions, and the drift-ack file covers unattributable
   // emitted-PATH deltas, not family churn.
-  const without = ALL_FAMILIES.filter((n) => n !== 'trae');
+  const dropTarget = ALL_FAMILIES[0];
+  const without = ALL_FAMILIES.filter((n) => n !== dropTarget);
   const added = [...ALL_FAMILIES, 'qoder'];
   for (const [names, baselineNames, code, family] of [
-    [without, ALL_FAMILIES, FAMILY_REASON.DROPPED_UNATTRIBUTED, 'trae'],
+    [without, ALL_FAMILIES, FAMILY_REASON.DROPPED_UNATTRIBUTED, dropTarget],
     [added, ALL_FAMILIES, FAMILY_REASON.ADDED_UNATTRIBUTED, 'qoder'],
   ]) {
     const r = reconcileWith({
       derivedNames: names, baselineNames, currentNames: names,
-      changedPaths: CONTENT_ONLY_CHANGE, minimum: 18,
+      changedPaths: CONTENT_ONLY_CHANGE, minimum: MINIMUM_MANIFEST_FAMILIES - 1,
     });
     assert.equal(r.ok, false);
     assert.deepEqual(r.errors, [{ code, family }]);
@@ -2702,7 +2712,8 @@ test('attribution is the ONLY permission path, symmetrically', () => {
 });
 
 test('an add and a drop together are permitted when attributed', () => {
-  const swapped = [...ALL_FAMILIES.filter((n) => n !== 'trae'), 'qoder'];
+  const dropTarget = ALL_FAMILIES[0];
+  const swapped = [...ALL_FAMILIES.filter((n) => n !== dropTarget), 'qoder'];
   const r = reconcileWith({
     derivedNames: swapped,
     baselineNames: ALL_FAMILIES,
@@ -2713,9 +2724,10 @@ test('an add and a drop together are permitted when attributed', () => {
 });
 
 test('an EQUAL-COUNT membership swap is caught in both directions', () => {
-  // 19 in, 19 out — invisible to any count-based check. This is why the contract is
+  // N in, N out — invisible to any count-based check. This is why the contract is
   // set-based rather than numeric.
-  const swapped = [...ALL_FAMILIES.filter((n) => n !== 'trae'), 'qoder'];
+  const dropTarget = ALL_FAMILIES[0];
+  const swapped = [...ALL_FAMILIES.filter((n) => n !== dropTarget), 'qoder'];
   const r = reconcileWith({
     derivedNames: swapped,
     baselineNames: ALL_FAMILIES,
@@ -2726,7 +2738,7 @@ test('an EQUAL-COUNT membership swap is caught in both directions', () => {
   assert.equal(r.ok, false);
   assert.deepEqual(r.errors.slice().sort((a, b) => a.code.localeCompare(b.code)), [
     { code: FAMILY_REASON.ADDED_UNATTRIBUTED, family: 'qoder' },
-    { code: FAMILY_REASON.DROPPED_UNATTRIBUTED, family: 'trae' },
+    { code: FAMILY_REASON.DROPPED_UNATTRIBUTED, family: dropTarget },
   ]);
 });
 
@@ -2753,30 +2765,32 @@ test('rejects a registered runtime with no fixture, naming it', () => {
 // ── The absolute floor: limit-1 / limit / limit+1 ────────────────────────────
 
 test('floor is enforced at limit-1 / limit / limit+1', () => {
-  const eighteen = ALL_FAMILIES.filter((n) => n !== 'trae');          // limit-1
-  const twenty = [...ALL_FAMILIES, 'qoder'];                          // limit+1
+  const dropTarget = ALL_FAMILIES[0];
+  const belowFloor = ALL_FAMILIES.filter((n) => n !== dropTarget);          // limit-1
+  const aboveFloor = [...ALL_FAMILIES, 'qoder'];                          // limit+1
 
   const below = reconcileWith({
-    derivedNames: eighteen, baselineNames: eighteen, currentNames: eighteen,
+    derivedNames: belowFloor, baselineNames: belowFloor, currentNames: belowFloor,
   });
   assert.equal(below.ok, false);
   assert.ok(codesOf(below).includes(FAMILY_REASON.BELOW_FLOOR));
 
-  assert.deepEqual(reconcileWith({}), { ok: true, errors: [] });      // limit == 19
+  assert.deepEqual(reconcileWith({}), { ok: true, errors: [] });      // limit == MINIMUM_MANIFEST_FAMILIES
 
   const above = reconcileWith({
-    derivedNames: twenty, baselineNames: twenty, currentNames: twenty,
+    derivedNames: aboveFloor, baselineNames: aboveFloor, currentNames: aboveFloor,
   });
   assert.deepEqual(above, { ok: true, errors: [] });
 });
 
 test('a uniformly shrunken universe fails on the floor', () => {
   // The Goodhart move the old literal permitted: drop a runtime AND its fixture together
-  // and lower the constant, and 18 === 18 passes over a smaller world.
-  const eighteen = ALL_FAMILIES.filter((n) => n !== 'trae');
+  // and lower the constant, and N-1 === N-1 passes over a smaller world.
+  const dropTarget = ALL_FAMILIES[0];
+  const belowFloor = ALL_FAMILIES.filter((n) => n !== dropTarget);
   const r = reconcileWith({
-    derivedNames: eighteen, fixtureNames: eighteen,
-    baselineNames: eighteen, currentNames: eighteen,
+    derivedNames: belowFloor, fixtureNames: belowFloor,
+    baselineNames: belowFloor, currentNames: belowFloor,
     changedPaths: REGISTRY_CHANGE,
   });
   assert.equal(r.ok, false);

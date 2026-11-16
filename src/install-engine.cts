@@ -32,6 +32,8 @@ import retiredArtifactCleanup = require('./retired-artifact-cleanup.cjs');
 import { posixNormalize } from './shell-command-projection.cjs';
 import { isPathConfined } from './external-descriptor-trust.cjs';
 import { ensureCommonJsMarker } from './commonjs-marker.cjs';
+import packageIdentity = require('./package-identity.cjs');
+const { PACKAGE_NAME } = packageIdentity;
 // #2874 (ADR-58 cleanup phase): the injectable fs seam for the
 // installRuntimeArtifacts call tree. `installFs()` resolves to real
 // `node:fs` unless a call is wrapped in `withInstallFs(deps.fs, ...)` —
@@ -1746,7 +1748,7 @@ function assertNotSourceRepository(targetDir: string, isGlobal: boolean): void {
   if (fs.existsSync(pkgPath) && fs.existsSync(srcDir)) {
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      if (pkg.name === 'gsd-core' || pkg.name === '@opengsd/gsd-core') {
+      if (pkg.name === 'gsd-core' || pkg.name === PACKAGE_NAME) {
         throw new Error(
           `Refusing to uninstall locally from inside the GSD Core source development repository (${dir}). This operation would delete source files.`
         );

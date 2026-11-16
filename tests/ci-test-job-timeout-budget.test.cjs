@@ -107,23 +107,24 @@ function hasSufficientBudget(budgetMinutes, measuredMinutes, headroomFactor = HE
 }
 
 test('CI job timeout budgets carry headroom over measured cost (#2952)', async (t) => {
-  const workflow = loadWorkflow('test.yml');
+  const fullWorkflow = loadWorkflow('test-full.yml');
+  const fastWorkflow = loadWorkflow('test.yml');
 
   for (const lane of LANE_COSTS) {
     await t.test(`${lane.job} is budgeted above its measured cost`, () => {
       assert.ok(
-        workflow.jobs && Object.prototype.hasOwnProperty.call(workflow.jobs, lane.job),
-        `.github/workflows/test.yml declares no job \`${lane.job}\`. If it was `
+        fullWorkflow.jobs && Object.prototype.hasOwnProperty.call(fullWorkflow.jobs, lane.job),
+        `.github/workflows/test-full.yml declares no job \`${lane.job}\`. If it was `
         + 'renamed or removed, update LANE_COSTS in this file to match — do not '
         + 'delete the entry to make this pass.',
       );
 
-      const budget = workflow.jobs[lane.job]['timeout-minutes'];
+      const budget = fullWorkflow.jobs[lane.job]['timeout-minutes'];
       const required = requiredBudgetMinutes(lane.measuredMinutes);
 
       assert.equal(
         typeof budget, 'number',
-        `.github/workflows/test.yml jobs.${lane.job} must declare timeout-minutes`,
+        `.github/workflows/test-full.yml jobs.${lane.job} must declare timeout-minutes`,
       );
       assert.ok(
         hasSufficientBudget(budget, lane.measuredMinutes),
@@ -135,6 +136,16 @@ test('CI job timeout budgets carry headroom over measured cost (#2952)', async (
       );
     });
   }
+
+  await t.test('fast push/PR CI gate (test.yml) declares explicit bounded timeouts for every job', () => {
+    for (const [jobName, minMinutes] of [['lint-tests', 5], ['test', 15], ['test-inert', 15], ['qa-loop-walk', 15]]) {
+      const budget = fastWorkflow.jobs?.[jobName]?.['timeout-minutes'];
+      assert.ok(
+        Number.isInteger(budget) && budget >= minMinutes,
+        `.github/workflows/test.yml jobs.${jobName}.timeout-minutes must be >= ${minMinutes}, got ${budget}`,
+      );
+    }
+  });
 
   // Boundary coverage on the predicate that decides every lane above:
   // required-1 must be rejected, required and required+1 accepted.

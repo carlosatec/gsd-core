@@ -3,7 +3,7 @@
 /**
  * Equivalence proof for ADR-857 phase 5d: descriptor-driven resolveRuntimeArtifactLayout.
  *
- * For every runtime in the 15-entry capability registry × {global, local} scopes,
+ * For every runtime in the active capability registry × {global, local} scopes,
  * this test asserts that:
  *   1. kind.kind, kind.destSubpath, kind.prefix are byte-identical to the STEP-0
  *      golden captured from the old switch() before any edits.
@@ -128,32 +128,6 @@ const GOLDEN = {
     { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
   ],
 
-  // ── augment ──────────────────────────────────────────────────────────────────
-  // Old switch: no scope branch → local == global. 5b backfill restores this.
-  // ADR-1235 step 1 (#1763): agents kind added.
-  'augment/global': [
-    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
-  ],
-  'augment/local': [
-    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
-  ],
-
-  // ── trae ─────────────────────────────────────────────────────────────────────
-  // Old switch: no scope branch → local == global. 5b backfill restores this.
-  // ADR-1235 step 1 (#1763): agents kind added.
-  'trae/global': [
-    { kind: 'skills', destSubpath: 'skills', prefix: 'gsd-' },
-    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
-  ],
-  'trae/local': [
-    { kind: 'skills', destSubpath: 'skills', prefix: 'gsd-' },
-    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
-  ],
-
   // ── qwen ─────────────────────────────────────────────────────────────────────
   // Old switch: no scope branch → local == global. 5b backfill restores this.
   // ADR-1239 / #2092 Phase B Upgrade 1: agents kind added (native
@@ -167,32 +141,6 @@ const GOLDEN = {
     { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
   ],
 
-  // ── hermes ───────────────────────────────────────────────────────────────────
-  // Old switch: no scope branch → local == global. 5b backfill restores this.
-  // #2875 Part 2: agents kind added (the inline loop wrote hermes agents too,
-  // via a new named branding converter — convertClaudeAgentToHermesAgent).
-  'hermes/global': [
-    { kind: 'skills', destSubpath: 'skills/gsd', prefix: 'gsd-' },
-    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
-  ],
-  'hermes/local': [
-    { kind: 'skills', destSubpath: 'skills/gsd', prefix: 'gsd-' },
-    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
-  ],
-
-  // ── codebuddy ────────────────────────────────────────────────────────────────
-  // Old switch: no scope branch → local == global. 5b backfill restores this.
-  // ADR-1235 step 1 (#1763): agents kind added.
-  'codebuddy/global': [
-    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
-  ],
-  'codebuddy/local': [
-    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
-  ],
 
   // ── cline ────────────────────────────────────────────────────────────────────
   // Old switch: scope='global' → [skills]; scope='local' → []. Matches descriptor.
@@ -217,13 +165,16 @@ const GOLDEN = {
     { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
   ],
 
-  // ── kimi ─────────────────────────────────────────────────────────────────────
-  // Old switch: scope='global' → [skills, kimi-agents]; scope='local' → []. Matches descriptor.
-  'kimi/global': [
-    { kind: 'skills',      destSubpath: 'skills', prefix: 'gsd-' },
-    { kind: 'kimi-agents', destSubpath: 'agents', prefix: 'gsd'  },
+  // ── kimi-code ────────────────────────────────────────────────────────────────
+  // Phase 24: replaces the retired `kimi` (kimi-agents) layout. Global writes
+  // skills + agents; local writes agents only.
+  'kimi-code/global': [
+    { kind: 'skills', destSubpath: 'skills', prefix: 'gsd-' },
+    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
   ],
-  'kimi/local': [],
+  'kimi-code/local': [
+    { kind: 'agents', destSubpath: 'agents', prefix: 'gsd-' },
+  ],
 
   // ── opencode ─────────────────────────────────────────────────────────────────
   // Old switch: no scope branch → local == global. 5b backfill restores this.
@@ -246,20 +197,17 @@ const GOLDEN = {
     { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
   ],
 
-  // ── kilo ─────────────────────────────────────────────────────────────────────
-  // Old switch: no scope branch → local == global. 5b backfill restores this.
-  // #2875 Part 2: agents kind added (mirrors opencode — same combined-family
-  // install shape, same install-engine.cts installOpencodeFamilyArtifacts /
-  // installAgentsKindStandalone coverage).
-  'kilo/global': [
-    { kind: 'commands', destSubpath: 'command', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',  prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',  prefix: 'gsd-' },
+  // ── deepseek-harness ─────────────────────────────────────────────────────────
+  // Phase 24: active runtime; commands + skills + agents in both scopes.
+  'deepseek-harness/global': [
+    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
+    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
+    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
   ],
-  'kilo/local': [
-    { kind: 'commands', destSubpath: 'command', prefix: 'gsd-' },
-    { kind: 'skills',   destSubpath: 'skills',  prefix: 'gsd-' },
-    { kind: 'agents',   destSubpath: 'agents',  prefix: 'gsd-' },
+  'deepseek-harness/local': [
+    { kind: 'commands', destSubpath: 'commands', prefix: 'gsd-' },
+    { kind: 'skills',   destSubpath: 'skills',   prefix: 'gsd-' },
+    { kind: 'agents',   destSubpath: 'agents',   prefix: 'gsd-' },
   ],
 };
 
@@ -267,8 +215,8 @@ const GOLDEN = {
 
 const RUNTIMES = [
   'claude', 'cursor', 'codex', 'copilot',
-  'antigravity', 'windsurf', 'augment', 'trae', 'qwen',
-  'hermes', 'codebuddy', 'cline', 'kimi', 'opencode', 'kilo',
+  'antigravity', 'windsurf', 'qwen', 'cline',
+  'kimi-code', 'opencode', 'deepseek-harness',
 ];
 
 for (const runtime of RUNTIMES) {
@@ -415,20 +363,20 @@ describe('resolveRuntimeArtifactLayout — scope defaults to global (descriptor-
     }
   });
 
-  test('omitting scope yields global layout for kimi (2 kinds)', () => {
-    const layout = resolveRuntimeArtifactLayout('kimi', FAKE_DIR);
+  test('omitting scope yields global layout for kimi-code (skills + agents)', () => {
+    const layout = resolveRuntimeArtifactLayout('kimi-code', FAKE_DIR);
     assert.strictEqual(layout.scope, 'global');
     assert.strictEqual(layout.kinds.length, 2);
     assert.strictEqual(layout.kinds[0].kind, 'skills');
-    assert.strictEqual(layout.kinds[1].kind, 'kimi-agents');
+    assert.strictEqual(layout.kinds[1].kind, 'agents');
   });
 });
 
 // ── Non-vacuous check: verify at least one multi-kind runtime ─────────────────
 
 describe('resolveRuntimeArtifactLayout — multi-kind runtimes non-vacuous (descriptor-driven)', () => {
-  test('augment global returns 3 kinds (commands + skills + agents)', () => {
-    const layout = resolveRuntimeArtifactLayout('augment', FAKE_DIR, 'global');
+  test('deepseek-harness global returns 3 kinds (commands + skills + agents)', () => {
+    const layout = resolveRuntimeArtifactLayout('deepseek-harness', FAKE_DIR, 'global');
     assert.strictEqual(layout.kinds.length, 3);
     assert.strictEqual(layout.kinds[0].kind, 'commands');
     assert.strictEqual(layout.kinds[1].kind, 'skills');
@@ -438,17 +386,17 @@ describe('resolveRuntimeArtifactLayout — multi-kind runtimes non-vacuous (desc
     assert.strictEqual(typeof layout.kinds[2].stage, 'function');
   });
 
-  test('kimi global returns skills then kimi-agents', () => {
-    const layout = resolveRuntimeArtifactLayout('kimi', FAKE_DIR, 'global');
+  test('kimi-code global returns skills then agents', () => {
+    const layout = resolveRuntimeArtifactLayout('kimi-code', FAKE_DIR, 'global');
     assert.strictEqual(layout.kinds.length, 2);
     assert.strictEqual(layout.kinds[0].kind, 'skills');
-    assert.strictEqual(layout.kinds[1].kind, 'kimi-agents');
+    assert.strictEqual(layout.kinds[1].kind, 'agents');
     assert.strictEqual(layout.kinds[1].destSubpath, 'agents');
-    assert.strictEqual(layout.kinds[1].prefix, 'gsd');
+    assert.strictEqual(layout.kinds[1].prefix, 'gsd-');
   });
 
-  test('codebuddy global returns commands then skills then agents', () => {
-    const layout = resolveRuntimeArtifactLayout('codebuddy', FAKE_DIR, 'global');
+  test('opencode global returns commands then skills then agents', () => {
+    const layout = resolveRuntimeArtifactLayout('opencode', FAKE_DIR, 'global');
     assert.strictEqual(layout.kinds.length, 3);
     assert.strictEqual(layout.kinds[0].kind, 'commands');
     assert.strictEqual(layout.kinds[1].kind, 'skills');

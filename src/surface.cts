@@ -433,7 +433,7 @@ function applySurface(runtimeConfigDir: string, layout: Layout, manifest: Map<st
           runtime: layout.runtime,
           configDir: layout.configDir,
           scope: layout.scope ?? 'global',
-        }) as string | undefined;
+        });
         if (rewritten && rewritten !== staged) {
           staged = rewritten;
           tempDirsToClean.push(rewritten);

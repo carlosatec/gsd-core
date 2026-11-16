@@ -238,24 +238,18 @@ describe('#2665: live-config hermeticity guard', () => {
   });
 
   test('artifact parents are DERIVED from the registry, not hand-listed', () => {
-    // Round 5's adversarial review refuted the completeness claim of the
-    // hand-list: it missed Kilo's SINGULAR `command/`, `workflows/`, and hermes'
-    // `skills/gsd` -- a whole directory whose name carries no `gsd-` prefix, so
-    // no prefix rule could ever reach it.
     const { parents, owned } = artifactTargets();
     // NB: `workflows` is declared only in LOCAL scope (windsurf), so it is
     // deliberately NOT a global config-root parent -- the derivation walks
     // artifactLayout.global only.
-    for (const p of ['agents', 'commands', 'command', 'skills', 'hooks', 'plugins', 'scripts', 'extensions']) {
+    for (const p of ['agents', 'commands', 'skills', 'hooks', 'plugins', 'scripts', 'extensions']) {
       assert.ok(p in parents, `expected derived parent ${p} in ${JSON.stringify(Object.keys(parents))}`);
     }
-    // kimi's kimi-agents layout declares prefix `gsd` (no hyphen); a fixed `gsd-`
-    // scan cannot see agents/gsd.yaml, which is the defect this derivation closes.
+    // Active runtimes declare both `gsd-` and `gsd.` (kimi-code/deepseek-harness) prefixes.
     assert.ok(
-      parents.agents.includes('gsd'),
-      `agents must carry kimi's bare 'gsd' prefix; got ${JSON.stringify(parents.agents)}`,
+      parents.agents.includes('gsd.'),
+      `agents must include derived 'gsd.' prefix; got ${JSON.stringify(parents.agents)}`,
     );
-    assert.ok(owned.includes('skills/gsd'), `expected hermes skills/gsd in ${JSON.stringify(owned)}`);
     // Exact GSD filenames only — never the shared directories that contain them.
     for (const o of ['scripts/fix-slash-commands.cjs', 'hooks/managed-hooks-registry.cjs']) {
       assert.ok(owned.includes(o), `expected owned nested ${o} in ${JSON.stringify(owned)}`);
@@ -268,19 +262,18 @@ describe('#2665: live-config hermeticity guard', () => {
   test('detects leaks a single hardcoded gsd- prefix cannot see', () => {
     const root = tmpRoot();
     try {
-      for (const d of ['skills/gsd', 'agents', 'plugins', 'command', 'extensions']) {
+      for (const d of ['agents', 'plugins', 'commands', 'extensions']) {
         fs.mkdirSync(path.join(root, ...d.split('/')), { recursive: true });
       }
       const before = snapshotLiveConfig([root]);
       const future = new Date(Date.now() + 10000);
-      // kimi declares prefix `gsd` (no hyphen) and writes agents/gsd.yaml;
-      // pi writes extensions/gsd.js. A fixed `gsd-` scan sees neither.
+      // Active runtimes declare `gsd.` prefix alongside `gsd-`: agents/gsd.agent.md,
+      // extensions/gsd.js. A fixed `gsd-` scan sees neither.
       const leaks = [
-        ['skills', 'gsd', 'executor.md'],
-        ['agents', 'gsd.yaml'],
+        ['agents', 'gsd.agent.md'],
         ['extensions', 'gsd.js'],
         ['plugins', 'gsd-core.js'],
-        ['command', 'gsd-plan.md'],
+        ['commands', 'gsd-plan.md'],
       ];
       for (const seg of leaks) {
         const f = path.join(root, ...seg);
@@ -290,7 +283,7 @@ describe('#2665: live-config hermeticity guard', () => {
       }
 
       const hit = diffLiveConfig(before, snapshotLiveConfig([root])).map((v) => v.path);
-      for (const expected of ['skills/gsd', 'agents/gsd.yaml', 'extensions/gsd.js', 'plugins/gsd-core.js', 'command/gsd-plan.md']) {
+      for (const expected of ['agents/gsd.agent.md', 'extensions/gsd.js', 'plugins/gsd-core.js', 'commands/gsd-plan.md']) {
         const abs = path.join(root, ...expected.split('/'));
         assert.ok(hit.includes(abs), `${expected} leaked undetected; got ${JSON.stringify(hit)}`);
       }
@@ -791,9 +784,9 @@ describe('#2665 round 4: CI wires the guard to strict mode', () => {
     // bypass is one people eventually set without knowing what they turned off.
     // The Docs Required gate gets satisfied by ANY docs/ file in the diff --
     // including a generated index -- so it cannot stand in for this.
-    const doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'TESTING-SUITES.md'), 'utf8');
+    const doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'reference', 'TESTING-SUITES.md'), 'utf8');
     for (const v of ['GSD_STRICT_LIVE_CONFIG_GUARD', 'GSD_SKIP_LIVE_CONFIG_GUARD']) {
-      assert.ok(doc.includes(v), `${v} must be documented in docs/TESTING-SUITES.md`);
+      assert.ok(doc.includes(v), `${v} must be documented in docs/reference/TESTING-SUITES.md`);
     }
   });
 
@@ -806,7 +799,10 @@ describe('#2665 round 4: CI wires the guard to strict mode', () => {
   test('EVERY job that runs the suite wires GSD_STRICT_LIVE_CONFIG_GUARD', () => {
     const yaml = require('js-yaml');
     const root = path.join(__dirname, '..');
-    const wf = yaml.load(fs.readFileSync(path.join(root, '.github', 'workflows', 'test.yml'), 'utf8'));
+    const workflows = ['test.yml', 'test-full.yml'].map((name) => [
+      name,
+      yaml.load(fs.readFileSync(path.join(root, '.github', 'workflows', name), 'utf8')),
+    ]);
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 
     // A step reaches the runner directly OR through an npm script, transitively.
@@ -823,22 +819,24 @@ describe('#2665 round 4: CI wires the guard to strict mode', () => {
       /run-tests\.cjs/.test(run)
       || [...run.matchAll(/npm run ([\w:.-]+)/g)].some((m) => scriptRunsSuite(m[1]));
 
-    const suiteJobs = Object.entries(wf.jobs ?? {})
-      .filter(([, job]) => (job?.steps ?? []).some((s) => typeof s?.run === 'string' && runsSuite(s.run)))
-      .map(([name]) => name)
-      .sort();
+    const suiteJobs = workflows
+      .flatMap(([wfName, wf]) =>
+        Object.entries(wf.jobs ?? {})
+          .filter(([, job]) => (job?.steps ?? []).some((s) => typeof s?.run === 'string' && runsSuite(s.run)))
+          .map(([name, job]) => ({ label: `${wfName}:${name}`, job }))
+      )
+      .sort((a, b) => a.label.localeCompare(b.label));
 
     // Guards the guard: an empty derivation would make every assertion below
     // vacuously true, which is the failure mode of the literal list it replaces.
     assert.ok(
       suiteJobs.length >= 4,
-      `expected at least 4 suite-running jobs, derived ${JSON.stringify(suiteJobs)}`,
+      `expected at least 4 suite-running jobs, derived ${JSON.stringify(suiteJobs.map((j) => j.label))}`,
     );
 
     const windowsMatrix = (job) => JSON.stringify(job?.strategy?.matrix ?? {}).includes('windows');
     const problems = [];
-    for (const name of suiteJobs) {
-      const job = wf.jobs[name];
+    for (const { label, job } of suiteJobs) {
       const v = String(job?.env?.GSD_STRICT_LIVE_CONFIG_GUARD ?? '');
       // Windows lanes stay report-only until the pre-existing USERPROFILE leak
       // class is swept (SEVERITY note in scripts/live-config-guard.cjs), so a
@@ -849,13 +847,13 @@ describe('#2665 round 4: CI wires the guard to strict mode', () => {
         // `&& '1' || '1'` (Windows silently strict) and a malformed tail.
         ? /^\$\{\{\s*matrix\.os\s*!=\s*'windows-latest'\s*&&\s*'1'\s*\|\|\s*''\s*\}\}$/.test(v)
         : v === '1';
-      if (!ok) problems.push(`jobs.${name}: ${JSON.stringify(v)}`);
+      if (!ok) problems.push(`${label}: ${JSON.stringify(v)}`);
     }
     assert.deepStrictEqual(
       problems,
       [],
       `every job running run-tests.cjs must wire the guard to strict mode `
-        + `(Windows matrices carved out). Derived jobs: ${JSON.stringify(suiteJobs)}`,
+      + `(Windows matrices carved out). Derived jobs: ${JSON.stringify(suiteJobs.map((j) => j.label))}`,
     );
   });
 });

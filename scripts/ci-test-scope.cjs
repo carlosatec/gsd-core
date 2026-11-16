@@ -35,6 +35,7 @@ const INERT_WORKFLOWS = new Set([
 // or malicious addition fails CI loudly in the `changes` job on every PR.
 const PROTECTED_WORKFLOWS = new Set([
   'test.yml',
+  'test-full.yml',
   'install-smoke.yml',
   'mutation.yml',
   'security-scan.yml',

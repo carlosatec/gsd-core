@@ -46,7 +46,7 @@ const { loadConfig } = configLoaderMod;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import installProfilesMod = require('./install-profiles.cjs');
-const { readActiveProfile, loadSkillsManifest, resolveProfile, parseRequires, parseCallsAgents } = installProfilesMod;
+const { readActiveProfile, loadSkillsManifest, resolveProfile, parseRequires, parseCallsAgentsWithWorkflows } = installProfilesMod;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import surfaceMod = require('./surface.cjs');
@@ -424,7 +424,7 @@ function _loadFlatCommandsGsdManifest(commandsParentDir: string): Map<string, st
     try {
       const content = fs.readFileSync(path.join(commandsParentDir, entry.name), 'utf8');
       manifest.set(stem, parseRequires(content));
-      manifest.set(`_calls_agents_${stem}`, parseCallsAgents(content));
+      manifest.set(`_calls_agents_${stem}`, parseCallsAgentsWithWorkflows(content, commandsParentDir));
     } catch {
       manifest.set(stem, []);
       manifest.set(`_calls_agents_${stem}`, []);

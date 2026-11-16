@@ -73,7 +73,7 @@ function isCompleteShardSet(specs) {
 }
 
 test('the full test lane is sharded and complete (#2952)', async (t) => {
-  const workflow = loadWorkflow('test.yml');
+  const workflow = loadWorkflow('test-full.yml');
   const include = workflow.jobs.test.strategy.matrix.include;
   const fullLanes = include.filter((e) => e.scope === 'full');
   const windowsLanes = include.filter((e) => e.scope === 'windows');
@@ -187,11 +187,11 @@ test('the full test lane is sharded and complete (#2952)', async (t) => {
 });
 
 test('the merged coverage gate survives sharding (#2952)', async (t) => {
-  const workflow = loadWorkflow('test.yml');
+  const workflow = loadWorkflow('test-full.yml');
 
   await t.test('a dedicated coverage-gate job exists and consumes the shards', () => {
     const gate = workflow.jobs['coverage-gate'];
-    assert.ok(gate, '.github/workflows/test.yml declares no `coverage-gate` job');
+    assert.ok(gate, '.github/workflows/test-full.yml declares no `coverage-gate` job');
     assert.ok(
       (gate.needs || []).includes('test'),
       'coverage-gate must depend on `test` — it merges that job\'s shard artifacts',

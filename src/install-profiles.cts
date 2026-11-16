@@ -148,6 +148,43 @@ function parseCallsAgents(content: string): string[] {
  */
 const DEFAULT_COMMANDS_DIR = path.resolve(__dirname, '..', '..', '..', 'commands', 'gsd');
 
+/**
+ * Parse agent references from command content plus any local/core workflow files
+ * referenced via `workflows/<name>.md`. Shared by nested and flat manifest loaders.
+ */
+function parseCallsAgentsWithWorkflows(content: string, baseDir: string): string[] {
+  let agentRefs = parseCallsAgents(content);
+  const wfMatches = content.match(/workflows\/([a-z0-9_-]+)\.md/g);
+  if (wfMatches) {
+    const possibleWfDirs = [
+      path.resolve(baseDir, '..', '..', 'gsd-core', 'workflows'),
+      path.resolve(baseDir, '..', '..', 'workflows'),
+      path.resolve(baseDir, '..', 'gsd-core', 'workflows'),
+      path.resolve(baseDir, '..', 'workflows'),
+      path.resolve(__dirname, '..', '..', 'workflows'),
+    ];
+    let wfDir: string | undefined;
+    for (const d of possibleWfDirs) {
+      if (fs.existsSync(d)) { wfDir = d; break; }
+    }
+    if (wfDir) {
+      for (const wfMatch of wfMatches) {
+        const wfFile = path.join(wfDir, path.basename(wfMatch));
+        if (fs.existsSync(wfFile)) {
+          try {
+            const wfContent = fs.readFileSync(wfFile, 'utf8');
+            const wfAgents = parseCallsAgents(wfContent);
+            agentRefs = [...new Set([...agentRefs, ...wfAgents])];
+          } catch {
+            // Non-blocking
+          }
+        }
+      }
+    }
+  }
+  return agentRefs;
+}
+
 function loadSkillsManifest(commandsDir: string = DEFAULT_COMMANDS_DIR): Map<string, string[]> {
   const manifest = new Map<string, string[]>();
   if (!fs.existsSync(commandsDir)) return manifest;
@@ -159,35 +196,7 @@ function loadSkillsManifest(commandsDir: string = DEFAULT_COMMANDS_DIR): Map<str
     try {
       const content = fs.readFileSync(path.join(commandsDir, entry.name), 'utf8');
       manifest.set(stem, parseRequires(content));
-      // Derive agent references from body text and referenced workflow descriptors
-      let agentRefs = parseCallsAgents(content);
-      const wfMatches = content.match(/workflows\/([a-z0-9_-]+)\.md/g);
-      if (wfMatches) {
-        const possibleWfDirs = [
-          path.resolve(commandsDir, '..', '..', 'gsd-core', 'workflows'),
-          path.resolve(commandsDir, '..', '..', 'workflows'),
-          path.resolve(__dirname, '..', '..', 'workflows'),
-        ];
-        let wfDir: string | undefined;
-        for (const d of possibleWfDirs) {
-          if (fs.existsSync(d)) { wfDir = d; break; }
-        }
-        if (wfDir) {
-          for (const wfMatch of wfMatches) {
-            const wfFile = path.join(wfDir, path.basename(wfMatch));
-            if (fs.existsSync(wfFile)) {
-              try {
-                const wfContent = fs.readFileSync(wfFile, 'utf8');
-                const wfAgents = parseCallsAgents(wfContent);
-                agentRefs = [...new Set([...agentRefs, ...wfAgents])];
-              } catch {
-                // Non-blocking
-              }
-            }
-          }
-        }
-      }
-      manifest.set(`_calls_agents_${stem}`, agentRefs);
+      manifest.set(`_calls_agents_${stem}`, parseCallsAgentsWithWorkflows(content, commandsDir));
     } catch {
       manifest.set(stem, []);
       manifest.set(`_calls_agents_${stem}`, []);
@@ -1237,6 +1246,7 @@ export = {
   // Shared internals
   parseRequires,
   parseCallsAgents,
+  parseCallsAgentsWithWorkflows,
   cleanupStagedSkills,
   // #2322: capability-skill security seams — exported for direct unit-testing
   // and for surface.cts's prune pass (CAPABILITY_SKILL_MARKER parity).

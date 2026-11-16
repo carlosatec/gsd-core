@@ -1146,8 +1146,8 @@ describe('regressions: installed-runtime capability surface (#1160)', () => {
   });
 
   test('_resolveManifest: falls back to installed skills when commandsGsdDir absent', () => {
-    const nonExistentDir = path.join(os.tmpdir(), 'cap-rm-nonexistent-' + Date.now());
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cap-rm-installed-'));
+    const nonExistentDir = path.join(tmpDir, 'nonexistent-commands', 'gsd');
     try {
       // Create installed skill layout under tmpDir
       const secureDir = path.join(tmpDir, 'skills', 'gsd-secure-phase');
