@@ -1,6 +1,6 @@
 ---
 name: gsd-status
-description: "Unified situational command: check progress, knowledge artifact freshness, living docs, and token telemetry savings"
+description: "Check project progress, artifact freshness, living docs, and token telemetry"
 argument-hint: "[--next [--auto]] [--drift] [--json]"
 allowed-tools:
   - Read

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { cleanup } = require('./helpers.cjs');
 const { inspectArtifactLifecycle, ARTIFACT_LIFECYCLE } = require('../gsd-core/bin/lib/artifact-lifecycle.cjs');
 const { buildCodebaseGraph, saveCodebaseGraph } = require('../gsd-core/bin/lib/codebase-ast-analyzer.cjs');
 const { assembleJitContext } = require('../gsd-core/bin/lib/jit-context-injector.cjs');
@@ -40,7 +41,7 @@ test('read-only inspection marks same-size same-mtime source edits stale and pre
     assert.equal(after.find(item => item.id === 'memory').status, 'present');
     assert.equal(fs.readFileSync(path.join(planning, 'memory', 'decisions.jsonl'), 'utf8'), '{"user":"keep"}\n');
     assert.equal(after.find(item => item.id === 'codebase-map').status, 'not generated');
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { cleanup(root); }
 });
 
 test('JIT rebuilds a stale graph before consuming its dependency signals', () => {
@@ -58,6 +59,6 @@ test('JIT rebuilds a stale graph before consuming its dependency signals', () =>
     const refreshed = loadCodebaseGraph(planning);
     assert.equal(refreshed.stats.contentFingerprint, computeCodebaseContentFingerprint(root));
     assert.ok(refreshed.files['src.ts'].symbols.some(symbol => symbol.name === 'bravo'));
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { cleanup(root); }
 });
 

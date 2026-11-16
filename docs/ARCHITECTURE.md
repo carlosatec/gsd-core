@@ -1246,8 +1246,8 @@ Indexing and retrieval have deterministic resource limits: 256 KiB per file, 32 
 
 | Artifact | Class and owner | Freshness | Creation and refresh | Retention |
 | --- | --- | --- | --- | --- |
-| `STATE.md`, `ROADMAP.md`, `PROJECT.md`, phase research/plans | Authoritative; user and planning workflow | User-maintained state | `/gsd:plan` or direct edits | Preserve user content |
-| `intel/codebase-graph.json` | Derived; native AST analyzer | SHA-256 fingerprint of supported source contents, including uncommitted edits | `/gsd:graph`; JIT refreshes when required | Replace derived cache |
+| `STATE.md`, `ROADMAP.md`, `PROJECT.md`, phase research/plans | Authoritative; user and planning workflow | User-maintained state | `/gsd-plan` or direct edits | Preserve user content |
+| `intel/codebase-graph.json` | Derived; native AST analyzer | SHA-256 fingerprint of supported source contents, including uncommitted edits | `/gsd-graph`; JIT refreshes when required | Replace derived cache |
 | `intel/semantic-index.json` | Derived; offline RAG indexer | Per-file content fingerprints and schema | Retrieval refreshes when required by plan/exec/JIT | Replace derived cache |
 | `intel/telemetry.json` | Derived measurements; JIT telemetry | Freshness not applicable | JIT invocation | Retain cumulative measurements |
 | `codebase/ARCHITECTURE.md`, `APIS.md` | Derived; living docs generator | Explicit generator run | Explicit docs sync | Regenerable output |
@@ -1255,7 +1255,7 @@ Indexing and retrieval have deterministic resource limits: 256 KiB per file, 32 
 | Codebase map, vault, graph/visual exports | Optional; explicit map/export commands | Generation time | User selection or explicit command; `--vault` stays opt-in | Retain user-managed exports |
 | `.planning/tmp/` | Transient; active workflow | Active operation | Workflow-specific | Remove only known tool-owned temporary files |
 
-`/gsd:status` reads this lifecycle and never builds, rewrites, or cleans artifacts. It reports rebuildable derived data as current, stale, or missing; state and memory use presence; opt-in exports remain absent until requested. The graph has one canonical persistence path: `.planning/intel/codebase-graph.json`. `graphifyBuild` reports that exact path and no longer advertises a duplicate `.planning/graphs/graph.json` artifact. Optional maps, vaults, and visual exports are never generated implicitly.
+`/gsd-status` reads this lifecycle and never builds, rewrites, or cleans artifacts. It reports rebuildable derived data as current, stale, or missing; state and memory use presence; opt-in exports remain absent until requested. The graph has one canonical persistence path: `.planning/intel/codebase-graph.json`. `graphifyBuild` reports that exact path and no longer advertises a duplicate `.planning/graphs/graph.json` artifact. Optional maps, vaults, and visual exports are never generated implicitly.
 
 The offline labeled fixture separates development and held-out queries across exact identifiers, conceptual retrieval, multilingual documentation, and hard negatives. At K=3, the recorded run measured Recall 0.75, Precision 0.25, and MRR 0.75 on both splits for the chunk pipeline and the whole-file baseline. The fixture index was 80,585 bytes and built in 213 ms; average query time was 3.69 ms (development) and 4.11 ms (held-out) for chunk retrieval, compared with 0.91 ms and 1.13 ms for the whole-file projection. These timings are environment-specific and the corpus is intentionally small; retrieval metrics do not measure answer quality or groundedness. Opt-in diagnostics report index state/age, rebuild and query timings, and stage counts, never raw query or source content.
 

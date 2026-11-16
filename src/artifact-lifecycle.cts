@@ -46,7 +46,9 @@ function inspectArtifactLifecycle(planningDir: string, rootDir: string = path.di
       if (!fs.existsSync(graphPath)) status = 'missing';
       else {
         try {
-          const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+          const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8')) as {
+            stats?: { contentFingerprint?: unknown };
+          };
           status = graph.stats?.contentFingerprint === computeCodebaseContentFingerprint(rootDir) ? 'current' : 'stale';
         } catch { status = 'stale'; }
       }
@@ -61,7 +63,7 @@ function inspectArtifactLifecycle(planningDir: string, rootDir: string = path.di
     if (item.id === 'codebase-map') status = exists('codebase/CONTEXT.md') ? 'present' : 'not generated';
     if (item.id === 'vault-visual-exports') status = exists('vault') || exists('graphs') ? 'present' : 'not generated';
     if (item.id === 'temporary-workflow') status = exists('tmp') ? 'present' : 'absent';
-    return { ...item, status } as ArtifactLifecycleEntry;
+    return { ...item, status };
   });
 }
 

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { cleanup } = require('./helpers.cjs');
 const { inspectArtifactLifecycle } = require('../gsd-core/bin/lib/artifact-lifecycle.cjs');
 const { dispatchUnifiedCommand } = require('../gsd-core/bin/lib/unified-workflow-hub.cjs');
 
@@ -23,7 +24,7 @@ test('artifact status is read-only and reports current, missing, durable, and op
     assert.equal(lookup('codebase-graph').refresh, '/gsd:graph');
     assert.deepEqual(fs.readdirSync(planning).sort(), before);
     assert.doesNotMatch(JSON.stringify(report), /source text|query text|user home/i);
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { cleanup(root); }
 });
 
 test('the status command includes lifecycle diagnostics without creating artifacts', () => {
@@ -38,5 +39,5 @@ test('the status command includes lifecycle diagnostics without creating artifac
     assert.equal(graph.status, 'missing');
     assert.equal(graph.refresh, '/gsd:graph');
     assert.equal(fs.existsSync(path.join(planning, 'intel')), false);
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { cleanup(root); }
 });

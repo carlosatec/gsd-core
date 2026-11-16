@@ -24,6 +24,15 @@
       ],
       "issue": "622"
     },
+    "hybrid-semantic-rag": {
+      "files": [
+        "hybrid-semantic-rag-diagnostics.test.cjs",
+        "hybrid-semantic-rag-index.test.cjs",
+        "hybrid-semantic-rag-query.test.cjs",
+        "hybrid-semantic-rag.test.cjs"
+      ],
+      "issue": "Phase-39"
+    },
     "init": {
       "files": [
         "init-debug-workflow-contract.test.cjs",

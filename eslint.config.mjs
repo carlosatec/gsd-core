@@ -320,6 +320,7 @@ export default tseslint.config(
       'gsd-core/bin/lib/section-manifest.cjs',
       // ADR-457 / Nexus Phases 1-12: tsc-generated runtime artifacts — lint the src/*.cts sources.
       'gsd-core/bin/lib/anti-pattern-store.cjs',
+      'gsd-core/bin/lib/artifact-lifecycle.cjs',
       'gsd-core/bin/lib/auto-upgrade-engine.cjs',
       'gsd-core/bin/lib/canonical-examples-finder.cjs',
       'gsd-core/bin/lib/codebase-ast-analyzer.cjs',

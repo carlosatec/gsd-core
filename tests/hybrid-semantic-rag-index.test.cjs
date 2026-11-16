@@ -18,7 +18,7 @@ test('versioned semantic index reconciles rename, deletion, and project-root cha
     const first = rag.buildSemanticIndex(root, planning);
     const priorId = first.files['before.ts'].chunkIds[0];
     fs.renameSync(path.join(root, 'before.ts'), path.join(root, 'after.ts'));
-    fs.rmSync(path.join(root, 'remove.ts'));
+    fs.unlinkSync(path.join(root, 'remove.ts'));
     const second = rag.buildSemanticIndex(root, planning);
     assert.ok(second.files['after.ts']);
     assert.ok(!second.files['before.ts']);

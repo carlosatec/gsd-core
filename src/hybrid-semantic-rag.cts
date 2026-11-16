@@ -274,7 +274,7 @@ function makeChunks(file: string, content: string): Array<Omit<SemanticChunk, 't
           piece += char;
         }
         if (piece) pieces.push(piece);
-        pieces.forEach((part, index) => {
+        pieces.forEach((part) => {
           const startLine = start;
           const id = contentFingerprint(`${file}\0${startLine}\0${part}`).slice(0, 24);
           chunks.push({ id, file, symbol: unit.isSymbol ? unit.label : undefined, section: unit.isSymbol ? undefined : unit.label, language: languageFor(file), startLine, endLine: startLine, content: part, preview: part.slice(0, 150).replace(/\s+/g, ' ').trim() });
