@@ -2,8 +2,8 @@
 /**
  * lint-test-file-count.cjs — max 2 test files per production module.
  *
- * Scans sdk/src/query/, sdk/src/, gsd-core/bin/lib/, bin/ for production
- * modules, then counts matching test files in tests/ and sdk/src (recursive). Cap is 2
+ * Scans gsd-core/bin/lib/ and bin/ for production modules,
+ * then counts matching test files in tests/. Cap is 2
  * (primary + one integration). Over-limit clusters must be in the allowlist with the
  * EXACT set of test filenames grandfathered (identity ratchet via allowlist-ratchet.cjs).
  * Adding a new test file to a capped module is a novel offender; removing one requires
@@ -14,30 +14,27 @@
  */
 'use strict';
 
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 const { assertWithinAllowlist } = require('./lib/allowlist-ratchet.cjs');
 const { runMain } = require('./lib/cli-exit.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const PROD_DIRS = [
-  path.join(ROOT, 'sdk', 'src', 'query'),
-  path.join(ROOT, 'sdk', 'src'),
   path.join(ROOT, 'gsd-core', 'bin', 'lib'),
   path.join(ROOT, 'bin'),
 ];
 const TEST_DIRS = [
   path.join(ROOT, 'tests'),
-  path.join(ROOT, 'sdk', 'src'),
 ];
 const ALLOWLIST_PATH = path.join(__dirname, 'lint-test-file-count.allowlist.json');
 const MAX_FILES = 2;
 
 const Verdict = Object.freeze({
-  OK_UNDER_LIMIT:       'OK_UNDER_LIMIT',
-  OK_IN_ALLOWLIST:      'OK_IN_ALLOWLIST',
-  FAIL_EXCEEDS_LIMIT:   'FAIL_EXCEEDS_LIMIT',
-  FAIL_NOVEL_FILES:     'FAIL_NOVEL_FILES',
+  OK_UNDER_LIMIT: 'OK_UNDER_LIMIT',
+  OK_IN_ALLOWLIST: 'OK_IN_ALLOWLIST',
+  FAIL_EXCEEDS_LIMIT: 'FAIL_EXCEEDS_LIMIT',
+  FAIL_NOVEL_FILES: 'FAIL_NOVEL_FILES',
   FAIL_STALE_ALLOWLIST: 'FAIL_STALE_ALLOWLIST',
 });
 
@@ -168,26 +165,26 @@ function evaluateLint({ prefix, testFiles, allowlist }) {
     });
 
     if (novel.length > 0) {
-      return { verdict: Verdict.FAIL_NOVEL_FILES,     prefix, count, knownFiles, novel, stale, files: testFiles };
+      return { verdict: Verdict.FAIL_NOVEL_FILES, prefix, count, knownFiles, novel, stale, files: testFiles };
     }
     if (stale.length > 0) {
       return { verdict: Verdict.FAIL_STALE_ALLOWLIST, prefix, count, knownFiles, novel, stale, files: testFiles };
     }
-    return { verdict: Verdict.OK_IN_ALLOWLIST,        prefix, count, knownFiles, novel: [], stale: [], files: testFiles };
+    return { verdict: Verdict.OK_IN_ALLOWLIST, prefix, count, knownFiles, novel: [], stale: [], files: testFiles };
   }
 
   if (count <= MAX_FILES) {
-    return { verdict: Verdict.OK_UNDER_LIMIT,    prefix, count, knownFiles: null, novel: [], stale: [], files: testFiles };
+    return { verdict: Verdict.OK_UNDER_LIMIT, prefix, count, knownFiles: null, novel: [], stale: [], files: testFiles };
   }
-  return   { verdict: Verdict.FAIL_EXCEEDS_LIMIT, prefix, count, knownFiles: null, novel: [], stale: [], files: testFiles };
+  return { verdict: Verdict.FAIL_EXCEEDS_LIMIT, prefix, count, knownFiles: null, novel: [], stale: [], files: testFiles };
 }
 
 function run() {
   const jsonMode = process.argv.includes('--json');
   const prodPrefixes = collectProdPrefixes();
   const allTestFiles = collectAllTestFiles();
-  const testMap      = buildTestMap(prodPrefixes, allTestFiles);
-  const allowlist    = loadAllowlist();
+  const testMap = buildTestMap(prodPrefixes, allTestFiles);
+  const allowlist = loadAllowlist();
 
   const results = [];
   for (const [prefix, files] of testMap) {

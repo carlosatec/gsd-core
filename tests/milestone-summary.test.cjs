@@ -18,7 +18,7 @@ const path = require('path');
 const { cleanup } = require('./helpers.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
-const commandPath = path.join(repoRoot, 'commands', 'gsd', 'milestone-summary.md');
+const commandPath = path.join(repoRoot, 'commands', 'gsd', 'ship.md');
 const workflowPath = path.join(repoRoot, 'gsd-core', 'workflows', 'milestone-summary.md');
 
 function extractStep(content, stepName) {
@@ -30,27 +30,15 @@ function extractStep(content, stepName) {
 }
 
 describe('milestone-summary command', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(commandPath), 'commands/gsd/milestone-summary.md should exist');
-  });
-
-  test('command has correct frontmatter name', () => {
+  test('canonical ship command exists and has valid frontmatter', () => {
+    assert.ok(fs.existsSync(commandPath), 'commands/gsd/ship.md should exist');
     const content = fs.readFileSync(commandPath, 'utf-8');
-    assert.ok(content.includes('name: gsd:milestone-summary'), 'should have correct command name');
-  });
-
-  test('command references workflow in execution_context', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
+    assert.ok(content.includes('name: gsd:ship'), 'should have canonical gsd:ship command name');
     assert.ok(
       content.includes('workflows/milestone-summary.md'),
-      'should reference the milestone-summary workflow'
+      'ship command should reference workflows/milestone-summary.md'
     );
-  });
-
-  test('command accepts optional version argument', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
     assert.ok(content.includes('argument-hint'), 'should have argument-hint');
-    assert.ok(content.includes('[version]'), 'version should be optional (bracketed)');
   });
 });
 
@@ -153,19 +141,19 @@ describe('milestone-summary workflow', () => {
 });
 
 describe('milestone-summary command structure', () => {
-  test('command has success_criteria section', () => {
+  test('ship command has objective and context sections', () => {
     const content = fs.readFileSync(commandPath, 'utf-8');
     assert.ok(
-      content.includes('<success_criteria>'),
-      'should have success_criteria section (follows complete-milestone pattern)'
+      content.includes('<objective>') && content.includes('<context>'),
+      'ship command should have <objective> and <context> sections'
     );
   });
 
-  test('command context lists RESEARCH.md', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
+  test('workflow context references RESEARCH.md', () => {
+    const content = fs.readFileSync(workflowPath, 'utf-8');
     assert.ok(
       content.includes('RESEARCH.md'),
-      'should list RESEARCH.md in context block'
+      'milestone-summary workflow should reference RESEARCH.md'
     );
   });
 });
@@ -317,11 +305,11 @@ describe('milestone-summary git stats resilience', () => {
     );
   });
 
-  test('command has type: prompt in frontmatter', () => {
+  test('ship command declares milestone-summary workflow in load_on_demand', () => {
     const content = fs.readFileSync(commandPath, 'utf-8');
     assert.ok(
-      content.includes('type: prompt'),
-      'should have type: prompt for consistency with complete-milestone.md'
+      content.includes('<load_on_demand>') && content.includes('workflows/milestone-summary.md'),
+      'ship.md should wire workflows/milestone-summary.md via <load_on_demand>'
     );
   });
 });

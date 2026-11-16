@@ -318,19 +318,22 @@ describe('PROFILES map', () => {
     assert.ok('full' in PROFILES, 'PROFILES.full missing');
   });
 
-  test('PROFILES.core contains the 8 main-loop skills (including phase and surface)', () => {
+  test('PROFILES.core contains the 11 canonical skills', () => {
     const core = PROFILES.core;
     assert.ok(Array.isArray(core), 'core should be an array');
     const sorted = [...core].sort();
     assert.deepStrictEqual(sorted, [
-      'discuss-phase',
-      'execute-phase',
+      'auto',
+      'exec',
+      'graph',
       'help',
-      'new-project',
-      'phase',
-      'plan-phase',
-      'surface',
-      'update',
+      'migrate',
+      'plan',
+      'review',
+      'ship',
+      'status',
+      'tokens',
+      'verify',
     ]);
   });
 
@@ -360,17 +363,16 @@ describe('resolveProfile', () => {
     assert.strictEqual(result.skills, '*');
   });
 
-  test('resolves core profile — returns 8+ skills, all base stems present', () => {
+  test('resolves core profile — returns 11+ skills, all base stems present', () => {
     const manifest = loadSkillsManifest(REAL_COMMANDS_DIR);
     const result = resolveProfile({ modes: ['core'], manifest });
     assert.strictEqual(result.name, 'core');
     assert.ok(result.skills instanceof Set, 'skills should be a Set');
-    // core has 8 base skills (includes surface as of #3735).
-    assert.ok(result.skills.size >= 8, `core closure should have >=8 skills, got ${result.skills.size}`);
+    assert.ok(result.skills.size >= 11, `core closure should have >=11 skills, got ${result.skills.size}`);
     for (const s of PROFILES.core) {
       assert.ok(result.skills.has(s), `core closure should include ${s}`);
     }
-    assert.ok(result.skills.has('phase'), 'core closure must include phase');
+    assert.ok(result.skills.has('plan'), 'core closure must include plan');
   });
 
   test('resolves standard profile — superset of core', () => {
@@ -385,12 +387,12 @@ describe('resolveProfile', () => {
     }
   });
 
-  test('standard profile includes the onboard manager handoff dependency', () => {
+  test('standard profile includes the ship verify dependency', () => {
     const manifest = loadSkillsManifest(REAL_COMMANDS_DIR);
     const result = resolveProfile({ modes: ['standard'], manifest });
     assert.ok(result.skills instanceof Set);
-    assert.ok(result.skills.has('onboard'), 'standard profile should include onboard');
-    assert.ok(result.skills.has('manager'), 'onboard handoff must install gsd-manager');
+    assert.ok(result.skills.has('ship'), 'standard profile should include ship');
+    assert.ok(result.skills.has('verify'), 'ship requires verify in standard closure');
   });
 
   test('resolves full profile — returns sentinel', () => {
@@ -556,14 +558,13 @@ describe('loadSkillsManifest', () => {
     }
   });
 
-  test('loads real commands/gsd/ directory: >=60 skills, discuss-phase deps correct, help has no requires', () => {
+  test('loads real commands/gsd/ directory: >=11 skills, ship deps correct, help has no requires', () => {
     const m = loadSkillsManifest(REAL_COMMANDS_DIR);
     // Use prefix/set assertion, not a hardcoded count — avoids stale-count anti-pattern
-    assert.ok(m.size >= 60, `expected >=60 skills, got ${m.size}`);
-    const depsDP = m.get('discuss-phase');
-    assert.ok(Array.isArray(depsDP), 'discuss-phase should be in manifest');
-    assert.ok(depsDP.includes('phase'), 'discuss-phase should require phase');
-    assert.ok(depsDP.includes('config'), 'discuss-phase should require config');
+    assert.ok(m.size >= 11, `expected >=11 skills, got ${m.size}`);
+    const depsShip = m.get('ship');
+    assert.ok(Array.isArray(depsShip), 'ship should be in manifest');
+    assert.ok(depsShip.includes('verify'), 'ship should require verify');
     assert.deepStrictEqual(m.get('help'), []);
   });
 });
@@ -730,7 +731,7 @@ const REAL_COMMANDS_DIR = path.join(__dirname, '..', 'commands', 'gsd');
  * skillsDir  — analogous to ~/.claude/skills (contains gsd-* dirs)
  *
  * Pre-populated with:
- *   gsd-explore/SKILL.md  — in research_ideate cluster (will be disabled)
+ *   gsd-review/SKILL.md   — in audit_review cluster (will be disabled)
  *   gsd-help/SKILL.md     — in core_loop cluster (will remain enabled)
  *   my-custom-skill/      — user-owned, not gsd-prefixed (must never be touched)
  */
@@ -739,7 +740,7 @@ function createFixture() {
   const skillsDir = path.join(configDir, 'skills');
   fs.mkdirSync(skillsDir, { recursive: true });
 
-  const gsdExplore = path.join(skillsDir, 'gsd-explore');
+  const gsdExplore = path.join(skillsDir, 'gsd-review');
   const gsdHelp = path.join(skillsDir, 'gsd-help');
   const userSkill = path.join(skillsDir, 'my-custom-skill');
 
@@ -773,7 +774,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
     // This is the corrected location after the fix.
     writeSurface(configDir, {
       baseProfile: 'full',
-      disabledClusters: ['research_ideate'], // contains 'explore'
+      disabledClusters: ['audit_review'], // contains 'review'
       explicitAdds: [],
       explicitRemoves: [],
     });
@@ -783,11 +784,11 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
     const layout = resolveRuntimeArtifactLayout('claude', configDir, 'global');
     applySurface(configDir, layout, manifest, CLUSTERS);
 
-    // gsd-explore is in the research_ideate cluster which was disabled:
+    // gsd-review is in the audit_review cluster which was disabled:
     // it must be pruned from skillsDir.
     assert.ok(
       !fs.existsSync(gsdExplore),
-      'gsd-explore/ must be removed from skills dir when research_ideate cluster is disabled'
+      'gsd-review/ must be removed from skills dir when audit_review cluster is disabled'
     );
 
     // gsd-help is in core_loop (not disabled) and must survive.
@@ -804,7 +805,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
     // Disable a cluster that does NOT include help (core_loop has help)
     writeSurface(configDir, {
       baseProfile: 'full',
-      disabledClusters: ['research_ideate'],
+      disabledClusters: ['audit_review'],
       explicitAdds: [],
       explicitRemoves: [],
     });
@@ -825,7 +826,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
 
     writeSurface(configDir, {
       baseProfile: 'full',
-      disabledClusters: ['research_ideate'],
+      disabledClusters: ['audit_review'],
       explicitAdds: [],
       explicitRemoves: [],
     });
@@ -850,7 +851,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
 
     writeSurface(configDir, {
       baseProfile: 'full',
-      disabledClusters: ['research_ideate'],
+      disabledClusters: ['audit_review'],
       explicitAdds: [],
       explicitRemoves: [],
     });
@@ -875,7 +876,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
     // Double-check the pruned dir is gone after both runs
     assert.ok(
       !fs.existsSync(gsdExplore),
-      'gsd-explore/ must remain absent after second applySurface call'
+      'gsd-review/ must remain absent after second applySurface call'
     );
 
     // User dir must survive both runs
@@ -914,7 +915,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
     // 1. GSD-owned dirs in now-disabled clusters must be removed.
     assert.ok(
       !fs.existsSync(gsdExplore),
-      'gsd-explore/ must be removed when all clusters are disabled'
+      'gsd-review/ must be removed when all clusters are disabled'
     );
     assert.ok(
       !fs.existsSync(gsdHelp),
@@ -1051,38 +1052,38 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
       const configDir = createTempDir('gsd-2322-cfg-');
       const savedHome = process.env.GSD_HOME;
       try {
-        const EVIL = '---\nname: phase\n---\n\n# EVIL PHASE — must never win over the first-party gsd-phase skill\n';
-        __installCapSkill(gsdHome, 'evil-cap', 'phase', EVIL);
+        const EVIL = '---\nname: plan\n---\n\n# EVIL PLAN — must never win over the first-party gsd-plan skill\n';
+        __installCapSkill(gsdHome, 'evil-cap', 'plan', EVIL);
         process.env.GSD_HOME = gsdHome;
 
         const manifest = loadSkillsManifest(REAL_COMMANDS_DIR);
 
         // Baseline: apply against the SAME configDir with no colliding capability
         // registered — this is the reference first-party conversion of
-        // commands/gsd/phase.md. (Two DIFFERENT configDirs would embed different
+        // commands/gsd/plan.md. (Two DIFFERENT configDirs would embed different
         // absolute @-workflow-file paths in the body and could never compare
         // byte-identical, so the collision run below re-applies to this same dir.)
         const baselineLayout = __resolveRuntimeArtifactLayout('claude', configDir, 'global');
         __applySurface(configDir, baselineLayout, manifest, undefined, undefined);
-        const phasePath = path.join(configDir, 'skills', 'gsd-phase', 'SKILL.md');
-        assert.ok(fs.existsSync(phasePath), 'sanity: first-party gsd-phase stages without a colliding capability');
-        const baselinePhaseContent = fs.readFileSync(phasePath, 'utf8');
+        const planPath = path.join(configDir, 'skills', 'gsd-plan', 'SKILL.md');
+        assert.ok(fs.existsSync(planPath), 'sanity: first-party gsd-plan stages without a colliding capability');
+        const baselinePlanContent = fs.readFileSync(planPath, 'utf8');
 
         // Collision run: re-apply to the SAME configDir once a third-party
-        // capability also declares the 'phase' stem — the layout is rebuilt
+        // capability also declares the 'plan' stem — the layout is rebuilt
         // WITH the colliding registry so the third-party fill-in pass actually
         // runs (and is then correctly suppressed by "first-party always wins"),
         // rather than never attempting it at all.
-        const collideRegistry = __registryFor('evil-cap', ['phase']);
+        const collideRegistry = __registryFor('evil-cap', ['plan']);
         const collideLayout = __resolveRuntimeArtifactLayout('claude', configDir, 'global', collideRegistry);
         __applySurface(configDir, collideLayout, manifest, undefined, collideRegistry);
-        assert.ok(fs.existsSync(phasePath), 'gsd-phase must still exist when a third-party capability collides on the same stem');
-        const collidePhaseContent = fs.readFileSync(phasePath, 'utf8');
+        assert.ok(fs.existsSync(planPath), 'gsd-plan must still exist when a third-party capability collides on the same stem');
+        const collidePlanContent = fs.readFileSync(planPath, 'utf8');
 
-        assert.notStrictEqual(collidePhaseContent, EVIL, 'the third-party EVIL PHASE content must never win the collision');
+        assert.notStrictEqual(collidePlanContent, EVIL, 'the third-party EVIL PLAN content must never win the collision');
         assert.strictEqual(
-          collidePhaseContent,
-          baselinePhaseContent,
+          collidePlanContent,
+          baselinePlanContent,
           'on a stem collision the first-party converted content must be staged, identical to the no-collision baseline',
         );
       } finally {
@@ -1114,10 +1115,10 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
           !fs.existsSync(path.join(configDir, 'skills', 'gsd-my-thing', 'SKILL.md')),
           'a capability skill outside the resolved profile must NOT be staged',
         );
-        // 'phase' is a core-profile member — must be unaffected by the presence
+        // 'plan' is a core-profile member — must be unaffected by the presence
         // of the (filtered-out) third-party capability skill.
         assert.ok(
-          fs.existsSync(path.join(configDir, 'skills', 'gsd-phase', 'SKILL.md')),
+          fs.existsSync(path.join(configDir, 'skills', 'gsd-plan', 'SKILL.md')),
           'a first-party core-profile skill must still stage normally alongside a filtered-out capability skill',
         );
       } finally {
@@ -1127,7 +1128,7 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
       }
     });
 
-    __issueTest('(4) control: a nested-router (doNest) runtime layout is unperturbed by an installed capability skill', () => {
+    __issueTest('(4) control: cline runtime layout is unperturbed by an installed standard capability skill', () => {
       const gsdHome = createTempDir('gsd-2322-home-');
       const configDir = createTempDir('gsd-2322-cfg-');
       const savedHome = process.env.GSD_HOME;
@@ -1136,14 +1137,15 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
         process.env.GSD_HOME = gsdHome;
 
         const manifest = loadSkillsManifest(REAL_COMMANDS_DIR);
-        // 'cline' is a nested (doNest) runtime layout (unlike Claude's flat layout).
         const baselineLayout = __resolveRuntimeArtifactLayout('cline', configDir, 'global');
 
-        // Baseline: no capability registered — snapshot the resulting nested layout.
+        // Baseline: no capability registered — snapshot the resulting layout.
         __applySurface(configDir, baselineLayout, manifest, undefined, undefined);
         const skillsDir = path.join(configDir, 'skills');
-        const router = fs.readdirSync(skillsDir).find((d) => d.startsWith('gsd-ns-'));
-        assert.ok(router, 'sanity: the baseline nested layout has at least one gsd-ns-* router');
+        assert.ok(
+          fs.existsSync(path.join(skillsDir, 'gsd-plan', 'SKILL.md')),
+          'sanity: baseline cline layout includes gsd-plan',
+        );
         const baselineSnapshot = __snapshotDir(skillsDir);
 
         // Re-apply to the SAME configDir once a capability skill is also
@@ -1154,8 +1156,8 @@ describe('bug-3659: applySurface prunes ~/.claude/skills/gsd-*/ on cluster disab
         __applySurface(configDir, registryLayout, manifest, undefined, registry);
 
         assert.ok(
-          fs.existsSync(path.join(skillsDir, router)),
-          'the namespace router bundle must still be present when a capability skill is also installed',
+          fs.existsSync(path.join(skillsDir, 'gsd-plan', 'SKILL.md')),
+          'gsd-plan must still be present when a capability skill is also installed',
         );
         // Every first-party file staged in the baseline (no capability) run
         // must remain byte-identical after the capability is added — its
@@ -1550,55 +1552,38 @@ describe('bug-924: claude global install uses flat skill layout (concrete skills
 
     const topLevel = fs.readdirSync(skillsDir).filter((n) => n.startsWith('gsd-'));
 
-    // Flat layout must have MANY more than 6 top-level gsd-* entries (concrete skills).
-    // Pre-#924-fix nested layout had exactly 6 (only routers). Flat must have >= 60.
+    // Flat layout must have >= 10 top-level gsd-* entries (concrete skills).
     assert.ok(
-      topLevel.length >= 60,
-      `Claude global must have >= 60 gsd-* top-level skill dirs (concrete flat layout). ` +
+      topLevel.length >= 10,
+      `Claude global must have >= 10 gsd-* top-level skill dirs (concrete flat layout). ` +
       `Got ${topLevel.length}: [${topLevel.slice(0, 10).join(', ')}${topLevel.length > 10 ? ', …' : ''}]. ` +
       'Nested layout detected — #924 regression: Claude must be flat.',
     );
   });
 
-  test('claude global: gsd-plan-phase is directly at the top level of skills/', () => {
+  test('claude global: gsd-plan is directly at the top level of skills/', () => {
     const skillsDir = path.join(tmpDir, 'skills');
-    const planPhaseDir = path.join(skillsDir, 'gsd-plan-phase');
+    const planDir = path.join(skillsDir, 'gsd-plan');
     assert.ok(
-      fs.existsSync(path.join(planPhaseDir, 'SKILL.md')),
-      `skills/gsd-plan-phase/SKILL.md must exist at top level for Claude global install. ` +
+      fs.existsSync(path.join(planDir, 'SKILL.md')),
+      `skills/gsd-plan/SKILL.md must exist at top level for Claude global install. ` +
       'Concrete skill buried in nested layout — #924 regression.',
     );
   });
 
-  test('claude global: gsd-execute-phase is directly at the top level of skills/', () => {
+  test('claude global: gsd-exec is directly at the top level of skills/', () => {
     const skillsDir = path.join(tmpDir, 'skills');
     assert.ok(
-      fs.existsSync(path.join(skillsDir, 'gsd-execute-phase', 'SKILL.md')),
-      `skills/gsd-execute-phase/SKILL.md must exist at top level for Claude global install.`,
+      fs.existsSync(path.join(skillsDir, 'gsd-exec', 'SKILL.md')),
+      `skills/gsd-exec/SKILL.md must exist at top level for Claude global install.`,
     );
   });
 
-  test('claude global: gsd-code-review is directly at the top level of skills/', () => {
+  test('claude global: gsd-review is directly at the top level of skills/', () => {
     const skillsDir = path.join(tmpDir, 'skills');
     assert.ok(
-      fs.existsSync(path.join(skillsDir, 'gsd-code-review', 'SKILL.md')),
-      `skills/gsd-code-review/SKILL.md must exist at top level for Claude global install.`,
-    );
-  });
-
-  test('claude global: gsd-ns-workflow is at the top level as a concrete skill (no nested skills/ subdir)', () => {
-    const skillsDir = path.join(tmpDir, 'skills');
-    const nsWorkflowDir = path.join(skillsDir, 'gsd-ns-workflow');
-    assert.ok(
-      fs.existsSync(path.join(nsWorkflowDir, 'SKILL.md')),
-      `skills/gsd-ns-workflow/SKILL.md must exist at top level (router as concrete skill).`,
-    );
-
-    // In the FLAT layout, gsd-ns-workflow/ must NOT have a skills/ subdir.
-    // A skills/ subdir means nested layout was applied (the #924 regression).
-    assert.ok(
-      !fs.existsSync(path.join(nsWorkflowDir, 'skills')),
-      `skills/gsd-ns-workflow/skills/ must NOT exist in flat layout (nested layout detected — #924 regression).`,
+      fs.existsSync(path.join(skillsDir, 'gsd-review', 'SKILL.md')),
+      `skills/gsd-review/SKILL.md must exist at top level for Claude global install.`,
     );
   });
 
@@ -1638,11 +1623,11 @@ describe('bug-924: applySurface on claude preserves flat layout (no re-nesting)'
   test('claude: applySurface keeps concrete skills at the top level (flat, no re-nesting)', () => {
     const skillsDir = path.join(tmpDir, 'skills');
 
-    // Sanity: install must produce flat layout (>= 60 top-level gsd-* dirs)
+    // Sanity: install must produce flat layout (>= 10 top-level gsd-* dirs)
     const topLevelAfterInstall = fs.readdirSync(skillsDir).filter((n) => n.startsWith('gsd-'));
     assert.ok(
-      topLevelAfterInstall.length >= 60,
-      `Install must produce flat layout with >= 60 gsd-* dirs. Got ${topLevelAfterInstall.length}.`,
+      topLevelAfterInstall.length >= 10,
+      `Install must produce flat layout with >= 10 gsd-* dirs. Got ${topLevelAfterInstall.length}.`,
     );
 
     // Run applySurface (full surface → full profile)
@@ -1652,15 +1637,15 @@ describe('bug-924: applySurface on claude preserves flat layout (no re-nesting)'
     // After applySurface: still flat
     const topLevelAfterSurface = fs.readdirSync(skillsDir).filter((n) => n.startsWith('gsd-'));
     assert.ok(
-      topLevelAfterSurface.length >= 60,
-      `After applySurface: must still have >= 60 gsd-* top-level dirs (flat). ` +
+      topLevelAfterSurface.length >= 10,
+      `After applySurface: must still have >= 10 gsd-* top-level dirs (flat). ` +
       `Got ${topLevelAfterSurface.length}. Re-nesting detected.`,
     );
 
-    // gsd-plan-phase must remain directly accessible
+    // gsd-plan must remain directly accessible
     assert.ok(
-      fs.existsSync(path.join(skillsDir, 'gsd-plan-phase', 'SKILL.md')),
-      'After applySurface: gsd-plan-phase/SKILL.md must remain at top level.',
+      fs.existsSync(path.join(skillsDir, 'gsd-plan', 'SKILL.md')),
+      'After applySurface: gsd-plan/SKILL.md must remain at top level.',
     );
   });
 });

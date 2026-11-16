@@ -104,6 +104,7 @@ ALLOWLIST=(
   'tests/prompt-injection-scan.security.test.cjs'
   'tests/verify.test.cjs'
   'gsd-core/bin/lib/security.cjs'
+  'gsd-core/bin/lib/speckit-interop.cjs'
   'hooks/gsd-prompt-guard.js'
   'hooks/gsd-read-injection-scanner.js'
   'tests/read-injection-scanner.security.test.cjs'

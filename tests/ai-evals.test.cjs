@@ -257,33 +257,20 @@ describe('TEMPLATE: AI-SPEC.md section completeness', () => {
 
 // ─── Command Frontmatter ──────────────────────────────────────────────────────
 
-describe('COMMAND: ai-integration-phase and eval-review frontmatter', () => {
-  const commands = ['ai-integration-phase', 'eval-review'];
+describe('COMMAND: ai-integration-phase and eval-review canonical wiring', () => {
+  test('plan.md loads workflows/ai-integration-phase.md and review.md loads workflows/eval-review.md', () => {
+    const planContent = fs.readFileSync(path.join(COMMANDS_DIR, 'plan.md'), 'utf-8');
+    const reviewContent = fs.readFileSync(path.join(COMMANDS_DIR, 'review.md'), 'utf-8');
+    assert.ok(planContent.includes('workflows/ai-integration-phase.md'), 'plan.md missing workflows/ai-integration-phase.md');
+    assert.ok(reviewContent.includes('workflows/eval-review.md'), 'review.md missing workflows/eval-review.md');
+  });
 
-  for (const cmd of commands) {
-    test(`${cmd}.md exists`, () => {
-      const p = path.join(COMMANDS_DIR, `${cmd}.md`);
-      assert.ok(fs.existsSync(p), `commands/gsd/${cmd}.md should exist`);
-    });
-
-    test(`${cmd}.md has name, description, argument-hint`, () => {
-      const content = fs.readFileSync(path.join(COMMANDS_DIR, `${cmd}.md`), 'utf-8');
-      const frontmatter = content.split('---')[1] || '';
-      assert.ok(frontmatter.includes('name:'), `${cmd}.md missing name:`);
-      assert.ok(frontmatter.includes('description:'), `${cmd}.md missing description:`);
-      assert.ok(frontmatter.includes('argument-hint:'), `${cmd}.md missing argument-hint:`);
+  for (const wf of ['ai-integration-phase', 'eval-review']) {
+    test(`workflows/${wf}.md exists and is non-empty`, () => {
+      const p = path.join(WORKFLOWS_DIR, `${wf}.md`);
+      assert.ok(fs.existsSync(p), `gsd-core/workflows/${wf}.md should exist`);
     });
   }
-
-  test('ai-integration-phase.md name is gsd:ai-integration-phase', () => {
-    const content = fs.readFileSync(path.join(COMMANDS_DIR, 'ai-integration-phase.md'), 'utf-8');
-    assert.ok(content.includes('name: gsd:ai-integration-phase'), 'ai-integration-phase command name mismatch');
-  });
-
-  test('eval-review.md name is gsd:eval-review', () => {
-    const content = fs.readFileSync(path.join(COMMANDS_DIR, 'eval-review.md'), 'utf-8');
-    assert.ok(content.includes('name: gsd:eval-review'), 'eval-review command name mismatch');
-  });
 });
 
 // ─── New Agents Exist ─────────────────────────────────────────────────────────

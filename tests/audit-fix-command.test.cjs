@@ -28,90 +28,18 @@ const WORKFLOWS_DIR = path.join(REPO_ROOT, 'gsd-core', 'workflows');
 
 // ─── 1. Command file — audit-fix.md ──────────────────────────────────────────
 
-describe('AUDIT-FIX: command file', () => {
-  const cmdPath = path.join(COMMANDS_DIR, 'audit-fix.md');
+describe('AUDIT-FIX: canonical review command wiring', () => {
+  const cmdPath = path.join(COMMANDS_DIR, 'review.md');
 
-  test('command file exists', () => {
-    assert.ok(
-      fs.existsSync(cmdPath),
-      'audit-fix.md must exist in commands/gsd/'
-    );
-  });
-
-  test('has valid frontmatter with name gsd:audit-fix', () => {
+  test('canonical review command exists and wires audit-fix workflow', () => {
+    assert.ok(fs.existsSync(cmdPath), 'review.md must exist in commands/gsd/');
     const content = fs.readFileSync(cmdPath, 'utf-8');
     const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('name: gsd:audit-fix'),
-      'name must be gsd:audit-fix'
-    );
-  });
-
-  test('has description in frontmatter', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('description:'),
-      'must have description in frontmatter'
-    );
-  });
-
-  test('has allowed-tools list including Agent', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('allowed-tools:'),
-      'must have allowed-tools in frontmatter'
-    );
-    assert.ok(
-      frontmatter.includes('- Agent'),
-      'allowed-tools must include Agent for spawning executor subagents'
-    );
-  });
-
-  test('has argument-hint in frontmatter for /gsd-help discoverability', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('argument-hint:'),
-      'must have argument-hint in frontmatter for /gsd-help discoverability'
-    );
-  });
-
-  test('has type: prompt in frontmatter', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('type: prompt'),
-      'must have type: prompt in frontmatter'
-    );
-  });
-
-  test('argument-hint reflects supported source values', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('--source <audit-uat>'),
-      'argument-hint must show --source <audit-uat> (the only currently supported value)'
-    );
-    assert.ok(
-      !frontmatter.includes('--source <audit|verify>'),
-      'argument-hint must not advertise unsupported verify source'
-    );
-  });
-
-  test('references audit-fix.md workflow', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('audit-fix.md'),
-      'must reference audit-fix.md workflow'
-    );
-  });
-
-  test('has <objective> section', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(content.includes('<objective>'), 'must have <objective> section');
-    assert.ok(content.includes('</objective>'), 'must close <objective> section');
+    assert.ok(frontmatter.includes('name: gsd:review'), 'name must be gsd:review');
+    assert.ok(frontmatter.includes('description:'), 'must have description in frontmatter');
+    assert.ok(frontmatter.includes('allowed-tools:'), 'must have allowed-tools in frontmatter');
+    assert.ok(frontmatter.includes('argument-hint:'), 'must have argument-hint in frontmatter');
+    assert.ok(content.includes('workflows/audit-fix.md'), 'review.md must wire workflows/audit-fix.md');
   });
 });
 
@@ -161,39 +89,13 @@ describe('AUDIT-FIX: workflow file', () => {
 // ─── 3. Flags documented ─────────────────────────────────────────────────────
 
 describe('AUDIT-FIX: all 4 flags documented', () => {
-  const cmdPath = path.join(COMMANDS_DIR, 'audit-fix.md');
+  const cmdPath = path.join(COMMANDS_DIR, 'review.md');
   const wfPath = path.join(WORKFLOWS_DIR, 'audit-fix.md');
 
-  test('--max flag documented in command', () => {
+  test('canonical review command documents --fix and wires workflows/audit-fix.md', () => {
     const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('--max'),
-      'command must document --max flag'
-    );
-  });
-
-  test('--severity flag documented in command', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('--severity'),
-      'command must document --severity flag'
-    );
-  });
-
-  test('--dry-run flag documented in command', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('--dry-run'),
-      'command must document --dry-run flag'
-    );
-  });
-
-  test('--source flag documented in command', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('--source'),
-      'command must document --source flag'
-    );
+    assert.ok(content.includes('--fix'), 'review.md must document --fix flag');
+    assert.ok(content.includes('workflows/audit-fix.md'), 'review.md must wire workflows/audit-fix.md');
   });
 
   test('--max flag documented in workflow with default 5', () => {

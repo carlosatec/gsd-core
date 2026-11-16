@@ -22,7 +22,7 @@ const REVERSIBILITY_REF = path.join(ROOT, 'gsd-core', 'references', 'planner-rev
 const ANTIPATTERNS_REF = path.join(ROOT, 'gsd-core', 'references', 'planner-antipatterns.md');
 const THINKING_MODELS = path.join(ROOT, 'gsd-core', 'references', 'thinking-models-planning.md');
 const PLAN_PHASE_WORKFLOW = path.join(ROOT, 'gsd-core', 'workflows', 'plan-phase.md');
-const PLAN_PHASE_CMD = path.join(ROOT, 'commands', 'gsd', 'plan-phase.md');
+const PLAN_PHASE_CMD = path.join(ROOT, 'commands', 'gsd', 'plan.md');
 const HELP_FULL = path.join(ROOT, 'gsd-core', 'workflows', 'help', 'modes', 'full.md');
 const DISCUSS_CONTEXT_TEMPLATE = path.join(
   ROOT, 'gsd-core', 'workflows', 'discuss-phase', 'templates', 'context.md',
@@ -236,20 +236,14 @@ describe('#1951 --no-reversibility-gates override', () => {
     );
   });
 
-  test('command argument-hint advertises the flag', () => {
-    const md = read(PLAN_PHASE_CMD);
-    const argHint = (md.match(/^argument-hint:.*$/m) || [''])[0];
+  test('canonical plan command wires workflows/plan-phase.md for reversibility gates', () => {
     assert.ok(
-      argHint.includes('--no-reversibility-gates'),
-      'commands/gsd/plan-phase.md argument-hint must list --no-reversibility-gates',
+      read(PLAN_PHASE_CMD).includes('workflows/plan-phase.md'),
+      'commands/gsd/plan.md must reference workflows/plan-phase.md',
     );
-  });
-
-  test('command documents the flag in its flag list', () => {
-    assert.match(
-      read(PLAN_PHASE_CMD),
-      /- `--no-reversibility-gates` —/,
-      'commands/gsd/plan-phase.md must document --no-reversibility-gates in its flag list',
+    assert.ok(
+      read(PLAN_PHASE_WORKFLOW).includes('--no-reversibility-gates'),
+      'gsd-core/workflows/plan-phase.md must document --no-reversibility-gates',
     );
   });
 

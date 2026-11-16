@@ -244,21 +244,6 @@ describe('saveLocalPatches — patch backup and pristine hash tracking (#1469)',
 // allow-test-rule: source-text-is-the-product
 // update.md routing and reapply-patches.md workflow text IS the deployed behavioral contract.
 
-/**
- * Parse a field from YAML frontmatter between --- markers.
- * Returns null if the frontmatter or field is absent.
- */
-function parseFrontmatterField(content, field) {
-  const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fmMatch) return null;
-  const fm = fmMatch[1];
-  const quoted = fm.match(new RegExp(`^${field}:\\s+"((?:[^"\\\\]|\\\\.)*)"\\s*$`, 'm'));
-  if (quoted) return quoted[1];
-  const plain = fm.match(new RegExp(`^${field}:\\s+(.+)$`, 'm'));
-  if (plain) return plain[1].trim();
-  return null;
-}
-
 // #2790: reapply-patches.md command was absorbed into update.md as the --reapply flag.
 // The full workflow content (three-way merge, hunk verification) is in the referenced workflow.
 // These tests now verify the update.md command delegates to the reapply-patches workflow correctly.
@@ -294,54 +279,17 @@ function parsePipeTable(content, expectedHeaderTokens) {
 }
 
 describe('reapply-patches workflow contract (#1469)', () => {
-  test('reapply-patches.md command file is deleted (absorbed into update.md --reapply, #2790)', () => {
+  test('reapply-patches.md command file is deleted (absorbed into exec/migrate workflows, #2790)', () => {
     const oldPath = path.join(__dirname, '..', 'commands', 'gsd', 'reapply-patches.md');
-    assert.ok(!fs.existsSync(oldPath), 'reapply-patches.md should be deleted (absorbed into update.md)');
+    assert.ok(!fs.existsSync(oldPath), 'reapply-patches.md command should remain deleted');
   });
 
-  test('update.md argument-hint declares --reapply as consolidated entry point', () => {
-    // Structural: parse frontmatter, then tokenize the argument-hint pipes
-    // and assert --reapply is one of the documented flags (no raw substring
-    // matching on prose, per the no-source-grep contract).
-    const updatePath = path.join(__dirname, '..', 'commands', 'gsd', 'update.md');
-    const content = fs.readFileSync(updatePath, 'utf8');
-    const argHint = parseFrontmatterField(content, 'argument-hint');
-    assert.ok(argHint, 'update.md frontmatter must declare argument-hint');
-    // argument-hint may include multiple bracketed segments; pull every
-    // `--flag` token out of any bracketed section to assert on a parsed
-    // flag set rather than the surrounding punctuation.
-    const bracketed = [...argHint.matchAll(/\[([^\]]*)\]/g)].map((m) => m[1]);
-    const flagList = bracketed
-      .flatMap((seg) => seg.split('|').map((s) => s.trim().split(/\s+/)[0]))
-      .filter((tok) => tok.startsWith('--'));
-    assert.ok(
-      flagList.includes('--reapply'),
-      `update.md argument-hint flag list must include --reapply; got: ${JSON.stringify(flagList)}`
-    );
-  });
-
-  test('update.md @-include declares the reapply-patches workflow as a dependency', () => {
-    // Structural: scan ALL <execution_context> and <execution_context_extended>
-    // blocks for an `@~/.../workflows/reapply-patches.md` include. The earlier
-    // substring check tolerated incidental mentions in prose; matching only the
-    // first context block missed the _extended block where the delegate lives.
-    const updatePath = path.join(__dirname, '..', 'commands', 'gsd', 'update.md');
-    const content = fs.readFileSync(updatePath, 'utf8');
-    const blocks = [
-      // eslint-disable-next-line local/no-unbounded-quantifier -- parses this repo's own command .md content, fixed-size author-controlled content
-      ...content.matchAll(/<execution_context(?:_extended)?>([\s\S]*?)<\/execution_context(?:_extended)?>/g),
-    ].map((m) => m[1]);
-    assert.ok(blocks.length > 0, 'update.md must define at least one <execution_context> block');
-    const includes = blocks
-      .flatMap((blk) => blk.split(/\r?\n/))
-      .map((l) => l.trim())
-      .filter((l) => l.startsWith('@'))
-      .map((l) => l.replace(/^@/, ''));
-    const declaresReapply = includes.some((p) => /(^|\/)workflows\/reapply-patches\.md$/.test(p));
-    assert.ok(
-      declaresReapply,
-      `update.md execution_context blocks must @-include workflows/reapply-patches.md; got: ${JSON.stringify(includes)}`
-    );
+  test('exec.md loads reapply-patches workflow on demand and update workflow parses --reapply', () => {
+    const execPath = path.join(__dirname, '..', 'commands', 'gsd', 'exec.md');
+    const execContent = fs.readFileSync(execPath, 'utf8');
+    const updateWf = fs.readFileSync(path.join(__dirname, '..', 'gsd-core', 'workflows', 'update.md'), 'utf8');
+    assert.ok(execContent.includes('workflows/reapply-patches.md'), 'exec.md must wire workflows/reapply-patches.md');
+    assert.ok(updateWf.includes('--reapply'), 'update.md workflow must support --reapply');
   });
 });
 
@@ -455,7 +403,7 @@ const path = require('path');
 
 // #2790: reapply-patches.md (command with inline workflow) was deleted.
 // The --reapply functionality is now in update.md.
-const UPDATE_MD = path.join(__dirname, '..', 'commands', 'gsd', 'update.md');
+const UPDATE_MD = path.join(__dirname, '..', 'commands', 'gsd', 'migrate.md');
 
 /**
  * Parse a field from YAML frontmatter between --- markers.
@@ -473,18 +421,14 @@ function parseFrontmatterField(content, field) {
 }
 
 describe('reapply-patches pristine baseline detection (#2424)', () => {
-  test('reapply-patches.md command is deleted (absorbed into update.md --reapply, #2790)', () => {
+  test('reapply-patches.md command is deleted (absorbed into migrate/exec workflows, #2790)', () => {
     const oldPath = path.join(__dirname, '..', 'commands', 'gsd', 'reapply-patches.md');
-    assert.ok(!fs.existsSync(oldPath), 'reapply-patches.md should be absent (absorbed into update.md --reapply)');
+    assert.ok(!fs.existsSync(oldPath), 'reapply-patches.md should be absent');
   });
 
-  test('update.md argument-hint declares --reapply as consolidated entry point', () => {
+  test('canonical migrate command wires workflows/update.md', () => {
     const content = fs.readFileSync(UPDATE_MD, 'utf-8');
-    const argHint = parseFrontmatterField(content, 'argument-hint');
-    assert.ok(
-      argHint && argHint.includes('--reapply'),
-      `update.md argument-hint must declare --reapply flag; got: ${argHint || '(none)'}`
-    );
+    assert.ok(content.includes('workflows/update.md'), 'migrate.md must reference workflows/update.md');
   });
 
   test('update.md workflow references backup-meta.json for pristine-hash baseline', () => {
@@ -500,8 +444,8 @@ describe('reapply-patches pristine baseline detection (#2424)', () => {
     );
   });
 
-  test('update.md exists as consolidated entry point', () => {
-    assert.ok(fs.existsSync(UPDATE_MD), 'update.md must exist as consolidated entry point');
+  test('migrate.md exists as consolidated entry point', () => {
+    assert.ok(fs.existsSync(UPDATE_MD), 'migrate.md must exist as consolidated entry point');
   });
 
   test('update.md argument-hint declares full consolidated flag surface (--sync | --reapply)', () => {

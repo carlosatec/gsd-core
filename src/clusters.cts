@@ -31,6 +31,10 @@ export type ClusterMap = Readonly<Record<ClusterName, ReadonlyArray<string>>>;
 
 export const CLUSTERS: ClusterMap = Object.freeze({
   core_loop: Object.freeze([
+    'auto',
+    'plan',
+    'exec',
+    'status',
     'next',
     'new-project',
     'onboard',
@@ -42,6 +46,7 @@ export const CLUSTERS: ClusterMap = Object.freeze({
   ]),
 
   audit_review: Object.freeze([
+    'verify',
     'code-review',
     'review',
     'audit-fix',
@@ -67,6 +72,7 @@ export const CLUSTERS: ClusterMap = Object.freeze({
     'spike',
     'forensics',
     'explore',
+    'graph',
     'graphify',
     'ns-ideate',
   ]),
@@ -106,6 +112,8 @@ export const CLUSTERS: ClusterMap = Object.freeze({
   ]),
 
   utility: Object.freeze([
+    'tokens',
+    'migrate',
     'health',
     'stats',
     'settings',

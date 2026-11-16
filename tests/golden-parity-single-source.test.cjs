@@ -136,14 +136,11 @@ const { cleanup } = require('./helpers.cjs');
 
 const COMMANDS_GSD = path.join(ROOT, 'commands', 'gsd');
 
-// The 7 descriptor-driven agent runtimes (cline deferred per code comment:
+// The 4 descriptor-driven agent runtimes (cline deferred per code comment:
 // rules-only local branch + local/global complication).
 const DESCRIPTOR_RUNTIMES = [
   'cursor',
   'windsurf',
-  'augment',
-  'trae',
-  'codebuddy',
   'copilot',
   'antigravity',
 ];

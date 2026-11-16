@@ -25,11 +25,15 @@ const FORENSIC_AUDIT_STEP_PATH = path.join(
 );
 
 describe('#2189: progress --forensic flag', () => {
-  test('progress command argument-hint includes --forensic', () => {
+  test('status command loads progress workflow which documents --forensic', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'progress.md'), 'utf8'
+      path.join(__dirname, '..', 'commands', 'gsd', 'status.md'), 'utf8'
     );
-    assert.ok(command.includes('--forensic'), 'argument-hint should include --forensic');
+    const workflow = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'progress.md'), 'utf8'
+    );
+    assert.ok(command.includes('workflows/progress.md'), 'status.md should reference workflows/progress.md');
+    assert.ok(workflow.includes('--forensic'), 'progress workflow should reference --forensic');
   });
 
   test('progress workflow has a forensic_audit step', () => {
@@ -249,27 +253,27 @@ const fs = require('fs');
 const path = require('path');
 
 describe('#3418: /gsd-progress flag routing prompt contract', () => {
-  test('progress command surfaces raw arguments on a dedicated line before routing parse', () => {
+  test('status command declares $ARGUMENTS context before routing', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'progress.md'),
+      path.join(__dirname, '..', 'commands', 'gsd', 'status.md'),
       'utf8'
     );
 
     assert.ok(
-      command.includes('Arguments provided: "$ARGUMENTS"'),
-      'progress.md must surface $ARGUMENTS on a dedicated line for stable flag parsing'
+      command.includes('$ARGUMENTS'),
+      'status.md must forward $ARGUMENTS for flag routing'
     );
   });
 
-  test('progress command must not inline-substitute $ARGUMENTS into parse instruction text', () => {
+  test('status command must not inline-substitute raw parse prompt bug', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'progress.md'),
+      path.join(__dirname, '..', 'commands', 'gsd', 'status.md'),
       'utf8'
     );
 
     assert.ok(
       !command.includes('Parse the first token of $ARGUMENTS:'),
-      'progress.md must keep parse instructions independent from argument interpolation'
+      'status.md must keep parse instructions independent from argument interpolation'
     );
   });
 });

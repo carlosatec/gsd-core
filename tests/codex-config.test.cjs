@@ -5318,15 +5318,15 @@ describe('#2760 CR5 finding 3 — migration emits namespaced AoT (no flat/namesp
   const { describe: __foldDescribe } = require('node:test');
   __foldDescribe("folded:bug-279-codex-agent-mapping (consolidation epic #1969 B1 #1970)", () => {
 'use strict';
-// allow-test-rule: source-text-is-the-product [adapter header contract in bin/install.js] (see #279)
+// allow-test-rule: source-text-is-the-product [adapter header contract in runtime-artifact-conversion.cjs] (see #279)
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const INSTALL_JS = path.join(__dirname, '..', 'bin', 'install.js');
-const src = fs.readFileSync(INSTALL_JS, 'utf8');
+const CONVERSION_CJS = path.join(__dirname, '..', 'gsd-core', 'bin', 'lib', 'runtime-artifact-conversion.cjs');
+const src = fs.readFileSync(CONVERSION_CJS, 'utf8');
 
 describe('bug #279: Codex adapter documents Agent() and deferred tool discovery', () => {
   test('adapter mapping section includes explicit Agent(...) -> spawn_agent mapping', () => {
@@ -8282,11 +8282,11 @@ describe('bug-3582: Codex global install materializes the skill surface', { conc
     // representative set so a future dispatch / filter / profile change
     // cannot drop just the commands the original user was trying to run.
     const representative = [
-      'gsd-map-codebase',     // the literal command from the bug report
-      'gsd-execute-phase',
-      'gsd-plan-phase',
-      'gsd-new-project',
-      'gsd-health',
+      'gsd-plan',
+      'gsd-exec',
+      'gsd-status',
+      'gsd-ship',
+      'gsd-help',
     ];
     const skillsDir = codexSkillsRoot(installRun.codexHome);
     for (const name of representative) {
@@ -9129,14 +9129,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const INSTALL_JS = path.join(__dirname, '..', 'bin', 'install.js');
-const src = fs.readFileSync(INSTALL_JS, 'utf8');
+const CONVERSION_CJS = path.join(__dirname, '..', 'gsd-core', 'bin', 'lib', 'runtime-artifact-conversion.cjs');
+const src = fs.readFileSync(CONVERSION_CJS, 'utf8');
 
 // Helper: extract Section C from the raw source text.
 // Anchors on the heading and ends at </codex_skill_adapter>.
 function getSectionC() {
   const headingIdx = src.indexOf('## C. Task() → spawn_agent Mapping');
-  assert.ok(headingIdx >= 0, 'Section C heading must exist in bin/install.js');
+  assert.ok(headingIdx >= 0, 'Section C heading must exist in runtime-artifact-conversion.cjs');
   const closeTag = src.indexOf('</codex_skill_adapter>', headingIdx);
   assert.ok(closeTag >= 0, 'Section C must be followed by </codex_skill_adapter>');
   return src.slice(headingIdx, closeTag);

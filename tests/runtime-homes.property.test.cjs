@@ -176,9 +176,9 @@ const { getDirName } = require(
 
 // Runtimes whose _applyRuntimeRewrites branch performs real path rewrites
 // (~/.claude/ → pathPrefix). copilot/antigravity only do attribution; claude
-// and the gemini/kilo family are omitted to keep the property on the path axis
+// and the gemini/kimi-code family are omitted to keep the property on the path axis
 // the issue names. getDirName(`.${rt}`) == `.${rt}` for every entry here.
-const PATH_REWRITE_RUNTIMES = ['codex', 'cline', 'cursor', 'windsurf', 'augment', 'trae', 'codebuddy'];
+const PATH_REWRITE_RUNTIMES = ['codex', 'cline', 'cursor', 'windsurf'];
 
 const HOMES = ['/home/u', '/Users/x', '/root', '/srv/app', '/a'];
 const SEG = fc.stringMatching(/^[a-z][a-z0-9]{0,8}$/);

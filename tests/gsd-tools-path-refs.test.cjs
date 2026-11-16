@@ -43,14 +43,14 @@ describe('command files: gsd-tools path references (#1766)', () => {
       'Violations:\n' + violations.join('\n'));
   });
 
-  test('workstreams.md documents the supported gsd-tools query binary', () => {
+  test('workstream-flag.md documents the supported gsd-tools query binary', () => {
     const content = fs.readFileSync(
-      path.join(COMMANDS_DIR, 'workstreams.md'), 'utf-8'
+      path.join(__dirname, '..', 'gsd-core', 'references', 'workstream-flag.md'), 'utf-8'
     );
 
     assert.ok(
       /gsd-tools query workstream\.list/.test(content),
-      'workstreams.md should document gsd-tools query workstream.list'
+      'workstream-flag.md should document gsd-tools query workstream.list'
     );
   });
 });

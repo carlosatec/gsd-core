@@ -46,37 +46,20 @@ function exists(rel) {
 // ─── #3042: --research-phase flag wired into /gsd-plan-phase ────────────────
 // (Moved from bug-3042-3044-research-flag-and-stale-refs.test.cjs)
 
-describe('skill frontmatter: /gsd-plan-phase --research-phase flag absorbs the standalone research command', () => {
-  test('commands/gsd/plan-phase.md argument-hint advertises --research-phase', () => {
-    const content = read('commands/gsd/plan-phase.md');
-    // Frontmatter argument-hint is the structural place users discover
-    // the flag. Parse the line that starts with "argument-hint:" and
-    // assert the flag token is present.
-    const m = content.match(/^argument-hint:\s*"([^"]+)"/m);
-    assert.ok(m, 'plan-phase.md must declare an argument-hint frontmatter field');
-    assert.ok(
-      m[1].includes('--research-phase'),
-      'argument-hint must include "--research-phase"; got: ' + m[1]
-    );
-  });
-
-  test('plan-phase.md frontmatter description still advertises plan capability (no semantics drift)', () => {
-    const content = read('commands/gsd/plan-phase.md');
+describe('skill frontmatter: /gsd-plan + workflows/plan-phase.md --research-phase absorbs standalone research command', () => {
+  test('commands/gsd/plan.md exists, describes planning, and routes to workflows/plan-phase.md', () => {
+    const content = read('commands/gsd/plan.md');
     const m = content.match(/^description:\s*(.+)$/m);
-    assert.ok(m, 'plan-phase.md must have a description field');
-    // The description should still describe planning — the flag is
-    // additive, not a renamed command.
+    assert.ok(m, 'plan.md must have a description field');
+    assert.ok(/plan/i.test(m[1]), 'description should mention planning; got: ' + m[1]);
     assert.ok(
-      /plan/i.test(m[1]),
-      'description should still mention planning; got: ' + m[1]
+      content.includes('workflows/plan-phase.md'),
+      'plan.md execution_context must reference workflows/plan-phase.md',
     );
   });
 
   test('workflows/plan-phase.md parses --research-phase and sets a research-only mode', () => {
     const content = read('gsd-core/workflows/plan-phase.md');
-    // The arg-parsing section of the workflow must mention the new flag
-    // by name. This is the structural seam the LLM follows.
-    // Anchored to the argument/flags section to avoid false positives from prose.
     const argsHeader = '## 2. Parse and Normalize Arguments';
     const argsIdx = content.indexOf(argsHeader);
     assert.ok(argsIdx >= 0, 'plan-phase workflow must contain an argument/flags section');
@@ -89,9 +72,6 @@ describe('skill frontmatter: /gsd-plan-phase --research-phase flag absorbs the s
 
   test('workflows/plan-phase.md skips planner/verifier when in research-only mode', () => {
     const content = read('gsd-core/workflows/plan-phase.md');
-    // Look for explicit early-exit prose so the LLM knows to stop after
-    // research. We accept any of: "research-only", "research only mode",
-    // "skip if --research-phase", "RESEARCH_ONLY", "exit after research".
     const patterns = [
       /research[ -]only/i,
       /RESEARCH_ONLY/,
@@ -101,8 +81,7 @@ describe('skill frontmatter: /gsd-plan-phase --research-phase flag absorbs the s
     const hits = patterns.filter((re) => re.test(content));
     assert.ok(
       hits.length > 0,
-      'plan-phase workflow must contain explicit early-exit prose for --research-phase mode; ' +
-        'none of [research-only, RESEARCH_ONLY, "skip if --research-phase", "exit after research"] matched'
+      'plan-phase workflow must contain explicit early-exit prose for --research-phase mode'
     );
   });
 
@@ -110,17 +89,15 @@ describe('skill frontmatter: /gsd-plan-phase --research-phase flag absorbs the s
     assert.equal(
       exists('gsd-core/workflows/research-phase.md'),
       false,
-      'workflows/research-phase.md must be removed; the capability now lives on /gsd-plan-phase --research-phase'
+      'workflows/research-phase.md must be removed; the capability now lives on workflows/plan-phase.md --research-phase'
     );
   });
 
-  test('argument-hint advertises --view as a research-only modifier', () => {
-    const content = read('commands/gsd/plan-phase.md');
-    const m = content.match(/^argument-hint:\s*"([^"]+)"/m);
-    assert.ok(m, 'plan-phase.md must declare an argument-hint frontmatter field');
+  test('workflows/plan-phase.md advertises --view as a research-only modifier', () => {
+    const content = read('gsd-core/workflows/plan-phase.md');
     assert.ok(
-      m[1].includes('--view'),
-      'argument-hint must include --view (research-only view-only mode); got: ' + m[1]
+      content.includes('`--view`'),
+      'workflows/plan-phase.md must document `--view` (research-only view-only mode)'
     );
   });
 
@@ -440,94 +417,27 @@ const path = require('path');
 const { assertWithinAllowlist } = require('../scripts/lib/allowlist-ratchet.cjs');
 
 // ---------------------------------------------------------------------------
-// Allowlisted set of user-invocable skills (commands/gsd/*.md, ns-* excluded).
-// Consolidation target ~58; this set may only SHRINK.
-// Adding a new skill requires adding it here with justification.
-// Removing a consolidated skill requires pruning it here.
+// Allowlisted set of canonical user-invocable skills (commands/gsd/*.md).
+// Consolidated to the 11 canonical unified commands.
 // ---------------------------------------------------------------------------
 const KNOWN_SKILLS = new Set([
-  'add-tests.md',
-  'ai-integration-phase.md',
-  'audit-fix.md',
-  'audit-milestone.md',
-  'audit-uat.md',
-  'autonomous.md',
-  'capture.md',
-  'cleanup.md',
-  'code-review.md',
-  'complete-milestone.md',
-  'config.md',
-  'debug.md',
-  'discuss-phase.md',
-  'docs-update.md',
-  'eval-review.md',
-  'execute-phase.md',
-  'explore.md',
-  'extract-learnings.md',
-  'fast.md',
-  'forensics.md',
-  'graphify.md',
-  'health.md',
+  'auto.md',
+  'exec.md',
+  'graph.md',
   'help.md',
-  'import.md',
-  'inbox.md',
-  'ingest-docs.md',
-  'manager.md',
-  'map-codebase.md',
-  'mempalace-capture.md',
-  'mempalace-recall.md',
-  'milestone-summary.md',
-  'mvp-phase.md',
-  'new-milestone.md',
-  'new-project.md',
-  // #1990 brownfield onboarding entry command; sibling of new-project, routed under ns-project.
-  'onboard.md',
-  // `next.md` was legitimately reclaimed (#1787): the old workflow-advance
-  // command stays absorbed into `progress.md --next`, while the current
-  // `/gsd:next` is a different state-aware smart-entry launcher.
-  'next.md',
-  'pause-work.md',
-  'phase.md',
-  'plan-phase.md',
-  'plan-review-convergence.md',
-  'pr-branch.md',
-  'profile-user.md',
-  'progress.md',
-  'quick.md',
-  'resume-work.md',
-  'review-backlog.md',
+  'migrate.md',
+  'plan.md',
   'review.md',
-  'secure-phase.md',
-  'settings.md',
   'ship.md',
-  'sketch.md',
-  'spec-phase.md',
-  'spike.md',
-  'stats.md',
-  'surface.md',
-  'thread.md',
-  'ui-phase.md',
-  'ui-review.md',
-  'ultraplan-phase.md',
-  'undo.md',
-  'update.md',
-  'validate-phase.md',
-  'verify-work.md',
-  'workspace.md',
-  'workstreams.md',
+  'status.md',
+  'tokens.md',
+  'verify.md',
 ]);
 
 const COMMANDS_DIR = path.join(__dirname, '..', 'commands', 'gsd');
 
-/**
- * Parse the YAML frontmatter from a skill .md file.
- * Returns an object with the frontmatter fields as strings.
- * Only handles simple scalar and array values needed by these tests.
- */
 function parseFrontmatter(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
-  // CRLF-tolerant: Windows checkouts leave \r on every line. lines.indexOf('---', 1)
-  // would never match because elements would be '---\r' instead of '---'.
   const lines = raw.split(/\r?\n/);
   if (lines[0].trim() !== '---') return {};
   const endIdx = lines.indexOf('---', 1);
@@ -541,7 +451,6 @@ function parseFrontmatter(filePath) {
       currentKey = kvMatch[1];
       result[currentKey] = kvMatch[2].trim();
     } else if (currentKey && line.match(/^\s+-\s+/)) {
-      // array item — append to existing string value so callers can check membership
       const item = line.replace(/^\s+-\s+/, '').trim();
       result[currentKey] = result[currentKey] ? [result[currentKey], item].join('\n') : item;
     }
@@ -554,68 +463,46 @@ function skillPath(name) {
 }
 
 // ---------------------------------------------------------------------------
-// Group: New consolidated skills exist
+// Group: Canonical 11 unified commands exist
 // ---------------------------------------------------------------------------
-describe('new consolidated skills exist', () => {
-  test('commands/gsd/capture.md exists', () => {
-    assert.ok(fs.existsSync(skillPath('capture')), 'capture.md does not exist');
-  });
-
-  test('commands/gsd/phase.md exists', () => {
-    assert.ok(fs.existsSync(skillPath('phase')), 'phase.md does not exist');
-  });
-
-  test('commands/gsd/config.md exists', () => {
-    assert.ok(fs.existsSync(skillPath('config')), 'config.md does not exist');
-  });
-
-  test('commands/gsd/workspace.md exists', () => {
-    assert.ok(fs.existsSync(skillPath('workspace')), 'workspace.md does not exist');
-  });
+describe('canonical 11 unified commands exist', () => {
+  for (const file of KNOWN_SKILLS) {
+    const stem = file.replace(/\.md$/, '');
+    test(`commands/gsd/${file} exists`, () => {
+      assert.ok(fs.existsSync(skillPath(stem)), `${file} does not exist`);
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
-// Group: Absorbed skills are removed
+// Group: Absorbed legacy skills are removed
 // ---------------------------------------------------------------------------
 describe('absorbed skills are removed', () => {
   const absorbed = [
-    ['add-todo', 'absorbed into capture.md'],
-    ['note', 'absorbed into capture.md'],
-    ['add-backlog', 'absorbed into capture.md'],
-    ['plant-seed', 'absorbed into capture.md'],
-    ['check-todos', 'absorbed into capture.md'],
-    ['add-phase', 'absorbed into phase.md'],
-    ['insert-phase', 'absorbed into phase.md'],
-    ['remove-phase', 'absorbed into phase.md'],
-    ['edit-phase', 'absorbed into phase.md'],
-    ['settings-advanced', 'absorbed into config.md'],
-    ['settings-integrations', 'absorbed into config.md'],
-    ['set-profile', 'absorbed into config.md'],
-    ['new-workspace', 'absorbed into workspace.md'],
-    ['list-workspaces', 'absorbed into workspace.md'],
-    ['remove-workspace', 'absorbed into workspace.md'],
-    ['sync-skills', 'absorbed into update.md'],
-    ['reapply-patches', 'absorbed into update.md'],
-    ['sketch-wrap-up', 'absorbed into sketch.md'],
-    ['spike-wrap-up', 'absorbed into spike.md'],
-    ['scan', 'absorbed into map-codebase.md'],
-    ['intel', 'absorbed into map-codebase.md'],
-    ['code-review-fix', 'absorbed into code-review.md'],
-    // NOTE: `next` is intentionally absent here — the workflow-advance behavior
-    // stays absorbed into `progress.md --next`, but `/gsd:next` was reintroduced
-    // (#1787) as a distinct state-aware smart-entry launcher, so `next.md` is a
-    // KNOWN_SKILL again rather than an absorbed/removed command.
-    ['do', 'absorbed into progress.md'],
+    ['add-todo', 'consolidated under canonical command suite'],
+    ['note', 'consolidated under canonical command suite'],
+    ['add-backlog', 'consolidated under canonical command suite'],
+    ['plant-seed', 'consolidated under canonical command suite'],
+    ['check-todos', 'consolidated under canonical command suite'],
+    ['capture', 'consolidated under canonical command suite'],
+    ['phase', 'absorbed into plan.md'],
+    ['config', 'absorbed into migrate.md'],
+    ['workspace', 'consolidated under canonical command suite'],
+    ['sync-skills', 'absorbed into migrate.md'],
+    ['reapply-patches', 'absorbed into exec.md'],
+    ['sketch-wrap-up', 'absorbed into plan.md'],
+    ['spike-wrap-up', 'absorbed into plan.md'],
+    ['scan', 'absorbed into status.md'],
+    ['intel', 'absorbed into status.md'],
+    ['code-review-fix', 'absorbed into review.md --fix'],
+    ['do', 'absorbed into exec.md'],
   ];
 
   for (const [name, reason] of absorbed) {
     test(`commands/gsd/${name}.md does NOT exist (${reason})`, () => {
       assert.ok(
         !fs.existsSync(skillPath(name)),
-        [
-          `${name}.md still exists but should have been deleted`,
-          `(${reason})`,
-        ].join(' '),
+        `${name}.md still exists (${reason})`,
       );
     });
   }
@@ -625,15 +512,7 @@ describe('absorbed skills are removed', () => {
 // Group: Outright deletions
 // ---------------------------------------------------------------------------
 describe('outright deleted dead skills are removed', () => {
-  const deleted = [
-    'join-discord',
-    // research-phase     → plan-phase --research-phase (PR #3045, already absorbed)
-    // plan-milestone-gaps → inline in audit-milestone (PR #3038, already absorbed)
-    // list-phase-assumptions → discuss-phase --assumptions (pending #3131)
-    // session-report     → pause-work --report (pending #3131)
-    // analyze-dependencies → manager --analyze-deps (pending #3131)
-    // from-gsd2          → import --from-gsd2 (pending #3131)
-  ];
+  const deleted = ['join-discord'];
 
   for (const name of deleted) {
     test(`commands/gsd/${name}.md does NOT exist`, () => {
@@ -646,200 +525,71 @@ describe('outright deleted dead skills are removed', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group: #3131 — re-wired workflows absorbed as flags
+// Group: #3131 — re-wired workflows absorbed as flags / sub-workflows
 // ---------------------------------------------------------------------------
 describe('#3131 re-wired workflows: standalone command files must not exist', () => {
   const rewired = [
-    ['list-phase-assumptions', 'absorbed into discuss-phase.md --assumptions'],
-    ['session-report',         'absorbed into pause-work.md --report'],
-    ['analyze-dependencies',   'absorbed into manager.md --analyze-deps'],
-    ['from-gsd2',              'absorbed into import.md --from-gsd2'],
+    ['list-phase-assumptions', 'routed via plan.md <load_on_demand>'],
+    ['session-report',         'routed via status.md <load_on_demand>'],
+    ['analyze-dependencies',   'routed via graph.md <execution_context>'],
+    ['from-gsd2',              'routed via migrate.md <load_on_demand> workflows/import.md'],
   ];
 
   for (const [name, reason] of rewired) {
     test(`commands/gsd/${name}.md does NOT exist (${reason})`, () => {
       assert.ok(
         !fs.existsSync(skillPath(name)),
-        `${name}.md still exists as a standalone command but should be absorbed (${reason})`,
+        `${name}.md still exists as a standalone command (${reason})`,
       );
     });
   }
 });
 
-describe('#3131 re-wired workflows: parent command argument-hints advertise the new flags', () => {
-  test('discuss-phase.md argument-hint contains --assumptions', () => {
-    const fm = parseFrontmatter(skillPath('discuss-phase'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--assumptions'),
-      'discuss-phase.md argument-hint does not contain --assumptions. got: ' + (fm['argument-hint'] || '(none)'),
-    );
-  });
-
-  test('pause-work.md argument-hint contains --report', () => {
-    const fm = parseFrontmatter(skillPath('pause-work'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--report'),
-      'pause-work.md argument-hint does not contain --report. got: ' + (fm['argument-hint'] || '(none)'),
-    );
-  });
-
-  test('manager.md argument-hint contains --analyze-deps', () => {
-    const fm = parseFrontmatter(skillPath('manager'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--analyze-deps'),
-      'manager.md argument-hint does not contain --analyze-deps. got: ' + (fm['argument-hint'] || '(none)'),
-    );
-  });
-
-  test('import.md argument-hint contains --from-gsd2', () => {
-    const fm = parseFrontmatter(skillPath('import'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--from-gsd2'),
-      'import.md argument-hint does not contain --from-gsd2. got: ' + (fm['argument-hint'] || '(none)'),
-    );
-  });
-});
-
-describe('#3131 re-wired workflows: parent command bodies dispatch to workflow files', () => {
+describe('#3131 & Phase 12 re-wired workflows: canonical commands route sub-workflows', () => {
   function bodyContains(name, substring) {
     const raw = fs.readFileSync(skillPath(name), 'utf8');
     return raw.includes(substring);
   }
 
-  test('discuss-phase.md body references list-phase-assumptions.md', () => {
-    assert.ok(
-      bodyContains('discuss-phase', 'list-phase-assumptions.md'),
-      'discuss-phase.md body does not reference list-phase-assumptions.md — --assumptions flag dispatch is missing',
-    );
+  test('plan.md routes list-phase-assumptions.md, spike.md, and sketch.md', () => {
+    assert.ok(bodyContains('plan', 'list-phase-assumptions.md'), 'plan.md must route list-phase-assumptions.md');
+    assert.ok(bodyContains('plan', 'workflows/spike.md'), 'plan.md must route workflows/spike.md');
+    assert.ok(bodyContains('plan', 'workflows/sketch.md'), 'plan.md must route workflows/sketch.md');
   });
 
-  test('pause-work.md body references session-report.md', () => {
-    assert.ok(
-      bodyContains('pause-work', 'session-report.md'),
-      'pause-work.md body does not reference session-report.md — --report flag dispatch is missing',
-    );
+  test('status.md routes session-report.md and map-codebase.md', () => {
+    assert.ok(bodyContains('status', 'session-report.md'), 'status.md must route session-report.md');
+    assert.ok(bodyContains('status', 'map-codebase.md'), 'status.md must route map-codebase.md');
   });
 
-  test('manager.md body references analyze-dependencies.md', () => {
-    assert.ok(
-      bodyContains('manager', 'analyze-dependencies.md'),
-      'manager.md body does not reference analyze-dependencies.md — --analyze-deps flag dispatch is missing',
-    );
+  test('graph.md references analyze-dependencies.md', () => {
+    assert.ok(bodyContains('graph', 'analyze-dependencies.md'), 'graph.md must reference analyze-dependencies.md');
   });
 
-  test('import.md body references from-gsd2', () => {
-    assert.ok(
-      bodyContains('import', 'from-gsd2'),
-      'import.md body does not reference from-gsd2 — --from-gsd2 flag dispatch is missing',
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Group: Parent skills updated with new flags
-// ---------------------------------------------------------------------------
-describe('parent skills updated with new flags in argument-hint', () => {
-  test('update.md argument-hint contains --sync', () => {
-    const fm = parseFrontmatter(skillPath('update'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--sync'),
-      [
-        'update.md argument-hint does not contain --sync',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
+  test('migrate.md routes import.md, settings.md, and sync-skills.md', () => {
+    assert.ok(bodyContains('migrate', 'workflows/import.md'), 'migrate.md must route workflows/import.md');
+    assert.ok(bodyContains('migrate', 'workflows/settings.md'), 'migrate.md must route workflows/settings.md');
+    assert.ok(bodyContains('migrate', 'workflows/sync-skills.md'), 'migrate.md must route workflows/sync-skills.md');
   });
 
-  test('update.md argument-hint contains --reapply', () => {
-    const fm = parseFrontmatter(skillPath('update'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--reapply'),
-      [
-        'update.md argument-hint does not contain --reapply',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
+  test('exec.md routes reapply-patches.md and quick.md', () => {
+    assert.ok(bodyContains('exec', 'reapply-patches.md'), 'exec.md must route reapply-patches.md');
+    assert.ok(bodyContains('exec', 'workflows/quick.md'), 'exec.md must route workflows/quick.md');
   });
 
-  test('sketch.md argument-hint contains --wrap-up', () => {
-    const fm = parseFrontmatter(skillPath('sketch'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--wrap-up'),
-      [
-        'sketch.md argument-hint does not contain --wrap-up',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
-  });
-
-  test('spike.md argument-hint contains --wrap-up', () => {
-    const fm = parseFrontmatter(skillPath('spike'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--wrap-up'),
-      [
-        'spike.md argument-hint does not contain --wrap-up',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
-  });
-
-  test('map-codebase.md argument-hint contains --fast', () => {
-    const fm = parseFrontmatter(skillPath('map-codebase'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--fast'),
-      [
-        'map-codebase.md argument-hint does not contain --fast',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
-  });
-
-  test('code-review.md argument-hint contains --fix', () => {
-    const fm = parseFrontmatter(skillPath('code-review'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--fix'),
-      [
-        'code-review.md argument-hint does not contain --fix',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
-  });
-
-  test('progress.md argument-hint contains --do', () => {
-    const fm = parseFrontmatter(skillPath('progress'));
-    assert.ok(
-      (fm['argument-hint'] || '').includes('--do'),
-      [
-        'progress.md argument-hint does not contain --do',
-        'got: ' + (fm['argument-hint'] || '(none)'),
-      ].join('. '),
-    );
+  test('review.md advertises --fix and routes code-review-fix.md', () => {
+    const fm = parseFrontmatter(skillPath('review'));
+    assert.ok((fm['argument-hint'] || '').includes('--fix'), 'review.md argument-hint must contain --fix');
+    assert.ok(bodyContains('review', 'code-review-fix.md'), 'review.md must route code-review-fix.md');
   });
 });
 
 // ---------------------------------------------------------------------------
-// Group: settings.md is NOT deleted
-// ---------------------------------------------------------------------------
-describe('settings.md is kept (merged into config entry point or remains standalone)', () => {
-  test('commands/gsd/settings.md still exists', () => {
-    assert.ok(
-      fs.existsSync(skillPath('settings')),
-      'settings.md was deleted — it should be kept (or renamed to config.md, but not both missing)',
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Group: Skill set allowlisted (identity-based, consolidating toward ~58)
+// Group: Skill set allowlisted (canonical 11 commands)
 // ---------------------------------------------------------------------------
 describe('skill set', () => {
-  test('user-invocable skill set is allowlisted (consolidating toward ~58)', () => {
-    // Exclude `ns-*.md` namespace meta-skills (#2792) from this guard.
-    // Those are descriptor-only routers selected first by the model and
-    // are not part of the consolidation surface this test tracks; their
-    // own contract is enforced by tests/enh-2792-namespace-skills.test.cjs.
-    const currentBasenames = fs.readdirSync(COMMANDS_DIR)
-      .filter((f) => f.endsWith('.md') && !f.startsWith('ns-'));
+  test('user-invocable skill set matches canonical allowlist (no unapproved sprawl)', () => {
+    const currentBasenames = fs.readdirSync(COMMANDS_DIR).filter((f) => f.endsWith('.md'));
     assertWithinAllowlist({
       label: 'user-invocable skills (commands/gsd)',
       current: currentBasenames,
@@ -847,6 +597,7 @@ describe('skill set', () => {
       fail: assert.fail,
       pruneHint: 'edit KNOWN_SKILLS in tests/skill-frontmatter-contract.test.cjs',
     });
+    assert.equal(currentBasenames.length, KNOWN_SKILLS.size, 'expected exact canonical 11 command set');
   });
 });
   });

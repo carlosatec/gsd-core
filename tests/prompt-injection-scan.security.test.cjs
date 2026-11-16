@@ -113,6 +113,7 @@ const SCAN_EXTS = new Set(['.md', '.cjs', '.js', '.json']);
 // or exceed the 50K size threshold due to legitimate workflow complexity
 const ALLOWLIST = new Set([
   'gsd-core/bin/lib/security.cjs',        // The security module itself
+  'gsd-core/bin/lib/speckit-interop.cjs', // Sanitizer regex strips prompt-injection strings during spec import
   'gsd-core/workflows/discuss-phase.md',  // Large workflow (~50K) with power mode + i18n
   'gsd-core/workflows/new-project.md',     // Large workflow (~50K) — agent install, runtime detect, brownfield map, #3491 worktree gating
   'gsd-core/workflows/execute-phase.md',  // Large orchestration workflow (~51K) with wave execution + code-review gate
@@ -163,6 +164,8 @@ function collectFiles(dir) {
   return results;
 }
 
+const toPosixPath = (p) => p.replace(/\\/g, '/');
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('codebase prompt injection scan', () => {
@@ -180,7 +183,8 @@ describe('codebase prompt injection scan', () => {
     // Agent files are version-controlled source files, not user-supplied input.
     // We check for injection *patterns* but apply a higher size threshold (100K)
     // rather than the 50K strict-mode limit designed for user input.
-    const agentFiles = allFiles.filter(f => f.includes('/agents/'));
+    const agentFiles = allFiles.filter(f => toPosixPath(f).includes('/agents/'));
+    assert.ok(agentFiles.length > 0, 'Expected agent files to scan');
     const findings = [];
 
     for (const file of agentFiles) {
@@ -213,7 +217,8 @@ describe('codebase prompt injection scan', () => {
     // The 50K limit in strict mode is calibrated for user-supplied input (prompts, PRDs);
     // agent files are version-controlled and naturally larger.
     const AGENT_SIZE_LIMIT = 100 * 1024; // 100K
-    const agentFiles = allFiles.filter(f => f.includes('/agents/'));
+    const agentFiles = allFiles.filter(f => toPosixPath(f).includes('/agents/'));
+    assert.ok(agentFiles.length > 0, 'Expected agent files for size check');
     const oversized = [];
 
     for (const file of agentFiles) {
@@ -237,7 +242,8 @@ describe('codebase prompt injection scan', () => {
   });
 
   test('workflow files are clean', () => {
-    const workflowFiles = allFiles.filter(f => f.includes('/workflows/'));
+    const workflowFiles = allFiles.filter(f => toPosixPath(f).includes('/workflows/'));
+    assert.ok(workflowFiles.length > 0, 'Expected workflow files to scan');
     const findings = [];
 
     for (const file of workflowFiles) {
@@ -269,7 +275,8 @@ describe('codebase prompt injection scan', () => {
   });
 
   test('command files are clean', () => {
-    const commandFiles = allFiles.filter(f => f.includes('/commands/'));
+    const commandFiles = allFiles.filter(f => toPosixPath(f).includes('/commands/'));
+    assert.ok(commandFiles.length > 0, 'Expected command files to scan');
     const findings = [];
 
     for (const file of commandFiles) {
@@ -295,7 +302,8 @@ describe('codebase prompt injection scan', () => {
   });
 
   test('hook files are clean', () => {
-    const hookFiles = allFiles.filter(f => f.includes('/hooks/'));
+    const hookFiles = allFiles.filter(f => toPosixPath(f).includes('/hooks/'));
+    assert.ok(hookFiles.length > 0, 'Expected hook files to scan');
     const findings = [];
 
     for (const file of hookFiles) {
@@ -321,7 +329,8 @@ describe('codebase prompt injection scan', () => {
   });
 
   test('lib source files are clean', () => {
-    const libFiles = allFiles.filter(f => f.includes('/bin/lib/'));
+    const libFiles = allFiles.filter(f => toPosixPath(f).includes('/bin/lib/'));
+    assert.ok(libFiles.length > 0, 'Expected lib source files to scan');
     const findings = [];
 
     for (const file of libFiles) {

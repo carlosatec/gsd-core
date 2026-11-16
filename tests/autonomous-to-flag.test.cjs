@@ -20,25 +20,17 @@ const path = require('path');
 
 describe('autonomous --to N flag (#1644)', () => {
   const workflowPath = path.join(__dirname, '..', 'gsd-core', 'workflows', 'autonomous.md');
-  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'autonomous.md');
+  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'auto.md');
 
-  // --- Command definition tests ---
+  // --- Command hub & workflow definition tests ---
 
-  test('command definition includes --to N in argument-hint', () => {
+  test('canonical auto command routes to autonomous workflow and advertises phase stop controls', () => {
     const content = fs.readFileSync(commandPath, 'utf8');
-    assert.ok(content.includes('--to N') || content.includes('--to'),
-      'command argument-hint should include --to flag');
-    // Verify it's in the argument-hint frontmatter line specifically
-    const hintMatch = content.match(/argument-hint:.*--to/);
-    assert.ok(hintMatch, 'argument-hint frontmatter should contain --to');
-  });
-
-  test('command definition describes --to N behavior in context', () => {
-    const content = fs.readFileSync(commandPath, 'utf8');
-    assert.ok(content.includes('--to N') || content.includes('--to'),
-      'command should document --to flag');
-    assert.ok(content.includes('stop') || content.includes('halt'),
-      'command should describe stopping behavior');
+    assert.ok(content.includes('workflows/autonomous.md'),
+      'commands/gsd/auto.md should load workflows/autonomous.md');
+    const wf = fs.readFileSync(workflowPath, 'utf8');
+    assert.ok(wf.includes('--to') && (wf.includes('stop') || wf.includes('halt') || wf.includes('TO_PHASE')),
+      'autonomous workflow should document --to stopping behavior');
   });
 
   // --- Workflow parsing tests ---

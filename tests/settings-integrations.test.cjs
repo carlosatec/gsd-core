@@ -35,24 +35,22 @@ const {
 } = require('../gsd-core/bin/lib/config-schema.cjs');
 
 const REPO_ROOT = path.join(__dirname, '..');
-// #2790: settings-integrations.md was consolidated into config.md as the --integrations flag.
-const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'config.md');
+// #2790 + Phase 12: settings-integrations.md consolidated under migrate.md load_on_demand.
+const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'migrate.md');
 const WORKFLOW_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'settings-integrations.md');
-const SKILL_PATH = path.join(REPO_ROOT, '.claude', 'skills', 'gsd-settings-integrations.md');
+const SKILL_PATH = path.join(REPO_ROOT, 'skills', 'gsd-migrate', 'SKILL.md');
 const SETTINGS_WORKFLOW_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'settings.md');
 
 // ─── Artifacts ───────────────────────────────────────────────────────────────
 
 describe('#2529 artifacts', () => {
-  test('consolidated config.md command exists (#2790: settings-integrations absorbed)', () => {
-    // #2790: settings-integrations.md was absorbed into config.md as the --integrations flag.
+  test('canonical migrate.md command exists (#2790: settings-integrations consolidated)', () => {
     assert.ok(fs.existsSync(COMMAND_PATH), `missing ${COMMAND_PATH}`);
   });
 
-  test('config.md frontmatter declares name gsd:config and routes to --integrations', () => {
+  test('migrate.md frontmatter declares name gsd:migrate and AskUserQuestion', () => {
     const src = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    // #2790: consolidated command uses gsd:config name
-    assert.match(src, /name:\s*gsd:config/);
+    assert.match(src, /name:\s*gsd:migrate/);
     assert.match(src, /description:\s*.+/);
     assert.match(src, /allowed-tools:/);
     assert.match(src, /AskUserQuestion/);
@@ -62,22 +60,21 @@ describe('#2529 artifacts', () => {
     assert.ok(fs.existsSync(WORKFLOW_PATH), `missing ${WORKFLOW_PATH}`);
   });
 
-  test('skill stub or canonical command surface ships (#2790: via config.md --integrations)', () => {
-    // #2790: The command surface is now config.md + settings-integrations.md workflow.
+  test('canonical command/skill surface ships for settings-integrations', () => {
     const hasStub = fs.existsSync(SKILL_PATH);
     const hasCanonical =
       fs.existsSync(COMMAND_PATH) && fs.existsSync(WORKFLOW_PATH);
     assert.ok(
-      hasStub || hasCanonical,
-      `neither ${SKILL_PATH} nor the canonical command/workflow pair exists`
+      hasStub && hasCanonical,
+      `expected ${SKILL_PATH} and canonical command/workflow pair`
     );
   });
 
-  test('config.md routes --integrations to the settings-integrations workflow', () => {
+  test('migrate.md wires workflows/settings-integrations.md in load_on_demand', () => {
     const src = fs.readFileSync(COMMAND_PATH, 'utf-8');
     assert.ok(
-      src.includes('workflows/settings-integrations.md') || src.includes('--integrations'),
-      'config.md must reference settings-integrations workflow or --integrations flag'
+      src.includes('workflows/settings-integrations.md'),
+      'migrate.md must reference workflows/settings-integrations.md'
     );
   });
 });

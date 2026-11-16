@@ -18,56 +18,36 @@ describe('workflow.discuss_mode config', () => {
     assert.strictEqual(template.workflow.discuss_mode, 'discuss');
   });
 
-  test('discuss-phase command references both workflow files', () => {
+  test('canonical plan command loads both discuss workflow files', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+      path.join(__dirname, '..', 'commands', 'gsd', 'plan.md'), 'utf8'
     );
-    assert.ok(command.includes('discuss-phase-assumptions.md'), 'should reference assumptions workflow');
-    assert.ok(command.includes('discuss-phase.md'), 'should reference discuss workflow');
-    assert.ok(command.includes('workflow.discuss_mode'), 'should reference config key');
+    assert.ok(command.includes('discuss-phase-assumptions.md'), 'plan.md should reference assumptions workflow');
+    assert.ok(command.includes('discuss-phase.md'), 'plan.md should reference discuss workflow');
   });
 
-  test('discuss-phase command process block defers to workflow file (not inline instructions)', () => {
-    const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+  test('plan-phase and discuss-phase workflows document config routing (discuss_mode and mode overlays)', () => {
+    const wf = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'discuss-phase.md'), 'utf8'
     );
-    // Extract the <process> block
-    // eslint-disable-next-line local/no-unbounded-quantifier -- parses this repo's own command .md content, fixed-size author-controlled content
-    const processMatch = command.match(/<process>([\s\S]*?)<\/process>/);
-    assert.ok(processMatch, 'should have a <process> block');
-    const processBlock = processMatch[1];
-
-    // The process block must explicitly tell the agent to read the workflow file
-    assert.ok(
-      processBlock.includes('Read and execute'),
-      'process block should direct agent to read and execute workflow file'
+    const planPhase = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'plan-phase.md'), 'utf8'
     );
     assert.ok(
-      processBlock.includes('MANDATORY'),
-      'process block should include MANDATORY instruction to read workflow files'
-    );
-
-    // The process block must NOT contain detailed step-by-step instructions
-    // that could substitute for the actual workflow file
-    assert.ok(
-      !processBlock.includes('Scout codebase'),
-      'process block should not contain detailed workflow steps (Scout codebase)'
+      planPhase.includes('workflow.discuss_mode') && planPhase.includes('discuss_mode'),
+      'plan-phase workflow should reference workflow.discuss_mode routing'
     );
     assert.ok(
-      !processBlock.includes('Deep-dive each area'),
-      'process block should not contain detailed workflow steps (Deep-dive)'
-    );
-    assert.ok(
-      !processBlock.includes('Probing depth'),
-      'process block should not contain detailed workflow steps (Probing depth)'
+      wf.includes('workflow.text_mode') && wf.includes('<progressive_disclosure>'),
+      'discuss-phase workflow should document mode overlays and workflow.text_mode'
     );
   });
 
-  test('discuss-phase command argument-hint includes --text', () => {
-    const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+  test('discuss-phase workflow includes --text mode handling', () => {
+    const wf = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'discuss-phase.md'), 'utf8'
     );
-    assert.ok(command.includes('--text'), 'argument-hint should include --text');
+    assert.ok(wf.includes('--text'), 'discuss-phase workflow should document --text');
   });
 
   test('assumptions workflow file exists and has required steps', () => {
@@ -128,11 +108,15 @@ describe('workflow.discuss_mode config', () => {
     assert.ok(planPhase.includes('--text'), 'plan-phase workflow should handle --text flag');
   });
 
-  test('plan-phase command argument-hint includes --text', () => {
+  test('canonical plan command loads plan-phase workflow and supports text mode', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'plan-phase.md'), 'utf8'
+      path.join(__dirname, '..', 'commands', 'gsd', 'plan.md'), 'utf8'
     );
-    assert.ok(command.includes('--text'), 'argument-hint should include --text flag');
+    const wf = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'plan-phase.md'), 'utf8'
+    );
+    assert.ok(command.includes('workflows/plan-phase.md'), 'plan.md should wire workflows/plan-phase.md');
+    assert.ok(wf.includes('--text'), 'plan-phase workflow should include --text flag');
   });
 
   test('plan-phase init propagates config.workflow.text_mode into its result', () => {
@@ -191,32 +175,25 @@ describe('workflow.discuss_mode config', () => {
   });
 
   test('documentation file exists', () => {
-    const docPath = path.join(__dirname, '..', 'docs', 'workflow-discuss-mode.md');
-    assert.ok(fs.existsSync(docPath), 'docs/workflow-discuss-mode.md should exist');
+    const docPath = path.join(__dirname, '..', 'docs', 'reference', 'workflow-discuss-mode.md');
+    assert.ok(fs.existsSync(docPath), 'docs/reference/workflow-discuss-mode.md should exist');
     const doc = fs.readFileSync(docPath, 'utf8');
     assert.ok(doc.includes('assumptions'), 'doc should mention assumptions');
     assert.ok(doc.includes('discuss'), 'doc should mention discuss');
     assert.ok(doc.includes('config-set'), 'doc should show how to configure');
   });
 
-  test('discuss-phase command mode-routing uses gsd_run (shim-safe) not bare gsd-tools', () => {
-    const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+  test('plan-phase workflow mode-routing uses gsd_run (shim-safe) not bare gsd-tools', () => {
+    const wf = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'plan-phase.md'), 'utf8'
     );
-    // Must contain the canonical shim probe marker
     assert.ok(
-      command.includes('_GSD_SHIM_NAME'),
-      'discuss-phase.md must define _GSD_SHIM_NAME shim probe before mode routing'
+      wf.includes('gsd_run query config-get workflow.discuss_mode'),
+      'plan-phase.md must use gsd_run (not bare gsd-tools) for discuss_mode lookup'
     );
-    // Must use gsd_run for the config lookup
     assert.ok(
-      command.includes('gsd_run query config-get workflow.discuss_mode'),
-      'discuss-phase.md must use gsd_run (not bare gsd-tools) for discuss_mode lookup'
-    );
-    // Must NOT contain the bare footgun pattern: gsd-tools immediately before the silent default
-    assert.ok(
-      !command.includes('gsd-tools query config-get workflow.discuss_mode 2>/dev/null || echo'),
-      'discuss-phase.md must NOT use bare gsd-tools binary for discuss_mode lookup (shim-only install footgun)'
+      !wf.includes('gsd-tools query config-get workflow.discuss_mode 2>/dev/null || echo'),
+      'plan-phase.md must NOT use bare gsd-tools binary for discuss_mode lookup (shim-only install footgun)'
     );
   });
 });

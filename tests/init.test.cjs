@@ -4356,15 +4356,15 @@ describe('init section manifest', () => {
 
   // ── Row 62: stub <execution_context> @-refs still resolve (ADR-0002) ────
 
-  describe('commands/gsd/execute-phase.md: <execution_context> @-refs resolve (#2932 row 62)', () => {
+  describe('commands/gsd/exec.md: <execution_context> @-refs resolve (#2932 row 62)', () => {
     test('stubExecutionContextRefStillResolves', () => {
-      const stubPath = path.join(COMMANDS_DIR, 'execute-phase.md');
+      const stubPath = path.join(COMMANDS_DIR, 'exec.md');
       const content = fs.readFileSync(stubPath, 'utf-8');
       const refs = executionContextRefs(content);
-      assert.ok(refs.length > 0, 'execute-phase.md stub must declare at least one execution_context @-ref');
+      assert.ok(refs.length > 0, 'exec.md stub must declare at least one execution_context @-ref');
 
       const workflowRef = refs.find((r) => r.normalized === 'workflows/execute-phase.md');
-      assert.ok(workflowRef, 'execute-phase.md stub must @-reference workflows/execute-phase.md');
+      assert.ok(workflowRef, 'exec.md stub must @-reference workflows/execute-phase.md');
 
       for (const ref of refs) {
         assert.ok(

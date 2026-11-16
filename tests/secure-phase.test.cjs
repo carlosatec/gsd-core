@@ -108,48 +108,24 @@ describe('SECURE: gsd-security-auditor agent', () => {
 
 // ─── 2. Command file — secure-phase.md ──────────────────────────────────────
 
-describe('SECURE: secure-phase command file', () => {
-  const cmdPath = path.join(COMMANDS_DIR, 'secure-phase.md');
+describe('SECURE: canonical plan command wiring', () => {
+  const cmdPath = path.join(COMMANDS_DIR, 'plan.md');
+  const wfPath = path.join(WORKFLOWS_DIR, 'secure-phase.md');
 
-  test('command file exists', () => {
-    assert.ok(
-      fs.existsSync(cmdPath),
-      'secure-phase.md must exist in commands/gsd/'
-    );
-  });
-
-  test('has valid frontmatter with name gsd:secure-phase', () => {
+  test('canonical plan command exists and loads secure-phase workflow', () => {
+    assert.ok(fs.existsSync(cmdPath), 'plan.md must exist in commands/gsd/');
     const content = fs.readFileSync(cmdPath, 'utf-8');
     const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('name: gsd:secure-phase'),
-      'name must be gsd:secure-phase'
-    );
+    assert.ok(frontmatter.includes('name: gsd:plan'), 'name must be gsd:plan');
+    assert.ok(frontmatter.includes('allowed-tools:'), 'must have allowed-tools in frontmatter');
+    assert.ok(content.includes('workflows/secure-phase.md'), 'plan.md must reference workflows/secure-phase.md');
   });
 
-  test('has allowed-tools list', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    const frontmatter = content.split('---')[1] || '';
-    assert.ok(
-      frontmatter.includes('allowed-tools:'),
-      'must have allowed-tools in frontmatter'
-    );
-  });
-
-  test('contains reference to secure-phase.md workflow', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(
-      content.includes('secure-phase.md'),
-      'must reference secure-phase.md workflow'
-    );
-  });
-
-  test('has <objective> section mentioning states A, B, C', () => {
-    const content = fs.readFileSync(cmdPath, 'utf-8');
-    assert.ok(content.includes('<objective>'), 'must have <objective> section');
-    assert.ok(content.includes('(A)'), 'must mention state A');
-    assert.ok(content.includes('(B)'), 'must mention state B');
-    assert.ok(content.includes('(C)'), 'must mention state C');
+  test('secure-phase workflow documents states A, B, C', () => {
+    const content = fs.readFileSync(wfPath, 'utf-8');
+    assert.ok(/(\(A\)|A\)|\bState A\b)/.test(content), 'workflow must document state A');
+    assert.ok(/(\(B\)|B\)|\bState B\b)/.test(content), 'workflow must document state B');
+    assert.ok(/(\(C\)|C\)|\bState C\b)/.test(content), 'workflow must document state C');
   });
 });
 

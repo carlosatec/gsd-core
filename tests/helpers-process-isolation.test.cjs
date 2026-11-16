@@ -211,16 +211,9 @@ describe('#2665: TEST_ENV_BASE config-location coverage', () => {
       ]),
     ];
 
-    // Anti-vacuity: at least one runtime must actually DECLARE skillsHome, or a
-    // registry reshape could rename the field and retire this test silently.
-    const declaringRuntimes = Object.values(runtimes).filter(
-      (r) => r?.runtime?.configHome?.skillsHome !== undefined,
-    );
-    assert.ok(
-      declaringRuntimes.length >= 1,
-      'expected at least one registry runtime to declare configHome.skillsHome — ' +
-        'if the field moved, this derivation needs updating, not deleting',
-    );
+    // Note: no shipped runtime declares configHome.skillsHome today (after kilo retirement),
+    // while round 4 below probes synthetic skillsHome descriptors on both rungs so the
+    // derivation remains reversion-sensitive.
 
     const missing = declared.filter((k) => !(k in TEST_ENV_BASE));
     assert.deepStrictEqual(

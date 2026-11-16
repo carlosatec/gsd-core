@@ -1672,15 +1672,14 @@ describe('#2584 orchestratorExec — parity / divergence guard', () => {
       assert.equal(result.ok, true,
         `${id}: runtime.orchestratorExec must resolve cleanly; got reason="${result.ok ? '' : result.reason}"`);
     }
-    // Sanity: the sweep actually found the 4 known hosts (guards a broken sweep
+    // Sanity: the sweep actually found the 3 known hosts (guards a broken sweep
     // silently matching zero capabilities and passing vacuously).
-    assert.deepEqual(orchestratorWorktreeHosts.sort(), ['codex', 'kimi', 'kimi-code', 'opencode']);
+    assert.deepEqual(orchestratorWorktreeHosts.sort(), ['codex', 'kimi-code', 'opencode']);
   });
 
-  // #2627: the two guards below encode the per-host research that found two
-  // shipped descriptors which would have failed at spawn time — kimi resolving
-  // to an interactive TUI (orchestrator hangs) and kimi-code naming a binary
-  // that does not exist (ENOENT).
+  // #2627: the two guards below encode the per-host research that found shipped
+  // descriptors which would fail at spawn time without explicit headless flags or
+  // real binary names.
   test('every orchestrator-worktree descriptor resolves to a HEADLESS invocation, never an interactive TUI', () => {
     // A host that binds cwd by flag alone, with no leading subcommand or
     // headless flag, launches its interactive UI. Each host must contribute at
@@ -1690,7 +1689,6 @@ describe('#2584 orchestratorExec — parity / divergence guard', () => {
     const expected = {
       codex: ['exec'],
       opencode: ['run'],
-      kimi: ['--print'],
       'kimi-code': [],
     };
     for (const [id, leadingArgs] of Object.entries(expected)) {
@@ -1706,14 +1704,12 @@ describe('#2584 orchestratorExec — parity / divergence guard', () => {
     }
   });
 
-  test('kimi and kimi-code both spawn the "kimi" binary — kimi-code is a package name, not a binary', () => {
-    // Moonshot ships both agents as a binary named `kimi`; `kimi-code` is the
+  test('kimi-code spawns the "kimi" binary — kimi-code is a package name, not a binary', () => {
+    // Moonshot ships the agent as a binary named `kimi`; `kimi-code` is the
     // npm package / config-home name only. Declaring command:"kimi-code" is an
     // immediate ENOENT at spawn.
-    for (const id of ['kimi', 'kimi-code']) {
-      assert.equal(loadCapability(id).runtime.orchestratorExec.command, 'kimi',
-        `${id}: orchestratorExec.command must be the real binary name "kimi"`);
-    }
+    assert.equal(loadCapability('kimi-code').runtime.orchestratorExec.command, 'kimi',
+      'kimi-code: orchestratorExec.command must be the real binary name "kimi"');
   });
 
   test('every capability whose dispatch.isolation is "harness-worktree" declares a non-empty harnessIsolationFlag', () => {
@@ -1914,9 +1910,6 @@ describe('#2627 dispatch-isolation CLI route', () => {
   test('each orchestrator-worktree host resolves to its own documented argv shape', () => {
     const args = (id) => queryJson(id, ['--cwd-target', '/tmp/wt', '--prompt', 'P']).exec.args;
     assert.deepEqual(args('opencode'), ['run', '--dir', '/tmp/wt', 'P']);
-    // kimi carries the prompt behind --prompt (its --print mode requires it),
-    // unlike codex/opencode which take it positionally.
-    assert.deepEqual(args('kimi'), ['--print', '--work-dir', '/tmp/wt', '--prompt', 'P']);
     // kimi-code binds by process cwd — no flag in argv, but cwd still returned.
     assert.deepEqual(args('kimi-code'), ['--prompt', 'P']);
     assert.equal(queryJson('kimi-code', ['--cwd-target', '/tmp/wt', '--prompt', 'P']).exec.cwd, '/tmp/wt');
@@ -1932,7 +1925,7 @@ describe('#2627 dispatch-isolation CLI route', () => {
     // The invariant the scheduler depends on: if isolation is non-none, the
     // corresponding mechanism is present. Anything else would have the wave
     // create a worktree and then discover it has nothing to spawn into it.
-    for (const id of ['claude', 'cursor', 'codex', 'opencode', 'kimi', 'kimi-code', 'pi', 'cline', 'zcode']) {
+    for (const id of ['claude', 'cursor', 'codex', 'opencode', 'kimi-code', 'cline']) {
       const r = queryJson(id, ['--cwd-target', '/tmp/wt', '--prompt', 'P']);
       if (r.isolation === 'harness-worktree') {
         assert.ok(r.harnessFlag && r.harnessFlag.length > 0, `${id}: harness-worktree without a flag`);

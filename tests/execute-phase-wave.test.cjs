@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
 
-const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'execute-phase.md');
+const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'exec.md');
 const WORKFLOW_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'execute-phase.md');
 const COMMANDS_DOC_PATH = path.join(__dirname, '..', 'docs', 'COMMANDS.md');
 // After #3039, the comprehensive command reference moved to help/modes/full.md.
@@ -25,29 +25,13 @@ const HELP_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'help', 'm
 // IS what executes. String presence tests guard against accidental deletion of critical clauses.
 // See #2692 for the missing behavioral test for --wave N argument parsing.
 describe('execute-phase command: --wave flag', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(COMMAND_PATH), 'commands/gsd/execute-phase.md should exist');
-  });
-
-  test('argument-hint includes --wave, --gaps-only, and --interactive', () => {
+  test('canonical exec command file exists and advertises --wave N', () => {
+    assert.ok(fs.existsSync(COMMAND_PATH), 'commands/gsd/exec.md should exist');
     const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
     const hintLine = content.split(/\r?\n/).find(l => l.includes('argument-hint'));
     assert.ok(hintLine, 'should have argument-hint line');
     assert.ok(hintLine.includes('--wave N'), 'argument-hint should include --wave N');
-    assert.ok(hintLine.includes('--gaps-only'), 'argument-hint should keep --gaps-only');
-    assert.ok(hintLine.includes('--interactive'), 'argument-hint should preserve --interactive');
-  });
-
-  test('objective describes wave-filter execution', () => {
-    const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
-    // eslint-disable-next-line local/no-unbounded-quantifier -- parses this repo's own command .md content, fixed-size author-controlled content
-    const objectiveMatch = content.match(/<objective>([\s\S]*?)<\/objective>/);
-    assert.ok(objectiveMatch, 'should have <objective> section');
-    assert.ok(objectiveMatch[1].includes('--wave N'), 'objective should mention --wave N');
-    assert.ok(
-      objectiveMatch[1].includes('no incomplete plans remain'),
-      'objective should mention phase completion guardrail'
-    );
+    assert.ok(content.includes('workflows/execute-phase.md'), 'exec.md should load workflows/execute-phase.md');
   });
 });
 

@@ -1665,14 +1665,6 @@ test('shipped installer-migration checksums are locked to a committed baseline (
     // fix-forward migration widens the scanned surface without touching 000.
     '2026-07-17-opencode-baseline-commands-dir':
       'sha256:0f6080b5f9b75fb5adbe9664a71152e23a5336813453b0a77e4df6fd483ad38e',
-    // Migration 006 (NEW, added here per this test's own sanctioned "adding a new
-    // migration" case — not a shipped-body edit): retire pi's stale
-    // extensions/gsd.cjs. #2470 renamed the installed extension to
-    // extensions/gsd.js because pi's isExtensionFile() auto-discovery accepts
-    // only .ts/.js and silently skips everything else; without this migration the
-    // old path drops out of the manifest and uninstall can never remove it.
-    '2026-07-20-pi-extension-cjs-to-js':
-      'sha256:185fa926ae24d83cbdd95c31a9ad2cc8d123e176ad543669b3b0ed75e6ca6f4a',
     // Migration 007 (NEW, added here per this test's own sanctioned "adding a new
     // migration" case — not a shipped-body edit): retire the pre-#2544
     // {"type":"commonjs"} marker at the runtime config root. #2544 moved that
@@ -1685,14 +1677,6 @@ test('shipped installer-migration checksums are locked to a committed baseline (
     // Migration 008: retire Cursor's duplicate commands/ surface (#2644).
     '2026-07-29-cursor-retire-commands-surface':
       'sha256:d0b2b812a3f752650f2518b48280f74a5937c80ec8412bac493382dfa3db083f',
-    // Migration 009 (NEW, added here per this test's own sanctioned "adding a new
-    // migration" case — not a shipped-body edit): retire pi's reserved hooks/
-    // directory now that the shared hook bundle installs at gsd-hooks/ instead
-    // (#3023). pi warns on hooks/'s mere existence regardless of contents, so an
-    // upgraded install must have both the legacy files AND the emptied directory
-    // itself retired via the new remove-empty-dir action.
-    '2026-08-07-pi-retire-reserved-hooks-dir':
-      'sha256:34264415b00e15e5a1691eae3db9bd24dca11e5c04d78358420a7a8adf115f9e',
   };
 
   const { DEFAULT_MIGRATIONS_DIR, migrationChecksum: computeChecksum } = require('../gsd-core/bin/lib/installer-migrations.cjs');
@@ -1852,7 +1836,15 @@ test('reconciles a drifted applied-migration checksum into install state on appl
     const realElsewhere = createTempDir('gsd-remove-empty-dir-elsewhere-');
     t.after(() => cleanup(realElsewhere));
     const linkPath = path.join(configDir, 'hooks');
-    fs.symlinkSync(realElsewhere, linkPath, 'dir');
+    try {
+      fs.symlinkSync(realElsewhere, linkPath, 'dir');
+    } catch (err) {
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        t.skip('symlinks require elevated privileges on Windows');
+        return;
+      }
+      throw err;
+    }
 
     assert.equal(evaluateRemoveEmptyDir(configDir, linkPath), 'left-in-place');
     assert.equal(fs.lstatSync(linkPath).isSymbolicLink(), true, 'the symlink itself must survive untouched');
@@ -2867,7 +2859,7 @@ describe('migration.plan()', () => {
 {
   const { describe, test } = require('node:test');
   describe('symlinked managed path is snapshotted as a link, never dereferenced', () => {
-  const piExtensionMigration = require('../gsd-core/bin/lib/installer-migrations/006-pi-extension-cjs-to-js.cjs');
+  const cursorCommandsMigration = require('../gsd-core/bin/lib/installer-migrations/008-cursor-retire-commands-surface.cjs');
   const SECRET = 'TOP-SECRET-PRIVATE-KEY-MATERIAL\n';
 
   test('backup-and-remove on a symlinked managed file copies the link, not the referent', (t) => {
@@ -2877,7 +2869,7 @@ describe('migration.plan()', () => {
       const secretPath = path.join(secretDir, 'id_rsa');
       fs.writeFileSync(secretPath, SECRET, 'utf8');
 
-      const linkPath = path.join(configDir, 'extensions', 'gsd.cjs');
+      const linkPath = path.join(configDir, 'commands', 'gsd-help.md');
       fs.mkdirSync(path.dirname(linkPath), { recursive: true });
       try {
         fs.symlinkSync(secretPath, linkPath);
@@ -2888,14 +2880,14 @@ describe('migration.plan()', () => {
 
       // Manifest records the path as managed with a hash that cannot match the
       // referent -> classification 'managed-modified' -> backup-and-remove.
-      writeManifest(configDir, { 'extensions/gsd.cjs': sha256('the original extension\n') });
+      writeManifest(configDir, { 'commands/gsd-help.md': sha256('the original command\n') });
 
       const result = runInstallerMigrations({
         configDir,
-        runtime: 'pi',
+        runtime: 'cursor',
         scope: 'global',
-        migrations: [piExtensionMigration],
-        now: () => '2026-07-20T00:00:00.000Z',
+        migrations: [cursorCommandsMigration],
+        now: () => '2026-07-29T00:00:00.000Z',
       });
 
       const backupAction = result.plan.actions.find((a) => a.type === 'backup-and-remove');
@@ -2936,15 +2928,15 @@ describe('migration.plan()', () => {
     const configDir = createTempInstall();
     t.after(() => cleanup(configDir));
 
-    writeFile(configDir, 'extensions/gsd.cjs', 'locally patched extension\n');
-    writeManifest(configDir, { 'extensions/gsd.cjs': sha256('the original extension\n') });
+    writeFile(configDir, 'commands/gsd-help.md', 'locally patched command\n');
+    writeManifest(configDir, { 'commands/gsd-help.md': sha256('the original command\n') });
 
     const result = runInstallerMigrations({
       configDir,
-      runtime: 'pi',
+      runtime: 'cursor',
       scope: 'global',
-      migrations: [piExtensionMigration],
-      now: () => '2026-07-20T00:00:00.000Z',
+      migrations: [cursorCommandsMigration],
+      now: () => '2026-07-29T00:00:00.000Z',
     });
 
     const backupAction = result.plan.actions.find((a) => a.type === 'backup-and-remove');
@@ -2958,10 +2950,10 @@ describe('migration.plan()', () => {
     const backupPath = path.join(configDir, journalled.backupRelPath);
     assert.equal(
       fs.readFileSync(backupPath, 'utf8'),
-      'locally patched extension\n',
+      'locally patched command\n',
       'a real file must still be backed up by content so the user can recover it',
     );
-    assert.ok(!fs.existsSync(path.join(configDir, 'extensions', 'gsd.cjs')));
+    assert.ok(!fs.existsSync(path.join(configDir, 'commands', 'gsd-help.md')));
   });
 
   // In-flight failure recovery: when a later step of the SAME apply() attempt
@@ -2985,7 +2977,7 @@ describe('migration.plan()', () => {
       const secretPath = path.join(secretDir, 'id_rsa');
       fs.writeFileSync(secretPath, SECRET, 'utf8');
 
-      const linkPath = path.join(configDir, 'extensions', 'gsd.cjs');
+      const linkPath = path.join(configDir, 'commands', 'gsd-help.md');
       fs.mkdirSync(path.dirname(linkPath), { recursive: true });
       try {
         fs.symlinkSync(secretPath, linkPath);
@@ -2993,7 +2985,7 @@ describe('migration.plan()', () => {
         t.skip('symlink creation unsupported on this platform/privilege');
         return;
       }
-      writeManifest(configDir, { 'extensions/gsd.cjs': sha256('the original extension\n') });
+      writeManifest(configDir, { 'commands/gsd-help.md': sha256('the original command\n') });
 
       let fired = false;
       fs.rmSync = function patched(target, options) {
@@ -3007,10 +2999,10 @@ describe('migration.plan()', () => {
 
       assert.throws(() => runInstallerMigrations({
         configDir,
-        runtime: 'pi',
+        runtime: 'cursor',
         scope: 'global',
-        migrations: [piExtensionMigration],
-        now: () => '2026-07-20T00:00:00.000Z',
+        migrations: [cursorCommandsMigration],
+        now: () => '2026-07-29T00:00:00.000Z',
       }), /injected post-delete failure/, 'the injected failure must propagate, not be swallowed');
 
       fs.rmSync = realRmSync;
@@ -3055,7 +3047,7 @@ describe('migration.plan()', () => {
       const targetPath = path.join(secretDir, 'id_rsa');
       fs.writeFileSync(targetPath, SECRET, 'utf8');
 
-      const linkPath = path.join(configDir, 'extensions', 'gsd.cjs');
+      const linkPath = path.join(configDir, 'commands', 'gsd-help.md');
       fs.mkdirSync(path.dirname(linkPath), { recursive: true });
       try {
         fs.symlinkSync(targetPath, linkPath);
@@ -3063,14 +3055,14 @@ describe('migration.plan()', () => {
         t.skip('symlink creation unsupported on this platform/privilege');
         return;
       }
-      writeManifest(configDir, { 'extensions/gsd.cjs': sha256('the original extension\n') });
+      writeManifest(configDir, { 'commands/gsd-help.md': sha256('the original command\n') });
 
       const result = runInstallerMigrations({
         configDir,
-        runtime: 'pi',
+        runtime: 'cursor',
         scope: 'global',
-        migrations: [piExtensionMigration],
-        now: () => '2026-07-20T00:00:00.000Z',
+        migrations: [cursorCommandsMigration],
+        now: () => '2026-07-29T00:00:00.000Z',
       });
       assert.equal(fs.lstatSync(linkPath, { throwIfNoEntry: false }), undefined, 'link removed by apply');
 

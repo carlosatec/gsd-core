@@ -1,6 +1,6 @@
 <!--
   MemPalace capability — contribution fragment.
-  Rendered into the execute:wave:post verifier prompt when `mempalace.capture_artifacts` is true.
+  Rendered into the execute:wave:post verifier prompt unless `mempalace.capture_artifacts` is `false`.
   Contributes DATA (capture instructions), not control flow. onError: skip — never fails a wave.
 -->
 ### Capture problems → fixes (MemPalace)

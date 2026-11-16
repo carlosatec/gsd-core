@@ -19,21 +19,20 @@ const path = require('path');
 
 describe('autonomous --interactive flag (#1413)', () => {
   const workflowPath = path.join(__dirname, '..', 'gsd-core', 'workflows', 'autonomous.md');
-  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'autonomous.md');
+  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'auto.md');
 
-  test('command definition includes --interactive in argument-hint', () => {
+  test('canonical auto command wires the autonomous workflow', () => {
     const content = fs.readFileSync(commandPath, 'utf8');
-    assert.ok(content.includes('--interactive'), 'command should document --interactive flag');
-    assert.ok(content.includes('argument-hint:') && content.includes('--interactive'),
-      'argument-hint should include --interactive');
+    assert.ok(content.includes('workflows/autonomous.md'),
+      'commands/gsd/auto.md should route to workflows/autonomous.md');
   });
 
-  test('command definition describes interactive mode behavior', () => {
-    const content = fs.readFileSync(commandPath, 'utf8');
-    assert.ok(content.includes('discuss') && content.includes('inline'),
-      'command should describe discuss running inline');
-    assert.ok(content.includes('background'),
-      'command should mention background agents for plan+execute');
+  test('workflow describes interactive mode behavior', () => {
+    const content = fs.readFileSync(workflowPath, 'utf8');
+    assert.ok(content.includes('discuss') && /inline|Skill\(/i.test(content),
+      'workflow should describe discuss running inline');
+    assert.ok(content.includes('run_in_background'),
+      'workflow should use background agents for plan+execute');
   });
 
   test('workflow parses --interactive flag', () => {
@@ -42,14 +41,10 @@ describe('autonomous --interactive flag (#1413)', () => {
       'workflow should parse --interactive into INTERACTIVE variable');
   });
 
-  test('workflow uses discuss-phase skill in interactive mode', () => {
-    // Per #2697 the user-facing form is the hyphen invariant gsd-discuss-phase;
-    // the colon form was retired and is enforced absent by bug-2543 tests.
-    //
-    // Don't `.includes()` against the full file — both tokens could appear in
-    // unrelated sections (e.g. INTERACTIVE="" initialization + a stray
-    // gsd-discuss-phase mention in prose) and falsely pass. Instead, isolate
-    // the structural region that gates on INTERACTIVE and assert the Skill
+  test('workflow uses plan --discuss skill in interactive mode', () => {
+    // Per #2697 and Phase 12 unification, discuss-phase is invoked via canonical
+    // gsd-plan with --discuss; the colon form is retired.
+    // Isolate the structural region that gates on INTERACTIVE and assert the Skill
     // invocation lives inside it.
     const content = fs.readFileSync(workflowPath, 'utf8');
     const interactiveMarker = '**If `INTERACTIVE` is set:**';
@@ -71,12 +66,12 @@ describe('autonomous --interactive flag (#1413)', () => {
     const branchEnd = Math.min(...candidates);
     const branch = content.slice(branchStart, branchEnd);
 
-    // The branch must invoke the hyphen-form Skill. Tolerate whitespace
+    // The branch must invoke canonical gsd-plan with --discuss. Tolerate whitespace
     // around `(`, `skill`, and `=` so harmless reformatting doesn't break this.
-    const skillCall = /Skill\(\s*skill\s*=\s*['"]gsd-discuss-phase['"]/.test(branch);
+    const skillCall = /Skill\(\s*skill\s*=\s*['"]gsd-plan['"]\s*,\s*args\s*=\s*['"][^'"]{0,100}--discuss[^'"]{0,100}['"]/.test(branch);
     assert.ok(
       skillCall,
-      `INTERACTIVE branch must invoke Skill(skill="gsd-discuss-phase"). Got branch:\n${branch}`,
+      `INTERACTIVE branch must invoke Skill(skill="gsd-plan", args="... --discuss"). Got branch:\n${branch}`,
     );
   });
 

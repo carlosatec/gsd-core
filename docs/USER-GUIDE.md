@@ -1,6 +1,6 @@
 # GSD User Guide
 
-A narrative companion guide to GSD Core Nexus 3.7 — orient yourself here, then follow the links into the dedicated docs.
+A narrative companion guide to GSD Core Nexus 3.8 — orient yourself here, then follow the links into the dedicated docs.
 
 > **GSD Core's documentation is organised by [Diataxis](https://diataxis.fr).**
 > Browse by goal: [Tutorials](README.md#tutorials) · [How-to guides](README.md#how-to-guides) · [Reference](README.md#reference) · [Explanation](README.md#explanation) · [Docs index](README.md)
@@ -30,7 +30,7 @@ A narrative companion guide to GSD Core Nexus 3.7 — orient yourself here, then
 
 ## The Unified 11-Command Surface
 
-Starting with GSD Core Nexus 3.7, the public command surface is streamlined into **11 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
+Starting with GSD Core Nexus 3.8, the public command surface is streamlined into **11 Canonical Unified Commands**. All operational sub-skills and internal workflows are orchestrated seamlessly under these entrypoints:
 
 | Command | Purpose | Primary Triggers & Flags |
 |---|---|---|
@@ -42,7 +42,7 @@ Starting with GSD Core Nexus 3.7, the public command surface is streamlined into
 | `/gsd-ship` | Complete milestone, open PR, tag release, and archive state | `--draft`, `--tag <version>` |
 | `/gsd-auto` | End-to-end autonomous autopilot across phase lifecycle | `--until <phase>`, `--max-iterations <N>` |
 | `/gsd-tokens` | Real-time multi-command token telemetry dashboard, operational sessions, financial estimation, and web dashboard | `[--sessions]`, `[--cost]`, `[--all]`, `[--web]`, `[--open]`, `[--json]`, `gsd-tools tokens` |
-| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.7 | `--dry-run`, `--force` |
+| `/gsd-migrate` | Non-destructive upgrade for legacy and greenfield projects to GSD Core Nexus 3.8 | `--dry-run`, `--force` |
 | `/gsd-graph` | Export the interactive HTML knowledge graph and Obsidian canvas | `--no-open` |
 | `/gsd-help` | Display command catalog, flags, and quick reference | `[command]` |
 
@@ -70,7 +70,7 @@ For the full command reference with all flags, see [`docs/COMMANDS.md`](COMMANDS
 
 ## Session Intelligence & Deterministic Replay CLI
 
-GSD Core Nexus 3.7 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
+GSD Core Nexus 3.8 automatically records structured, append-only JSONL execution events under `.planning/intel/sessions/`. Every command execution captures tool invocations, AST pre-flight checks, stack traces, and real diffs:
 
 ```bash
 # Replay the latest session in the terminal
@@ -112,7 +112,7 @@ The **System One Engine** is a local, API-free decision layer that triages risk 
 
 ## DeepSeek Harness & Multi-Runtime Support
 
-GSD Core Nexus 3.7 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
+GSD Core Nexus 3.8 provides 1st-class host adapter support for **DeepSeek Harness** (`@deepseek-ai/dsh` micro-kernel), **Google Antigravity CLI**, **Claude Code**, **OpenCode**, and **Codex**, ensuring consistent spec-driven execution across all major AI coding platforms.
 
 ---
 
@@ -226,6 +226,21 @@ During planning research, GSD maps automated test coverage to each phase require
 - **Verification Gate:** Plans where tasks lack automated verify commands are refined before execution approval.
 - **Review with Auto-Repair:** Running `/gsd-review --fix` analyzes changed files against anti-pattern stores and automatically applies non-destructive fixes.
 
+### Plan Drift Guard
+
+Before approving a plan for execution, `/gsd-plan` runs a two-axis Plan Drift Guard controlled by `plan_review.source_grounding` (default `true` in `.planning/config.json`):
+
+```yaml
+plan_review.source_grounding: true
+```
+
+1. **Source-grounding axis:** Verifies that functions, classes, decorators, and CLI flags cited in `PLAN.md` actually exist in the repository before execution begins. Uses live source `grep` by default, so the guard works without intel (`source_grounding_authority: grep`, with optional `intel`, `treesitter`, `lsp`, and `scip` authorities). Unresolved references emit a `needs-acknowledgement` notice prior to plan approval.
+2. **Cross-artifact fact-drift axis:** Compares shared facts across `ROADMAP.md`, `PLAN.md`, `STATE.md`, and `CONTEXT.md` and reports contradictions (such as phase status or requirement mismatches) as advisory findings.
+
+### Trimming MCP Tool Schemas (Context Budget)
+
+Before starting a phase, audit enabled MCP tool schemas via `enabledMcpjsonServers` and `disabledMcpjsonServers` in `.claude/settings.json`. MCP tool definitions add per-turn context overhead that compounds with `model_profile` (managed by the harness rather than GSD). Trim unused browser/Playwright, platform-specific, or cross-project servers as needed — see `gsd-core/references/context-budget.md` for the full audit checklist.
+
 ---
 
 ## UI Design & Review Contract
@@ -330,7 +345,7 @@ Key capabilities:
 | Broken implementation | Run `/gsd-review --fix` or `git revert` last phase commit |
 | STATE.md out of sync | Run `gsd-tools state sync` to reconstruct state |
 | High token consumption | Check `/gsd-tokens` and set `model_profile: "budget"` in config |
-| Legacy project upgrade | Run `/gsd-migrate` to update the structure to the GSD Core Nexus 3.7 format |
+| Legacy project upgrade | Run `/gsd-migrate` to update the structure to the GSD Core Nexus 3.8 format |
 | `Intel AST: Stale` in status | Run `node gsd-core/bin/gsd-tools.cjs intel graph` so the graph re-anchors to the current Git HEAD |
 
 ---
@@ -363,3 +378,4 @@ Key capabilities:
 - [Architecture](ARCHITECTURE.md)
 - [Command Reference](COMMANDS.md)
 - [Configuration](CONFIGURATION.md)
+- [Issue-Driven Orchestration](how-to/issue-driven-orchestration.md)

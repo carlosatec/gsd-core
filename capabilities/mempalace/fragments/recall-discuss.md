@@ -1,6 +1,6 @@
 <!--
   MemPalace capability — contribution fragment.
-  Rendered into the discuss:pre orchestrator prompt when `mempalace.recall_on_discuss` is true.
+  Rendered into the discuss:pre orchestrator prompt unless `mempalace.recall_on_discuss` is `false`.
   Contributes DATA (recall instructions), not control flow. onError: skip — never blocks discussion.
 -->
 ### Memory recall (MemPalace)

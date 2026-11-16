@@ -8,14 +8,15 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-// #2790: scan.md was consolidated into map-codebase.md as the --fast flag.
+// #2790 + Phase 12: scan/map-codebase consolidated under status.md load_on_demand.
 // The underlying workflow (workflows/scan.md) remains functional.
 describe('scan command', () => {
-  test('scan is now a --fast flag on map-codebase.md (#2790)', () => {
-    const p = path.join(__dirname, '..', 'commands', 'gsd', 'map-codebase.md');
-    assert.ok(fs.existsSync(p), 'commands/gsd/map-codebase.md should exist');
+  test('canonical status command loads scan and map-codebase workflows on demand', () => {
+    const p = path.join(__dirname, '..', 'commands', 'gsd', 'status.md');
+    assert.ok(fs.existsSync(p), 'commands/gsd/status.md should exist');
     const content = fs.readFileSync(p, 'utf-8');
-    assert.ok(content.includes('--fast'), 'map-codebase.md must document --fast flag (absorbed scan)');
+    assert.ok(content.includes('workflows/scan.md'), 'status.md must reference workflows/scan.md');
+    assert.ok(content.includes('workflows/map-codebase.md'), 'status.md must reference workflows/map-codebase.md');
     assert.ok(content.includes('description:'), 'Command must have description frontmatter');
   });
 

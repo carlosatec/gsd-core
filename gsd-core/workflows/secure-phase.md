@@ -157,7 +157,7 @@ Handle return:
 ```
 GSD > PHASE {N} SECURITY BLOCKED
 {K} blocking threats open — phase advancement blocked until threats_open: 0
-▶ Fix mitigations then re-run: /gsd:secure-phase {N}
+▶ Fix mitigations then re-run: /gsd:plan {N} --secure
 ▶ Or document accepted risks in SECURITY.md and re-run.
 ```
 
@@ -176,8 +176,8 @@ gsd_run query commit "docs(phase-${PHASE}): add/update security threat verificat
 ```
 GSD > PHASE {N} THREAT-SECURE
 threats_open: 0 — no blocking threats remain (threats_open: 0).
-▶ /gsd:validate-phase {N}    validate test coverage
-▶ /gsd:verify-work {N}       run UAT
+▶ /gsd:plan {N} --validate    validate test coverage
+▶ /gsd:verify {N}       run UAT
 ```
 
 Display `/clear` reminder.

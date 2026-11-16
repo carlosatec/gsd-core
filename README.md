@@ -10,7 +10,7 @@
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-3.7.7-06b6d4?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
+[![Version](https://img.shields.io/badge/version-3.8.0-06b6d4?style=for-the-badge&logo=git&logoColor=white)](.planning/ROADMAP.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Tests&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
 [![License](https://img.shields.io/badge/license-MIT-38bdf8?style=for-the-badge)](LICENSE)
 [![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
@@ -82,7 +82,7 @@ GSD Core Nexus strictly unifies its interface into **11 canonical commands** ava
 
 ---
 
-## 💎 GSD Core Nexus 3.7 Flagship Capabilities
+## 💎 GSD Core Nexus 3.8 Flagship Capabilities
 
 ### 1. 🧠 Project Second Brain & Obsidian Vault Engine
 - **Non-Destructive Vault (`.planning/vault/`):** Automatically compiles your project's decisions, phases, modules, and lessons learned into 600+ interconnected markdown notes with native `[[wikilinks]]`.
@@ -161,7 +161,7 @@ Once installed, bootstrap your workflow immediately:
 
 ## 📚 Documentation
 
-- **[Practical Tutorial: Mastering GSD Core Nexus 3.7](docs/tutorials/practical-tutorial.md)** ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
+- **[Practical Tutorial: Mastering GSD Core Nexus 3.8](docs/tutorials/practical-tutorial.md)** ([Português](docs/pt-BR/tutorials/tutorial-pratico.md)) 🔥
 - **[Command Reference](docs/COMMANDS.md):** Complete guide to all 11 canonical commands, flags, and workflows.
 - **[System Architecture](docs/ARCHITECTURE.md):** Comprehensive deep dive into the component architecture, AST engine, and JIT context injector.
 - **[Feature Reference](docs/FEATURES.md):** Full catalog of 170+ capabilities and architectural milestones.

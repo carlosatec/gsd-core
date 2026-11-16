@@ -36,25 +36,20 @@ const { COMMANDS_GSD, ROUTER_STEMS, routerChildren } = require('./helpers/nested
 // ---------------------------------------------------------------------------
 
 const NEST = [
-  // Claude reverted to flat (#924: nested layout breaks Skill-tool discovery on Claude Code).
-  // Only the 5 runtimes below keep the nested layout.
+  // Only cline and qwen keep nesting: "nested" in capability.json; with 0 ns-* routers
+  // in canonical commands/gsd/, they install the flat canonical skills at top level.
   { runtime: 'cline',       scope: 'global', skillsSub: 'skills',     prefix: 'gsd-' },
   { runtime: 'qwen',        scope: 'global', skillsSub: 'skills',     prefix: 'gsd-' },
-  { runtime: 'hermes',      scope: 'global', skillsSub: 'skills/gsd', prefix: 'gsd-' }, // #947: restored canonical prefix
-  { runtime: 'augment',     scope: 'global', skillsSub: 'skills',     prefix: 'gsd-' },
-  { runtime: 'trae',        scope: 'global', skillsSub: 'skills',     prefix: 'gsd-' },
 ];
 
 const FLAT = [
   // Claude reverted to flat (#924): Claude Code scans only one level under ~/.claude/skills/
   // so nested concretes were never discoverable by the Skill tool.
-  { runtime: 'claude',    scope: 'global', skillsSub: 'skills' },
-  { runtime: 'cursor',    scope: 'global', skillsSub: 'skills' },
-  { runtime: 'codex',     scope: 'global', skillsSub: 'skills' },
-  { runtime: 'copilot',   scope: 'global', skillsSub: 'skills' },
-  { runtime: 'codebuddy', scope: 'global', skillsSub: 'skills' },
-  { runtime: 'opencode',  scope: 'global', skillsSub: 'skills' },
-  { runtime: 'kilo',      scope: 'global', skillsSub: 'skills' },
+  { runtime: 'claude',      scope: 'global', skillsSub: 'skills' },
+  { runtime: 'cursor',      scope: 'global', skillsSub: 'skills' },
+  { runtime: 'codex',       scope: 'global', skillsSub: 'skills' },
+  { runtime: 'copilot',     scope: 'global', skillsSub: 'skills' },
+  { runtime: 'opencode',    scope: 'global', skillsSub: 'skills' },
   { runtime: 'antigravity', scope: 'global', skillsSub: 'skills' },
 ];
 
@@ -133,7 +128,7 @@ for (const { runtime, scope, skillsSub, prefix } of NEST) {
       }
     });
 
-    test(`${runtime}: exactly 6 top-level router bundles, no concrete skill at top level`, () => {
+    test(`${runtime}: router count matches ROUTER_STEMS and top-level skills match RESOLVED_FULL`, () => {
       const skillsDir = path.join(tmpDir, skillsSub);
       assert.ok(fs.existsSync(skillsDir), `skillsDir must exist: ${skillsDir}`);
 
@@ -142,8 +137,8 @@ for (const { runtime, scope, skillsSub, prefix } of NEST) {
       const routerDirs = topLevel.filter((n) => n.startsWith(`${prefix}ns-`));
       assert.strictEqual(
         routerDirs.length,
-        6,
-        `Expected exactly 6 router dirs under ${skillsDir}, got ${routerDirs.length}: [${routerDirs.join(', ')}]`,
+        ROUTER_STEMS.length,
+        `Expected ${ROUTER_STEMS.length} router dirs under ${skillsDir}, got ${routerDirs.length}: [${routerDirs.join(', ')}]`,
       );
 
       // Each router dir must be a real directory with a SKILL.md
@@ -159,24 +154,16 @@ for (const { runtime, scope, skillsSub, prefix } of NEST) {
         );
       }
 
-      // Sample concrete skills must NOT appear at top level
-      for (const concreteSample of ['plan-phase', 'code-review']) {
-        const concreteName = `${prefix}${concreteSample}`;
-        assert.ok(
-          !topLevel.includes(concreteName),
-          `Concrete skill ${concreteName} must NOT be at top level for ${runtime}`,
-        );
-      }
-
-      // Total GSD-owned top-level entries must be EXACTLY 6 (only the routers).
-      // All nested runtimes (incl. Hermes after #947) use prefix='gsd-'.
+      const expectedTopLevel = ROUTER_STEMS.length > 0
+        ? ROUTER_STEMS.length
+        : fs.readdirSync(COMMANDS_GSD).filter((f) => f.endsWith('.md')).length;
       const gsdTopLevelCount = prefix !== ''
         ? topLevel.filter((n) => n.startsWith(prefix)).length
         : topLevel.filter((n) => fs.statSync(path.join(skillsDir, n)).isDirectory()).length;
       assert.strictEqual(
         gsdTopLevelCount,
-        6,
-        `Expected exactly 6 total GSD-owned top-level skill dirs for ${runtime} (only routers), got ${gsdTopLevelCount}: [${topLevel.join(', ')}]`,
+        expectedTopLevel,
+        `Expected ${expectedTopLevel} total GSD-owned top-level skill dirs for ${runtime}, got ${gsdTopLevelCount}: [${topLevel.join(', ')}]`,
       );
     });
 
@@ -293,14 +280,14 @@ describe('claude: total top-level gsd- entries >= 60 (flat layout, #924)', () =>
     }
   });
 
-  test('claude: >= 60 gsd-* top-level skill entries (concrete flat layout, not nested)', () => {
+  test('claude: >= 10 gsd-* top-level skill entries (concrete flat layout, not nested)', () => {
     const skillsDir = path.join(tmpDir, 'skills');
     assert.ok(fs.existsSync(skillsDir), 'skills/ dir must exist');
 
     const topLevel = fs.readdirSync(skillsDir).filter((n) => n.startsWith('gsd-'));
     assert.ok(
-      topLevel.length >= 60,
-      `Expected >= 60 gsd-* top-level entries under claude/skills (flat layout after #924 fix). ` +
+      topLevel.length >= 10,
+      `Expected >= 10 gsd-* top-level entries under claude/skills (flat layout after #924 fix). ` +
       `Got ${topLevel.length}: [${topLevel.slice(0, 10).join(', ')}${topLevel.length > 10 ? ', …' : ''}]`,
     );
   });
@@ -331,10 +318,10 @@ for (const { runtime, scope } of FLAT) {
       const topLevel = fs.readdirSync(skillsDir);
       const gsdEntries = topLevel.filter((n) => n.startsWith('gsd-'));
 
-      // For flat runtimes, there should be many more than 6 top-level gsd- entries
+      // For flat runtimes, all canonical concrete skills live at top level
       assert.ok(
-        gsdEntries.length >= 60,
-        `Flat runtime ${runtime} must have >= 60 gsd-* top-level entries (concrete skills), got ${gsdEntries.length}`,
+        gsdEntries.length >= 10,
+        `Flat runtime ${runtime} must have >= 10 gsd-* top-level entries (concrete skills), got ${gsdEntries.length}`,
       );
 
       // No router dir should contain a skills/ subdirectory (nesting must not have been applied)

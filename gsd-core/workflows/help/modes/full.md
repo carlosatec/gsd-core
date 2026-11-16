@@ -41,6 +41,8 @@ npx @opengsd/gsd-core@latest
 /gsd:new-project → /gsd:plan-phase → /gsd:execute-phase → repeat
 ```
 
+Unified v3.7+ commands: `/gsd:status [--next [--auto]] [--drift] [--json]` · `/gsd:plan [phase] [--converge] [--reviews]` · `/gsd:exec [phase] [--wave N] [--dry-run]` · `/gsd:review [phase] [--fix] [--full] [--repo] [--ui] [--backlog]` · `/gsd:verify` · `/gsd:ship` · `/gsd:auto [--until-phase N] [--max-phases N] [--dry-run] [--resume] [--interactive]` · `/gsd:tokens [--sessions] [--cost] [--all] [--web] [--open] [--json]` · `/gsd:migrate [--dry-run] [--force]` · `/gsd:graph [--vault] [--canvas] [--open] [--no-open]` · `/gsd:help [--brief | --full | <topic>]`
+
 ### Project Initialization
 
 **`/gsd:new-project`**

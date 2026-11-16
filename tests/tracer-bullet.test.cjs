@@ -32,7 +32,7 @@ const PLANNER = read('agents/gsd-planner.md');
 const EXECUTOR = read('agents/gsd-executor.md');
 const EXECUTE_PLAN = read('gsd-core/workflows/execute-plan.md');
 const WORKFLOW = read('gsd-core/workflows/plan-phase.md');
-const COMMAND = read('commands/gsd/plan-phase.md');
+const COMMAND = read('commands/gsd/plan.md');
 const HELP_FULL = read('gsd-core/workflows/help/modes/full.md');
 const MVP_REF = read('gsd-core/references/planner-mvp-mode.md');
 const CONTEXT = read('CONTEXT.md');
@@ -118,14 +118,6 @@ function parseWorkflowContract(md) {
     // Guard: must not eagerly @-import the reference (size-budget rule, mirrors
     // tests/workflow-size-budget.test.cjs). An eager import is an @-path at line start.
     noEagerImportOfMvpRef: !/^\s*@[^\n]*planner-mvp-mode\.md/m.test(md),
-  };
-}
-
-function parseCommandContract(md) {
-  const argHint = (md.split(/\r?\n/).find((l) => l.startsWith('argument-hint:')) || '');
-  return {
-    argHintHasNoTracer: argHint.includes('--no-tracer'),
-    flagsDocumentNoTracer: /- `--no-tracer` —/.test(md),
   };
 }
 
@@ -217,7 +209,6 @@ describe('#1945 executor: post-tracer feedback gate', () => {
 
 describe('#1945 plan-phase orchestrator + command: --no-tracer wiring', () => {
   const w = parseWorkflowContract(WORKFLOW);
-  const cmd = parseCommandContract(COMMAND);
 
   test('workflow argument list documents --no-tracer', () => {
     assert.ok(w.argListDocumentsNoTracer, 'plan-phase workflow must extract --no-tracer from $ARGUMENTS');
@@ -235,9 +226,9 @@ describe('#1945 plan-phase orchestrator + command: --no-tracer wiring', () => {
     assert.ok(w.noEagerImportOfMvpRef, 'planner-mvp-mode.md must stay lazily loaded by the planner, not eagerly imported');
   });
 
-  test('command argument-hint and flags document --no-tracer', () => {
-    assert.ok(cmd.argHintHasNoTracer, 'command argument-hint must advertise --no-tracer');
-    assert.ok(cmd.flagsDocumentNoTracer, 'command flags list must document --no-tracer');
+  test('canonical plan command wires plan-phase workflow and help full lists --no-tracer', () => {
+    assert.ok(COMMAND.includes('workflows/plan-phase.md'), 'commands/gsd/plan.md must reference workflows/plan-phase.md');
+    assert.ok(WORKFLOW.includes('--no-tracer'), 'workflows/plan-phase.md must document --no-tracer');
   });
 
   test('/gsd:help full listing documents --no-tracer', () => {

@@ -482,28 +482,11 @@ describe('#3135: gsd-core/workflows/add-backlog.md', () => {
 // ─── capture.md routing integrity ────────────────────────────────────────────
 
 describe('#3135: capture.md correctly routes --backlog to add-backlog workflow', () => {
-  function executionContextIncludes(body) {
-    const blocks = [
-      ...body.matchAll(/<execution_context(?:_extended)?>([\s\S]*?)<\/execution_context(?:_extended)?>/g),
-    ].map((m) => m[1]);
-    const targets = [];
-    for (const blk of blocks) {
-      for (const line of blk.split('\n')) {
-        const t = line.trim();
-        if (!t.startsWith('@')) continue;
-        const rel = t.replace(/^@~?\/?(?:\.claude\/)?(?:gsd-core\/)?/, '');
-        targets.push(rel);
-      }
-    }
-    return targets;
-  }
-
-  test('capture.md execution_context @-includes add-backlog.md', () => {
-    const body = fs.readFileSync(path.join(COMMANDS_DIR, 'capture.md'), 'utf8');
-    const targets = executionContextIncludes(body);
+  test('help.md load_on_demand wires add-backlog.md', () => {
+    const body = fs.readFileSync(path.join(COMMANDS_DIR, 'help.md'), 'utf8');
     assert.ok(
-      targets.some((t) => /(^|\/)workflows\/add-backlog\.md$/.test(t)),
-      `capture.md execution_context must @-include workflows/add-backlog.md; got: ${JSON.stringify(targets)}`,
+      body.includes('workflows/add-backlog.md'),
+      'help.md must wire workflows/add-backlog.md in load_on_demand',
     );
   });
 });

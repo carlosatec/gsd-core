@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.7.
+ * Unified Workflow Hub — Streamlined 6+1 Command Surface & Reviewer for GSD Core Nexus 3.8.
  *
  * Implements canonical command interface (/gsd:status, /gsd:plan, /gsd:exec, /gsd:review,
  * /gsd:verify, /gsd:ship, /gsd:auto) with autonomous repair support.
@@ -479,7 +479,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'auto',
                 action: 'AUTOPILOT_CYCLE',
                 nextStep: 'executing phase plans sequentially with safety checkpoints',
-                message: 'GSD Core Nexus 3.7 Autopilot active. Running phase loop with guardrails.',
+                message: 'GSD Core Nexus 3.8 Autopilot active. Running phase loop with guardrails.',
             };
         case 'status': {
             const isSync = Boolean(options.flags?.['sync'] ||
@@ -566,7 +566,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                         contextRecallPct: telemetry.averageContextRecallPct ?? 0,
                     } : undefined,
                 },
-                message: `GSD Core Nexus 3.7 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}${secondBrainMsg}${syncMsg}`,
+                message: `GSD Core Nexus 3.8 Status analyzed. Context and phase roadmap verified.${teleMsg}${intelMsg}${secondBrainMsg}${syncMsg}`,
             };
         }
         case 'plan': {
@@ -1218,7 +1218,7 @@ function runInternalUnifiedCommand(canonicalName, options, cwd, planningDir, has
                 command: 'help',
                 action: 'DISPLAY_HELP',
                 nextStep: 'run /gsd:status or /gsd:plan to proceed with your workflow',
-                message: 'GSD Core Nexus 3.7 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
+                message: 'GSD Core Nexus 3.8 Unified Commands: /gsd:status, /gsd:plan, /gsd:exec, /gsd:review, /gsd:verify, /gsd:ship, /gsd:auto, /gsd:tokens, /gsd:migrate, /gsd:graph, /gsd:help',
             };
     }
 }

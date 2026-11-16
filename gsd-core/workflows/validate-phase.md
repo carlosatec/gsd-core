@@ -164,14 +164,14 @@ gsd_run query commit "docs(phase-${PHASE}): add/update validation strategy" \
 ```
 GSD > PHASE {N} IS NYQUIST-COMPLIANT
 All requirements have automated verification.
-▶ Next: /gsd:audit-milestone ${GSD_WS}
+▶ Next: /gsd:ship ${GSD_WS}
 ```
 
 **Partial:**
 ```
 GSD > PHASE {N} VALIDATED (PARTIAL)
 {M} automated, {K} manual-only.
-▶ Retry: /gsd:validate-phase {N} ${GSD_WS}
+▶ Retry: /gsd:plan {N} --validate ${GSD_WS}
 ```
 
 Display `/clear` reminder.

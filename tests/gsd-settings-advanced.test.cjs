@@ -79,8 +79,8 @@ function findDocumentedDefault(workflow, key, defaultToken, windowSize = DEFAULT
 }
 
 const ROOT = path.resolve(__dirname, '..');
-// #2790: settings-advanced.md was consolidated into config.md as the --advanced flag.
-const COMMAND_PATH = path.join(ROOT, 'commands', 'gsd', 'config.md');
+// #2790 + Phase 12: settings-advanced.md consolidated under migrate.md load_on_demand.
+const COMMAND_PATH = path.join(ROOT, 'commands', 'gsd', 'migrate.md');
 const WORKFLOW_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'settings-advanced.md');
 const SETTINGS_WORKFLOW_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'settings.md');
 
@@ -125,7 +125,7 @@ const ALL_SPEC_KEYS = Object.values(SPEC_FIELDS).flat().map((f) => f.key);
 // ─── File existence + frontmatter ─────────────────────────────────────────────
 
 describe('gsd-settings-advanced — file scaffolding', () => {
-  test('consolidated config.md command exists (#2790: settings-advanced absorbed)', () => {
+  test('canonical migrate.md command exists (#2790: settings-advanced consolidated)', () => {
     assert.ok(fs.existsSync(COMMAND_PATH), `missing ${COMMAND_PATH}`);
   });
 
@@ -139,16 +139,16 @@ describe('gsd-settings-advanced — file scaffolding', () => {
     const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     assert.ok(fmMatch, 'command file missing frontmatter block');
     const fm = fmMatch[1];
-    assert.match(fm, /name:\s*gsd:config/, 'frontmatter missing name (gsd:config)');
+    assert.match(fm, /name:\s*gsd:migrate/, 'frontmatter missing name (gsd:migrate)');
     assert.match(fm, /description:\s*\S/, 'frontmatter missing non-empty description');
     assert.match(fm, /allowed-tools:/, 'frontmatter missing allowed-tools');
   });
 
-  test('command routes to the settings-advanced workflow via --advanced flag', () => {
+  test('command routes to settings-advanced workflow via load_on_demand', () => {
     const text = fs.readFileSync(COMMAND_PATH, 'utf-8');
     assert.ok(
-      text.includes('workflows/settings-advanced.md') || text.includes('--advanced'),
-      'config.md must reference settings-advanced workflow or --advanced flag'
+      text.includes('workflows/settings-advanced.md'),
+      'migrate.md must reference workflows/settings-advanced.md'
     );
   });
 });

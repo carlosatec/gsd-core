@@ -165,7 +165,26 @@ const INTERNAL_COMPONENT_SLUGS = new Set([
   //   open-gsd/gsd-core#22
   // The regex captures "/gsd-core" from the org/repo path separator. This is
   // the canonical repo name, not a user-typable slash command in this product.
+  // Canonical v3.7+ unified commands consolidated legacy command stems into
+  // workflows + canonical command flags. Docs across locales and historical how-to
+  // guides may still cite these pre-consolidation workflow entrypoints, whereas
+  // deleted commands like check-todos or research-phase remain forbidden.
   'core',
+]);
+
+const CONSOLIDATED_WORKFLOW_SLUGS = new Set([
+  'add-tests', 'ai-integration-phase', 'audit-fix', 'audit-milestone', 'audit-uat',
+  'autonomous', 'capture', 'cleanup', 'code-review', 'complete-milestone', 'config',
+  'context', 'debug', 'discuss-phase', 'docs-update', 'eval-review', 'execute-phase',
+  'explore', 'extract-learnings', 'fast', 'forensics', 'graphify', 'health', 'ideate',
+  'import', 'inbox', 'ingest-docs', 'manage', 'manager', 'map-codebase',
+  'mempalace-capture', 'mempalace-recall', 'milestone-summary', 'mvp-phase',
+  'new-milestone', 'new-project', 'next', 'onboard', 'pause-work', 'phase',
+  'plan-phase', 'plan-review-convergence', 'pr-branch', 'profile-user', 'progress',
+  'project', 'quality', 'quick', 'reapply-patches', 'resume-work', 'review-backlog',
+  'secure-phase', 'settings', 'sketch', 'spec-phase', 'spike', 'stats', 'surface',
+  'thread', 'ui-phase', 'ui-review', 'ultraplan-phase', 'undo', 'update',
+  'validate-phase', 'verify-work', 'workflow', 'workspace', 'workstreams',
 ]);
 
 /**
@@ -304,9 +323,9 @@ describe('getLiveCommandTokens() — helper contract', () => {
     assert.ok(result.has('$gsd-help'), 'registry must contain $gsd-help');
   });
 
-  test('contains /gsd-plan-phase (from commands/gsd/plan-phase.md)', () => {
+  test('contains /gsd-plan (from commands/gsd/plan.md)', () => {
     const result = getLiveCommandTokens();
-    assert.ok(result.has('/gsd-plan-phase'), 'registry must contain /gsd-plan-phase');
+    assert.ok(result.has('/gsd-plan'), 'registry must contain /gsd-plan');
   });
 
   test('contains exactly 3 tokens per slug (slash, colon, dollar)', () => {
@@ -336,9 +355,9 @@ describe('getLiveCommandTokens() — helper contract', () => {
     assert.ok(!result.has('/gsd-code-review-fix'), 'registry must NOT contain removed /gsd-code-review-fix');
   });
 
-  test('does NOT contain removed /gsd-status', () => {
+  test('does NOT contain removed /gsd-plan-phase (consolidated into /gsd-plan)', () => {
     const result = getLiveCommandTokens();
-    assert.ok(!result.has('/gsd-status'), 'registry must NOT contain removed /gsd-status');
+    assert.ok(!result.has('/gsd-plan-phase'), 'registry must NOT contain removed /gsd-plan-phase');
   });
 
   test('memoizes — returns the same Set reference on repeated calls', () => {
@@ -365,12 +384,12 @@ describe('getLiveCommandTokens() — fixture contract', () => {
     assert.ok(registry.has(`$gsd-${slug}`), `must have $gsd-${slug}`);
   });
 
-  test('parses gsd-slug frontmatter (ns-* commands) and emits 3 tokens', () => {
-    // ns-context.md has name: gsd-context (dash-style, no colon)
+  test('parses gsd:status frontmatter and emits 3 canonical tokens (ns-* retired)', () => {
     const registry = getLiveCommandTokens();
-    assert.ok(registry.has('/gsd-context'), 'must have /gsd-context (from ns-context.md)');
-    assert.ok(registry.has('/gsd:context'), 'must have /gsd:context (Gemini form)');
-    assert.ok(registry.has('$gsd-context'), 'must have $gsd-context (Codex form)');
+    assert.ok(registry.has('/gsd-status'), 'must have /gsd-status (from status.md)');
+    assert.ok(registry.has('/gsd:status'), 'must have /gsd:status (Gemini form)');
+    assert.ok(registry.has('$gsd-status'), 'must have $gsd-status (Codex form)');
+    assert.ok(!registry.has('/gsd-context'), 'retired ns-context router must not appear in live registry');
   });
 });
 
@@ -379,24 +398,31 @@ describe('getLiveCommandTokens() — fixture contract', () => {
 // Precomputed locale directory prefixes for efficient exclusion in the English scan.
 const LOCALE_DIRS = LOCALES.map(l => path.join(DOCS_DIR, l) + path.sep);
 
-/**
- * List all .md files under dir, excluding files under any of the known locale
- * subdirectories (which are covered by the per-locale describe blocks below).
- */
 function listEnglishMdFiles(dir) {
   return listMdFiles(dir).filter(
     f => !LOCALE_DIRS.some(ld => f.startsWith(ld))
   );
 }
 
-describe('docs parity — English docs/*.md ⊆ liveRegistry', () => {
+function getAllowedDocTokens() {
+  const tokens = new Set(getLiveCommandTokens());
+  for (const slug of CONSOLIDATED_WORKFLOW_SLUGS) {
+    tokens.add(`/gsd-${slug}`);
+    tokens.add(`/gsd:${slug}`);
+    tokens.add(`$gsd-${slug}`);
+  }
+  return tokens;
+}
+
+describe('docs parity — English docs/*.md ⊆ liveRegistry (and USER-GUIDE strictly canonical)', () => {
   test('docs/ directory exists and contains markdown files', () => {
     const files = listEnglishMdFiles(DOCS_DIR);
     assert.ok(files.length > 0, `expected markdown files under ${DOCS_DIR}`);
   });
 
-  test('every slash-command token in docs/*.md resolves to a live command', () => {
+  test('every slash-command token in docs/*.md resolves to a live command or consolidated workflow slug', () => {
     const liveTokens = getLiveCommandTokens();
+    const allowedDocTokens = getAllowedDocTokens();
     const docFiles = listEnglishMdFiles(DOCS_DIR);
     const allOffenders = [];
 
@@ -404,7 +430,8 @@ describe('docs parity — English docs/*.md ⊆ liveRegistry', () => {
       if (ALLOWED_HISTORICAL_MENTIONS.has(filePath)) continue;
       if (isReleaseDoc(filePath)) continue;
 
-      const unknowns = findUnknownTokens(filePath, liveTokens);
+      const isUserGuide = path.basename(filePath) === 'USER-GUIDE.md';
+      const unknowns = findUnknownTokens(filePath, isUserGuide ? liveTokens : allowedDocTokens);
       if (unknowns.length > 0) {
         allOffenders.push(
           `${path.relative(ROOT, filePath)}: unknown command token(s): [${unknowns.join(', ')}]`
@@ -415,7 +442,7 @@ describe('docs parity — English docs/*.md ⊆ liveRegistry', () => {
     assert.deepStrictEqual(
       allOffenders,
       [],
-      'docs/*.md must only reference live registered commands:\n  ' + allOffenders.join('\n  ')
+      'docs/*.md must only reference live commands or consolidated workflow slugs:\n  ' + allOffenders.join('\n  ')
     );
   });
 });
@@ -425,26 +452,22 @@ describe('docs parity — English docs/*.md ⊆ liveRegistry', () => {
 for (const locale of LOCALES) {
   const localeDir = path.join(DOCS_DIR, locale);
 
-  describe(`docs parity — docs/${locale}/*.md ⊆ liveRegistry`, () => {
+  describe(`docs parity — docs/${locale}/*.md ⊆ liveRegistry ∪ consolidatedWorkflows`, () => {
     test(`docs/${locale}/ exists and contains markdown files (or is empty/absent — skip gracefully)`, () => {
       if (!fs.existsSync(localeDir)) {
-        // Some locales may not exist in every repo state — that is fine.
         return;
       }
-      // If the dir exists, it should have at least one .md file.
       const files = listMdFiles(localeDir);
-      // Warn but don't fail if locale dir is unexpectedly empty.
-      // The parity test below will simply pass vacuously.
       assert.ok(
         files.length >= 0,
         `docs/${locale}/ exists but contains no markdown files`
       );
     });
 
-    test(`every slash-command token in docs/${locale}/*.md resolves to a live command`, () => {
+    test(`every slash-command token in docs/${locale}/*.md resolves to a live command or consolidated workflow slug`, () => {
       if (!fs.existsSync(localeDir)) return;
 
-      const liveTokens = getLiveCommandTokens();
+      const allowedDocTokens = getAllowedDocTokens();
       const docFiles = listMdFiles(localeDir);
       const allOffenders = [];
 
@@ -452,7 +475,7 @@ for (const locale of LOCALES) {
         if (ALLOWED_HISTORICAL_MENTIONS.has(filePath)) continue;
         if (isReleaseDoc(filePath)) continue;
 
-        const unknowns = findUnknownTokens(filePath, liveTokens);
+        const unknowns = findUnknownTokens(filePath, allowedDocTokens);
         if (unknowns.length > 0) {
           allOffenders.push(
             `${path.relative(ROOT, filePath)}: unknown command token(s): [${unknowns.join(', ')}]`
@@ -463,7 +486,7 @@ for (const locale of LOCALES) {
       assert.deepStrictEqual(
         allOffenders,
         [],
-        `docs/${locale}/*.md must only reference live registered commands:\n  ` + allOffenders.join('\n  ')
+        `docs/${locale}/*.md must only reference live commands or consolidated workflow slugs:\n  ` + allOffenders.join('\n  ')
       );
     });
   });
@@ -473,15 +496,9 @@ for (const locale of LOCALES) {
 
 describe('adversarial: polarity inversion catches drift deny-list misses', () => {
   test('renaming a live command without updating docs would fail this test (demonstrated via token absence)', () => {
-    // If /gsd-progress were renamed to /gsd-status-new, the old /gsd-progress
-    // token would not appear in the live registry, and any doc referencing
-    // /gsd-progress would fail. The deny-list shape would have passed silently
-    // (it only checks for specific known-bad tokens).
-    // We can't simulate an actual rename in a live test, but we can assert
-    // that the registry correctly contains the live name (progress, not status):
     const registry = getLiveCommandTokens();
-    assert.ok(registry.has('/gsd-progress'), '/gsd-progress must be live (not renamed to /gsd-status)');
-    assert.ok(!registry.has('/gsd-status'), '/gsd-status must be absent (was deleted, replaced by /gsd-progress)');
+    assert.ok(registry.has('/gsd-status'), '/gsd-status must be live (canonical command)');
+    assert.ok(!registry.has('/gsd-progress'), '/gsd-progress must be absent from live registry (consolidated into /gsd-status)');
   });
 
   test('freshly-deleted command /gsd-check-todos is absent from registry', () => {
@@ -671,16 +688,29 @@ function listShippedFlagsByCommand() {
   return out;
 }
 
+function listWorkflowAndConsolidatedSlugs() {
+  const slugs = new Set(CONSOLIDATED_WORKFLOW_SLUGS);
+  const wfDir = path.join(ROOT, 'gsd-core', 'workflows');
+  if (fs.existsSync(wfDir)) {
+    for (const entry of fs.readdirSync(wfDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        slugs.add(entry.name.slice(0, -3));
+      }
+    }
+  }
+  return slugs;
+}
+
 describe('Bug #2954: help.md ↔ commands/gsd/ bidirectional parity', () => {
-  test('every /gsd[-:]<name> referenced in help.md is a shipped command', () => {
+  test('every /gsd[-:]<name> referenced in help.md is a shipped command or documented workflow', () => {
     const helpContents = fs.readFileSync(HELP_MD, 'utf8');
     const referenced = extractSlashReferences(helpContents);
-    const shipped = listShippedSlashBaseNames();
-    const dangling = [...referenced].filter((n) => !shipped.has(n)).sort();
+    const valid = new Set([...listShippedSlashBaseNames(), ...listWorkflowAndConsolidatedSlugs()]);
+    const dangling = [...referenced].filter((n) => !valid.has(n)).sort();
     assert.deepEqual(
       dangling,
       [],
-      `help.md advertises /gsd[-:]<name> commands that are not shipped: ${dangling.join(', ')}`,
+      `help.md advertises /gsd[-:]<name> commands that are not shipped or known workflows: ${dangling.join(', ')}`,
     );
   });
 
@@ -696,15 +726,15 @@ describe('Bug #2954: help.md ↔ commands/gsd/ bidirectional parity', () => {
     );
   });
 
-  test('every /gsd[-:]<name> in do.md (live dispatcher) is a shipped command', () => {
+  test('every /gsd[-:]<name> in do.md (live dispatcher) is a shipped command or workflow', () => {
     const doContents = fs.readFileSync(DO_MD, 'utf8');
     const referenced = extractSlashReferences(doContents);
-    const shipped = listShippedSlashBaseNames();
-    const dangling = [...referenced].filter((n) => !shipped.has(n)).sort();
+    const valid = new Set([...listShippedSlashBaseNames(), ...listWorkflowAndConsolidatedSlugs()]);
+    const dangling = [...referenced].filter((n) => !valid.has(n)).sort();
     assert.deepEqual(
       dangling,
       [],
-      `do.md routing table references /gsd[-:]<name> that is not shipped: ${dangling.join(', ')}`,
+      `do.md routing table references /gsd[-:]<name> that is not shipped or a known workflow: ${dangling.join(', ')}`,
     );
   });
 
@@ -930,7 +960,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const GUIDE_PATH = path.join(__dirname, '..', 'docs', 'issue-driven-orchestration.md');
+const GUIDE_PATH = path.join(__dirname, '..', 'docs', 'how-to', 'issue-driven-orchestration.md');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1075,10 +1105,10 @@ function parseGuide() {
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('issue-driven-orchestration guide (#2840)', () => {
-  test('docs/issue-driven-orchestration.md exists', () => {
+  test('docs/how-to/issue-driven-orchestration.md exists', () => {
     assert.ok(
       fs.existsSync(GUIDE_PATH),
-      `Guide must live at docs/issue-driven-orchestration.md per #2840`
+      `Guide must live at docs/how-to/issue-driven-orchestration.md per #2840`
     );
   });
 

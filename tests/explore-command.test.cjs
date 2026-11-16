@@ -9,17 +9,17 @@ const fs = require('fs');
 const path = require('path');
 
 describe('explore command', () => {
-  test('command file exists', () => {
-    const p = path.join(__dirname, '..', 'commands', 'gsd', 'explore.md');
-    assert.ok(fs.existsSync(p), 'commands/gsd/explore.md should exist');
-  });
-
-  test('command file has required frontmatter', () => {
-    const p = path.join(__dirname, '..', 'commands', 'gsd', 'explore.md');
+  test('canonical plan command loads explore workflow on demand', () => {
+    const p = path.join(__dirname, '..', 'commands', 'gsd', 'plan.md');
+    assert.ok(fs.existsSync(p), 'commands/gsd/plan.md should exist');
     const content = fs.readFileSync(p, 'utf-8');
-    assert.ok(content.includes('name: gsd:explore'), 'Command must have name frontmatter');
+    assert.ok(content.includes('name: gsd:plan'), 'Command must have name frontmatter');
     assert.ok(content.includes('description:'), 'Command must have description frontmatter');
     assert.ok(content.includes('allowed-tools:'), 'Command must have allowed-tools frontmatter');
+    assert.ok(
+      content.includes('workflows/explore.md'),
+      'plan.md must reference workflows/explore.md in load_on_demand'
+    );
   });
 
   test('workflow file exists', () => {
@@ -64,15 +64,6 @@ describe('explore command', () => {
     const p = path.join(__dirname, '..', 'gsd-core', 'workflows', 'explore.md');
     const content = fs.readFileSync(p, 'utf-8');
     assert.ok(content.includes('commit_docs'), 'Workflow must respect commit_docs configuration');
-  });
-
-  test('command references the workflow via execution_context', () => {
-    const p = path.join(__dirname, '..', 'commands', 'gsd', 'explore.md');
-    const content = fs.readFileSync(p, 'utf-8');
-    assert.ok(
-      content.includes('workflows/explore.md'),
-      'Command must reference workflows/explore.md in execution_context'
-    );
   });
 });
 

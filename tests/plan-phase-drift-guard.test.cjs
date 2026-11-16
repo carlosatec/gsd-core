@@ -318,7 +318,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SPIKE_CMD_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'spike.md');
+const SPIKE_CMD_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'plan.md');
 const SPIKE_WORKFLOW_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'spike.md');
 
 /**
@@ -367,67 +367,20 @@ function extractSection(body, tag) {
   return body.slice(start + open.length, end);
 }
 
-/**
- * Parse the @-prefixed workflow references out of an execution_context section.
- * Returns an array of resolved reference strings (@ stripped).
- */
-function parseExecutionContextRefs(section) {
-  return section
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(l => l.startsWith('@'))
-    .map(l => l.slice(1).trim());
-}
-
 describe('bug-2948: /gsd:spike --wrap-up dispatch wiring', () => {
-  describe('commands/gsd/spike.md — frontmatter and section contract', () => {
-    test('spike.md command file exists and has valid frontmatter', () => {
-      assert.ok(fs.existsSync(SPIKE_CMD_PATH), 'commands/gsd/spike.md should exist');
+  describe('commands/gsd/plan.md — spike & spike-wrap-up sub-workflow routing contract', () => {
+    test('plan.md command file exists and has valid frontmatter', () => {
+      assert.ok(fs.existsSync(SPIKE_CMD_PATH), 'commands/gsd/plan.md should exist');
       const fm = parseFrontmatter(fs.readFileSync(SPIKE_CMD_PATH, 'utf-8'));
-      assert.ok(fm.name, 'frontmatter must have a name field');
+      assert.equal(fm.name, 'gsd:plan', 'frontmatter must have name: gsd:plan');
     });
 
-    test('argument-hint frontmatter field advertises --wrap-up flag', () => {
+    test('load_on_demand section includes both spike and spike-wrap-up workflow references', () => {
       const fm = parseFrontmatter(fs.readFileSync(SPIKE_CMD_PATH, 'utf-8'));
-      assert.ok(
-        fm['argument-hint'] && fm['argument-hint'].includes('--wrap-up'),
-        `argument-hint must advertise --wrap-up; got: "${fm['argument-hint']}"`
-      );
-    });
-
-    test('execution_context section includes spike-wrap-up workflow reference', () => {
-      const fm = parseFrontmatter(fs.readFileSync(SPIKE_CMD_PATH, 'utf-8'));
-      const execSection = extractSection(fm._body, 'execution_context');
-      assert.ok(execSection !== null, 'spike.md must have an <execution_context> section');
-      const refs = parseExecutionContextRefs(execSection);
-      assert.ok(
-        refs.some(r => r.includes('spike-wrap-up')),
-        `execution_context must declare a spike-wrap-up reference so the runtime can load the workflow; ` +
-        `declared refs: ${JSON.stringify(refs)}`
-      );
-    });
-
-    test('process section dispatches first-token --wrap-up to spike-wrap-up workflow', () => {
-      const fm = parseFrontmatter(fs.readFileSync(SPIKE_CMD_PATH, 'utf-8'));
-      const processSection = extractSection(fm._body, 'process');
-      assert.ok(processSection, 'spike.md must have a <process> section');
-
-      const rules = processSection
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(Boolean);
-
-      const wrapUpRule = rules.find(line => line.startsWith('- If it is `--wrap-up`:'));
-      const fallbackRule = rules.find(line => line.startsWith('- Otherwise:'));
-
-      assert.ok(
-        wrapUpRule && wrapUpRule.includes('strip the flag') && wrapUpRule.includes('spike-wrap-up'),
-        'process must define a --wrap-up branch that strips the flag and routes to spike-wrap-up'
-      );
-      assert.ok(
-        fallbackRule && fallbackRule.includes('spike workflow'),
-        'process must define an Otherwise fallback to the normal spike workflow'
-      );
+      const loadOnDemand = extractSection(fm._body, 'load_on_demand');
+      assert.ok(loadOnDemand !== null, 'plan.md must have a <load_on_demand> section');
+      assert.ok(loadOnDemand.includes('workflows/spike.md'), 'load_on_demand must route workflows/spike.md');
+      assert.ok(loadOnDemand.includes('workflows/spike-wrap-up.md'), 'load_on_demand must route workflows/spike-wrap-up.md');
     });
   });
 
@@ -484,34 +437,18 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const SKETCH_COMMAND = path.join(ROOT, 'commands/gsd/sketch.md');
+const SKETCH_COMMAND = path.join(ROOT, 'commands/gsd/plan.md');
 const SKETCH_WORKFLOW = path.join(ROOT, 'gsd-core/workflows/sketch.md');
 
 describe('bug-2949: sketch --wrap-up dispatch wiring', () => {
-  test('commands/gsd/sketch.md contains --wrap-up dispatch logic', () => {
+  test('commands/gsd/plan.md routes both sketch and sketch-wrap-up in load_on_demand', () => {
     const content = fs.readFileSync(SKETCH_COMMAND, 'utf8');
-    assert.ok(
-      content.includes('--wrap-up'),
-      'sketch.md should contain --wrap-up dispatch logic'
-    );
-    // The dispatch should route to sketch-wrap-up workflow
-    assert.ok(
-      content.includes('sketch-wrap-up'),
-      'sketch.md should reference sketch-wrap-up in dispatch logic'
-    );
-  });
-
-  test('commands/gsd/sketch.md has sketch-wrap-up in execution_context section', () => {
-    const content = fs.readFileSync(SKETCH_COMMAND, 'utf8');
-    // Find execution_context block
     // eslint-disable-next-line local/no-unbounded-quantifier -- parses this repo's own command .md content, fixed-size author-controlled content
-    const execCtxMatch = content.match(/<execution_context>([\s\S]*?)<\/execution_context>/);
-    assert.ok(execCtxMatch, 'sketch.md must have an <execution_context> block');
-    const execCtx = execCtxMatch[1];
-    assert.ok(
-      execCtx.includes('sketch-wrap-up'),
-      `execution_context block should include sketch-wrap-up workflow; got: ${execCtx}`
-    );
+    const lodMatch = content.match(/<load_on_demand>([\s\S]*?)<\/load_on_demand>/);
+    assert.ok(lodMatch, 'plan.md must have a <load_on_demand> block');
+    const lod = lodMatch[1];
+    assert.ok(lod.includes('workflows/sketch.md'), 'load_on_demand must route workflows/sketch.md');
+    assert.ok(lod.includes('workflows/sketch-wrap-up.md'), 'load_on_demand must route workflows/sketch-wrap-up.md');
   });
 
   test('workflows/sketch.md does NOT contain old /gsd-sketch-wrap-up form', () => {
@@ -939,7 +876,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const COMMAND_PATH = path.join(ROOT, 'commands', 'gsd', 'plan-phase.md');
+const COMMAND_PATH = path.join(ROOT, 'commands', 'gsd', 'plan.md');
 const WORKFLOW_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'plan-phase.md');
 const DOCS_COMMANDS_PATH = path.join(ROOT, 'docs', 'COMMANDS.md');
 
@@ -948,12 +885,15 @@ function read(filePath) {
 }
 
 describe('enh #3209: plan-phase ADR ingest express path', () => {
-  test('command argument-hint advertises --ingest and --ingest-format', () => {
+  test('plan.md routes to plan-phase.md which documents --ingest and --ingest-format', () => {
     const command = read(COMMAND_PATH);
-    assert.ok(command.includes('--ingest <path-or-glob>'),
-      'plan-phase command argument-hint must include --ingest <path-or-glob>');
-    assert.ok(command.includes('--ingest-format <auto|nygard|madr|narrative>'),
-      'plan-phase command argument-hint must include --ingest-format selector');
+    assert.ok(command.includes('workflows/plan-phase.md'),
+      'plan.md execution_context must reference workflows/plan-phase.md');
+    const workflow = read(WORKFLOW_PATH);
+    assert.ok(workflow.includes('--ingest <path-or-glob>'),
+      'plan-phase workflow must include --ingest <path-or-glob>');
+    assert.ok(workflow.includes('--ingest-format <auto|nygard|madr|narrative>'),
+      'plan-phase workflow must include --ingest-format selector');
   });
 
   test('workflow parses --ingest and --ingest-format flags', () => {

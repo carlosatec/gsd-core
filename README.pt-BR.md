@@ -10,7 +10,7 @@
 
 <br/>
 
-[![Versão](https://img.shields.io/badge/version-3.7.7-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
+[![Versão](https://img.shields.io/badge/version-3.8.0-06b6d4?style=for-the-badge&logo=git&logoColor=white&label=Versão)](.planning/ROADMAP.md)
 [![Testes](https://img.shields.io/github/actions/workflow/status/carlosatec/gsd-core/test.yml?branch=next&style=for-the-badge&logo=github&label=Testes&color=34d399)](https://github.com/carlosatec/gsd-core/actions)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-38bdf8?style=for-the-badge)](LICENSE)
 [![Zero Python](https://img.shields.io/badge/zero-python%20%7C%20native%20ts-a855f7?style=for-the-badge&logo=typescript&logoColor=white)](docs/ARCHITECTURE.md)
@@ -82,7 +82,7 @@ O GSD Core Nexus unifica sua superfície em **11 comandos canônicos essenciais*
 
 ---
 
-## 💎 Destaques Tecnológicos do GSD Core Nexus 3.7
+## 💎 Destaques Tecnológicos do GSD Core Nexus 3.8
 
 ### 1. 🧠 Segundo Cérebro do Projeto & Motor de Obsidian Vault
 - **Vault Não-Destrutivo (`.planning/vault/`):** Gera automaticamente mais de 600 notas markdown interconectadas com `[[wikilinks]]` cobrindo decisões, fases, módulos e lições aprendidas.
@@ -161,7 +161,7 @@ Após a instalação, comece a usar os comandos imediatamente:
 
 ## 📚 Documentação
 
-- **[Tutorial Prático: Dominando o GSD Core Nexus 3.7](docs/pt-BR/tutorials/tutorial-pratico.md)** ([English](docs/tutorials/practical-tutorial.md)) 🔥
+- **[Tutorial Prático: Dominando o GSD Core Nexus 3.8](docs/pt-BR/tutorials/tutorial-pratico.md)** ([English](docs/tutorials/practical-tutorial.md)) 🔥
 - **[Referência de Comandos](docs/COMMANDS.md):** Guia detalhado de todos os 11 comandos canônicos e suas flags.
 - **[Arquitetura do Sistema](docs/ARCHITECTURE.md):** Imersão profunda na arquitetura de componentes, motor AST e injeção JIT.
 - **[Catálogo de Funcionalidades](docs/FEATURES.md):** Registro de todas as 170+ capacidades e marcos arquiteturais.

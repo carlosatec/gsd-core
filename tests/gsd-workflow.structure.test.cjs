@@ -17,9 +17,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
-const CMD = path.join(ROOT, 'commands', 'gsd', 'next.md');
+const CMD = path.join(ROOT, 'commands', 'gsd', 'status.md');
 const WF = path.join(ROOT, 'gsd-core', 'workflows', 'smart-entry.md');
 const CMDS_DIR = path.join(ROOT, 'commands', 'gsd');
+const WFS_DIR = path.join(ROOT, 'gsd-core', 'workflows');
 
 // NEW_FILE_CAP from tests/workflow-size-budget.test.cjs (#1074).
 const NEW_FILE_CAP = 32768;
@@ -40,16 +41,16 @@ function parseFrontmatter(content) {
   return fm;
 }
 
-describe('/gsd:next command file (commands/gsd/next.md)', () => {
+describe('/gsd:status command file (commands/gsd/status.md)', () => {
   const content = read(CMD);
 
   test('exists', () => {
     assert.ok(fs.existsSync(CMD));
   });
 
-  test('frontmatter has name: gsd:next (surfaces as /gsd:next)', () => {
+  test('frontmatter has name: gsd:status (surfaces as /gsd:status)', () => {
     const fm = parseFrontmatter(content);
-    assert.equal(fm.name, 'gsd:next');
+    assert.equal(fm.name, 'gsd:status');
   });
 
   test('has NO requires field (must work pre-project)', () => {
@@ -57,11 +58,10 @@ describe('/gsd:next command file (commands/gsd/next.md)', () => {
     assert.equal(fm.requires, undefined);
   });
 
-  test('allowed-tools includes AskUserQuestion, Bash, SlashCommand', () => {
+  test('allowed-tools includes AskUserQuestion and Bash', () => {
     const fmBlock = content.match(/^---\r?\n[\s\S]*?\r?\n---/)[0];
     assert.match(fmBlock, /AskUserQuestion/);
     assert.match(fmBlock, /Bash/);
-    assert.match(fmBlock, /SlashCommand/);
   });
 
   test('references the smart-entry workflow', () => {
@@ -139,15 +139,21 @@ describe('smart-entry: every emitted command resolves to a real slash command', 
     assert.ok(allCommands.size >= 8, `expected a broad command set, got ${allCommands.size}`);
   });
 
+  const LEGACY_STEM_ALIASES = {
+    'resume-work': 'resume-project',
+    capture: 'note',
+  };
+
   for (const cmd of allCommands) {
-    test(`command "${cmd}" resolves to a real commands/gsd/*.md file`, () => {
-      // Strip leading "/gsd:" and any trailing flags, map to a file stem.
+    test(`command "${cmd}" resolves to a canonical command or workflow file`, () => {
+      // Strip leading "/gsd:" and any trailing flags, map to a canonical command or workflow stem.
       const stem = cmd.replace(/^\/gsd:/, '').split(/\s+/)[0];
-      // Special-case: "progress --next" / "progress --do" still → progress.md.
-      const file = path.join(CMDS_DIR, `${stem}.md`);
+      const wfStem = LEGACY_STEM_ALIASES[stem] || stem;
+      const cmdFile = path.join(CMDS_DIR, `${stem}.md`);
+      const wfFile = path.join(WFS_DIR, `${wfStem}.md`);
       assert.ok(
-        fs.existsSync(file),
-        `command "${cmd}" → expected file commands/gsd/${stem}.md (not found)`,
+        fs.existsSync(cmdFile) || fs.existsSync(wfFile),
+        `command "${cmd}" → expected commands/gsd/${stem}.md or gsd-core/workflows/${wfStem}.md`,
       );
     });
   }

@@ -166,7 +166,7 @@ These six routers are descriptor-only entries that the model picks first; the bo
 | `/gsd-config` | Configure GSD settings — workflow toggles (default), advanced knobs (`--advanced`), integrations (`--integrations`), or model profile (`--profile`). | [commands/gsd/config.md](../commands/gsd/config.md) |
 | `/gsd-pr-branch` | Create a clean PR branch by filtering out `.planning/` commits. | [commands/gsd/pr-branch.md](../commands/gsd/pr-branch.md) |
 | `/gsd-surface` | Toggle which skills are surfaced — apply a profile, list, or disable a cluster without reinstall. | [commands/gsd/surface.md](../commands/gsd/surface.md) |
-| `/gsd-update` | Update GSD to latest version; use `--sync` to sync skills across runtimes or `--reapply` to reapply local patches. | [commands/gsd/update.md](../commands/gsd/update.md) |
+| `/gsd-migrate` | Update GSD to latest version and migrate project structures; use `--sync` to sync skills across runtimes or `--reapply` to reapply local patches. | [commands/gsd/migrate.md](../commands/gsd/migrate.md) |
 | `/gsd-help` | Show available GSD commands and usage guide. | [commands/gsd/help.md](../commands/gsd/help.md) |
 
 ---
@@ -236,7 +236,7 @@ Full roster at `gsd-core/workflows/*.md`. Workflows are thin orchestrators that 
 | `profile-user.md` | Orchestrate the full developer profiling flow — consent, session scan, profile generation. | `/gsd-profile-user` |
 | `progress.md` | Progress rendering — project context, position, and next-action routing. | `/gsd-progress` |
 | `quick.md` | Quick-task execution with GSD guarantees (atomic commits, state tracking). | `/gsd-quick` |
-| `reapply-patches.md` | Reapply local modifications after a GSD update. | `/gsd-update --reapply` |
+| `reapply-patches.md` | Reapply local modifications after a GSD update. | `/gsd-migrate --reapply` |
 | `remove-phase.md` | Remove a future phase from the roadmap and renumber subsequent phases. | `/gsd-phase --remove` |
 | `remove-workspace.md` | Remove a GSD workspace and clean up worktrees. | `/gsd-workspace --remove` |
 | `resume-project.md` | Resume work — restore full context from STATE.md, HANDOFF.json, and artifacts. | `/gsd-resume-work` |
@@ -254,14 +254,14 @@ Full roster at `gsd-core/workflows/*.md`. Workflows are thin orchestrators that 
 | `spike.md` | Rapid feasibility validation through focused, throwaway experiments. | `/gsd-spike` |
 | `spike-wrap-up.md` | Curate spike findings and package them as a persistent `spike-findings-[project]` skill. | `/gsd-spike --wrap-up` |
 | `stats.md` | Project statistics rendering — phases, plans, requirements, git metrics. | `/gsd-stats` |
-| `sync-skills.md` | Cross-runtime GSD skill sync — diff and apply `gsd-*` skill directories across runtime roots. | `/gsd-update --sync` |
+| `sync-skills.md` | Cross-runtime GSD skill sync — diff and apply `gsd-*` skill directories across runtime roots. | `/gsd-migrate --sync` |
 | `transition.md` | Phase-boundary transition workflow — workstream checks, state advancement. | `execute-phase.md`, `/gsd-progress --next` |
 | `ui-phase.md` | Generate UI-SPEC.md design contract via gsd-ui-researcher. | `/gsd-ui-phase` |
 | `ui-review.md` | Retroactive 6-pillar visual audit via gsd-ui-auditor. | `/gsd-ui-review` |
 | `ultraplan-phase.md` | [BETA] Offload planning to Claude Code's ultraplan cloud; drafts remotely and imports back via `/gsd-import`. | `/gsd-ultraplan-phase` |
 | `undo.md` | Safe git revert — phase or plan commits using the phase manifest. | `/gsd-undo` |
 | `thread.md` | Create, list, close, or resume persistent context threads for cross-session work. | `/gsd-thread` |
-| `update.md` | Update GSD to latest version with changelog display. | `/gsd-update` |
+| `update.md` | Update GSD to latest version with changelog display. | `/gsd-migrate` |
 | `validate-phase.md` | Retroactively audit and fill Nyquist validation gaps for a completed phase. | `/gsd-validate-phase` |
 | `verify-work.md` | Conversational UAT with auto-diagnosis — produces UAT.md and fix plans. | `/gsd-verify-work` |
 
@@ -481,7 +481,6 @@ Full listing: `gsd-core/bin/lib/*.cjs`.
 | `commands.cjs` | Misc CLI commands (slug, timestamp, todos, scaffolding, stats) |
 | `config-loader.cjs` | Project config loading — defaults merge, legacy-key migration, workstream overlay, unknown-key/profile-override validation (extracted from `core.cjs`, ADR-857) |
 | `config-schema.cjs` | Single source of truth for `VALID_CONFIG_KEYS` and dynamic key patterns; imported by both the validator and the config-schema-docs parity test |
-| `config-types.cjs` | TypeScript type definitions for the `model_policy` config block — `ModelPolicyConfig`, `TierEntry`, `RuntimeTiers`; compiled from `src/config-types.cts` at publish time (ADR-457) |
 | `health-diagnostic-rules/config-validation.cjs` | Health-diagnostic rules: config.json validation checks (W003, W004, W022, E005, W008, W012-W016), reading only `snapshot.config`, ported behavior-preserving from `cmdValidateHealth` (ADR-3180 §8.2/§8.3/§8.5, Phase 11, #3309) |
 | `config.cjs` | `config.json` read/write, section initialization; imports validator from `config-schema.cjs` |
 | `configuration.cjs` | Configuration Module — legacy-key normalization, defaults merge, and explicit on-disk migration; pure normalization primitives consumed by `config-loader.cjs` and `config-schema.cjs` (loadConfig extracted to config-loader per ADR-857 #885) |
@@ -615,7 +614,7 @@ Full listing: `gsd-core/bin/lib/*.cjs`.
 | `ui-consideration-probe.cjs` | Spec-completeness UI-consideration probe (compiled from `src/ui-consideration-probe.cts`, gitignored) — the third adapter of the `probe-core` resolution model (ADR-550 Decision 7): element-kind classification, applicable-category relevance filter, consideration proposal, `proposeElements`/`autoResolve` (propose-then-confirm + the `--auto` never-dismiss floor), and the `{explicit, backstop}` validators; delegates merge/rollup/CLI to `probe-core`; exports `classifyElement`, `applicableCategories`, `proposeConsiderations`, `proposeElements`, `autoResolve`, `analyzeCoverage`, `UI_TAXONOMY` (#1867) |
 | `ui-safety-gate.cjs` | Shell-free word-boundary UI token detector (#3706, #3718); reads phase-section text from stdin, exits 0 (UI found) or 1 (no UI); also deployed to `gsd-core/bin/lib/` so the GSD installer ships it to `$RUNTIME_DIR` (#448) |
 | `ui-frontend-evidence.cjs` | Static frontend-evidence detector (compiled from `src/ui-frontend-evidence.cts`, gitignored) — plan-time structural corroboration for `computeUiPlanGate` (#3312): a `package.json` UI-framework dependency or a component-framework file (`*.tsx/*.jsx/*.vue/*.svelte`) in the tree, so a UI-token match on a hyphenated proper noun (e.g. repo `dashboard-financeiro`) cannot block planning in a repo with no frontend; mirrors the post-wave `computeUiSafetyGate` git-diff corroboration |
-| `update-context.cjs` | Pure install-context resolver for `/gsd-update` — runtime/scope/config-dir/version detection (LOCAL/GLOBAL/UNKNOWN) ported from update.md bash; backs `gsd-tools update-context` (#498) |
+| `update-context.cjs` | Pure install-context resolver for `/gsd-migrate` — runtime/scope/config-dir/version detection (LOCAL/GLOBAL/UNKNOWN) ported from update.md bash; backs `gsd-tools update-context` (#498) |
 | `user-artifact-staging.cjs` | Durable, on-disk staging for `USER_OWNED_ARTIFACTS` across the preserve → wipe → restore window (compiled from `src/user-artifact-staging.cts`, gitignored; #2875, epic #2866 Phase 6, ADR-3574) — closes #1874-F19 (in-memory-only preservation lost on a crash between wipe and restore); `recoverOrphanedUserArtifacts` is wired at the start of `bin/install.js`'s `install()` so an orphaned staged copy from a prior crashed run is recovered before the ordinary preserve step, closing the #1879-F15 inert-fix failure mode; exports `stageUserArtifacts`, `restoreStagedUserArtifacts`, `discardStagedUserArtifacts`, `recoverOrphanedUserArtifacts` |
 | `validate-command-router.cjs` | Thin CJS subcommand router adapter for `gsd-tools validate` |
 | `validate.cjs` | Pure phase variant normalization helpers (`phaseVariants`, `buildRoadmapPhaseVariants`, `buildNotStartedPhaseVariants`) used by `verify.cjs` for W006/W007 checks; no I/O, no async |

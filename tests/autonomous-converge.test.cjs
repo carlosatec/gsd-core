@@ -13,7 +13,7 @@ const { throwIfFailed } = require('./helpers/git-fixture.cjs');
 const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'autonomous.md');
+const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'auto.md');
 const WORKFLOW_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'autonomous.md');
 const COMMANDS_DOC_PATH = path.join(REPO_ROOT, 'docs', 'COMMANDS.md');
 const HOW_TO_PATH = path.join(REPO_ROOT, 'docs', 'how-to', 'run-phases-autonomously.md');
@@ -32,20 +32,13 @@ function read(filePath) {
 }
 
 describe('autonomous --converge flag (#711)', () => {
-  test('command advertises --converge and documents --cross-ai as alias', () => {
+  test('auto command loads autonomous workflow which supports --converge and --cross-ai', () => {
     const command = read(COMMAND_PATH);
+    const workflow = read(WORKFLOW_PATH);
 
-    assert.match(
-      command,
-      /^argument-hint:.*--converge/m,
-      'autonomous command should advertise --converge in argument-hint',
-    );
-    assert.match(command, /--cross-ai/, 'autonomous command should document --cross-ai alias');
-    assert.match(
-      command,
-      /workflow\.plan_review_convergence=true/,
-      'autonomous command should mention the existing convergence feature gate',
-    );
+    assert.match(command, /workflows\/autonomous\.md/, 'auto command should reference workflows/autonomous.md');
+    assert.match(workflow, /--converge/, 'autonomous workflow should document --converge');
+    assert.match(workflow, /--cross-ai/, 'autonomous workflow should document --cross-ai alias');
   });
 
   test('workflow parses converge aliases into a plan strategy', () => {
@@ -106,7 +99,7 @@ describe('autonomous --converge flag (#711)', () => {
     );
     assert.match(
       workflow,
-      /Skill\(skill="gsd-plan-phase", args="\$\{PHASE_NUM\}"\)/,
+      /Skill\(skill="gsd-plan", args="\$\{PHASE_NUM\}"\)/,
       'local planning path should remain available for default autonomous runs',
     );
   });

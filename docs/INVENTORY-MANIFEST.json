@@ -295,7 +295,6 @@
       "complexity-trigger.cjs",
       "config-loader.cjs",
       "config-schema.cjs",
-      "config-types.cjs",
       "config.cjs",
       "configuration.cjs",
       "context-composer.cjs",

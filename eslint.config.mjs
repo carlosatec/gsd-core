@@ -452,7 +452,7 @@ export default tseslint.config(
 
   // ── gsd-core/bin/**/*.cjs + scripts/**/*.cjs ───────────────────────────
   // CommonJS Node files: js.recommended + eslint-plugin-n + local plugin rules
-  // eslint-rules/**, bin/lib/**, pi/**, examples/**, vscode/*.js, .kilo/plugins/*.js,
+  // eslint-rules/**, bin/lib/**, examples/**, vscode/*.js, .kilo/plugins/*.js,
   // and .opencode/plugins/*.js were previously unmatched by every glob in this config
   // (drift guard scripts/lint-eslint-glob-coverage.cjs, #3059). All are CommonJS
   // (require/module.exports); folded into this block rather than duplicated.
@@ -462,7 +462,6 @@ export default tseslint.config(
       'scripts/**/*.cjs',
       'eslint-rules/**/*.cjs',
       'bin/lib/**/*.cjs',
-      'pi/**/*.cjs',
       'examples/**/*.cjs',
       'vscode/*.js',
       '.kilo/plugins/*.js',
@@ -508,7 +507,7 @@ export default tseslint.config(
   // A NARROWER block than the combined glob above on purpose: gsd-core/bin/**
   // is the ONLY surface in that shared glob that is copied verbatim into
   // installed trees with no node_modules (scripts/**, eslint-rules/**,
-  // bin/lib/**, pi/**, examples/**, vscode/*.js, .kilo/plugins/*.js, and
+  // bin/lib/**, examples/**, vscode/*.js, .kilo/plugins/*.js, and
   // .opencode/plugins/*.js all run inside THIS repo checkout, where
   // node_modules exists, and legitimately require npm packages). Registering
   // this rule on the shared block above would falsely flag every one of

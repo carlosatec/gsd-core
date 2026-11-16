@@ -24,6 +24,8 @@ Extract from init JSON: `project_exists`, `roadmap_exists`, `state_exists`, `pha
 DISCUSS_MODE=$(gsd_run query config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
 ```
 
+**If `--next` is present in `$ARGUMENTS`:** delegate directly to `workflows/next.md`, preserving all flags (including `--auto`, `--force`, `--converge`, `--cross-ai`, and reviewer flags).
+
 If `project_exists` is false (no `.planning/` directory):
 
 ```

@@ -34,7 +34,8 @@ const path = require('path');
 const { execFileSync } = require('node:child_process');
 const { readFileNormalized } = require('./helpers.cjs');
 
-const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'plan-review-convergence.md');
+const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'plan.md');
+const REVIEW_COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'review.md');
 const WORKFLOW_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'plan-review-convergence.md');
 const CONFIG_DOC_PATH = path.join(__dirname, '..', 'docs', 'CONFIGURATION.md');
 const PLAN_PHASE_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'plan-phase.md');
@@ -87,104 +88,57 @@ function runReviewerFlagsParseBlock(block, args) {
 
 describe('plan-review-convergence command source (#2306)', () => {
   const command = fs.readFileSync(COMMAND_PATH, 'utf8');
+  const reviewCommand = fs.readFileSync(REVIEW_COMMAND_PATH, 'utf8');
+  const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 
-  test('command name uses gsd: prefix (installer converts to gsd- on install)', () => {
+  test('canonical command uses gsd:plan with --converge and load_on_demand workflow routing', () => {
+    assert.ok(command.includes('name: gsd:plan'), 'parent command must be canonical gsd:plan');
+    assert.ok(command.includes('--converge'), 'plan.md argument-hint must advertise --converge');
     assert.ok(
-      command.includes('name: gsd:plan-review-convergence'),
-      'command name must use gsd: prefix so installer converts it to gsd-plan-review-convergence'
+      command.includes('workflows/plan-review-convergence.md'),
+      'plan.md load_on_demand must route to workflows/plan-review-convergence.md',
     );
   });
 
-  test('command declares all reviewer flags in context', () => {
-    assert.ok(command.includes('--codex'), 'must document --codex flag');
-    assert.ok(command.includes('--gemini'), 'must document --gemini flag');
-    assert.ok(command.includes('--claude'), 'must document --claude flag');
-    assert.ok(command.includes('--opencode'), 'must document --opencode flag');
-    assert.ok(command.includes('--all'), 'must document --all flag');
-    assert.ok(command.includes('--max-cycles'), 'must document --max-cycles flag');
+  test('review command and convergence workflow declare reviewer flags and --max-cycles', () => {
+    assert.ok(reviewCommand.includes('--codex'), 'must document --codex flag');
+    assert.ok(reviewCommand.includes('--gemini'), 'must document --gemini flag');
+    assert.ok(reviewCommand.includes('--claude'), 'must document --claude flag');
+    assert.ok(reviewCommand.includes('--opencode'), 'must document --opencode flag');
+    assert.ok(reviewCommand.includes('--qwen'), 'must document --qwen flag');
+    assert.ok(reviewCommand.includes('--cursor'), 'must document --cursor flag');
+    assert.ok(reviewCommand.includes('--all'), 'must document --all flag');
+    assert.ok(workflow.includes('--max-cycles'), 'convergence workflow must document --max-cycles flag');
   });
 
-  test('command documents local model reviewer flags (--ollama, --lm-studio, --llama-cpp)', () => {
-    assert.ok(command.includes('--ollama'), 'must document --ollama flag for local Ollama server');
-    assert.ok(command.includes('--lm-studio'), 'must document --lm-studio flag for local LM Studio server');
-    assert.ok(command.includes('--llama-cpp'), 'must document --llama-cpp flag for local llama.cpp server');
+  // #2293: the Antigravity adapter must be reachable via --agy / --antigravity.
+  test('review command documents the --agy / --antigravity reviewer flag (#2293)', () => {
+    assert.ok(reviewCommand.includes('--agy'), 'must document --agy flag (Antigravity CLI reviewer)');
+    assert.ok(reviewCommand.includes('--antigravity'), 'must document the --antigravity alias');
   });
 
-  // #2293: the 1.7.0 Antigravity adapter (successor to the discontinued Gemini
-  // CLI) was unreachable from convergence because its reviewer whitelist dropped
-  // --agy/--antigravity. The flag must be documented and in the argument-hint.
-  test('command documents the --agy / --antigravity reviewer flag (#2293)', () => {
-    assert.ok(command.includes('--agy'), 'must document --agy flag (Antigravity CLI reviewer)');
-    assert.ok(command.includes('--antigravity'), 'must document the --antigravity alias');
+  test('workflow references supporting reference files', () => {
+    assert.ok(workflow.includes('revision-loop.md'), 'must reference revision-loop.md for stall detection pattern');
+    assert.ok(workflow.includes('gates.md'), 'must reference gates.md for gate taxonomy');
+    assert.ok(workflow.includes('agent-contracts.md'), 'must reference agent-contracts.md for completion markers');
   });
 
-  test('argument-hint advertises --agy (#2293)', () => {
-    const hint = command.match(/^argument-hint:\s*"(.*)"\s*$/m);
-    assert.ok(hint, 'command must declare an argument-hint');
-    assert.ok(hint[1].includes('--agy'), `argument-hint must list --agy, got: ${hint[1]}`);
+  test('workflow orchestrates inline plan-phase Skill() and isolated Agent review spawns (#936)', () => {
+    assert.ok(workflow.includes('Agent'), 'workflow must spawn isolated Agent for reviews');
+    assert.ok(workflow.includes('Skill(skill="gsd-plan-phase"'), 'workflow invokes gsd-plan-phase inline via Skill() (#936 fix)');
   });
 
-  test('command references the workflow file via execution_context', () => {
+  test('review command and workflow document review.default_reviewers precedence (#2315)', () => {
     assert.ok(
-      command.includes('@$HOME/.claude/gsd-core/workflows/plan-review-convergence.md'),
-      'execution_context must reference the workflow file'
+      reviewCommand.includes('review.default_reviewers') && workflow.includes('review.default_reviewers'),
+      'both review.md and plan-review-convergence.md must document review.default_reviewers precedence (#2315)',
     );
   });
 
-  test('command references supporting reference files', () => {
+  test('workflow documents the workflow.plan_review_convergence config key', () => {
     assert.ok(
-      command.includes('revision-loop.md'),
-      'must reference revision-loop.md for stall detection pattern'
-    );
-    assert.ok(
-      command.includes('gates.md'),
-      'must reference gates.md for gate taxonomy'
-    );
-    assert.ok(
-      command.includes('agent-contracts.md'),
-      'must reference agent-contracts.md for completion markers'
-    );
-  });
-
-  test('command declares Agent in allowed-tools (required for spawning review sub-agents)', () => {
-    assert.ok(
-      command.includes('- Agent'),
-      'Agent must be in allowed-tools — command spawns isolated agents for reviewing'
-    );
-  });
-
-  test('command declares Skill in allowed-tools (required for inline plan-phase invocations)', () => {
-    assert.ok(
-      command.includes('- Skill'),
-      'Skill must be in allowed-tools — command invokes gsd-plan-phase inline via Skill() at depth 0 (#936 fix)'
-    );
-  });
-
-  test('command has Copilot runtime_note for AskUserQuestion fallback', () => {
-    assert.ok(
-      command.includes('vscode_askquestions'),
-      'must document vscode_askquestions fallback for Copilot compatibility'
-    );
-  });
-
-  test('--codex is the default reviewer when no flag is given AND review.default_reviewers is unset (#2315)', () => {
-    // #2315: a bare invocation now respects review.default_reviewers per
-    // ADR-0011. The command must document that --codex is the default ONLY
-    // when review.default_reviewers is unset; otherwise the configured default
-    // wins. The pre-fix claim ("default if no reviewer specified") was the
-    // user-facing mirror of the #2315 bug.
-    assert.ok(
-      command.includes('default if no reviewer flag given') &&
-      command.includes('review.default_reviewers'),
-      'command must document that --codex is the default ONLY when review.default_reviewers is unset (#2315)'
-    );
-  });
-
-  test('command documents the workflow.plan_review_convergence config key', () => {
-    assert.ok(
-      command.includes('workflow.plan_review_convergence') ||
-      command.includes('plan_review_convergence'),
-      'command must document the config key required to enable the feature (#2306-v2)'
+      workflow.includes('workflow.plan_review_convergence'),
+      'workflow must document the config key required to enable the feature (#2306-v2)',
     );
   });
 });
@@ -193,7 +147,7 @@ describe('plan-review-convergence command source (#2306)', () => {
 
 describe('plan-review-convergence: --agy/--antigravity reviewer whitelist (#2293)', () => {
   const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8');
-  const SKILL_PATH = path.join(__dirname, '..', 'skills', 'gsd-plan-review-convergence', 'SKILL.md');
+  const SKILL_PATH = path.join(__dirname, '..', 'skills', 'gsd-review', 'SKILL.md');
 
   test('workflow REVIEWER_FLAGS extraction derives its whitelist from review-lane flags, not a hand-written list (#2800)', () => {
     // #2800: the runtime contract used to be a hand-written grep-accumulation
@@ -272,8 +226,8 @@ describe('plan-review-convergence: #2315 respects review.default_reviewers (no-f
   // structural assertions in this same describe block, so normalizing here
   // is the single correct fix rather than a per-test patch.
   const workflow = readFileNormalized(WORKFLOW_PATH);
-  const command = fs.readFileSync(COMMAND_PATH, 'utf8');
-  const SKILL_PATH = path.join(__dirname, '..', 'skills', 'gsd-plan-review-convergence', 'SKILL.md');
+  const command = fs.readFileSync(REVIEW_COMMAND_PATH, 'utf8');
+  const SKILL_PATH = path.join(__dirname, '..', 'skills', 'gsd-review', 'SKILL.md');
   const skill = fs.readFileSync(SKILL_PATH, 'utf8');
 
   // Pre-fix #2315: the workflow unconditionally set REVIEWER_FLAGS="--codex" in

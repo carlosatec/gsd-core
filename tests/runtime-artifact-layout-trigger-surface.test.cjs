@@ -169,13 +169,12 @@ describe('resolveTriggerSurface — claude', () => {
 
 describe('resolveTriggerSurface — both-scope runtimes', () => {
   test('both-scope runtimes report same-kind shadowing', () => {
-    // The 12 both-scope trigger-bearing runtimes excluding claude (claude has
-    // its own dedicated rows above). windsurf is excluded too — its global
-    // scope emits agents only, so it is NOT a both-scope trigger-bearing
-    // runtime (see the dedicated windsurf test below).
+    // Active both-scope trigger-bearing runtimes excluding claude (tested
+    // separately above). windsurf's global scope emits agents only, and
+    // cline/kimi-code are global-only.
     const BOTH_SCOPE_RUNTIMES = [
-      'antigravity', 'augment', 'codebuddy', 'codex', 'copilot',
-      'cursor', 'hermes', 'kilo', 'opencode', 'qwen', 'trae', 'zcode',
+      'antigravity', 'codex', 'copilot', 'cursor',
+      'deepseek-harness', 'opencode', 'qwen',
     ];
     for (const runtime of BOTH_SCOPE_RUNTIMES) {
       const result = resolveTriggerSurface(runtime, ['global', 'local'], { stems: ['plan-phase'] });
@@ -197,9 +196,10 @@ describe('resolveTriggerSurface — both-scope runtimes', () => {
 
 describe('resolveTriggerSurface — global-only runtimes', () => {
   test('global-only runtimes report unshadowed triggers', () => {
-    // cline/kimi/kimi-code declare local: [] — no special-casing, it falls
-    // out of an empty local kind set even when 'local' is in `scopes`.
-    for (const runtime of ['cline', 'kimi', 'kimi-code']) {
+    // cline and kimi-code declare no local command/skill layout — no
+    // special-casing, it falls out of empty local trigger kinds even when
+    // 'local' is in `scopes`.
+    for (const runtime of ['cline', 'kimi-code']) {
       const result = resolveTriggerSurface(runtime, ['global', 'local'], { stems: ['plan-phase'] });
       assert.ok(result.length > 0, `${runtime}: expected at least one trigger`);
       for (const s of result) {
@@ -211,11 +211,16 @@ describe('resolveTriggerSurface — global-only runtimes', () => {
 });
 
 describe('resolveTriggerSurface — no-artifact-surface runtimes', () => {
-  test('runtimes with no artifact surface yield no triggers', () => {
-    for (const runtime of ['pi', 'vscode']) {
-      assert.deepStrictEqual(
-        resolveTriggerSurface(runtime, ['global', 'local'], { stems: ['plan-phase'] }), [],
-        `${runtime}: expected no triggers`,
+  test('runtimes with no artifact surface yield no triggers and retired runtimes throw', () => {
+    assert.deepStrictEqual(
+      resolveTriggerSurface('vscode', ['global', 'local'], { stems: ['plan-phase'] }), [],
+      'vscode: expected no triggers',
+    );
+    for (const retired of ['augment', 'codebuddy', 'hermes', 'kilo', 'kimi', 'pi', 'trae', 'zcode']) {
+      assert.throws(
+        () => resolveTriggerSurface(retired, ['global', 'local'], { stems: ['plan-phase'] }),
+        /Unknown runtime/,
+        `${retired}: retired runtime should reject cleanly`,
       );
     }
   });
@@ -244,9 +249,9 @@ describe('resolveTriggerSurface — agents exclusion', () => {
     assert.ok(result.some((s) => s.kind === 'commands'), 'commands must still be present');
   });
 
-  test('kimi-agents are excluded from the trigger surface', () => {
-    const result = resolveTriggerSurface('kimi', ['global'], { stems: ['plan-phase'] });
-    assert.ok(!result.some((s) => s.kind === 'kimi-agents'), 'kimi-agents must never appear in the trigger surface');
+  test('kimi-code global agents are excluded from the trigger surface', () => {
+    const result = resolveTriggerSurface('kimi-code', ['global'], { stems: ['plan-phase'] });
+    assert.ok(!result.some((s) => s.kind === 'agents'), 'agents must never appear in the trigger surface');
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].kind, 'skills');
   });
@@ -254,7 +259,7 @@ describe('resolveTriggerSurface — agents exclusion', () => {
 
 describe('resolveTriggerSurface — nested-router runtimes (#69)', () => {
   test('nested runtimes distinguish direct from router-reachable registration', () => {
-    const NESTED_ROUTER_RUNTIMES = ['cline', 'qwen', 'hermes', 'augment', 'trae'];
+    const NESTED_ROUTER_RUNTIMES = ['cline', 'qwen'];
     const opts = {
       stems: ['ns-plan', 'plan-phase'],
       routerStems: ['ns-plan'],
@@ -462,21 +467,34 @@ describe('triggerPrecedence axis — validator', () => {
 
 describe('triggerPrecedence axis — resolution', () => {
   test('reordering the axis changes which artifact wins', () => {
-    // codebuddy declares BOTH commands and skills at the SAME scope from the
-    // same source stems — the one runtime shape where kind precedence (not
-    // scope rank) decides the winner.
-    const defaultResult = resolveTriggerSurface('codebuddy', ['global'], { stems: ['plan-phase'] });
-    const defaultGroup = defaultResult.filter((s) => s.trigger === 'gsd-plan-phase');
+    // Inject a same-scope skills entry alongside claude's local commands entry
+    // so both kinds produce identical local triggers and triggerPrecedence is
+    // the sole tiebreaker.
+    const localSkillsEntry = {
+      kind: 'skills',
+      destSubpath: 'skills',
+      prefix: 'gsd-',
+      nesting: 'flat',
+      recursive: false,
+      converter: null,
+    };
+    const baseCap = JSON.parse(JSON.stringify(capabilityRegistry.runtimes.claude));
+    baseCap.runtime.artifactLayout.local.push(localSkillsEntry);
+    baseCap.runtime.triggerPrecedence = ['skills', 'commands'];
+    const defaultRegistry = { runtimes: { claude: baseCap } };
+    const defaultResult = resolveTriggerSurface('claude', ['local'], { stems: ['plan'], registry: defaultRegistry });
+    const defaultGroup = defaultResult.filter((s) => s.trigger === 'gsd-plan');
     const defaultWinner = defaultGroup.find((s) => s.shadowedBy === null);
     assert.ok(defaultWinner, 'expected a winner under the default precedence');
     assert.strictEqual(defaultWinner.kind, 'skills', 'default precedence (skills > commands) must pick skills');
 
-    const overriddenCap = JSON.parse(JSON.stringify(capabilityRegistry.runtimes.codebuddy));
+    const overriddenCap = JSON.parse(JSON.stringify(capabilityRegistry.runtimes.claude));
+    overriddenCap.runtime.artifactLayout.local.push({ ...localSkillsEntry });
     overriddenCap.runtime.triggerPrecedence = ['commands', 'skills'];
-    const overriddenRegistry = { runtimes: { codebuddy: overriddenCap } };
+    const overriddenRegistry = { runtimes: { claude: overriddenCap } };
 
-    const overriddenResult = resolveTriggerSurface('codebuddy', ['global'], { stems: ['plan-phase'], registry: overriddenRegistry });
-    const overriddenGroup = overriddenResult.filter((s) => s.trigger === 'gsd-plan-phase');
+    const overriddenResult = resolveTriggerSurface('claude', ['local'], { stems: ['plan'], registry: overriddenRegistry });
+    const overriddenGroup = overriddenResult.filter((s) => s.trigger === 'gsd-plan');
     const overriddenWinner = overriddenGroup.find((s) => s.shadowedBy === null);
     assert.ok(overriddenWinner, 'expected a winner under the overridden precedence');
     assert.strictEqual(overriddenWinner.kind, 'commands', 'reordered precedence (commands > skills) must flip the winner');

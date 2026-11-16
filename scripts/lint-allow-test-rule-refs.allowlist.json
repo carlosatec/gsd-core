@@ -8,7 +8,6 @@
   "tests/anti-pattern-enforcement.test.cjs :: source-text-is-the-product",
   "tests/ask-user-questions-fallback.test.cjs :: source-text-is-the-product",
   "tests/audit-fix-command.test.cjs :: source-text-is-the-product",
-  "tests/autonomous-allowed-tools.test.cjs :: source-text-is-the-product",
   "tests/autonomous-converge.test.cjs :: source-text-is-the-product",
   "tests/autonomous-decomposition.test.cjs :: source-text-is-the-product",
   "tests/autonomous-interactive.test.cjs :: source-text-is-the-product",

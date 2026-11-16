@@ -2619,12 +2619,12 @@ describe('ADR-857 phase 4a: profileMembership derivation', () => {
     );
   });
 
-  test('PROFILE_RANK is imported (not hardcoded): all three tiers covered', () => {
-    // Verify PROFILE_RANK is the canonical ['core', 'standard', 'full'] from install-profiles.cjs
+  test('PROFILE_RANK is imported (not hardcoded): all four tiers covered', () => {
+    // Verify PROFILE_RANK matches ['unified', 'core', 'standard', 'full'] from install-profiles.cjs
     assert.deepEqual(
       PROFILE_RANK,
-      ['core', 'standard', 'full'],
-      'PROFILE_RANK must be [core, standard, full] from install-profiles.cjs, got: ' + JSON.stringify(PROFILE_RANK),
+      ['unified', 'core', 'standard', 'full'],
+      'PROFILE_RANK must be [unified, core, standard, full] from install-profiles.cjs, got: ' + JSON.stringify(PROFILE_RANK),
     );
   });
 
@@ -2779,31 +2779,31 @@ describe('ADR-857 phase 4a: pending-reconciliation warnings (SOFT gate)', () => 
   });
 
   test('a cap whose skill IS already in the standard profile emits no reconciliation warning', () => {
-    // 'plan-phase' IS in the hand-authored standard profile. A synthetic cap
-    // with tier=standard and skill=plan-phase should NOT generate a warning.
-    const cap = makeSyntheticCap('planner-cap', 'standard', ['plan-phase']);
+    // 'plan' IS in the canonical standard profile. A synthetic cap
+    // with tier=standard and skill=plan should NOT generate a warning.
+    const cap = makeSyntheticCap('planner-cap', 'standard', ['plan']);
     const capMap = new Map([['planner-cap', cap]]);
     const clusters = deriveCapabilityClusters(capMap);
     const profiles = deriveProfileMembership(capMap);
     const warnings = runConsistencyGate(clusters, profiles, capMap);
-    const planPhaseWarnings = warnings.filter((w) => w.includes('plan-phase'));
+    const planWarnings = warnings.filter((w) => w.includes('plan'));
     assert.deepEqual(
-      planPhaseWarnings, [],
-      'No reconciliation warning expected for plan-phase (already in standard profile), got: ' + JSON.stringify(planPhaseWarnings),
+      planWarnings, [],
+      'No reconciliation warning expected for plan (already in standard profile), got: ' + JSON.stringify(planWarnings),
     );
   });
 
   test('a core-tier cap with skills already in core profile emits no reconciliation warning', () => {
-    // 'new-project' IS in the hand-authored core profile.
-    const cap = makeSyntheticCap('np-cap', 'core', ['new-project']);
-    const capMap = new Map([['np-cap', cap]]);
+    // 'status' IS in the canonical core profile.
+    const cap = makeSyntheticCap('status-cap', 'core', ['status']);
+    const capMap = new Map([['status-cap', cap]]);
     const clusters = deriveCapabilityClusters(capMap);
     const profiles = deriveProfileMembership(capMap);
     const warnings = runConsistencyGate(clusters, profiles, capMap);
-    const npWarnings = warnings.filter((w) => w.includes('new-project'));
+    const statusWarnings = warnings.filter((w) => w.includes('status'));
     assert.deepEqual(
-      npWarnings, [],
-      'No reconciliation warning expected for new-project (already in core profile), got: ' + JSON.stringify(npWarnings),
+      statusWarnings, [],
+      'No reconciliation warning expected for status (already in core profile), got: ' + JSON.stringify(statusWarnings),
     );
   });
 });
@@ -2870,33 +2870,29 @@ describe('ADR-857 phase 4a: --check determinism after --write', () => {
 // ─── 17. FIX 1: SOFT gate uses real manifest for requires-closure expansion ────
 
 describe('FIX 1: SOFT gate uses closure-resolved manifest (not empty)', () => {
-  test('plan-phase is transitively in standard — no reconciliation warning', () => {
-    // plan-phase is in PROFILES.standard directly; resolved (with real manifest) = in standard.
-    // A standard-tier cap with skill=plan-phase must NOT generate a reconciliation warning.
-    const cap = makeSyntheticCap('plan-cap', 'standard', ['plan-phase']);
+  test('plan is in standard — no reconciliation warning', () => {
+    const cap = makeSyntheticCap('plan-cap', 'standard', ['plan']);
     const capMap = new Map([['plan-cap', cap]]);
     const clusters = deriveCapabilityClusters(capMap);
     const profiles = deriveProfileMembership(capMap);
     const warnings = runConsistencyGate(clusters, profiles, capMap);
-    const planWarnings = warnings.filter((w) => w.includes('plan-phase'));
+    const planWarnings = warnings.filter((w) => w.includes('plan'));
     assert.deepEqual(
       planWarnings, [],
-      'plan-phase is in standard profile — no warning expected, got: ' + JSON.stringify(planWarnings),
+      'plan is in standard profile — no warning expected, got: ' + JSON.stringify(planWarnings),
     );
   });
 
-  test('FIX 1: skill only transitively in standard (requires-closure) emits no warning', () => {
-    // 'code-review' is brought into standard via requires-closure expansion (not in raw base).
-    // FIX 1 ensures the real manifest is used, so no false-positive warning is emitted.
-    const cap = makeSyntheticCap('cr-cap', 'standard', ['code-review']);
-    const capMap = new Map([['cr-cap', cap]]);
+  test('FIX 1: requires-closure target (verify required by ship) emits no warning', () => {
+    const cap = makeSyntheticCap('verify-cap', 'standard', ['verify']);
+    const capMap = new Map([['verify-cap', cap]]);
     const clusters = deriveCapabilityClusters(capMap);
     const profiles = deriveProfileMembership(capMap);
     const warnings = runConsistencyGate(clusters, profiles, capMap);
-    const crWarnings = warnings.filter((w) => w.includes('code-review'));
+    const verifyWarnings = warnings.filter((w) => w.includes('verify'));
     assert.deepEqual(
-      crWarnings, [],
-      'code-review is transitively in standard via requires-closure — no warning expected, got: ' + JSON.stringify(crWarnings),
+      verifyWarnings, [],
+      'verify is in closure-resolved standard profile — no warning expected, got: ' + JSON.stringify(verifyWarnings),
     );
   });
 });
@@ -3930,12 +3926,12 @@ describe('FIX 3: tightened runtime validator — ArtifactKind field type checks'
     assert.deepEqual(converterErrors, [], 'converter: null must be accepted, got: ' + JSON.stringify(converterErrors));
   });
 
-  test('ArtifactKind with converter: "convertClaudeCommandToKiloSkill" (string) → no error', () => {
+  test('ArtifactKind with converter: "convertClaudeCommandToClaudeSkill" (string) → no error', () => {
     const cap = makeRuntimeCap({
       id: 'test-rt',
       runtime: {
         artifactLayout: {
-          global: [{ kind: 'skills', destSubpath: 'skills', prefix: 'gsd-', nesting: 'flat', recursive: true, converter: 'convertClaudeCommandToKiloSkill' }],
+          global: [{ kind: 'skills', destSubpath: 'skills', prefix: 'gsd-', nesting: 'flat', recursive: true, converter: 'convertClaudeCommandToClaudeSkill' }],
           local: [],
         },
       },
@@ -4129,8 +4125,8 @@ describe('ADR-857 phase 5e: validateArtifactKindEntry — ConverterName enum (FA
   });
 
   // Valid known name must be accepted
-  test('ACCEPTED: converter "convertClaudeCommandToKiloSkill" is a known ConverterName', () => {
-    const entry = makeArtifactEntry({ converter: 'convertClaudeCommandToKiloSkill' });
+  test('ACCEPTED: converter "convertClaudeCommandToClaudeSkill" is a known ConverterName', () => {
+    const entry = makeArtifactEntry({ converter: 'convertClaudeCommandToClaudeSkill' });
     const errors = validateArtifactKindEntry('test-cap', entry, 'artifactLayout.global[0]');
     const converterErrors = errors.filter((e) => e.includes('converter'));
     assert.deepEqual(converterErrors, [], 'Known converter name must be accepted, got: ' + JSON.stringify(converterErrors));
@@ -6164,12 +6160,10 @@ describe('fix-1628 capability validation: mempalace.memory_mode (enum)', () => {
 describe('#2007 mempalace.memory_mode routing contract (instruction surfaces)', () => {
   const MODES = ['augment', 'kg_backend', 'replace'];
 
-  // The five parallel instruction surfaces that must express per-mode routing.
+  // The three live parallel instruction surfaces that express per-mode routing.
   const SURFACES = [
     'capabilities/mempalace/fragments/recall-discuss.md',
     'capabilities/mempalace/fragments/capture-problems.md',
-    'commands/gsd/mempalace-recall.md',
-    'commands/gsd/mempalace-capture.md',
     'agents/gsd-mempalace-curator.md',
   ];
 

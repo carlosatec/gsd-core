@@ -121,8 +121,8 @@ const allUserFacingFiles = allFiles.concat(topLevelFiles);
 describe('slash-command namespace invariant (#3443)', () => {
   test('commands/gsd/ directory contains known command files', () => {
     assert.ok(cmdNames.length > 0, 'commands/gsd/ must contain .md files');
-    assert.ok(cmdNames.includes('plan-phase'), 'plan-phase must be a known command');
-    assert.ok(cmdNames.includes('execute-phase'), 'execute-phase must be a known command');
+    assert.ok(cmdNames.includes('plan'), 'plan must be a known command');
+    assert.ok(cmdNames.includes('exec'), 'exec must be a known command');
   });
 
   // SCOPED ACTIVE INVARIANT (2026-05-23 re-activation after Codex adversarial review of PR #164).
@@ -168,20 +168,20 @@ describe('slash-command namespace invariant (#3443)', () => {
     const liveCmdNames = cmdNames;
 
     test('rewrites /gsd-<cmd> to /gsd:<cmd>', () => {
-      const out = transformContent('See /gsd-plan-phase for details.', liveCmdNames);
-      assert.ok(out.includes('/gsd:plan-phase'), `expected /gsd:plan-phase, got: ${out}`);
-      assert.ok(!out.includes('/gsd-plan-phase'), `dash form must not survive, got: ${out}`);
+      const out = transformContent('See /gsd-plan for details.', liveCmdNames);
+      assert.ok(out.includes('/gsd:plan'), `expected /gsd:plan, got: ${out}`);
+      assert.ok(!out.includes('/gsd-plan'), `dash form must not survive, got: ${out}`);
     });
 
     test('rewrites multiple occurrences in one pass', () => {
-      const out = transformContent('Run /gsd-plan-phase then /gsd-execute-phase.', liveCmdNames);
-      assert.ok(out.includes('/gsd:plan-phase'));
-      assert.ok(out.includes('/gsd:execute-phase'));
+      const out = transformContent('Run /gsd-plan then /gsd-exec.', liveCmdNames);
+      assert.ok(out.includes('/gsd:plan'));
+      assert.ok(out.includes('/gsd:exec'));
       assert.ok(!out.match(/\/gsd-[a-z]/), `no dash form may remain, got: ${out}`);
     });
 
     test('does not rewrite canonical colon form (idempotent)', () => {
-      const input = '/gsd:plan-phase is the canonical name.';
+      const input = '/gsd:plan is the canonical name.';
       assert.strictEqual(transformContent(input, liveCmdNames), input,
         'transformer must be a no-op when input is already canonical');
     });
@@ -192,9 +192,9 @@ describe('slash-command namespace invariant (#3443)', () => {
         'transformer must leave non-command identifiers alone');
     });
 
-    test('respects word boundary — does not rewrite /gsd-plan-phase-extra', () => {
-      const out = transformContent('/gsd-plan-phase-extra', liveCmdNames);
-      assert.strictEqual(out, '/gsd-plan-phase-extra',
+    test('respects word boundary — does not rewrite /gsd-plan-extra', () => {
+      const out = transformContent('/gsd-plan-extra', liveCmdNames);
+      assert.strictEqual(out, '/gsd-plan-extra',
         'word-boundary lookahead must prevent partial matches');
     });
   });
@@ -272,11 +272,10 @@ const { transformContentToHyphen } = require(path.join(REPO_ROOT, 'scripts', 'fi
 // Snapshot of all runtime IDs in the layout table at the time of this fix.
 // Keep these two sets covering: any runtime listed in
 // runtime-artifact-layout.cjs MUST appear in exactly one bucket.
-const HYPHEN_NAME_AGENT_RUNTIMES = ['claude', 'qwen', 'hermes'];
+const HYPHEN_NAME_AGENT_RUNTIMES = ['claude', 'qwen'];
 const SELF_CONVERTING_OR_COLON_RUNTIMES = [
-  'codex', 'copilot', 'antigravity', 'cursor', 'windsurf', 'augment',
-  'trae', 'codebuddy', 'cline',
-  'opencode', 'kilo',
+  'codex', 'copilot', 'antigravity', 'cursor', 'windsurf',
+  'cline', 'opencode', 'kimi-code', 'deepseek-harness',
 ];
 
 describe('bug #3677 — agent body colon-namespace leak (Claude / Qwen / Hermes)', () => {
@@ -360,12 +359,6 @@ describe('bug #3677 — agent body colon-namespace leak (Claude / Qwen / Hermes)
       assert.ok(!out.includes('/gsd:execute-phase'));
     });
 
-    test('C3: hermes — same transform applies', () => {
-      const out = normalizeAgentBodyForRuntime(inputBody, 'hermes', cmdNames);
-      assert.ok(out.includes('/gsd-execute-phase'));
-      assert.ok(!out.includes('/gsd:execute-phase'));
-    });
-
     test('C5: self-converting runtime (copilot) — body returned unchanged at this layer', () => {
       const out = normalizeAgentBodyForRuntime(inputBody, 'copilot', cmdNames);
       // Copilot has its own convertClaudeAgentToCopilotAgent that handles
@@ -407,10 +400,10 @@ describe('bug #3677 — agent body colon-namespace leak (Claude / Qwen / Hermes)
       `(?<![a-zA-Z0-9_-])gsd:(${[...cmdNames].sort((a, b) => b.length - a.length).join('|')})(?=[^a-zA-Z0-9_-]|$)`,
     );
 
-    test('E0: command roster is populated and contains the symptom commands', () => {
+    test('E0: command roster is populated and contains the canonical commands', () => {
       assert.ok(cmdNames.length > 0, 'command roster must be populated');
-      assert.ok(cmdNames.includes('execute-phase'));
-      assert.ok(cmdNames.includes('plan-phase'));
+      assert.ok(cmdNames.includes('exec'));
+      assert.ok(cmdNames.includes('plan'));
     });
 
     test('E1: every agents/gsd-*.md transforms clean — no roster colon refs survive', () => {
@@ -432,7 +425,7 @@ describe('bug #3677 — agent body colon-namespace leak (Claude / Qwen / Hermes)
     });
 
     test('E2: idempotent — transform of already-hyphenated input is a no-op', () => {
-      const input = 'use /gsd-plan-phase next, then /gsd-execute-phase';
+      const input = 'use /gsd-plan next, then /gsd-exec';
       assert.strictEqual(
         transformContentToHyphen(input, cmdNames),
         input,
@@ -440,19 +433,19 @@ describe('bug #3677 — agent body colon-namespace leak (Claude / Qwen / Hermes)
       );
     });
 
-    test('E3: word boundary — /gsd:plan-phase-extra is not a roster match', () => {
+    test('E3: word boundary — /gsd:plan-extra is not a roster match', () => {
       assert.strictEqual(
-        transformContentToHyphen('/gsd:plan-phase-extra', cmdNames),
-        '/gsd:plan-phase-extra',
+        transformContentToHyphen('/gsd:plan-extra', cmdNames),
+        '/gsd:plan-extra',
       );
     });
 
     test('E4: rewrites bare `gsd:<cmd>` shorthand (no leading slash)', () => {
       const out = transformContentToHyphen(
-        'Spawned by the gsd:execute-phase orchestrator.',
+        'Spawned by the gsd:exec orchestrator.',
         cmdNames,
       );
-      assert.strictEqual(out, 'Spawned by the gsd-execute-phase orchestrator.');
+      assert.strictEqual(out, 'Spawned by the gsd-exec orchestrator.');
     });
   });
 });
@@ -577,31 +570,31 @@ describe('bug #3683 — command body colon-namespace leak (Claude local install)
     const { normalizeAgentBodyForRuntime } = install;
     const cmdNames = readCmdNames();
 
-    test('B0: command roster is populated and includes symptom commands', () => {
+    test('B0: command roster is populated and includes canonical commands', () => {
       assert.ok(cmdNames.length > 0, 'readCmdNames() must return a non-empty list');
-      assert.ok(cmdNames.includes('execute-phase'), 'roster must include execute-phase');
-      assert.ok(cmdNames.includes('plan-phase'), 'roster must include plan-phase');
+      assert.ok(cmdNames.includes('exec'), 'roster must include exec');
+      assert.ok(cmdNames.includes('plan'), 'roster must include plan');
     });
 
     test('B1: claude — rewrites /gsd:<cmd> colon refs in command-body prose to hyphen form', () => {
       const input = [
         '## After planning',
         '',
-        'Run `/gsd:execute-phase 1 --tdd` to begin execution.',
-        'Then use `/gsd:verify-work 1` when done.',
+        'Run `/gsd:exec 1 --tdd` to begin execution.',
+        'Then use `/gsd:verify 1` when done.',
       ].join('\n');
       const out = normalizeAgentBodyForRuntime(input, 'claude', cmdNames);
-      assert.ok(out.includes('/gsd-execute-phase'), 'execute-phase must be rewritten to hyphen form');
-      assert.ok(out.includes('/gsd-verify-work'), 'verify-work must be rewritten to hyphen form');
-      assert.ok(!out.includes('/gsd:execute-phase'), 'colon form for execute-phase must be absent');
-      assert.ok(!out.includes('/gsd:verify-work'), 'colon form for verify-work must be absent');
+      assert.ok(out.includes('/gsd-exec'), 'exec must be rewritten to hyphen form');
+      assert.ok(out.includes('/gsd-verify'), 'verify must be rewritten to hyphen form');
+      assert.ok(!out.includes('/gsd:exec'), 'colon form for exec must be absent');
+      assert.ok(!out.includes('/gsd:verify'), 'colon form for verify must be absent');
     });
 
     test('B2: gemini — colon refs preserved (Gemini intentionally uses colon namespace)', () => {
-      const input = 'Run `/gsd:execute-phase 1` to begin.';
+      const input = 'Run `/gsd:exec 1` to begin.';
       const out = normalizeAgentBodyForRuntime(input, 'gemini', cmdNames);
-      assert.ok(out.includes('/gsd:execute-phase'), 'Gemini must keep colon form');
-      assert.ok(!out.includes('/gsd-execute-phase'), 'Gemini must not have hyphen form injected');
+      assert.ok(out.includes('/gsd:exec'), 'Gemini must keep colon form');
+      assert.ok(!out.includes('/gsd-exec'), 'Gemini must not have hyphen form injected');
     });
   });
 

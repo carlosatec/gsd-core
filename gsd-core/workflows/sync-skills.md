@@ -17,7 +17,7 @@ Sync managed `gsd-*` skill directories from one canonical runtime's skills root 
 
 If neither `--dry-run` nor `--apply` is specified, dry-run is the default.
 
-**Supported runtime names:** `antigravity`, `augment`, `claude`, `cline`, `codebuddy`, `codex`, `copilot`, `cursor`, `grok`, `hermes`, `kilo`, `kimi`, `kimi-code`, `opencode`, `pi`, `qwen`, `trae`, `windsurf`, `zcode` — the full capability registry runtime set (`gsd-core/bin/lib/capability-registry.cjs`'s `runtimes`) plus `grok` (a live, dedicated `~/.agents`-layout resolution branch in `getGlobalConfigDir` predating the capability registry — overridable via `GROK_AGENTS_HOME`), excluding `vscode`: it is `installSurface: 'none'` (#2103) and `getGlobalSkillsBase('vscode')` returns `null`, so a skills-root sync to/from it always aborts at Step 2's resolution guard — there is nowhere on disk to sync to.
+**Supported runtime names:** `antigravity`, `claude`, `cline`, `codex`, `copilot`, `cursor`, `deepseek-harness`, `grok`, `kimi-code`, `opencode`, `qwen`, `windsurf` — the full capability registry runtime set (`gsd-core/bin/lib/capability-registry.cjs`'s `runtimes`) plus `grok` (a live, dedicated `~/.agents`-layout resolution branch in `getGlobalConfigDir` predating the capability registry — overridable via `GROK_AGENTS_HOME`), excluding `vscode`: it is `installSurface: 'none'` (#2103) and `getGlobalSkillsBase('vscode')` returns `null`, so a skills-root sync to/from it always aborts at Step 2's resolution guard — there is nowhere on disk to sync to.
 
 ---
 
@@ -35,7 +35,7 @@ fi
 
 # Parse --to
 if [[ "$@" == *"--to all"* ]]; then
-  TO_RUNTIMES=(antigravity augment claude cline codebuddy codex copilot cursor grok hermes kilo kimi kimi-code opencode pi qwen trae windsurf zcode)
+  TO_RUNTIMES=(antigravity claude cline codex copilot cursor deepseek-harness grok kimi-code opencode qwen windsurf)
 elif [[ "$@" == *"--to"* ]]; then
   TO_RUNTIMES=( $(echo "$@" | grep -oP '(?<=--to )\S+') )
 fi
@@ -264,7 +264,7 @@ Sync complete: <N> skills synced to <M> runtime(s).
 1. **Only `gsd-*` directories** are created, updated, or removed. Any directory not starting with `gsd-` in a destination root is untouched.
 2. **Dry-run is the default.** `--apply` must be passed explicitly to write anything.
 3. **Source root must exist.** Never create the source root; it must have been created by a prior `gsd-update` or installer run.
-4. **No cross-runtime content transformation.** Sync copies files verbatim. It does not apply runtime-specific content transformations (those happen at install time). If a runtime requires transformed content (e.g. Augment's format differs), the developer should run the installer for that runtime instead of using sync.
+4. **No cross-runtime content transformation.** Sync copies files verbatim. It does not apply runtime-specific content transformations (those happen at install time). If a runtime requires transformed content (e.g. Windsurf's format differs), the developer should run the installer for that runtime instead of using sync.
 
 ---
 

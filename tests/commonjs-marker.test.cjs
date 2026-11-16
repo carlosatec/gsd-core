@@ -131,7 +131,15 @@ describe('commonjs-marker: ownership predicate', () => {
     // A DANGLING symlink is the dangerous case: existsSync() reports false for
     // it, so an existsSync-based guard would classify `absent` and then write
     // straight through the link, landing outside the directory GSD owns.
-    fs.symlinkSync(outside, link);
+    try {
+      fs.symlinkSync(outside, link);
+    } catch (err) {
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        t.skip('symlinks require elevated privileges on Windows');
+        return;
+      }
+      throw err;
+    }
     assert.equal(classifyMarker(owned), 'foreign');
     assert.equal(ensureCommonJsMarker(owned), 'preserved-foreign');
     assert.ok(!fs.existsSync(outside), 'the write must not follow the symlink out of the directory');
@@ -158,7 +166,15 @@ describe('commonjs-marker: ownership predicate', () => {
     const outside = path.join(dir, 'escaped.json');
     const owned = path.join(dir, 'hooks');
     fs.mkdirSync(owned);
-    fs.symlinkSync(outside, path.join(owned, 'package.json'));
+    try {
+      fs.symlinkSync(outside, path.join(owned, 'package.json'));
+    } catch (err) {
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        t.skip('symlinks require elevated privileges on Windows');
+        return;
+      }
+      throw err;
+    }
 
     assert.equal(
       hooksSurface.ensureCommonJsMarker(owned),
@@ -525,19 +541,13 @@ describe('#2544 regression: install must not clobber the config-root package.jso
     // `staging zero hook scripts` tests above are the ones that pin a real
     // staged-nothing gate, on the #2717 writers.
     //
-    // ZCode, not Windsurf. Windsurf was the original choice because
-    // hostBehaviors.skipSharedHooksInstall kept it out of the shared bundle —
-    // but #2717 then began staging cursor/windsurf/codex .js hooks via dedicated
-    // paths and writing the marker beside them, so for those three GSD now DOES
-    // fill hooks/ and the marker is correct. ZCode is the durable choice: per
-    // #1821 it has hooksSurface:'none' AND no plugin surface to spawn hooks, so
-    // GSD stages no .js there by either route. (Measured on this tree: zcode
-    // stages 0 .js hooks and gets no marker; windsurf stages 2 and gets one.)
+    // Cline declares hooksSurface:'none' and skipSharedHooksInstall with no
+    // plugin surface to spawn hooks, so GSD stages no .js hooks into hooks/.
     const userHooks = path.join(root, 'hooks');
     fs.mkdirSync(userHooks, { recursive: true });
     fs.writeFileSync(path.join(userHooks, 'my-hook.js'), '// user-authored\n');
 
-    runInstall(root, 'zcode');
+    runInstall(root, 'cline');
 
     assert.ok(
       !fs.existsSync(path.join(userHooks, 'package.json')),
@@ -546,98 +556,6 @@ describe('#2544 regression: install must not clobber the config-root package.jso
     assert.ok(
       fs.existsSync(path.join(userHooks, 'my-hook.js')),
       "the user's own hooks/ contents must be untouched",
-    );
-  });
-
-  test('pi: the extensions/ marker is installed and reclaimed on uninstall', (t) => {
-    const root = mkTmp('gsd-2544-pi-');
-    t.after(() => cleanup(root));
-
-    runInstall(root, 'pi');
-    const marker = path.join(root, 'extensions', 'package.json');
-    assert.ok(fs.existsSync(marker), 'pi extensions/package.json marker must be staged');
-    assert.equal(JSON.parse(fs.readFileSync(marker, 'utf8')).type, 'commonjs');
-
-    runInstall(root, 'pi', ['--uninstall']);
-    assert.ok(!fs.existsSync(marker), 'uninstall must remove the extensions/ marker it wrote');
-  });
-
-  test('pi: a user-authored extensions/package.json survives install and uninstall', (t) => {
-    const root = mkTmp('gsd-2544-pi-user-');
-    t.after(() => cleanup(root));
-
-    const extDir = path.join(root, 'extensions');
-    fs.mkdirSync(extDir, { recursive: true });
-    const userPkg = path.join(extDir, 'package.json');
-    fs.writeFileSync(userPkg, USER_PACKAGE_JSON);
-    const before = sha256(fs.readFileSync(userPkg));
-
-    runInstall(root, 'pi');
-    assert.equal(sha256(fs.readFileSync(userPkg)), before,
-      'install must not overwrite a user-authored extensions/package.json');
-
-    runInstall(root, 'pi', ['--uninstall']);
-    assert.ok(fs.existsSync(userPkg), 'uninstall must not remove it either');
-    assert.equal(sha256(fs.readFileSync(userPkg)), before);
-  });
-
-  test('kimi: the marker lives under hooks/, and the legacy root marker is retired', (t) => {
-    const root = mkTmp('gsd-2544-kimi-');
-    t.after(() => cleanup(root));
-
-    // HOME is redirected to `root`, so kimi's native hook root
-    // (resolveKimiHooksTomlDir → the `.kimi` dot-home) resolves inside the
-    // temp tree. That root is OUTSIDE kimi's configDir, which is why migration
-    // 007 cannot reach it and bin/install.js retires it directly.
-    const kimiRoot = path.join(root, '.kimi');
-
-    runInstall(root, 'kimi');
-    assert.ok(
-      fs.existsSync(path.join(kimiRoot, 'hooks', 'package.json')),
-      'kimi marker must be staged inside .kimi/hooks/',
-    );
-    assert.ok(
-      !fs.existsSync(path.join(kimiRoot, 'package.json')),
-      'kimi must not carry a marker at its native hook root',
-    );
-
-    // Model a pre-#2544 install, which left the marker at the .kimi root, then
-    // upgrade. The stale marker must be retired by the install itself.
-    fs.writeFileSync(path.join(kimiRoot, 'package.json'), `${COMMONJS_MARKER}\n`);
-    runInstall(root, 'kimi');
-    assert.ok(
-      !fs.existsSync(path.join(kimiRoot, 'package.json')),
-      'upgrading must retire the pre-#2544 marker at kimi\'s root',
-    );
-  });
-
-  test('kimi: a user-authored package.json at the .kimi root is never retired', (t) => {
-    const root = mkTmp('gsd-2544-kimi-user-');
-    t.after(() => cleanup(root));
-    const kimiRoot = path.join(root, '.kimi');
-    fs.mkdirSync(kimiRoot, { recursive: true });
-    const userPkg = path.join(kimiRoot, 'package.json');
-    fs.writeFileSync(userPkg, USER_PACKAGE_JSON);
-    const before = sha256(fs.readFileSync(userPkg));
-
-    runInstall(root, 'kimi');
-
-    assert.ok(fs.existsSync(userPkg), 'a user file at the .kimi root must survive');
-    assert.equal(sha256(fs.readFileSync(userPkg)), before);
-  });
-
-  test('kimi: uninstall reclaims the hooks/ marker', (t) => {
-    const root = mkTmp('gsd-2544-kimi-uninstall-');
-    t.after(() => cleanup(root));
-    const kimiRoot = path.join(root, '.kimi');
-
-    runInstall(root, 'kimi');
-    assert.ok(fs.existsSync(path.join(kimiRoot, 'hooks', 'package.json')));
-
-    runInstall(root, 'kimi', ['--uninstall']);
-    assert.ok(
-      !fs.existsSync(path.join(kimiRoot, 'hooks', 'package.json')),
-      'uninstall must remove the kimi hooks/ marker it wrote',
     );
   });
 

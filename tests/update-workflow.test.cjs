@@ -90,7 +90,7 @@ const path = require('node:path');
 
 const ROOT815 = path.join(__dirname, '..');
 const WF = fs.readFileSync(path.join(ROOT815, 'gsd-core', 'workflows', 'update.md'), 'utf8');
-const CMD = fs.readFileSync(path.join(ROOT815, 'commands', 'gsd', 'update.md'), 'utf8');
+const CMD = fs.readFileSync(path.join(ROOT815, 'commands', 'gsd', 'migrate.md'), 'utf8');
 
 test('issue #815: workflow parses --next/--rc into a TAG channel', () => {
   assert.match(WF, /--next/);
@@ -115,10 +115,8 @@ test('issue #815: install uses the selected tag, not a hardcoded @latest', () =>
     'install lines must use the $TAG variable, never a hardcoded dist-tag literal');
 });
 
-test('issue #815: command documents --next/--rc and routes it to the update workflow', () => {
-  assert.match(CMD, /--next/);
-  assert.match(CMD, /--rc/);
-  assert.match(CMD, /argument-hint:.*--next/);
+test('issue #815: canonical migrate command wires the update workflow', () => {
+  assert.match(CMD, /workflows\/update\.md/);
 });
   });
 }

@@ -94,7 +94,7 @@ describe('install-profiles: MINIMAL_SKILL_ALLOWLIST', () => {
   test('contains exactly the main-loop core (frozen)', () => {
     assert.deepStrictEqual(
       [...MINIMAL_SKILL_ALLOWLIST].sort(),
-      ['discuss-phase', 'execute-phase', 'help', 'new-project', 'phase', 'plan-phase', 'surface', 'update'],
+      ['auto', 'exec', 'graph', 'help', 'migrate', 'plan', 'review', 'ship', 'status', 'tokens', 'verify'],
     );
     assert.ok(Object.isFrozen(MINIMAL_SKILL_ALLOWLIST));
   });
@@ -195,8 +195,8 @@ describe('install-profiles: shouldInstallSkill', () => {
 describe('install-profiles: stageSkillsForMode', () => {
   function createFixtureSkillsDir() {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-stage-fixture-'));
-    for (const name of ['plan-phase', 'execute-phase', 'autonomous', 'do', 'help',
-      'new-project', 'phase', 'discuss-phase', 'update', 'progress', 'surface']) {
+    for (const name of ['plan', 'exec', 'autonomous', 'do', 'help',
+      'auto', 'status', 'verify', 'ship', 'tokens', 'migrate', 'graph', 'review', 'progress']) {
       fs.writeFileSync(path.join(tmp, `${name}.md`), `# ${name}\n`);
     }
     return tmp;
@@ -219,8 +219,8 @@ describe('install-profiles: stageSkillsForMode', () => {
       assert.notStrictEqual(staged, src);
       assert.deepStrictEqual(
         fs.readdirSync(staged).sort(),
-        ['discuss-phase.md', 'execute-phase.md', 'help.md', 'new-project.md',
-          'phase.md', 'plan-phase.md', 'surface.md', 'update.md'],
+        ['auto.md', 'exec.md', 'graph.md', 'help.md', 'migrate.md', 'plan.md',
+          'review.md', 'ship.md', 'status.md', 'tokens.md', 'verify.md'],
       );
     } finally {
       cleanup(src);
@@ -233,8 +233,8 @@ describe('install-profiles: stageSkillsForMode', () => {
     let staged;
     try {
       staged = stageSkillsForMode(src, 'minimal');
-      const original = fs.readFileSync(path.join(src, 'plan-phase.md'), 'utf8');
-      const copied = fs.readFileSync(path.join(staged, 'plan-phase.md'), 'utf8');
+      const original = fs.readFileSync(path.join(src, 'plan.md'), 'utf8');
+      const copied = fs.readFileSync(path.join(staged, 'plan.md'), 'utf8');
       assert.strictEqual(copied, original);
     } finally {
       cleanup(src);
@@ -251,12 +251,12 @@ describe('install-profiles: stageSkillsForMode', () => {
     const src = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-stage-mixed-'));
     let staged;
     try {
-      fs.writeFileSync(path.join(src, 'plan-phase.md'), '# plan\n');
+      fs.writeFileSync(path.join(src, 'plan.md'), '# plan\n');
       fs.writeFileSync(path.join(src, 'README.txt'), 'not a skill\n');
       fs.mkdirSync(path.join(src, 'nested-dir'));
-      fs.writeFileSync(path.join(src, 'nested-dir', 'plan-phase.md'), '# nested\n');
+      fs.writeFileSync(path.join(src, 'nested-dir', 'plan.md'), '# nested\n');
       staged = stageSkillsForMode(src, 'minimal');
-      assert.deepStrictEqual(fs.readdirSync(staged), ['plan-phase.md']);
+      assert.deepStrictEqual(fs.readdirSync(staged), ['plan.md']);
     } finally {
       cleanup(src);
       cleanup(staged);
@@ -267,7 +267,7 @@ describe('install-profiles: stageSkillsForMode', () => {
 describe('install-profiles: cleanupStagedSkills', () => {
   test('removes staged dirs created during process', () => {
     const src = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-stage-cleanup-'));
-    fs.writeFileSync(path.join(src, 'plan-phase.md'), '# plan\n');
+    fs.writeFileSync(path.join(src, 'plan.md'), '# plan\n');
     try {
       const a = stageSkillsForMode(src, 'minimal');
       const b = stageSkillsForMode(src, 'minimal');
@@ -290,7 +290,7 @@ describe('install-profiles: cleanupStagedSkills', () => {
   test('exit handler registers at most once across many calls', () => {
     cleanupStagedSkills();
     const src = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-stage-exit-handler-'));
-    fs.writeFileSync(path.join(src, 'plan-phase.md'), '# plan\n');
+    fs.writeFileSync(path.join(src, 'plan.md'), '# plan\n');
     try {
       const before = process.listenerCount('exit');
       for (let i = 0; i < 5; i++) stageSkillsForMode(src, 'minimal');
@@ -305,8 +305,8 @@ describe('install-profiles: cleanupStagedSkills', () => {
   test('mid-copy failure removes partial staged dir and re-throws', () => {
     cleanupStagedSkills();
     const src = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-stage-fail-'));
-    fs.writeFileSync(path.join(src, 'plan-phase.md'), '# plan\n');
-    fs.writeFileSync(path.join(src, 'execute-phase.md'), '# x\n');
+    fs.writeFileSync(path.join(src, 'plan.md'), '# plan\n');
+    fs.writeFileSync(path.join(src, 'exec.md'), '# x\n');
     const realCopy = fs.copyFileSync;
     const realMkdtemp = fs.mkdtempSync;
     let stagedDir = null;
@@ -336,13 +336,13 @@ describe('install-profiles: cleanupStagedSkills', () => {
 
 describe('install-profiles: allowlist scope guards', () => {
   test('every main-loop command is in the allowlist', () => {
-    for (const required of ['new-project', 'discuss-phase', 'plan-phase', 'execute-phase']) {
+    for (const required of ['plan', 'exec', 'verify', 'status']) {
       assert.ok(shouldInstallSkill(required, 'minimal'), `"${required}" must be in allowlist`);
     }
   });
 
   test('off-loop commands are NOT in the allowlist', () => {
-    for (const offLoop of ['autonomous', 'ship', 'do', 'progress', 'next', 'fast', 'quick', 'debug', 'code-review', 'verify-work']) {
+    for (const offLoop of ['autonomous', 'do', 'progress', 'next', 'fast', 'quick', 'debug', 'code-review']) {
       assert.ok(!shouldInstallSkill(offLoop, 'minimal'), `"${offLoop}" must NOT be in allowlist`);
     }
   });
@@ -465,23 +465,23 @@ describe('install: manifest records mode for both profiles', () => {
     assert.ok(r.agentCount > 0);
   });
 
-  test('--minimal records mode: "minimal" with exactly 8 skills and 0 agents', () => {
+  test('--minimal records mode: "minimal" with exactly 11 skills and 0 agents', () => {
     const r = manifestModeAfterInstall(['--minimal']);
     assert.strictEqual(r.mode, 'minimal');
-    assert.strictEqual(r.skillCount, 8);
+    assert.strictEqual(r.skillCount, 11);
     assert.strictEqual(r.agentCount, 0);
   });
 
   test('--core-only is an alias for --minimal', () => {
     const r = manifestModeAfterInstall(['--core-only']);
     assert.strictEqual(r.mode, 'minimal');
-    assert.strictEqual(r.skillCount, 8);
+    assert.strictEqual(r.skillCount, 11);
     assert.strictEqual(r.agentCount, 0);
   });
 });
 
 describe('install-minimal-backcompat: PROFILES.core matches MINIMAL_SKILL_ALLOWLIST', () => {
-  test('PROFILES.core contains the same 8 skills as MINIMAL_SKILL_ALLOWLIST', () => {
+  test('PROFILES.core contains the same 11 skills as MINIMAL_SKILL_ALLOWLIST', () => {
     assert.deepStrictEqual(
       [...PROFILES.core].sort(),
       [...MINIMAL_SKILL_ALLOWLIST].sort(),
@@ -512,10 +512,10 @@ describe('install-minimal-backcompat: --minimal and --profile=core produce same 
     }
   }
 
-  test('--minimal produces mode "minimal" with exactly 8 skills', () => {
+  test('--minimal produces mode "minimal" with exactly 11 skills', () => {
     const r = installAndGetManifest(['--minimal']);
     assert.strictEqual(r.mode, 'minimal');
-    assert.strictEqual(r.skillCount, 8);
+    assert.strictEqual(r.skillCount, 11);
   });
 
   test('--minimal writes .gsd-profile marker "core"', () => {
@@ -722,38 +722,6 @@ describe('#1821/#2305: ZCode receives no dead hook files; Kilo/OpenCode/Claude k
     }
   }
 
-  // ZCode declares hooksSurface:'none' with no plugin surface, so its staged
-  // hooks are genuinely dead weight (#1821) — this is the case the fix
-  // removes. (Kilo was originally in this loop; #2305 moved it to the
-  // OpenCode group below — its native plugin spawns the staged guard hooks.)
-  for (const runtime of ['zcode']) {
-    test(`${runtime} --global install creates no gsd-*.js/.sh hook files or hooks/lib`, () => {
-      const { hookFiles, hooksLibExists } = installAndCollect(runtime);
-      assert.deepStrictEqual(hookFiles, [], `${runtime} install must not copy any gsd-*.js/.sh hook files, found: ${hookFiles.join(', ')}`);
-      assert.ok(!hooksLibExists, `${runtime} install must not create hooks/lib/`);
-    });
-  }
-
-  // #2305: Kilo's native plugin (plugins/gsd-core.js, byte-identical to
-  // OpenCode's) spawns the staged PreToolUse guard hooks as subprocesses, so
-  // Kilo must receive the shared hooks bundle as a sibling of gsd-core/ —
-  // the shape the plugin's resolveRepoRoot walk requires. #1821 excluded
-  // Kilo on the false premise that it had no plugin surface; with the skip
-  // flag set, every guard silently no-opped on every Kilo install.
-  test('kilo --global install stages the guard hooks its plugin spawns, hooks/lib, and the plugin', () => {
-    const { hookFiles, hooksLibExists, gitCmdExists, pluginExists } = installAndCollect('kilo');
-    const basenames = hookFiles.map((f) => path.basename(f));
-    for (const expected of ['gsd-prompt-guard.js', 'gsd-read-guard.js', 'gsd-worktree-path-guard.js']) {
-      assert.ok(
-        basenames.includes(expected),
-        `kilo install must copy ${expected} (spawned by the plugin's runHook), found: ${basenames.join(', ')}`,
-      );
-    }
-    assert.ok(hooksLibExists, 'kilo install must create hooks/lib/');
-    assert.ok(gitCmdExists, 'kilo install must copy hooks/lib/git-cmd.js (required by the shared hooks)');
-    assert.ok(pluginExists, 'kilo install must install plugins/gsd-core.js (the hook-spawning plugin)');
-  });
-
   // Regression guard for #1914: OpenCode's plugin adapter spawns the staged
   // hooks, so excluding OpenCode from the hook copy would break it. OpenCode
   // must KEEP its hooks and receive the plugin.
@@ -765,48 +733,6 @@ describe('#1821/#2305: ZCode receives no dead hook files; Kilo/OpenCode/Claude k
       `opencode install must still copy gsd-*.js hooks (spawned by the #1914 plugin), found: ${basenames.join(', ')}`,
     );
     assert.ok(pluginExists, 'opencode install must install plugins/gsd-core.js (#1914 hook bridge)');
-  });
-
-  // pi ALSO declares hooksSurface:'none', but — like OpenCode — it is NOT a
-  // dead-weight case: pi's native extension (pi/gsd.cjs → extensions/gsd.js)
-  // spawns the staged gsd-hooks/*.js scripts as bounded subprocesses (session_start
-  // → gsd-ensure-canonical-path.js, before_agent_start → gsd-workflow-guard.js,
-  // session_before_compact → gsd-context-monitor.js — #2102 Stage 2), and its
-  // /gsd command handler tokenizes raw args via the shared gsd-hooks/lib/git-cmd.js
-  // tokenizer. hostBehaviors.skipSharedHooksInstall is therefore NOT set for
-  // pi (unlike Kilo/ZCode/Cursor/Cline/Trae/Copilot/Windsurf/Kimi) — pi is in
-  // the OpenCode group, not the Kilo/ZCode group. #3023: pi's bundle is staged
-  // under `gsd-hooks/` (hostBehaviors.sharedHooksDirName), not the default
-  // `hooks/` every other runtime in this describe block uses.
-  test('pi --global install still copies gsd-hooks/ (spawned by the native extension) + gsd-hooks/lib/git-cmd.js + the extension itself', () => {
-    // #2470: derive the extension filename from pi's own descriptor rather than
-    // hardcoding it, and assert it satisfies pi's isExtensionFile() discovery
-    // filter (.ts/.js only) — a dest pi cannot discover installs "successfully"
-    // while /gsd never registers, which is exactly how this shipped broken.
-    const piNativePlugin = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '..', 'capabilities', 'pi', 'capability.json'), 'utf8'),
-    ).runtime.hostBehaviors.nativePlugin;
-    assert.ok(
-      piNativePlugin.file.endsWith('.ts') || piNativePlugin.file.endsWith('.js'),
-      `pi's installed extension "${piNativePlugin.file}" must end in .ts or .js — pi silently ` +
-        'skips any other suffix during extensions/ auto-discovery (#2470)',
-    );
-    const { hookFiles, hooksLibExists, gitCmdExists, pluginExists } = installAndCollect('pi', {
-      pluginRelPath: path.join(piNativePlugin.dir, piNativePlugin.file),
-    });
-    const basenames = hookFiles.map((f) => path.basename(f));
-    for (const expected of ['gsd-ensure-canonical-path.js', 'gsd-workflow-guard.js', 'gsd-context-monitor.js']) {
-      assert.ok(
-        basenames.includes(expected),
-        `pi install must copy ${expected} (spawned by pi/gsd.cjs's event bridges), found: ${basenames.join(', ')}`,
-      );
-    }
-    assert.ok(hooksLibExists, 'pi install must create gsd-hooks/lib/');
-    assert.ok(gitCmdExists, 'pi install must copy gsd-hooks/lib/git-cmd.js (the /gsd command tokenizer)');
-    assert.ok(
-      pluginExists,
-      `pi install must install ${piNativePlugin.dir}/${piNativePlugin.file} (the native-extension hook bridge)`,
-    );
   });
 
   // Positive control: guards against over-exclusion breaking runtimes that
@@ -1901,69 +1827,6 @@ describe('enh-1077 phase 5f-2: claude hookEvents dialect → PostToolUse/PreTool
         `claude must NOT use BeforeTool for prompt-guard; got BeforeTool commands: ${JSON.stringify(cmds)}`);
     });
   });
-
-  // ── augment ──
-
-  describe('augment install uses PostToolUse/PreToolUse (claude dialect)', () => {
-    let tmpDir;
-    let previousCwd;
-    let settings;
-
-    beforeEach(() => {
-      tmpDir = createTempDir('gsd-1077-augment-');
-      previousCwd = process.cwd();
-      process.chdir(tmpDir);
-
-      const augDir = path.join(tmpDir, '.augment');
-      fs.mkdirSync(augDir, { recursive: true });
-      const result = install(false, 'augment');
-      settings = result && result.settings;
-    });
-
-    afterEach(() => {
-      process.chdir(previousCwd);
-      cleanup(tmpDir);
-    });
-
-    test('registry confirms augment hookEvents is "claude"', () => {
-      const he = registryHookEvents('augment');
-      if (he !== undefined) {
-        assert.strictEqual(he, 'claude',
-          'Registry descriptor for augment must declare hookEvents="claude"');
-      }
-    });
-
-    test('augment install returns a settings object', () => {
-      assert.ok(settings !== null && typeof settings === 'object',
-        'augment install must return a non-null settings object');
-    });
-
-    test('augment install registers at least one hook under PostToolUse', () => {
-      assert.ok(hasHooksFor(settings, 'PostToolUse'),
-        `Expected PostToolUse hooks on augment; got hooks keys: ${JSON.stringify(Object.keys((settings && settings.hooks) || {}))}`);
-    });
-
-    test('augment install does NOT register context-monitor under AfterTool', () => {
-      const cmds = hooksForEvent(settings, 'AfterTool');
-      const hasMonitor = cmds.some(c => c && c.includes('gsd-context-monitor'));
-      assert.strictEqual(hasMonitor, false,
-        `augment must NOT use AfterTool for context-monitor; got: ${JSON.stringify(cmds)}`);
-    });
-
-    test('augment install registers at least one pre-tool hook (prompt-guard) under PreToolUse', () => {
-      const cmds = hooksForEvent(settings, 'PreToolUse');
-      const hasPromptGuard = cmds.some(c => c && c.includes('gsd-prompt-guard'));
-      assert.ok(hasPromptGuard,
-        `Expected prompt-guard hook under PreToolUse on augment; PreToolUse commands: ${JSON.stringify(cmds)}; hooks keys: ${JSON.stringify(Object.keys((settings && settings.hooks) || {}))}`);
-    });
-
-    test('augment install does NOT register prompt-guard under BeforeTool (wrong pre-tool dialect)', () => {
-      const cmds = hooksForEvent(settings, 'BeforeTool');
-      const hasPromptGuard = cmds.some(c => c && c.includes('gsd-prompt-guard'));
-      assert.strictEqual(hasPromptGuard, false,
-        `augment must NOT use BeforeTool for prompt-guard; got BeforeTool commands: ${JSON.stringify(cmds)}`);
-    });
-  });
 });
 
 // ─── Suite 3: Registry-parity invariant ──────────────────────────────────────
@@ -1982,7 +1845,7 @@ describe('enh-1077 phase 5f-2: registry-parity — hookEvents descriptor drives 
     }
 
     // Runtimes that have settings.json surfaces and a hookEvents descriptor
-    const SETTINGS_JSON_RUNTIMES = ['claude', 'antigravity', 'augment', 'qwen', 'hermes', 'codebuddy'];
+    const SETTINGS_JSON_RUNTIMES = ['claude', 'antigravity', 'qwen'];
 
     const failures = [];
 
@@ -2359,20 +2222,16 @@ const {
 
 const REAL_COMMANDS_DIR = path.join(__dirname, '..', 'commands', 'gsd');
 
-describe('PROFILES.core — ADR-0011 expand contract', () => {
-  test("PROFILES.core includes 'surface' so users can expand via /gsd:surface enable", () => {
+describe('PROFILES.core — canonical core contract', () => {
+  test("PROFILES.core includes 'plan' (canonical core skill)", () => {
     const manifest = loadSkillsManifest(REAL_COMMANDS_DIR);
     const result = resolveProfile({ modes: ['core'], manifest });
 
     assert.ok(result.skills instanceof Set,
       'resolveProfile must return a skills Set for core profile');
 
-    // The primary assertion: surface must be in the resolved closure.
-    // ADR-0011 documents that --profile=core users expand via /gsd:surface enable <cluster>.
-    // That sub-command is only available if surface.md is staged — which requires it to be
-    // in the resolved set for the core profile.
-    assert.ok(result.skills.has('surface'),
-      `PROFILES.core resolved closure must include 'surface'; got: [${[...result.skills].sort().join(', ')}]`);
+    assert.ok(result.skills.has('plan'),
+      `PROFILES.core resolved closure must include 'plan'; got: [${[...result.skills].sort().join(', ')}]`);
   });
 
   // Counter-test: 'forensics' is NOT in core — proves the assertion above is selective,
@@ -2937,84 +2796,3 @@ describe('#1834: installer deploys .sh hooks alongside .js hooks', () => {
 });
   });
 }
-
-// ─── #3023: pi must not stage its shared-hooks bundle in pi's reserved hooks/ ──
-//
-// pi (pi.dev) renamed its `hooks/` directory to `extensions/` and now prints a
-// deprecation warning on every startup when a `hooks/` directory exists in its
-// agent dir. GSD's installer stages the shared hook bundle at
-// `<destRootDir>/hooks` for every runtime that does not set
-// hostBehaviors.skipSharedHooksInstall — which since #2102 Stage 2 includes pi.
-// The bundle must live under a name pi does not reserve.
-//
-// The expected directory name is asserted as a LITERAL on purpose: importing the
-// production constant would make the assertion re-derive the very value under
-// test, and it could then never catch that value changing.
-describe('#3023 pi shared-hooks bundle avoids the host-reserved hooks/ directory', () => {
-  const PI_RESERVED_DIR = 'hooks';
-  const PI_BUNDLE_DIR = 'gsd-hooks';
-
-  for (const scope of ['local', 'global']) {
-    test(`pi ${scope} install does not create the host-reserved hooks/ directory`, (t) => {
-      const { configDir, root } = runMinimalInstall({ runtime: 'pi', scope });
-      t.after(() => cleanup(root));
-
-      const reserved = path.join(configDir, PI_RESERVED_DIR);
-      assert.equal(
-        fs.existsSync(reserved),
-        false,
-        `pi reserves <configDir>/${PI_RESERVED_DIR} as its deprecated extension location; ` +
-        `GSD must not create it (found ${reserved})`
-      );
-    });
-
-    test(`pi ${scope} install stages the shared hooks bundle under ${PI_BUNDLE_DIR}/`, (t) => {
-      const { configDir, root } = runMinimalInstall({ runtime: 'pi', scope });
-      t.after(() => cleanup(root));
-
-      const bundle = path.join(configDir, PI_BUNDLE_DIR);
-      assert.equal(
-        fs.existsSync(bundle) && fs.statSync(bundle).isDirectory(),
-        true,
-        `pi's shared hook bundle must be staged at ${bundle}`
-      );
-
-      // The adapter's live require target (pi/gsd.cjs parseGsdCommandArgs).
-      const gitCmd = path.join(bundle, 'lib', 'git-cmd.js');
-      assert.equal(
-        fs.existsSync(gitCmd) && fs.statSync(gitCmd).isFile(),
-        true,
-        `pi adapter requires ${gitCmd}; the hooks/lib helpers must move with the bundle`
-      );
-
-      // #2544 CommonJS marker follows the bundle, and is NOT dropped at the
-      // shared config root (user-owned territory).
-      assert.equal(
-        fs.existsSync(path.join(bundle, 'package.json')),
-        true,
-        'the CommonJS marker must live inside the bundle directory'
-      );
-    });
-
-    test(`pi ${scope} install manifests the bundle under ${PI_BUNDLE_DIR}/`, (t) => {
-      const { manifest, root } = runMinimalInstall({ runtime: 'pi', scope });
-      t.after(() => cleanup(root));
-
-      assert.ok(manifest && manifest.files, 'pi install must write a file manifest');
-      const keys = Object.keys(manifest.files);
-
-      const stale = keys.filter((k) => k.startsWith(`${PI_RESERVED_DIR}/`));
-      assert.deepEqual(
-        stale,
-        [],
-        'no manifest key may reference the host-reserved hooks/ directory'
-      );
-
-      const staged = keys.filter((k) => k.startsWith(`${PI_BUNDLE_DIR}/`));
-      assert.ok(
-        staged.length > 0,
-        `manifest must track the staged bundle under ${PI_BUNDLE_DIR}/ so uninstall can remove it`
-      );
-    });
-  }
-});

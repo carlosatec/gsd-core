@@ -13,9 +13,9 @@ The hyphen and colon forms are *runtime-specific spellings of the same command*.
 
 ---
 
-## Canonical Unified Interface (GSD 3.7)
+## Canonical Unified Interface (GSD 3.8)
 
-Starting in GSD 3.7, the public command surface is strictly consolidated into **11 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
+Starting in GSD 3.8, the public command surface is strictly consolidated into **11 Canonical Unified Commands** (with all specialized playbooks loaded on-demand via execution context):
 
 | Command | Action & Workflow Step | Common Flags |
 |---|---|---|

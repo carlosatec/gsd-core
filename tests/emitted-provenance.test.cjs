@@ -40,7 +40,6 @@ const {
   COMMANDS_SRC,
   CLINE_BODY_SRC,
   HOOKS_WINDOWS_SHIM_SRC,
-  KIMI_ROOT_AGENT_SRC,
   AGENT_TRANSFORM_SRCS,
   stripSkillPrefix,
   matchRules,
@@ -79,7 +78,7 @@ test('totality: every emitted path across all 19 manifests matches exactly one r
 
   const { checked, byRule } = assertTotality(manifests());
 
-  assert.ok(checked > 8000, `expected the full emitted corpus, only checked ${checked}`);
+  assert.ok(checked > 3000, `expected the full emitted corpus, only checked ${checked}`);
   // No dead rules — assertTotality already throws on one; this pins the contract
   // so a future refactor cannot quietly downgrade it to a warning.
   for (const [ruleId, count] of byRule) {
@@ -139,81 +138,48 @@ test('every attributed source exists in the repo (identity/rewrite/derived rules
 // ─── Spot-checks: known emitted/source pairs (#2722 "add spot-check tests") ──
 
 test('spot-check: flat skill attributes to commands/gsd, NOT the generated repo skills/ dir', () => {
-  const got = attributeEmittedPath('skills/gsd-add-tests/SKILL.md', 'claude');
+  const got = attributeEmittedPath('skills/gsd-plan/SKILL.md', 'claude');
 
   assert.equal(got.ruleId, 'skills-from-commands');
-  assert.deepEqual(got.sources, [`${COMMANDS_SRC}/add-tests.md`]);
+  assert.deepEqual(got.sources, [`${COMMANDS_SRC}/plan.md`]);
 
   // The trap, asserted explicitly. The repo DOES contain
-  // skills/gsd-add-tests/SKILL.md, but scripts/gen-plugin-skills.cjs generates it
-  // from commands/gsd/add-tests.md — attributing to it would be false attribution
+  // skills/gsd-plan/SKILL.md, but scripts/gen-plugin-skills.cjs generates it
+  // from commands/gsd/plan.md — attributing to it would be false attribution
   // that still passes totality.
   assert.ok(
-    !got.sources.includes('skills/gsd-add-tests/SKILL.md'),
+    !got.sources.includes('skills/gsd-plan/SKILL.md'),
     'emitted skills must never attribute to the generated repo skills/ directory',
   );
   assert.ok(
-    fs.existsSync(path.join(REPO_ROOT, 'skills', 'gsd-add-tests', 'SKILL.md')),
+    fs.existsSync(path.join(REPO_ROOT, 'skills', 'gsd-plan', 'SKILL.md')),
     'precondition: the generated repo skills/ dir exists, which is why the trap is live',
   );
 });
 
-test('spot-check: nested skill attributes to its child stem, not its router', () => {
-  // augment is a real nested-layout host (#69); the key below is verbatim from
-  // tests/fixtures/golden-install-parity/augment.json, not a constructed path.
-  const nested = attributeEmittedPath('skills/gsd-ns-manage/skills/config/SKILL.md', 'augment');
-  assert.equal(nested.ruleId, 'skills-nested-from-commands');
-  assert.deepEqual(nested.sources, [`${COMMANDS_SRC}/config.md`]);
-  assert.ok(
-    !nested.sources.includes(`${COMMANDS_SRC}/ns-manage.md`),
-    'a nested skill must attribute to the CHILD stem, not the routing ns-* parent',
-  );
-
-  // The router itself is a normal flat skill and resolves to its own stem.
-  const router = attributeEmittedPath('skills/gsd-ns-manage/SKILL.md', 'augment');
-  assert.equal(router.ruleId, 'skills-from-commands');
-  assert.deepEqual(router.sources, [`${COMMANDS_SRC}/ns-manage.md`]);
-});
-
-test('spot-check: alternate skills roots (hermes category, codex .agents) strip correctly', () => {
-  // Every key here is verbatim from the named runtime's committed manifest.
-  assert.deepEqual(
-    attributeEmittedPath('skills/gsd/gsd-ns-context/SKILL.md', 'hermes').sources,
-    [`${COMMANDS_SRC}/ns-context.md`],
-  );
-  assert.deepEqual(
-    attributeEmittedPath('skills/gsd/gsd-ns-context/skills/docs-update/SKILL.md', 'hermes').sources,
-    [`${COMMANDS_SRC}/docs-update.md`],
-  );
+test('spot-check: alternate skills roots (codex .agents) strip correctly', () => {
   // codex — NOT antigravity: codex's skills kind carries a `home` override to
   // $HOME/.agents/skills (ADR-1239 upgrade 3 / #2088), which is why its emitted
   // skills sit under `.agents/skills/` rather than `skills/`.
   assert.deepEqual(
-    attributeEmittedPath('.agents/skills/gsd-add-tests/SKILL.md', 'codex').sources,
-    [`${COMMANDS_SRC}/add-tests.md`],
+    attributeEmittedPath('.agents/skills/gsd-plan/SKILL.md', 'codex').sources,
+    [`${COMMANDS_SRC}/plan.md`],
   );
 });
 
 test('spot-check: nativePlugin source is per-runtime, read from the descriptor', () => {
   const opencode = attributeEmittedPath('plugins/gsd-core.js', 'opencode');
-  const kilo = attributeEmittedPath('plugins/gsd-core.js', 'kilo');
-  const pi = attributeEmittedPath('extensions/gsd.js', 'pi');
 
   assert.equal(opencode.ruleId, 'native-plugin');
   assert.deepEqual(opencode.sources, ['.opencode/plugins/gsd-core.js']);
-  assert.deepEqual(kilo.sources, ['.kilo/plugins/gsd-core.js']);
-  assert.deepEqual(pi.sources, ['pi/gsd.cjs']);
-
-  // Independence: the SAME emitted key resolves differently per host. A design
-  // keyed on `rel` alone would silently give kilo opencode's source.
-  assert.notDeepEqual(
-    opencode.sources,
-    kilo.sources,
-    'attribution must be a function of (rel, runtime), not rel alone',
+  assert.throws(
+    () => attributeEmittedPath('plugins/gsd-core.js', 'claude'),
+    /no hostBehaviors\.nativePlugin\.source/,
+    'attribution must be a function of (rel, runtime), rejecting runtimes without nativePlugin',
   );
 });
 
-test('spot-check: agents identity, Copilot rename, Codex toml, and Kimi subagent derivation', () => {
+test('spot-check: agents identity, Copilot rename, Codex toml', () => {
   assert.deepEqual(
     attributeEmittedPath('agents/gsd-planner.md', 'claude').sources,
     ['agents/gsd-planner.md'],
@@ -228,22 +194,6 @@ test('spot-check: agents identity, Copilot rename, Codex toml, and Kimi subagent
     attributeEmittedPath('agents/gsd-planner.toml', 'codex').sources,
     ['agents/gsd-planner.md'],
   );
-  // Two emitted paths sharing one source is legal; one path matching two rules is not.
-  const yaml = attributeEmittedPath('agents/subagents/gsd-planner.yaml', 'kimi');
-  const md = attributeEmittedPath('agents/subagents/gsd-planner.md', 'kimi');
-  assert.deepEqual(yaml.sources, ['agents/gsd-planner.md']);
-  assert.deepEqual(md.sources, yaml.sources);
-});
-
-test('spot-check: Kimi root agent is code-derived, not a repo agent file', () => {
-  const rootYaml = attributeEmittedPath('agents/gsd.yaml', 'kimi');
-  assert.equal(rootYaml.ruleId, 'kimi-root-agent');
-  assert.equal(rootYaml.kind, 'code-derived');
-  // Built from a literal AND an enumeration of every staged agent, so both are
-  // declared; the trailing-slash entry is a prefix, not a file.
-  assert.ok(rootYaml.sources.includes(KIMI_ROOT_AGENT_SRC));
-  assert.ok(rootYaml.sources.includes('agents/'));
-  assert.deepEqual(attributeEmittedPath('agents/gsd.md', 'kimi').ruleId, 'kimi-root-agent');
 });
 
 test('spot-check: hooks attribute to repo source, not the dist build artifact', () => {
@@ -254,11 +204,6 @@ test('spot-check: hooks attribute to repo source, not the dist build artifact', 
   assert.deepEqual(
     attributeEmittedPath('hooks/lib/git-cmd.js', 'claude').sources,
     ['hooks/lib/git-cmd.js'],
-  );
-  // Kimi installs the same bundle under its own hooks root.
-  assert.deepEqual(
-    attributeEmittedPath('.kimi/hooks/gsd-statusline.js', 'kimi').sources,
-    ['hooks/gsd-statusline.js'],
   );
   // Copilot's hook REGISTRATION json is a code literal, not a built script.
   const reg = attributeEmittedPath('hooks/gsd-session.json', 'copilot');
@@ -532,7 +477,7 @@ test('removing a rule fails the guard with the unmatched paths named', () => {
       // 19 manifests, not the 10 the message samples.
       const m = err.message.match(/(\d+) emitted path\(s\) match no provenance rule/);
       assert.ok(m, 'the failure must report how many paths went unattributed');
-      assert.ok(Number(m[1]) > 5000, `expected the full gsd-core corpus, got ${m[1]}`);
+      assert.ok(Number(m[1]) > 2000, `expected the full gsd-core corpus, got ${m[1]}`);
       // Named samples are real emitted paths from the removed rule's family.
       assert.match(err.message, /gsd-core\//);
       return true;
@@ -560,17 +505,17 @@ test('wrong-source rule is caught by the spot-check, not by totality', () => {
   // rule.sources() and re-deriving the expected value would only re-implement the
   // assertion, proving nothing about the shipped code path — the injectable
   // `rules` seam is what makes this an actual demonstration.
-  const got = attributeEmittedPath('skills/gsd-add-tests/SKILL.md', 'claude', corrupted);
-  assert.deepEqual(got.sources, ['skills/gsd-add-tests/SKILL.md']);
+  const got = attributeEmittedPath('skills/gsd-plan/SKILL.md', 'claude', corrupted);
+  assert.deepEqual(got.sources, ['skills/gsd-plan/SKILL.md']);
   assert.notDeepEqual(
     got.sources,
-    [`${COMMANDS_SRC}/add-tests.md`],
+    [`${COMMANDS_SRC}/plan.md`],
     'the corrupted table produces the wrong source through the real path',
   );
   // The uncorrupted table, same path, same call — the difference IS the spot-check.
   assert.deepEqual(
-    attributeEmittedPath('skills/gsd-add-tests/SKILL.md', 'claude').sources,
-    [`${COMMANDS_SRC}/add-tests.md`],
+    attributeEmittedPath('skills/gsd-plan/SKILL.md', 'claude').sources,
+    [`${COMMANDS_SRC}/plan.md`],
   );
 
   // Why the spot-check is load-bearing and the source-existence gate is not
@@ -578,7 +523,7 @@ test('wrong-source rule is caught by the spot-check, not by totality', () => {
   // generated dir). Existence catches a rule pointing at nothing; only a pinned
   // known-pair catches a rule pointing at the wrong real thing.
   assert.ok(
-    fs.existsSync(path.join(REPO_ROOT, 'skills', 'gsd-add-tests', 'SKILL.md')),
+    fs.existsSync(path.join(REPO_ROOT, 'skills', 'gsd-plan', 'SKILL.md')),
     'the wrong source exists, which is exactly why existence alone cannot catch it',
   );
 });
@@ -731,7 +676,7 @@ test('a non-object build result is rejected, not silently treated as empty', () 
     families: FAKE_FAMILY,
     install: fakeInstall,
     build: () => ({ 'scripts/lib/cli-exit.cjs': 'deadbeef' }),
-    clean: () => {},
+    clean: () => { },
   });
   assert.equal(result.length, 1);
   assert.deepEqual(result[0], { file: 'fake.json', runtime: 'fake', keys: ['scripts/lib/cli-exit.cjs'] });
@@ -761,8 +706,8 @@ test('rule ids are unique', () => {
 });
 
 test('attribution is pure and repeatable on a second call', () => {
-  const first = attributeEmittedPath('skills/gsd-add-tests/SKILL.md', 'claude');
-  const second = attributeEmittedPath('skills/gsd-add-tests/SKILL.md', 'claude');
+  const first = attributeEmittedPath('skills/gsd-plan/SKILL.md', 'claude');
+  const second = attributeEmittedPath('skills/gsd-plan/SKILL.md', 'claude');
   assert.deepEqual(second, first);
   // The rule table itself must not have been mutated by matching.
   assert.equal(PROVENANCE_RULES.length, new Set(PROVENANCE_RULES.map((r) => r.id)).size);

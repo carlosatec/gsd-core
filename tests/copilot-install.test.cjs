@@ -714,11 +714,11 @@ describe('installRuntimeArtifacts (copilot integration)', () => {
     installRuntimeArtifacts('copilot', configDir, 'global', resolvedProfileFull);
 
     const skillsDir = path.join(configDir, 'skills');
-    // Check specific folders exist
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-health')), 'gsd-health folder exists');
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-health', 'SKILL.md')), 'gsd-health/SKILL.md exists');
+    // Check specific canonical folders exist
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-status')), 'gsd-status folder exists');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-status', 'SKILL.md')), 'gsd-status/SKILL.md exists');
     assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-help')), 'gsd-help folder exists');
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-progress')), 'gsd-progress folder exists');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-plan')), 'gsd-plan folder exists');
 
     // Count gsd-* directories — should match number of source command files
     const dirs = fs.readdirSync(skillsDir, { withFileTypes: true })
@@ -732,10 +732,10 @@ describe('installRuntimeArtifacts (copilot integration)', () => {
     installRuntimeArtifacts('copilot', configDir, 'global', resolvedProfileFull);
 
     const skillsDir = path.join(configDir, 'skills');
-    const skillContent = fs.readFileSync(path.join(skillsDir, 'gsd-health', 'SKILL.md'), 'utf8');
+    const skillContent = fs.readFileSync(path.join(skillsDir, 'gsd-status', 'SKILL.md'), 'utf8');
     // Frontmatter format checks
-    assert.ok(skillContent.startsWith('---\nname: gsd-health\n'), 'starts with name: gsd-health');
-    assert.ok(skillContent.includes('allowed-tools: Read, Bash, Write, AskUserQuestion'),
+    assert.ok(skillContent.startsWith('---\nname: gsd-status\n'), 'starts with name: gsd-status');
+    assert.ok(skillContent.includes('allowed-tools: Read, Bash, Grep, Glob, AskUserQuestion'),
       'allowed-tools is comma-separated');
     assert.ok(!skillContent.includes('allowed-tools:\n  -'), 'NOT YAML multiline format');
     // CONV-06/07 applied
@@ -743,51 +743,45 @@ describe('installRuntimeArtifacts (copilot integration)', () => {
     assert.ok(!skillContent.match(/gsd:[a-z]/), 'no gsd: command references');
   });
 
-  test('generates gsd-autonomous skill from autonomous.md command', () => {
+  test('generates gsd-auto skill from auto.md command', () => {
     // Fail-fast: source command must exist
-    const srcFile = path.join(srcDir, 'autonomous.md');
-    assert.ok(fs.existsSync(srcFile), 'commands/gsd/autonomous.md must exist as source');
+    const srcFile = path.join(srcDir, 'auto.md');
+    assert.ok(fs.existsSync(srcFile), 'commands/gsd/auto.md must exist as source');
 
     installRuntimeArtifacts('copilot', configDir, 'global', resolvedProfileFull);
 
     const skillsDir = path.join(configDir, 'skills');
     // Skill folder and file created
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-autonomous')), 'gsd-autonomous folder exists');
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-autonomous', 'SKILL.md')), 'gsd-autonomous/SKILL.md exists');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-auto')), 'gsd-auto folder exists');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-auto', 'SKILL.md')), 'gsd-auto/SKILL.md exists');
 
-    const skillContent = fs.readFileSync(path.join(skillsDir, 'gsd-autonomous', 'SKILL.md'), 'utf8');
+    const skillContent = fs.readFileSync(path.join(skillsDir, 'gsd-auto', 'SKILL.md'), 'utf8');
     const fm = parseFrontmatter(skillContent);
 
-    // Frontmatter: name converted from gsd:autonomous to gsd-autonomous
-    assert.equal(fm.name, 'gsd-autonomous', 'name is gsd-autonomous');
+    // Frontmatter: name converted from gsd:auto to gsd-auto
+    assert.equal(fm.name, 'gsd-auto', 'name is gsd-auto');
     assert.equal(
       fm.description,
-      'Run all remaining phases autonomously — discuss→plan→execute per phase',
+      'Autonomous end-to-end autopilot across phase workflows with continuous guardrails',
       'description preserved (round-trips through #2876 yamlQuote)',
     );
     // argument-hint round-trips
-    assert.equal(fm['argument-hint'], '[--from N] [--to N] [--only N] [--interactive] [--converge]', 'argument-hint round-trips');
+    assert.equal(fm['argument-hint'], '[--until-phase N] [--max-phases N] [--force]', 'argument-hint round-trips');
     // allowed-tools comma-separated
-    assert.ok(skillContent.includes('allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, Agent'),
+    assert.ok(skillContent.includes('allowed-tools: Read, Write, Bash, Grep, Glob, AskUserQuestion'),
       'allowed-tools is comma-separated');
     // No Claude-format remnants
     assert.ok(!skillContent.includes('allowed-tools:\n  -'), 'NOT YAML multiline format');
     assert.ok(!skillContent.includes('~/.claude/'), 'no ~/.claude/ references in body');
   });
 
-  test('autonomous skill body converts gsd: to gsd- (CONV-07)', () => {
+  test('auto skill body converts gsd: to gsd- (CONV-07)', () => {
     // Use convertClaudeToCopilotContent directly on the command body content
-    const srcContent = fs.readFileSync(path.join(srcDir, 'autonomous.md'), 'utf8');
+    const srcContent = fs.readFileSync(path.join(srcDir, 'auto.md'), 'utf8');
     const result = convertClaudeToCopilotContent(srcContent);
 
-    // gsd:autonomous references should be converted to gsd-autonomous
     assert.ok(!result.match(/gsd:[a-z]/), 'no gsd: command references remain after conversion');
-    // Specific: gsd:discuss-phase, gsd:plan-phase, gsd:execute-phase mentioned in body
-    // The body references gsd-tools.cjs (not a gsd: command) — those should be unaffected
-    // But /gsd:autonomous → /gsd-autonomous, gsd:discuss-phase → gsd-discuss-phase etc.
-    if (srcContent.includes('gsd:autonomous')) {
-      assert.ok(result.includes('gsd-autonomous'), 'gsd:autonomous converted to gsd-autonomous');
-    }
+    assert.ok(result.includes('gsd-auto'), 'gsd:auto converted to gsd-auto');
     // Path conversion: ~/.claude/ → .github/
     assert.ok(!result.includes('~/.claude/'), 'no ~/.claude/ paths remain');
   });
@@ -808,7 +802,7 @@ describe('installRuntimeArtifacts (copilot integration)', () => {
     installRuntimeArtifacts('copilot', configDir, 'global', resolvedProfileFull);
 
     // Real skills are present after install
-    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-health')), 'real dirs still exist');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'gsd-status')), 'real dirs still exist');
     // Stale GSD-prefixed dir is removed by pre-prune
     assert.ok(!fs.existsSync(staleDir), 'stale gsd-* dir removed by pre-prune');
     // Non-GSD dir is preserved

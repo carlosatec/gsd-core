@@ -14,14 +14,14 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const CMD_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'import.md');
+const CMD_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'migrate.md');
 const WF_PATH = path.join(__dirname, '..', 'gsd-core', 'workflows', 'import.md');
 
 // ─── File Existence ────────────────────────────────────────────────────────────
 
 describe('import command file structure', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(CMD_PATH), 'commands/gsd/import.md should exist');
+  test('canonical migrate command exists', () => {
+    assert.ok(fs.existsSync(CMD_PATH), 'commands/gsd/migrate.md should exist');
   });
 
   test('workflow file exists', () => {
@@ -35,15 +35,15 @@ describe('import command frontmatter', () => {
   const content = fs.readFileSync(CMD_PATH, 'utf-8');
 
   test('has name field', () => {
-    assert.match(content, /^name:\s*gsd:import$/m);
+    assert.match(content, /^name:\s*gsd:migrate$/m);
   });
 
   test('has description field', () => {
     assert.match(content, /^description:\s*.+$/m);
   });
 
-  test('has argument-hint with --from', () => {
-    assert.match(content, /^argument-hint:.*--from/m);
+  test('has argument-hint field', () => {
+    assert.match(content, /^argument-hint:.+$/m);
   });
 });
 
@@ -52,10 +52,10 @@ describe('import command frontmatter', () => {
 describe('import command references', () => {
   const content = fs.readFileSync(CMD_PATH, 'utf-8');
 
-  test('references the import workflow', () => {
+  test('references the import workflow in load_on_demand', () => {
     assert.ok(
-      content.includes('@~/.claude/gsd-core/workflows/import.md'),
-      'command should reference the workflow via @~/.claude/gsd-core/workflows/import.md'
+      content.includes('workflows/import.md'),
+      'migrate command should reference workflows/import.md'
     );
   });
 });

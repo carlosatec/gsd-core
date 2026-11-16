@@ -83,37 +83,31 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 
 describe('#14: /gsd:progress --next --auto flag must be documented and propagated', () => {
-  test('progress.md <flags> section documents --auto flag', () => {
+  test('status.md command declares --next and --auto and loads progress/next workflows', () => {
     const command = fs.readFileSync(
-      path.join(ROOT, 'commands', 'gsd', 'progress.md'),
+      path.join(ROOT, 'commands', 'gsd', 'status.md'),
       'utf8'
     );
 
     assert.ok(
-      command.includes('--auto'),
-      'progress.md must document the --auto flag in the <flags> section'
+      command.includes('--auto') && command.includes('--next'),
+      'status.md must document --next and --auto flags in argument-hint'
+    );
+    assert.ok(
+      command.includes('workflows/progress.md') && command.includes('workflows/next.md'),
+      'status.md must wire progress.md and next.md workflows'
     );
   });
 
-  test('progress.md <process> block explicitly passes --auto through to next workflow', () => {
-    const command = fs.readFileSync(
-      path.join(ROOT, 'commands', 'gsd', 'progress.md'),
+  test('progress.md workflow explicitly passes --auto through to next workflow', () => {
+    const progressWf = fs.readFileSync(
+      path.join(ROOT, 'gsd-core', 'workflows', 'progress.md'),
       'utf8'
     );
 
-    // Extract only the <process>…</process> block so this assertion is
-    // scoped to the handoff wiring, not just any occurrence in the file.
-    // eslint-disable-next-line local/no-unbounded-quantifier -- parses this repo's own command .md content, fixed-size author-controlled content
-    const processMatch = command.match(/<process>([\s\S]*?)<\/process>/);
     assert.ok(
-      processMatch,
-      'progress.md must contain a <process> block'
-    );
-    const processBlock = processMatch[1];
-
-    assert.ok(
-      processBlock.includes('--auto'),
-      'progress.md <process> block must explicitly mention --auto so it is not silently stripped at the --next handoff'
+      progressWf.includes('--auto'),
+      'progress.md workflow must preserve --auto flag so it is not silently stripped at the --next handoff'
     );
   });
 

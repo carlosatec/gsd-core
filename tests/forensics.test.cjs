@@ -18,52 +18,29 @@ const os = require('os');
 const { cleanup } = require('./helpers.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
-const commandPath = path.join(repoRoot, 'commands', 'gsd', 'forensics.md');
+const commandPath = path.join(repoRoot, 'commands', 'gsd', 'status.md');
 const workflowPath = path.join(repoRoot, 'gsd-core', 'workflows', 'forensics.md');
 
 describe('forensics command', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(commandPath), 'commands/gsd/forensics.md should exist');
-  });
-
-  test('command has correct frontmatter', () => {
+  test('canonical status command loads forensics workflow on demand', () => {
+    assert.ok(fs.existsSync(commandPath), 'commands/gsd/status.md should exist');
     const content = fs.readFileSync(commandPath, 'utf-8');
-    assert.ok(content.includes('name: gsd:forensics'), 'should have correct command name');
-    assert.ok(content.includes('type: prompt'), 'should have type: prompt');
-    assert.ok(content.includes('argument-hint'), 'should have argument-hint');
-  });
-
-  test('command references workflow in execution_context', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
+    assert.ok(content.includes('name: gsd:status'), 'should have canonical status command name');
     assert.ok(
       content.includes('workflows/forensics.md'),
-      'should reference the forensics workflow'
+      'status command should reference workflows/forensics.md'
     );
   });
 
-  test('command has success_criteria section', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
-    assert.ok(content.includes('<success_criteria>'), 'should have success_criteria');
-  });
-
-  test('command has critical_rules section', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
-    assert.ok(content.includes('<critical_rules>'), 'should have critical_rules');
-  });
-
-  test('command enforces read-only investigation', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
+  test('workflow enforces read-only and evidence-grounded investigation', () => {
+    const content = fs.readFileSync(workflowPath, 'utf-8');
     assert.ok(
-      content.toLowerCase().includes('read-only') || content.toLowerCase().includes('do not modify'),
-      'should enforce read-only investigation'
+      content.toLowerCase().includes('read-only') || content.toLowerCase().includes('do not modify') || content.toLowerCase().includes('strictly read-only'),
+      'forensics workflow should enforce read-only investigation'
     );
-  });
-
-  test('command requires evidence-grounded findings', () => {
-    const content = fs.readFileSync(commandPath, 'utf-8');
     assert.ok(
-      content.includes('Ground findings') || content.includes('cite specific'),
-      'should require evidence-grounded analysis'
+      content.includes('evidence') || content.includes('cite'),
+      'forensics workflow should require evidence-grounded analysis'
     );
   });
 });

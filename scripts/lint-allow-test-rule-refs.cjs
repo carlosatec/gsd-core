@@ -76,7 +76,7 @@
  *
  * `local/no-source-grep` is registered by `eslint.config.mjs` on several
  * glob blocks, not only `tests/** /*.cjs`: also `scripts/** /*.cjs`,
- * `eslint-rules/** /*.cjs`, `bin/lib/** /*.cjs`, `pi/** /*.cjs`,
+ * `eslint-rules/** /*.cjs`, `bin/lib/** /*.cjs`,
  * `examples/** /*.cjs`, `gsd-core/bin/** /*.cjs`, `vscode/*.js`,
  * `.kilo/plugins/*.js`, and `.opencode/plugins/*.js`. A prior version of
  * this script only walked `tests/** /*.test.cjs`, which silently dropped
@@ -168,7 +168,7 @@ const ROOT = path.join(__dirname, '..');
 const ESLINT_CONFIG_PATH = path.join(ROOT, 'eslint.config.mjs');
 const TESTS_DIR = process.env.GSD_LINT_ALLOW_TEST_RULE_TESTS_DIR || path.join(ROOT, 'tests');
 // Overrides the ROOT that non-`tests/` glob base directories (scripts/,
-// eslint-rules/, bin/lib/, pi/, examples/, gsd-core/bin/, vscode/,
+// eslint-rules/, bin/lib/, examples/, gsd-core/bin/, vscode/,
 // .kilo/plugins/, .opencode/plugins/ — see deriveNoSourceGrepGlobs) are
 // resolved under. TESTS_DIR already has its own override (above) for the
 // `tests/**/*.cjs` block; this is the equivalent knob for every OTHER block
@@ -246,7 +246,7 @@ function extractGenuineMarkerReasons(allComments) {
  * set, which silently missed every non-`.test.cjs` file under `tests/`
  * (`tests/helpers/**`, `tests/qa/**`, `tests/fixtures/**`, ...) AND every one
  * of the other config blocks the rule is registered on (`scripts/** /*.cjs`,
- * `eslint-rules/** /*.cjs`, `bin/lib/** /*.cjs`, `pi/** /*.cjs`,
+ * `eslint-rules/** /*.cjs`, `bin/lib/** /*.cjs`,
  * `examples/** /*.cjs`, `gsd-core/bin/** /*.cjs`, `vscode/*.js`,
  * `.kilo/plugins/*.js`, `.opencode/plugins/*.js`). A marker in any of those
  * would vanish from BOTH reported numbers instead of tripping anything.

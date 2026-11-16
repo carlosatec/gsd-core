@@ -47,7 +47,7 @@ Write machine-parseable, evidence-based intelligence. Every claim references act
 ### From `/gsd:map-codebase --query` Command
 
 - **Spawned by:** `/gsd:map-codebase --query` command
-- **Receives:** Focus directive -- either `full` (all 5 files) or `partial --files <paths>` (update specific file entries only)
+- **Receives:** Focus directive -- either `full` (all 6 files) or `partial --files <paths>` (update specific file entries only)
 - **Input format:** Spawn prompt with `focus: full|partial` directive and project root path
 
 ### Config Gate
@@ -198,6 +198,10 @@ arch-decisions.json is JSON (NOT markdown). The `gsd-tools intel` CLI reads, val
 
 Add one `component:{Name}` entry per key component, plus any other descriptive keys that fit (e.g. `security`, `modes`, a domain engine). Keys and string values are what `intel query <term>` searches, so keep them descriptive.
 
+### codebase-graph.json -- AST Knowledge Graph
+
+Generated natively by `gsd_run intel graph` (`src/intel.cts` -> `INTEL_FILES.graph`). Captures indexed source files, symbols, call/import edges, and git commit lineage (`stats.gitCommitSha`) for `intel symbol`, `intel deps`, and `checkIntelHealth`.
+
 <execution_flow>
 ## Exploration Process
 
@@ -245,6 +249,14 @@ Write `dependency-graph.json`. Then patch its timestamp:
 gsd_run intel patch-meta .planning/intel/dependency-graph.json 
 ```
 
+### Step 5.5: AST Codebase Graph
+
+Generate or refresh `codebase-graph.json` using the native TypeScript AST graph builder and patch its metadata timestamp:
+```bash
+gsd_run intel graph
+gsd_run intel patch-meta .planning/intel/codebase-graph.json
+```
+
 ### Step 6: Architecture
 
 Synthesize patterns from steps 2-5 into structured JSON.
@@ -289,11 +301,12 @@ When `focus: partial --files <paths>` is specified:
 | dependency-graph.json | <=1000 tokens | 1500 tokens |
 | stack.json | <=500 tokens | 800 tokens |
 | arch-decisions.json | <=1500 tokens | 2000 tokens |
+| codebase-graph.json | <=2500 tokens | 4000 tokens |
 
 For large codebases, prioritize coverage of key files over exhaustive listing. Include the most important 50-100 source files in file-roles.json rather than attempting to list every file.
 
 <success_criteria>
-- [ ] All 5 intel files written to .planning/intel/
+- [ ] All 6 intel files written to .planning/intel/
 - [ ] All JSON files are valid, parseable JSON
 - [ ] All entries reference actual file paths verified by Glob/Read
 - [ ] .last-refresh.json written with hashes

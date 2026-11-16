@@ -15,19 +15,18 @@ const fs = require('fs');
 const path = require('path');
 
 describe('#2188: discuss-phase --all flag', () => {
-  test('discuss-phase command argument-hint includes --all', () => {
+  test('canonical plan command loads discuss-phase workflow on demand', () => {
     const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+      path.join(__dirname, '..', 'commands', 'gsd', 'plan.md'), 'utf8'
     );
-    assert.ok(command.includes('--all'), 'argument-hint should include --all');
+    assert.ok(command.includes('workflows/discuss-phase.md'), 'plan.md should load workflows/discuss-phase.md');
   });
 
-  test('discuss-phase command description mentions --all', () => {
-    const command = fs.readFileSync(
-      path.join(__dirname, '..', 'commands', 'gsd', 'discuss-phase.md'), 'utf8'
+  test('discuss-phase workflow references --all behavior in objective/initialize', () => {
+    const workflow = fs.readFileSync(
+      path.join(__dirname, '..', 'gsd-core', 'workflows', 'discuss-phase.md'), 'utf8'
     );
-    // The description frontmatter or objective should reference --all
-    assert.ok(command.includes('--all'), 'command description should mention --all flag');
+    assert.ok(workflow.includes('--all'), 'workflow should document --all flag');
   });
 
   test('discuss-phase workflow handles --all flag in present_gray_areas', () => {

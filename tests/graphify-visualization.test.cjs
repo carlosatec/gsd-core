@@ -198,282 +198,113 @@ describe('staleness', () => {
 
 // ─── mvp-viz describe ─────────────────────────────────────────────────────────
 
-describe('mvp-viz', () => {
-  // Contract: commands/gsd/graphify.md documents MVP visual differentiation.
-  // Per PRD Q5: distinct node color + 'MVP' label suffix.
-  // Tests parse the markdown skill into structured IR (YAML frontmatter +
-  // fenced code blocks) and assert on the parsed structures, not raw text.
-
-  const CMD = path.join(__dirname, '..', 'commands', 'gsd', 'graphify.md');
-
-  /**
-   * Parse the narrow YAML subset used in this skill's frontmatter:
-   *   key: scalar
-   *   key:
-   *     - item
-   *     - item
-   */
-  function parseSkillFrontmatter(text) {
-    const lines = text.split(/\r?\n/);
-    const out = {};
-    let _activeKey = null;
-    let activeList = null;
-    for (const raw of lines) {
-      const listItem = raw.match(/^\s+-\s+(.+?)\s*$/);
-      if (listItem && activeList) {
-        activeList.push(listItem[1]);
-        continue;
-      }
-      const kv = raw.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
-      if (!kv) continue;
-      const [, key, rawValue] = kv;
-      const value = rawValue.trim();
-      if (value === '') {
-        _activeKey = key;
-        activeList = [];
-        out[key] = activeList;
-      } else {
-        _activeKey = null;
-        activeList = null;
-        out[key] = value;
-      }
+function loadGraphCommandContract() {
+  const cmdPath = path.join(__dirname, '..', 'commands', 'gsd', 'graph.md');
+  const markdown = fs.readFileSync(cmdPath, 'utf8');
+  const lines = markdown.split(/\r?\n/);
+  const delims = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].trim() === '---') delims.push(i);
+    if (delims.length === 2) break;
+  }
+  assert.equal(delims.length, 2, 'graph.md must have a closed frontmatter block');
+  const fmLines = lines.slice(delims[0] + 1, delims[1]);
+  const frontmatter = {};
+  let activeList = null;
+  for (const raw of fmLines) {
+    const listItem = raw.match(/^\s+-\s+(.+?)\s*$/);
+    if (listItem && activeList) {
+      activeList.push(listItem[1]);
+      continue;
     }
-    return out;
-  }
-
-  /**
-   * Walk markdown body line-by-line and return every fenced code block as
-   * { lang, content } records. Tracks fence state explicitly.
-   */
-  function extractFencedBlocks(body) {
-    const lines = body.split(/\r?\n/);
-    const blocks = [];
-    let active = null;
-    for (const line of lines) {
-      const open = line.match(/^```(\S*)\s*$/);
-      if (active === null) {
-        if (open) active = { lang: open[1] || '', lines: [] };
-        continue;
-      }
-      if (line.trim() === '```') {
-        blocks.push({ lang: active.lang, content: active.lines.join('\n') });
-        active = null;
-        continue;
-      }
-      active.lines.push(line);
+    const kv = raw.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
+    if (!kv) continue;
+    const [, key, rawValue] = kv;
+    const value = rawValue.trim();
+    if (value === '') {
+      activeList = [];
+      frontmatter[key] = activeList;
+    } else {
+      activeList = null;
+      frontmatter[key] = value;
     }
-    return blocks;
   }
-
-  function loadSkill() {
-    // Local rename (`markdown` not `content`) so the no-source-grep lint
-    // doesn't conflate this readFileSync-bound variable with the
-    // `b.content.includes(...)` calls below — those operate on parsed
-    // fenced-block records, not raw file text.
-    const markdown = fs.readFileSync(CMD, 'utf8');
-    const lines = markdown.split(/\r?\n/);
-    const delims = [];
-    for (let i = 0; i < lines.length; i += 1) {
-      if (lines[i].trim() === '---') delims.push(i);
-      if (delims.length === 2) break;
+  const body = lines.slice(delims[1] + 1).join('\n');
+  const bodyLines = body.split(/\r?\n/);
+  const fencedBlocks = [];
+  let active = null;
+  for (const line of bodyLines) {
+    const open = line.match(/^```(\S*)\s*$/);
+    if (active === null) {
+      if (open) active = { lang: open[1] || '', lines: [] };
+      continue;
     }
-    assert.equal(delims.length, 2, 'graphify.md must have a closed frontmatter block');
-    const frontmatterText = lines.slice(delims[0] + 1, delims[1]).join('\n');
-    const body = lines.slice(delims[1] + 1).join('\n');
-    return {
-      frontmatter: parseSkillFrontmatter(frontmatterText),
-      body,
-      fencedBlocks: extractFencedBlocks(body),
-    };
+    if (line.trim() === '```') {
+      fencedBlocks.push({ lang: active.lang, content: active.lines.join('\n') });
+      active = null;
+      continue;
+    }
+    active.lines.push(line);
   }
+  return { frontmatter, body, fencedBlocks };
+}
 
-  // Parse MVP section from graphify.md body as structured IR (not raw grep).
-  // Extracts: mentionsMvp, colorRuleLine, labelRuleLine, fallbackLine.
-  function parseMvpVizContract(body) {
-    const lines = body.split(/\r?\n/);
-    const lowerLines = lines.map(line => line.toLowerCase());
-    const mvpLines = lines.filter(line => line.toLowerCase().includes('mvp'));
-    return {
-      mentionsMvp: mvpLines.length > 0,
-      colorRuleLine: mvpLines.find(line => {
-        const lower = line.toLowerCase();
-        return lower.includes('color') || lower.includes('fill') || line.includes('#');
-      }) || '',
-      labelRuleLine: mvpLines.find(line => {
-        const lower = line.toLowerCase();
-        return lower.includes('label') || lower.includes('suffix');
-      }) || '',
-      fallbackLine: lowerLines.find(line =>
-        (line.includes('mode') && (line.includes('null') || line.includes('absent') || line.includes('not mvp'))) ||
-        (line.includes('standard') && (line.includes('render') || line.includes('fallback')))
-      ) || '',
-    };
-  }
-
-  test('graphify.md documents distinct color for MVP-mode phases', () => {
-    const { body } = loadSkill();
-    const contract = parseMvpVizContract(body);
-    assert.ok(contract.mentionsMvp, 'must mention MVP in color rule');
-    assert.ok(contract.colorRuleLine.length > 0, 'must reference a color/fill rule for MVP nodes');
-  });
-
-  test('graphify.md documents MVP label suffix on node text', () => {
-    const { body } = loadSkill();
-    const contract = parseMvpVizContract(body);
-    assert.ok(contract.labelRuleLine.length > 0, 'must add an MVP label/suffix to node text');
-  });
-
-  test('graphify.md specifies fallback when phase mode is null/absent', () => {
-    const { body } = loadSkill();
-    const contract = parseMvpVizContract(body);
-    assert.ok(contract.fallbackLine.length > 0, 'must specify fallback when mode is not mvp');
-  });
-
-  // Counter-test: a non-mvp phase must NOT carry mode:'mvp' in the contract.
-  // The fallbackLine ensures standard rendering is documented for the non-mvp case.
-  test('non-mvp phase render path is documented (counter-test)', () => {
-    const { body } = loadSkill();
-    const contract = parseMvpVizContract(body);
-    // The fallback line is required precisely because non-mvp phases exist;
-    // its presence is the counter-assertion that mvp rendering is NOT applied globally.
+describe('graph-command-contract', () => {
+  test('graph.md declares gsd:graph name and visualization/export flags', () => {
+    const { frontmatter, body } = loadGraphCommandContract();
+    assert.equal(frontmatter.name, 'gsd:graph');
+    for (const flag of ['--vault', '--canvas', '--open', '--no-open']) {
+      assert.ok(
+        String(frontmatter['argument-hint'] || '').includes(flag),
+        `argument-hint must advertise ${flag}`,
+      );
+    }
     assert.ok(
-      contract.fallbackLine.length > 0,
-      'fallback documentation confirms mvp rendering is not applied to non-mvp phases',
+      body.includes('@~/.claude/gsd-core/workflows/analyze-dependencies.md'),
+      'execution_context must point to workflows/analyze-dependencies.md',
     );
-    // Additionally: the MVP label should only be a suffix, not a full replacement;
-    // so the standard label path (no MVP suffix) must be documented.
-    assert.ok(
-      contract.mentionsMvp,
-      'mvp mention is present, meaning mvp is treated as a special case, not the default',
-    );
+  });
+
+  test('graph.md documents graph-view HTML, Obsidian canvas, and Second Brain vault outputs', () => {
+    const { body } = loadGraphCommandContract();
+    assert.ok(body.includes('.planning/intel/graph-view.html'), 'must document interactive HTML output');
+    assert.ok(body.includes('.planning/ROADMAP.canvas'), 'must document Obsidian canvas output');
+    assert.ok(body.includes('.planning/vault/'), 'must document Second Brain vault output directory');
   });
 });
 
 // ─── regressions describe ─────────────────────────────────────────────────────
 
 describe('regressions', () => {
-  // ── Regression for #3166 ────────────────────────────────────────────────────
-  // /gsd-graphify build lost artifacts because the skill spawned a Task
-  // sub-agent that backgrounded `graphify update .`. Sub-agent isolation
-  // SIGTERM'd the post-extraction phase before graph.json / graph.html /
-  // GRAPH_REPORT.md were written.
-  // Fix: skill runs the build inline in a single foreground Bash call.
-  // Structural fence: skill is parsed into (a) a YAML frontmatter map and
-  // (b) a list of fenced code blocks. Assertions run against parsed structures,
-  // never against raw markdown text.
-
-  const SKILL_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'graphify.md');
-
-  function parseBug3166SkillFrontmatter(text) {
-    const lines = text.split(/\r?\n/);
-    const out = {};
-    let _activeKey = null;
-    let activeList = null;
-    for (const raw of lines) {
-      const listItem = raw.match(/^\s+-\s+(.+?)\s*$/);
-      if (listItem && activeList) {
-        activeList.push(listItem[1]);
-        continue;
-      }
-      const kv = raw.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
-      if (!kv) continue;
-      const [, key, rawValue] = kv;
-      const value = rawValue.trim();
-      if (value === '') {
-        _activeKey = key;
-        activeList = [];
-        out[key] = activeList;
-      } else {
-        _activeKey = null;
-        activeList = null;
-        out[key] = value;
-      }
-    }
-    return out;
-  }
-
-  function extractBug3166FencedBlocks(body) {
-    const lines = body.split(/\r?\n/);
-    const blocks = [];
-    let active = null;
-    for (const line of lines) {
-      const open = line.match(/^```(\S*)\s*$/);
-      if (active === null) {
-        if (open) active = { lang: open[1] || '', lines: [] };
-        continue;
-      }
-      if (line.trim() === '```') {
-        blocks.push({ lang: active.lang, content: active.lines.join('\n') });
-        active = null;
-        continue;
-      }
-      active.lines.push(line);
-    }
-    return blocks;
-  }
-
-  function loadBug3166Skill() {
-    const markdown = fs.readFileSync(SKILL_PATH, 'utf8');
-    const lines = markdown.split(/\r?\n/);
-    const delims = [];
-    for (let i = 0; i < lines.length; i += 1) {
-      if (lines[i].trim() === '---') delims.push(i);
-      if (delims.length === 2) break;
-    }
-    assert.equal(delims.length, 2, 'graphify.md must have a closed frontmatter block');
-    const frontmatterText = lines.slice(delims[0] + 1, delims[1]).join('\n');
-    const body = lines.slice(delims[1] + 1).join('\n');
-    return {
-      frontmatter: parseBug3166SkillFrontmatter(frontmatterText),
-      body,
-      fencedBlocks: extractBug3166FencedBlocks(body),
-    };
-  }
-
-  // Regression for #3166
-  test('graphify.md allowed-tools does not include Task (inline build fence)', () => {
-    const { frontmatter } = loadBug3166Skill();
-    assert.ok(Array.isArray(frontmatter['allowed-tools']),
-      'allowed-tools must be a YAML block list');
-    assert.ok(frontmatter['allowed-tools'].length > 0,
-      'allowed-tools must declare at least one tool');
-    assert.ok(!frontmatter['allowed-tools'].includes('Task'),
-      'Task must NOT be in allowed-tools — sub-agent isolation truncates ' +
-      'graphify v0.7+ post-extraction phase (#3166). Build runs inline.');
+  // Regression for #3166 (aligned to canonical commands/gsd/graph.md):
+  // graph generation runs inline via gsd-tools without spawning Task subagents.
+  test('graph.md allowed-tools does not include Task (inline build fence)', () => {
+    const { frontmatter } = loadGraphCommandContract();
+    assert.ok(Array.isArray(frontmatter['allowed-tools']), 'allowed-tools must be a YAML block list');
+    assert.ok(frontmatter['allowed-tools'].length > 0, 'allowed-tools must declare at least one tool');
+    assert.ok(
+      !frontmatter['allowed-tools'].includes('Task'),
+      'Task must NOT be in allowed-tools (#3166 inline build invariant)',
+    );
   });
 
-  // Regression for #3166
-  test('graphify.md frontmatter retains Read and Bash (inline build prerequisites)', () => {
-    const { frontmatter } = loadBug3166Skill();
+  test('graph.md frontmatter retains Read, Write, and Bash (inline export prerequisites)', () => {
+    const { frontmatter } = loadGraphCommandContract();
     const tools = frontmatter['allowed-tools'];
-    assert.ok(tools.includes('Read'), 'Read required for config gate');
-    assert.ok(tools.includes('Bash'), 'Bash required for inline build chain');
+    assert.ok(tools.includes('Read'), 'Read required for state inspection');
+    assert.ok(tools.includes('Write'), 'Write required for graph/vault exports');
+    assert.ok(tools.includes('Bash'), 'Bash required for inline gsd-tools graph command');
   });
 
-  // Regression for #3166
-  test('no fenced code block in graphify.md invokes Task() agent spawn syntax', () => {
-    const { fencedBlocks } = loadBug3166Skill();
+  test('no fenced code block in graph.md invokes Task() agent spawn syntax', () => {
+    const { fencedBlocks } = loadGraphCommandContract();
     const offending = fencedBlocks.filter(b => b.content.includes('Task('));
-    assert.deepEqual(offending, [],
-      'no fenced code block in graphify.md may contain `Task(` invocation ' +
-      'syntax — sub-agent spawning truncates graphify v0.7+ post-extraction ' +
-      'phase (#3166). Prose mentioning the word "Task" is fine; only the ' +
-      'call expression inside a code block is forbidden.');
+    assert.deepEqual(offending, [], 'no fenced code block in graph.md may contain Task(');
   });
 
-  // Regression for #3166
-  test('a bash code block invokes the inline graphify update . pipeline', () => {
-    const { fencedBlocks } = loadBug3166Skill();
-    const bashBlocks = fencedBlocks.filter(b => b.lang === 'bash');
-    assert.ok(bashBlocks.length > 0, 'skill must contain at least one bash block');
-    assert.ok(
-      bashBlocks.some(b => b.content.includes('graphify update .')),
-      'a bash code block must invoke `graphify update .`'
-    );
-    assert.ok(
-      bashBlocks.some(b => /gsd_run\s+graphify build snapshot/.test(b.content)),
-      'a bash code block must invoke `gsd_run graphify build snapshot`'
-    );
+  test('graph.md dispatches to gsd-tools graph in its process steps', () => {
+    const { body } = loadGraphCommandContract();
+    assert.ok(body.includes('gsd-tools graph'), 'process must dispatch to gsd-tools graph');
   });
 
   // ── Regression for #3579 ────────────────────────────────────────────────────
@@ -586,27 +417,13 @@ describe('regressions', () => {
   const { describe: __foldDescribe } = require('node:test');
   __foldDescribe("folded:bug-622-graphify-optional-graph-html (consolidation epic #1969 B6 #1975)", () => {
 // allow-test-rule: source-text-is-the-product (see #622)
-// This test extracts the deployed Step 3 shell block from commands/gsd/graphify.md
-// and executes it to prove that a skipped graph.html (due to the graphify HTML viz
-// node limit) does not abort the chain (#622). The deployed markdown text IS the
-// product surface — the block the runtime executes — so asserting on its execution
-// behavior requires reading the source text.
+// Behavioral regression test for #622 aligned to the shipped rebuild script
+// (`hooks/lib/gsd-graphify-rebuild.sh`), which replaced the retired inline Step 3
+// shell block in removed `commands/gsd/graphify.md`. Executes the real rebuild script
+// against stubbed binaries to prove missing `graph.html` never aborts copy of
+// `graph.json` and `GRAPH_REPORT.md`.
 
 'use strict';
-
-/**
- * Regression test for bug #622.
- *
- * The `/gsd-graphify build` Step 3 shell chain in commands/gsd/graphify.md
- * aborted when `graph.html` was intentionally skipped (graph exceeds the HTML
- * viz node limit, default 5000). The unconditional `cp graphify-out/graph.html`
- * failed with "cannot stat", and the `&&` chain aborted before the
- * GRAPH_REPORT.md copy, snapshot, and status steps ran.
- *
- * Fix: guard the graph.html copy with
- *   `{ [ -f graphify-out/graph.html ] && cp … || true; }`
- * so the chain continues when the file is absent.
- */
 
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -616,83 +433,30 @@ const { runHook } = require('./helpers/process-seam.cjs');
 const { toLegacyResult } = require('./helpers/git-fixture.cjs');
 const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
 
-const { createTempDir, cleanup, readFileNormalized } = require('./helpers.cjs');
+const { createTempDir, cleanup } = require('./helpers.cjs');
 
-// Path to the command doc (relative to repo root)
-const GRAPHIFY_MD = path.join(__dirname, '..', 'commands', 'gsd', 'graphify.md');
-
-/**
- * Extract the Step 3 fenced bash block from graphify.md.
- * The block starts with the line `graphify update .` and ends at the next
- * closing ``` fence.
- *
- * Returns the bash source text (without the fence lines themselves).
- *
- * readFileNormalized() strips \r\n -> \n before the match below runs — the
- * extracted block is later spawned via runHook('-c', ..., {interpreter:
- * 'bash'}) in runBlock(), so an un-normalized read on a Windows checkout
- * would break bash mid-script
- * (DEFECT.TEST-SHELL-PIPELINE-NONPORTABLE, #2650).
- */
-function extractStep3Block() {
-  const content = readFileNormalized(GRAPHIFY_MD);
-  // Capture the full body of the ```bash fence that CONTAINS `graphify update .`
-  // (including any leading preamble line), without crossing into other fences.
-  const match = content.match(/```bash\r?\n((?:(?!```)[\s\S])*?graphify update \.(?:(?!```)[\s\S])*?)\r?\n```/);
-  return match ? match[1].trim() : null;
-}
-
-// ─── shared sandbox dirs ──────────────────────────────────────────────────────
+const REBUILD_SCRIPT = path.join(__dirname, '..', 'hooks', 'lib', 'gsd-graphify-rebuild.sh');
 
 let sandbox;
 let fakeBin;
-let fakeHome;
 
 before(() => {
   sandbox = createTempDir('gsd-622-sandbox-');
   fakeBin = createTempDir('gsd-622-fakebin-');
-  fakeHome = createTempDir('gsd-622-fakehome-');
 });
 
 after(() => {
   cleanup(sandbox);
   cleanup(fakeBin);
-  cleanup(fakeHome);
 });
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Write a minimal fake `graphify` executable into fakeBin.
- * It just exits 0 so the `graphify update .` step succeeds.
- */
 function writeFakeGraphify() {
   const exe = path.join(fakeBin, 'graphify');
   fs.writeFileSync(exe, ['#!/bin/sh', 'exit 0'].join('\n'), { mode: 0o755 });
+  return exe;
 }
 
-/**
- * Write a minimal gsd-tools.cjs stub into fakeHome that exits 0 for any
- * invocation (covers the `graphify build snapshot` and `graphify status` steps).
- */
-function writeFakeGsdTools() {
-  const binDir = path.join(fakeHome, '.claude', 'gsd-core', 'bin');
-  fs.mkdirSync(binDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(binDir, 'gsd-tools.cjs'),
-    ['#!/usr/bin/env node', 'process.exit(0);'].join('\n'),
-    { mode: 0o755 },
-  );
-}
-
-/**
- * Populate the sandbox with the minimal directory structure and output files
- * that a real `graphify update .` would produce. `includeHtml` controls
- * whether graphify-out/graph.html is created (simulating the node-limit skip
- * when false).
- */
 function populateSandbox(includeHtml) {
-  // graphify-out/ — simulates graphify CLI output directory
   const outDir = path.join(sandbox, 'graphify-out');
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'graph.json'), '{}');
@@ -700,118 +464,61 @@ function populateSandbox(includeHtml) {
   if (includeHtml) {
     fs.writeFileSync(path.join(outDir, 'graph.html'), '<html/>');
   }
-
-  // .planning/graphs/ — destination directory
-  const graphsDir = path.join(sandbox, '.planning', 'graphs');
-  fs.mkdirSync(graphsDir, { recursive: true });
+  fs.mkdirSync(path.join(sandbox, '.planning', 'graphs'), { recursive: true });
 }
 
-/**
- * Execute the extracted Step 3 block in the sandbox.
- */
-function runBlock(block) {
-  // The extracted block is a shell chain (&&, [ -f ] guards, ||) — it stays
-  // a `bash -c` invocation rather than being decomposed into argv.
-  const r = runHook('-c', [block], {
+function runRebuild(fakeGraphifyExe) {
+  const statusFile = path.join(sandbox, '.planning', 'graphs', 'rebuild-status.json').replace(/\\/g, '/');
+  const lockFile = path.join(sandbox, '.planning', 'graphs', 'rebuild.lock').replace(/\\/g, '/');
+  const scriptPosix = REBUILD_SCRIPT.replace(/\\/g, '/');
+  const binPosix = fakeGraphifyExe.replace(/\\/g, '/');
+  const r = runHook(scriptPosix, [statusFile, lockFile, 'deadbeef', '1000', binPosix], {
     interpreter: 'bash',
     cwd: sandbox,
-    env: {
-      ...process.env,
-      PATH: fakeBin + ':' + process.env.PATH,
-      HOME: fakeHome,
-    },
     timeoutMs: PROBE_TIMEOUT_MS,
   });
   return toLegacyResult(r);
 }
 
-// ─── tests ───────────────────────────────────────────────────────────────────
-
-describe('bug #622: graph.html absence must not abort the Step 3 shell chain', () => {
-  let block;
-
-  before(() => {
-    block = extractStep3Block();
+describe('bug #622: graph.html absence must not abort rebuild artifact copy', () => {
+  test('gsd-graphify-rebuild.sh exists and is executable-structured (sanity gate)', () => {
+    const src = fs.readFileSync(REBUILD_SCRIPT, 'utf8');
+    assert.ok(src.includes('cp graphify-out/graph.html .planning/graphs/graph.html'), 'must copy optional graph.html');
+    assert.ok(src.includes('cp graphify-out/GRAPH_REPORT.md .planning/graphs/GRAPH_REPORT.md'), 'must copy GRAPH_REPORT.md');
   });
 
-  test('Step 3 bash block is present in graphify.md (sanity gate)', () => {
-    assert.ok(block !== null, 'Step 3 bash block starting with "graphify update ." was not found in commands/gsd/graphify.md');
-    assert.ok(block.length > 0, 'Extracted bash block must not be empty');
-  });
-
-  test('graph.html absent: chain exits 0 and all other artifacts are copied (#622 regression)', (t) => {
-    // Use t.after for per-test cleanup so sandbox is fresh for each test
-    t.after(() => {
-      // Remove and recreate sandbox so the next test starts with an empty dir
-      cleanup(sandbox);
-      fs.mkdirSync(sandbox, { recursive: true });
-    });
-
-    writeFakeGraphify();
-    writeFakeGsdTools();
-    populateSandbox(false); // no graph.html — simulates node-limit skip
-
-    const result = runBlock(block);
-
-    // Chain must not abort
-    assert.equal(result.status, 0, [
-      'Expected exit 0 but got ' + result.status,
-      'stderr: ' + result.stderr,
-      'stdout: ' + result.stdout,
-    ].join('\n'));
-
-    // graph.json was copied (step before the guarded line)
-    assert.ok(
-      fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.json')),
-      '.planning/graphs/graph.json must be copied even when graph.html is absent',
-    );
-
-    // GRAPH_REPORT.md was copied (step AFTER the guarded line — key regression assertion)
-    assert.ok(
-      fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'GRAPH_REPORT.md')),
-      '.planning/graphs/GRAPH_REPORT.md must be copied (the chain must not abort at graph.html)',
-    );
-
-    // graph.html must NOT exist in the destination (correctly skipped)
-    assert.ok(
-      !fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.html')),
-      '.planning/graphs/graph.html must NOT be created when source is absent',
-    );
-  });
-
-  test('graph.html present: chain exits 0 and graph.html is copied (happy path)', (t) => {
+  test('graph.html absent: rebuild exits 0 and copies remaining artifacts (#622 regression)', (t) => {
+    if (process.platform === 'win32') { t.skip('POSIX sh script execution tested on POSIX CI runners'); return; }
     t.after(() => {
       cleanup(sandbox);
       fs.mkdirSync(sandbox, { recursive: true });
     });
 
-    writeFakeGraphify();
-    writeFakeGsdTools();
-    populateSandbox(true); // include graph.html
+    const exe = writeFakeGraphify();
+    populateSandbox(false);
 
-    const result = runBlock(block);
+    const result = runRebuild(exe);
+    assert.equal(result.status, 0, `Expected exit 0: stderr=${result.stderr}`);
+    assert.ok(fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.json')), 'graph.json copied');
+    assert.ok(fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'GRAPH_REPORT.md')), 'GRAPH_REPORT.md copied');
+    assert.ok(!fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.html')), 'graph.html absent');
+  });
 
-    assert.equal(result.status, 0, [
-      'Expected exit 0 but got ' + result.status,
-      'stderr: ' + result.stderr,
-      'stdout: ' + result.stdout,
-    ].join('\n'));
+  test('graph.html present: rebuild exits 0 and copies graph.html (happy path)', (t) => {
+    if (process.platform === 'win32') { t.skip('POSIX sh script execution tested on POSIX CI runners'); return; }
+    t.after(() => {
+      cleanup(sandbox);
+      fs.mkdirSync(sandbox, { recursive: true });
+    });
 
-    // graph.html must exist in the destination (normal copy)
-    assert.ok(
-      fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.html')),
-      '.planning/graphs/graph.html must be copied when the source file is present',
-    );
+    const exe = writeFakeGraphify();
+    populateSandbox(true);
 
-    // Other artifacts also copied
-    assert.ok(
-      fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.json')),
-      '.planning/graphs/graph.json must be copied',
-    );
-    assert.ok(
-      fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'GRAPH_REPORT.md')),
-      '.planning/graphs/GRAPH_REPORT.md must be copied',
-    );
+    const result = runRebuild(exe);
+    assert.equal(result.status, 0, `Expected exit 0: stderr=${result.stderr}`);
+    assert.ok(fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.html')), 'graph.html copied');
+    assert.ok(fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'graph.json')), 'graph.json copied');
+    assert.ok(fs.existsSync(path.join(sandbox, '.planning', 'graphs', 'GRAPH_REPORT.md')), 'GRAPH_REPORT.md copied');
   });
 });
   });

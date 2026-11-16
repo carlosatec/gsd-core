@@ -17,7 +17,7 @@ const path = require('path');
 const { extractFrontmatter } = require('../gsd-core/bin/lib/frontmatter.cjs');
 
 const ROOT = path.join(__dirname, '..');
-const CMD_PATH = path.join(ROOT, 'commands', 'gsd', 'ingest-docs.md');
+const CMD_PATH = path.join(ROOT, 'commands', 'gsd', 'migrate.md');
 const WF_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'ingest-docs.md');
 const CLASSIFIER_PATH = path.join(ROOT, 'agents', 'gsd-doc-classifier.md');
 const SYNTHESIZER_PATH = path.join(ROOT, 'agents', 'gsd-doc-synthesizer.md');
@@ -26,8 +26,8 @@ const CONFLICT_ENGINE_PATH = path.join(ROOT, 'gsd-core', 'references', 'doc-conf
 // ─── File Existence ────────────────────────────────────────────────────────────
 
 describe('ingest-docs file structure (#2387)', () => {
-  test('command file exists', () => {
-    assert.ok(fs.existsSync(CMD_PATH), 'commands/gsd/ingest-docs.md should exist');
+  test('canonical migrate command exists', () => {
+    assert.ok(fs.existsSync(CMD_PATH), 'commands/gsd/migrate.md should exist');
   });
   test('workflow file exists', () => {
     assert.ok(fs.existsSync(WF_PATH), 'gsd-core/workflows/ingest-docs.md should exist');
@@ -48,25 +48,17 @@ describe('ingest-docs file structure (#2387)', () => {
 describe('ingest-docs command frontmatter', () => {
   const content = fs.readFileSync(CMD_PATH, 'utf-8');
 
-  test('has name field', () => {
-    assert.match(content, /^name:\s*gsd:ingest-docs$/m);
+  test('has canonical gsd:migrate name field', () => {
+    assert.match(content, /^name:\s*gsd:migrate$/m);
   });
   test('has description field', () => {
     assert.match(content, /^description:\s*.+$/m);
   });
-  test('argument-hint mentions --mode, --manifest, --resolve', () => {
-    const m = content.match(/^argument-hint:\s*"(.+)"$/m);
-    assert.ok(m, 'argument-hint should be present');
-    assert.ok(m[1].includes('--mode'), 'argument-hint should mention --mode');
-    assert.ok(m[1].includes('--manifest'), 'argument-hint should mention --manifest');
-    assert.ok(m[1].includes('--resolve'), 'argument-hint should mention --resolve');
-  });
-  test('allowed-tools include AskUserQuestion and Agent', () => {
+  test('allowed-tools include AskUserQuestion', () => {
     const frontmatter = extractFrontmatter(content);
     const allowedTools = frontmatter['allowed-tools'];
     assert.ok(Array.isArray(allowedTools), 'allowed-tools should be a frontmatter array');
     assert.ok(allowedTools.includes('AskUserQuestion'), 'command needs AskUserQuestion for gates');
-    assert.ok(allowedTools.includes('Agent'), 'command needs Agent for agent spawns');
   });
 });
 
@@ -74,23 +66,18 @@ describe('ingest-docs command frontmatter', () => {
 
 describe('ingest-docs command references', () => {
   const content = fs.readFileSync(CMD_PATH, 'utf-8');
+  const wfContent = fs.readFileSync(WF_PATH, 'utf-8');
 
-  test('references the ingest-docs workflow', () => {
+  test('migrate command references the ingest-docs workflow', () => {
     assert.ok(
-      content.includes('@~/.claude/gsd-core/workflows/ingest-docs.md'),
-      'command must @-reference its workflow'
+      content.includes('workflows/ingest-docs.md'),
+      'migrate command must wire workflows/ingest-docs.md'
     );
   });
-  test('references the doc-conflict-engine', () => {
+  test('ingest-docs workflow references the doc-conflict-engine', () => {
     assert.ok(
-      content.includes('@~/.claude/gsd-core/references/doc-conflict-engine.md'),
-      'command must load the shared conflict-engine contract'
-    );
-  });
-  test('references gate-prompts', () => {
-    assert.ok(
-      content.includes('@~/.claude/gsd-core/references/gate-prompts.md'),
-      'command must load gate-prompts for AskUserQuestion patterns'
+      wfContent.includes('doc-conflict-engine'),
+      'workflow must load/cite the shared conflict-engine contract'
     );
   });
 });
@@ -292,13 +279,13 @@ describe('doc-conflict-engine shared reference', () => {
 // ─── Import command still consumes the shared reference (#2387 refactor) ───────
 
 describe('import command adopts shared conflict-engine', () => {
-  const cmdContent = fs.readFileSync(path.join(ROOT, 'commands', 'gsd', 'import.md'), 'utf-8');
+  const cmdContent = fs.readFileSync(CMD_PATH, 'utf-8');
   const wfContent = fs.readFileSync(path.join(ROOT, 'gsd-core', 'workflows', 'import.md'), 'utf-8');
 
-  test('import command loads doc-conflict-engine reference', () => {
+  test('migrate command loads import workflow', () => {
     assert.ok(
-      cmdContent.includes('@~/.claude/gsd-core/references/doc-conflict-engine.md'),
-      '/gsd-import must load the shared conflict-engine contract'
+      cmdContent.includes('workflows/import.md'),
+      'migrate command must wire workflows/import.md'
     );
   });
   test('import workflow cites the shared reference', () => {

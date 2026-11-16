@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-16
+
+### Security
+- **Cross-OS Prompt Injection Scan Parity (`tests/prompt-injection-scan.security.test.cjs`, `scripts/prompt-injection-scan.sh`):** Normalized path separators before exclusion filtering so Windows scans all 509 target files alongside Linux/macOS, and allowlisted `gsd-core/bin/lib/speckit-interop.cjs` (`sanitizeExternalSpecContent`) across both JS and shell security scanners.
+
+### Fixed
+- **Workflow, Agent & Cluster Parity (`gsd-core/workflows/explore.md`, `progress.md`, `secure-phase.md`, `validate-phase.md`, `commands/gsd/review.md`, `agents/gsd-intel-updater.md`, `src/clusters.cts`):** Moved the canonical `_GSD_SHIM_NAME="gsd-tools.cjs"` launcher preamble into `explore.md` Step 1, wired `--next` delegation to `workflows/next.md` in `progress.md`, aligned `review.md` (`/gsd:review --fix`) and `secure-phase.md`/`validate-phase.md` routing lines with canonical Phase 12 commands, documented `codebase-graph.json` (`gsd_run intel graph`) in `gsd-intel-updater.md`, and mapped all 11 canonical command stems in `src/clusters.cts`.
+
+### Changed
+- **Dead Code & Policy Glob Cleanup (`scripts/`, `src/config-types.cts`, `eslint.config.mjs`, `tests/`):** Removed dead unreferenced scripts (`diff-touches-shipped-paths.cjs`, `strip-prose-atrefs.cjs`), unused `src/config-types.cts` stub + compiled outputs, retired `pi/**/*.cjs` / `sdk/src` globs from policy linters, deleted 4 purely obsolete command-wrapper tests (`autonomous-allowed-tools`, `mvp-phase-command`, `quick-session-management`, `surface-md-paths.regression`), aligned `tests/` across both `test.yml` and `test-full.yml` lanes with the 11 canonical commands and active runtimes, and bumped release version to `3.8.0`.
+
 ## [3.7.7] - 2026-11-14
 
 ### Security

@@ -20,8 +20,8 @@ const path = require('path');
 
 describe('/gsd-next safety gates (#1732, #2089)', () => {
   const workflowPath = path.join(__dirname, '..', 'gsd-core', 'workflows', 'next.md');
-  // #2790: next.md command was consolidated into progress.md as the --next flag.
-  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'progress.md');
+  // #2790 + Phase 12: next.md consolidated under status.md (and progress.md workflow).
+  const commandPath = path.join(__dirname, '..', 'commands', 'gsd', 'status.md');
 
   test('workflow contains safety_gates step', () => {
     const content = fs.readFileSync(workflowPath, 'utf8');
@@ -166,24 +166,19 @@ describe('/gsd-next safety gates (#1732, #2089)', () => {
     );
   });
 
-  test('command definition documents --next flag with --force AND completeness routing (#2790)', () => {
-    // #2790 absorbed standalone /gsd-next into /gsd-progress --next. The
-    // consolidated command must preserve BOTH safety-relevant contracts:
-    //  (a) --force escape hatch for bypassing safety gates
-    //  (b) the completeness scan / next-workflow routing semantics
-    // Earlier OR-based predicates passed when only `--next` was mentioned,
-    // letting the completeness contract regress silently.
+  test('status.md command documents --next and wires next.md completeness routing (#2790)', () => {
     const content = fs.readFileSync(commandPath, 'utf8');
+    const wfContent = fs.readFileSync(workflowPath, 'utf8');
     assert.ok(content.includes('--next'),
-      'progress.md must document the --next flag (absorbed from standalone next.md command in #2790)');
-    assert.ok(content.includes('--force'),
-      'progress.md must document the --force escape hatch for --next (#2790 carried over from next.md)');
-    const documentsCompleteness =
-      /completeness/i.test(content) ||
-      /next workflow/i.test(content) ||
-      /scans? all prior phases/i.test(content);
-    assert.ok(documentsCompleteness,
-      'progress.md must document the completeness scan / next-workflow routing for --next (#2790)');
+      'status.md must document the --next flag');
+    assert.ok(content.includes('workflows/next.md'),
+      'status.md must load workflows/next.md');
+    assert.ok(wfContent.includes('--force'),
+      'next.md workflow must document the --force escape hatch (#2790)');
+    assert.ok(
+      /completeness/i.test(wfContent) || /next workflow/i.test(content),
+      'completeness scan routing must remain wired through status.md -> workflows/next.md',
+    );
   });
 
   test('next workflow documents --force bypass flag', () => {

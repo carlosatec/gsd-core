@@ -472,36 +472,27 @@ describe('installRuntimeArtifacts — F2: fake-adapter install touches no real f
     );
   });
 
-  test('fake-adapter install touches no real filesystem (nativePlugin runtime: pi)', (t) => {
+  test('fake-adapter install touches no real filesystem (nativePlugin runtime: opencode)', (t) => {
     poisonRealFsAgainstDestination(t, ' (nativePlugin)');
 
-    // Resolve the SAME pluginSrc path _installNativePluginIfDeclared
-    // (install-engine.cts) computes for pi's declared nativePlugin, using the
-    // real (unrouted, package-own-source) findInstallSourceRoot — this read
-    // happens BEFORE the poison mocks above are installed... no: it must
-    // happen before `t.mock.method` calls would matter for IT, but
-    // findInstallSourceRoot's own walk uses `fs.statSync`, which is NOT on
-    // the poisoned list (see install-fs-adapter.cts's module doc — it is
-    // deliberately unrouted, real-fs-only, package-source introspection), so
-    // resolving this here is safe even after poisoning existsSync et al.
     const commandsGsdDir = runtimeArtifactLayout.findInstallSourceRoot();
     const repoRoot = path.dirname(path.dirname(commandsGsdDir));
-    const nativePlugin = registry.runtimes.pi.runtime.hostBehaviors.nativePlugin;
-    assert.ok(nativePlugin && nativePlugin.source, 'pi must declare hostBehaviors.nativePlugin.source (registry drifted)');
+    const nativePlugin = registry.runtimes.opencode.runtime.hostBehaviors.nativePlugin;
+    assert.ok(nativePlugin && nativePlugin.source, 'opencode must declare hostBehaviors.nativePlugin.source (registry drifted)');
     const pluginSrc = path.join(repoRoot, nativePlugin.source);
 
-    const configDir = path.join(os.tmpdir(), `gsd-f2-pi-nativeplugin-${crypto.randomUUID()}`);
+    const configDir = path.join(os.tmpdir(), `gsd-f2-opencode-nativeplugin-${crypto.randomUUID()}`);
     const fakeFs = createFakeInstallFs([
       [pluginSrc, { type: 'file', content: '// fake plugin adapter\n' }],
     ]);
 
     const result = installRuntimeArtifacts(
-      'pi', configDir, 'global', RESOLVED_CORE, undefined, undefined,
+      'opencode', configDir, 'global', RESOLVED_CORE, undefined, undefined,
       { fs: fakeFs },
     );
 
     assert.notStrictEqual(result, undefined, 'F2 (nativePlugin): must still return a plan');
-    assert.strictEqual(result.postSteps.nativePlugin, true, 'F2 (nativePlugin): postSteps.nativePlugin must be true for pi');
+    assert.strictEqual(result.postSteps.nativePlugin, true, 'F2 (nativePlugin): postSteps.nativePlugin must be true for opencode');
     const destPath = path.join(configDir, nativePlugin.dir, nativePlugin.file);
     assert.strictEqual(
       fakeFs._store.has(path.normalize(destPath)),
@@ -598,69 +589,59 @@ describe('installRuntimeArtifacts — E2: claude local', () => {
   });
 });
 
-describe('installRuntimeArtifacts — E4: kilo (second family member)', () => {
-  test('kilo family install still returns a plan', (t) => {
-    const configDir = createTempDir('gsd-e4-kilo-');
+describe('installRuntimeArtifacts — E4: deepseek-harness (commands+skills+agents layout)', () => {
+  test('deepseek-harness install returns a plan covering agents, commands, and skills', (t) => {
+    const configDir = createTempDir('gsd-e4-dsh-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
-    const result = installRuntimeArtifacts('kilo', configDir, 'global', RESOLVED_CORE);
+    const result = installRuntimeArtifacts('deepseek-harness', configDir, 'global', RESOLVED_CORE);
 
     assert.notStrictEqual(
       result, undefined,
-      'E4: kilo, the SECOND combined-family runtime, must ALSO return a plan — E3 is not a one-runtime special case',
+      'E4: deepseek-harness must return an executed plan',
     );
-    // 'agents' was added here deliberately by #2875 Part 2 Task A
-    // (installAgentsKindStandalone, install-engine.cts:1614-1618): the
-    // combined-family (opencode/kilo) executed plan now also reports the
-    // agents kind it stages via installAgentsKindStandalone, mirroring the
-    // generic layout-driven loop's own top-level shape (install-engine.cts:1627-1637).
-    // This test was written under #2874 (Phase 5), before that kind was
-    // wired in — its expected list was never updated. Kilo's resolved layout
-    // declares an `agents` kind, so a correct plan MUST include it; a
-    // ['commands', 'skills']-only expectation encoded the pre-#2875 shape,
-    // not a real contract.
     assert.deepStrictEqual(result.kinds.map((k) => k.kind).sort(), ['agents', 'commands', 'skills']);
   });
 });
 
-describe('installRuntimeArtifacts — E5/E7: empty layout + nativePlugin post-step (pi)', () => {
-  test('empty layout returns an empty plan', (t) => {
-    const configDir = createTempDir('gsd-e5-pi-');
+describe('installRuntimeArtifacts — E5/E7: empty layout (vscode) + nativePlugin post-step (opencode)', () => {
+  test('empty layout returns an empty plan (vscode)', (t) => {
+    const configDir = createTempDir('gsd-e5-vscode-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
-    const result = installRuntimeArtifacts('pi', configDir, 'global', RESOLVED_CORE);
+    const result = installRuntimeArtifacts('vscode', configDir, 'global', RESOLVED_CORE);
 
     assert.ok(Array.isArray(result.kinds), 'E5: kinds must be an array even when layout.kinds is empty');
-    assert.strictEqual(result.kinds.length, 0, 'E5: pi declares an empty artifactLayout — kinds must be [], never undefined');
+    assert.strictEqual(result.kinds.length, 0, 'E5: vscode declares an empty artifactLayout — kinds must be [], never undefined');
   });
 
-  test('native plugin post-step is recorded', (t) => {
-    const configDir = createTempDir('gsd-e7-pi-');
+  test('native plugin post-step is recorded (opencode)', (t) => {
+    const configDir = createTempDir('gsd-e7-opencode-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
-    const result = installRuntimeArtifacts('pi', configDir, 'global', RESOLVED_CORE);
+    const result = installRuntimeArtifacts('opencode', configDir, 'global', RESOLVED_CORE);
 
     assert.strictEqual(
       result.postSteps.nativePlugin, true,
-      'E7: pi declares hostBehaviors.nativePlugin — postSteps.nativePlugin must record it as a post-step',
+      'E7: opencode declares hostBehaviors.nativePlugin — postSteps.nativePlugin must record it as a post-step',
     );
   });
 });
 
-describe('installRuntimeArtifacts — E6: hermes post-step is recorded', () => {
-  test('hermes post-step is recorded', (t) => {
-    const configDir = createTempDir('gsd-e6-hermes-');
+describe('installRuntimeArtifacts — E6: hermesBareStemCleanup is false for non-hermes runtimes', () => {
+  test('standard runtime reports hermesBareStemCleanup: false', (t) => {
+    const configDir = createTempDir('gsd-e6-claude-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
-    const result = installRuntimeArtifacts('hermes', configDir, 'global', RESOLVED_CORE);
+    const result = installRuntimeArtifacts('claude', configDir, 'global', RESOLVED_CORE);
 
     assert.strictEqual(
-      result.postSteps.hermesBareStemCleanup, true,
-      'E6: hermes must record _removeHermesBareStemDirs having run as a post-step',
+      result.postSteps.hermesBareStemCleanup, false,
+      'E6: standard runtimes must report postSteps.hermesBareStemCleanup === false',
     );
   });
 });
@@ -825,14 +806,14 @@ function createRealDelegatingFs(overrides = {}) {
 
 describe('installRuntimeArtifacts — F4: adapter errors propagate, cleanup still runs', () => {
   test('adapter errors propagate, cleanup still runs', (t) => {
-    const configDir = createTempDir('gsd-f4-augment-');
+    const configDir = createTempDir('gsd-f4-dsh-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
     let capturedCleanupDir;
     const fakeFs = createRealDelegatingFs({
       writeFileSync: (p, data, opts) => {
-        if (String(p).includes('gsd-cmd-rewrites-') && capturedCleanupDir === undefined) {
+        if ((String(p).includes('gsd-profile-runtime-') || String(p).includes('gsd-cmd-rewrites-')) && capturedCleanupDir === undefined) {
           capturedCleanupDir = path.dirname(p);
         }
         fs.writeFileSync(p, data, opts);
@@ -845,11 +826,11 @@ describe('installRuntimeArtifacts — F4: adapter errors propagate, cleanup stil
     });
 
     assert.throws(
-      () => installRuntimeArtifacts('augment', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs }),
+      () => installRuntimeArtifacts('deepseek-harness', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs }),
       (err) => err.code === 'EACCES',
       'F4: an EACCES from the injected adapter mid-copy must propagate to the caller unchanged, exactly as a real EACCES would today',
     );
-    assert.ok(capturedCleanupDir, 'F4 test precondition: the commands kind rewrite must have run before the copy failure');
+    assert.ok(capturedCleanupDir, 'F4 test precondition: a stage/rewrite temp dir must have been created before the copy failure');
     assert.strictEqual(
       fs.existsSync(capturedCleanupDir), false,
       'F4: cleanup must still run (the finally block) even though the copy step threw',
@@ -1042,13 +1023,13 @@ describe('installRuntimeArtifacts — H5: nul byte in dest is rejected', () => {
 
 describe('installRuntimeArtifacts — I1: successful cleanup is recorded', () => {
   test('successful cleanup is recorded', (t) => {
-    const configDir = createTempDir('gsd-i1-augment-');
+    const configDir = createTempDir('gsd-i1-dsh-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
-    const result = installRuntimeArtifacts('augment', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION);
+    const result = installRuntimeArtifacts('deepseek-harness', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION);
 
-    assert.ok(result.cleanup.length > 0, 'I1: augment install must produce at least one cleanupDirs entry to prove this row');
+    assert.ok(result.cleanup.length > 0, 'I1: deepseek-harness install must produce at least one cleanupDirs entry to prove this row');
     for (const entry of result.cleanup) {
       assert.strictEqual(typeof entry.dir, 'string');
       assert.strictEqual(entry.ok, true, `I1: successful cleanup entries must record ok:true (dir=${entry.dir})`);
@@ -1059,13 +1040,13 @@ describe('installRuntimeArtifacts — I1: successful cleanup is recorded', () =>
 
 describe('installRuntimeArtifacts — I2: failed cleanup is visible, not silent', () => {
   test('failed cleanup is visible, not silent', (t) => {
-    const configDir = createTempDir('gsd-i2-augment-');
+    const configDir = createTempDir('gsd-i2-dsh-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
     const fakeFs = createRealDelegatingFs({
       rmSync: (p, opts) => {
-        if (String(p).includes('gsd-cmd-rewrites-')) {
+        if (String(p).includes('gsd-profile-runtime-') || String(p).includes('gsd-cmd-rewrites-')) {
           throw new Error('I2: simulated cleanup failure');
         }
         // eslint-disable-next-line local/no-raw-rmsync-in-tests -- delegate, not test cleanup
@@ -1073,10 +1054,10 @@ describe('installRuntimeArtifacts — I2: failed cleanup is visible, not silent'
       },
     });
 
-    const result = installRuntimeArtifacts('augment', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs });
+    const result = installRuntimeArtifacts('deepseek-harness', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs });
 
     assert.notStrictEqual(result, undefined, 'I2: install must still succeed (never fail) even when cleanup throws');
-    assert.ok(result.cleanup.length > 0, 'I2: augment must have at least one cleanupDirs entry to fail');
+    assert.ok(result.cleanup.length > 0, 'I2: deepseek-harness must have at least one cleanupDirs entry to fail');
     assert.ok(
       result.cleanup.every((c) => c.ok === false),
       'I2: a cleanup rmSync throw must be reported as ok:false on the returned plan, never silently dropped',
@@ -1117,7 +1098,7 @@ describe('installRuntimeArtifacts — I4: stage failure before any item cleans u
 
 describe('installRuntimeArtifacts — I5: rewrite failure mid-plan cleans up and throws', () => {
   test('rewrite failure cleans up and throws', (t) => {
-    const configDir = createTempDir('gsd-i5-augment-');
+    const configDir = createTempDir('gsd-i5-dsh-');
     t.after(() => cleanup(configDir));
     sandboxHome(t, configDir);
 
@@ -1125,13 +1106,13 @@ describe('installRuntimeArtifacts — I5: rewrite failure mid-plan cleans up and
     const fakeFs = createRealDelegatingFs({
       mkdirSync: (p, opts) => {
         if (String(p).includes('gsd-profile-runtime-skills-')) {
-          throw new Error('I5: simulated skills-stage failure AFTER commands already rewrote+registered a cleanup dir');
+          throw new Error('I5: simulated skills-stage failure AFTER commands already staged a cleanup dir');
         }
         fs.mkdirSync(p, opts);
         return undefined;
       },
       writeFileSync: (p, data, opts) => {
-        if (String(p).includes('gsd-cmd-rewrites-') && capturedCleanupDir === undefined) {
+        if ((String(p).includes('gsd-profile-runtime-commands-') || String(p).includes('gsd-cmd-rewrites-')) && capturedCleanupDir === undefined) {
           capturedCleanupDir = path.dirname(p);
         }
         fs.writeFileSync(p, data, opts);
@@ -1139,14 +1120,14 @@ describe('installRuntimeArtifacts — I5: rewrite failure mid-plan cleans up and
     });
 
     assert.throws(
-      () => installRuntimeArtifacts('augment', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs }),
+      () => installRuntimeArtifacts('deepseek-harness', configDir, 'global', RESOLVED_FULL, TEST_ATTRIBUTION, undefined, { fs: fakeFs }),
       /I5: simulated skills-stage failure/,
       'I5: a failure in a LATER kind\'s stage step must still propagate as a thrown error',
     );
-    assert.ok(capturedCleanupDir, 'I5 test precondition: the commands kind\'s rewrite dir must have been observed before the skills-stage failure');
+    assert.ok(capturedCleanupDir, 'I5 test precondition: the commands kind\'s stage dir must have been observed before the skills-stage failure');
     assert.strictEqual(
       fs.existsSync(capturedCleanupDir), false,
-      'I5: the EARLIER (successfully rewritten) commands cleanupDir must still be removed by the finally ' +
+      'I5: the EARLIER (successfully staged) commands cleanupDir must still be removed by the finally ' +
       'block even though a LATER kind\'s stage step failed',
     );
   });

@@ -32,6 +32,10 @@ const {
 } = require(path.join(ROOT, 'gsd-core', 'bin', 'lib', 'install-engine.cjs'));
 
 const {
+  _computePathPrefix,
+} = require(path.join(ROOT, 'gsd-core', 'bin', 'lib', 'runtime-artifact-conversion.cjs'));
+
+const {
   loadSkillsManifest,
   resolveProfile,
 } = require(path.join(ROOT, 'gsd-core', 'bin', 'lib', 'install-profiles.cjs'));
@@ -121,28 +125,28 @@ describe('convertClaudeCommandToClaudeSkill', () => {
   });
 
   test('preserves body content while normalizing gsd: command references (#3583)', () => {
-    // The body transformer now rewrites gsd: references (colon → hyphen) but must
-    // leave all other custom prose, tags, and structure intact.
-    const body = '\n<objective>\nSee /gsd:plan-phase and gsd:review for details.\n</objective>\n\n<process>\nStep 1.\nStep 2.\n</process>\n';
+    // The body transformer now rewrites canonical gsd:<cmd> references (colon -> hyphen)
+    // while leaving all other custom prose, tags, and structure intact.
+    const body = '\n<objective>\nSee /gsd:plan and gsd:review for details.\n</objective>\n\n<process>\nStep 1.\nStep 2.\n</process>\n';
     const input = [
       '---',
       'name: gsd:test',
       'description: Test command',
       '---',
       body,
-    ].join('');
+    ].join('\n');
 
     const result = convertClaudeCommandToClaudeSkill(input, 'gsd-test');
     // Custom structure preserved
     assert.ok(result.includes('<objective>'), 'objective tag preserved');
-    assert.ok(result.includes('See /gsd-plan-phase'), 'rewritten command reference visible');
+    assert.ok(result.includes('See /gsd-plan'), 'rewritten command reference visible');
     assert.ok(result.includes('<process>'), 'process tag preserved');
     assert.ok(result.includes('Step 1.'), 'step text preserved');
 
     // #3583: gsd: references in body are normalized to hyphen form
-    assert.ok(result.includes('/gsd-plan-phase'), 'colon command ref rewritten to hyphen');
+    assert.ok(result.includes('/gsd-plan'), 'colon command ref rewritten to hyphen');
     assert.ok(result.includes('gsd-review'), 'bare colon ref rewritten to hyphen');
-    assert.ok(!result.includes('gsd:plan-phase'), 'no colon form should survive in body');
+    assert.ok(!result.includes('gsd:plan'), 'no colon form should survive in body');
     assert.ok(!result.includes('gsd:review'), 'no colon form should survive in body');
   });
 
@@ -320,11 +324,24 @@ describe('installRuntimeArtifacts path replacement in Claude global skills (#165
     cleanup(tmpDir);
   });
 
-  test('replaces ~/.claude/ and $HOME/.claude/ paths with absolute configDir prefix on global install', () => {
-    // Global install: configDir IS the runtime config directory.
-    // computePathPrefix(isGlobal=true) → resolvedTarget + '/'.
-    // applyRuntimeContentRewritesInPlace rewrites ~/.claude/ and $HOME/.claude/
-    // to the absolute configDir path so skills work from any machine.
+  function expectedGlobalRefPrefix(configDir) {
+    // On global installs inside $HOME (true on Windows os.tmpdir() and live
+    // ~/.claude), _computePathPrefix yields `$HOME/.../`, and
+    // restoreClaudeGlobalAtRefTilde restores unquoted `@$HOME/...` back to `@~/...`
+    // for Claude Code's `@`-importer while shell lines retain `$HOME/.../`.
+    const shellPrefix = _computePathPrefix({
+      isGlobal: true,
+      isOpencode: false,
+      resolvedTarget: path.resolve(configDir),
+      homeDir: os.homedir(),
+    });
+    const atPrefix = shellPrefix.startsWith('$HOME')
+      ? '~' + shellPrefix.slice('$HOME'.length)
+      : shellPrefix;
+    return { shellPrefix, atPrefix };
+  }
+
+  test('replaces ~/.claude/ and $HOME/.claude/ paths with computed configDir prefix on global install', () => {
     const { configDir } = setupConfigDir(tmpDir, {
       'manager.md': [
         '---',
@@ -333,8 +350,9 @@ describe('installRuntimeArtifacts path replacement in Claude global skills (#165
         '---',
         '',
         '<execution_context>',
-        '@~/.claude/gsd-core/workflows/manager.md',
-        '@$HOME/.claude/gsd-core/references/ui-brand.md',
+        '@~/.claude/gsd-core/references/ui-brand.md',
+        '@$HOME/.claude/gsd-core/templates/summary.md',
+        'node "$HOME/.claude/gsd-core/bin/gsd-tools.cjs"',
         '</execution_context>',
       ].join('\n'),
     });
@@ -346,21 +364,24 @@ describe('installRuntimeArtifacts path replacement in Claude global skills (#165
     );
     assert.ok(!content.includes('~/.claude/'), 'no hardcoded ~/.claude/ paths remain');
     assert.ok(!content.includes('$HOME/.claude/'), 'no $HOME/.claude/ paths remain');
-    // Paths are rewritten to the absolute configDir prefix
-    const expectedPrefix = path.resolve(configDir).replace(/\\/g, '/') + '/';
+    const { shellPrefix, atPrefix } = expectedGlobalRefPrefix(configDir);
     assert.ok(
-      content.includes(expectedPrefix + 'gsd-core/workflows/manager.md'),
-      'tilde path rewritten to absolute configDir prefix'
+      content.includes('@' + atPrefix + 'gsd-core/references/ui-brand.md'),
+      'tilde @-include rewritten to expected global @ prefix'
     );
     assert.ok(
-      content.includes(expectedPrefix + 'gsd-core/references/ui-brand.md'),
-      'HOME path rewritten to absolute configDir prefix'
+      content.includes('@' + atPrefix + 'gsd-core/templates/summary.md'),
+      'HOME @-include rewritten to expected global @ prefix'
+    );
+    assert.ok(
+      content.includes('node "' + shellPrefix + 'gsd-core/bin/gsd-tools.cjs"'),
+      'shell path rewritten to computed shell prefix'
     );
   });
 
-  test('replaces $HOME/.claude/ paths with absolute configDir prefix on global install', () => {
+  test('replaces $HOME/.claude/ paths with computed configDir prefix on global install', () => {
     const { configDir } = setupConfigDir(tmpDir, {
-      'debug.md': '---\nname: gsd:debug\ndescription: Debug\n---\n\n@$HOME/.claude/gsd-core/workflows/debug.md',
+      'debug.md': '---\nname: gsd:debug\ndescription: Debug\n---\n\nnode "$HOME/.claude/gsd-core/bin/gsd-tools.cjs"',
     });
 
     installRuntimeArtifacts('claude', configDir, 'global', resolvedProfileFull);
@@ -369,18 +390,16 @@ describe('installRuntimeArtifacts path replacement in Claude global skills (#165
       path.join(configDir, 'skills', 'gsd-debug', 'SKILL.md'), 'utf8'
     );
     assert.ok(!content.includes('$HOME/.claude/'), 'no $HOME/.claude/ paths remain');
-    const expectedPrefix = path.resolve(configDir).replace(/\\/g, '/') + '/';
+    const { shellPrefix } = expectedGlobalRefPrefix(configDir);
     assert.ok(
-      content.includes(expectedPrefix + 'gsd-core/workflows/debug.md'),
-      'path rewritten to absolute configDir prefix'
+      content.includes('node "' + shellPrefix + 'gsd-core/bin/gsd-tools.cjs"'),
+      'path rewritten to computed configDir shell prefix'
     );
   });
 
-  test('global install rewrites ~/.claude/ paths to absolute configDir form', () => {
-    // For global installs, computePathPrefix returns the absolute configDir path.
-    // Both ~/.claude/ and $HOME/.claude/ are normalized to the same absolute prefix.
+  test('global install rewrites ~/.claude/ workflow spec include per #2873 and non-workflow paths per #1653', () => {
     const { configDir } = setupConfigDir(tmpDir, {
-      'next.md': '---\nname: gsd:next\ndescription: Next\n---\n\n@~/.claude/gsd-core/workflows/next.md',
+      'next.md': '---\nname: gsd:next\ndescription: Next\n---\n\n@~/.claude/gsd-core/workflows/next.md\n@~/.claude/gsd-core/references/ui-brand.md',
     });
 
     installRuntimeArtifacts('claude', configDir, 'global', resolvedProfileFull);
@@ -388,12 +407,16 @@ describe('installRuntimeArtifacts path replacement in Claude global skills (#165
     const content = fs.readFileSync(
       path.join(configDir, 'skills', 'gsd-next', 'SKILL.md'), 'utf8'
     );
-    const expectedPrefix = path.resolve(configDir).replace(/\\/g, '/') + '/';
+    const { atPrefix } = expectedGlobalRefPrefix(configDir);
     assert.ok(
-      content.includes(expectedPrefix + 'gsd-core/workflows/next.md'),
-      'global tilde path rewritten to absolute configDir prefix'
+      content.includes('gsd-core/workflows/next.md') && !content.includes('@~/.claude/gsd-core/workflows/next.md'),
+      'workflow spec-root include rewritten to imperative local/global fallback (#2873)'
     );
-    assert.ok(!content.includes('~/.claude/'), 'tilde form is replaced');
+    assert.ok(
+      content.includes('@' + atPrefix + 'gsd-core/references/ui-brand.md'),
+      'non-workflow tilde @-include rewritten to expected prefix'
+    );
+    assert.ok(!content.includes('~/.claude/gsd-core/references/'), 'source ~/.claude/ reference path is replaced');
   });
 });
 

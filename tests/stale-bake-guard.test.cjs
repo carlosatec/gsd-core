@@ -383,7 +383,7 @@ describe('stale-bake-guard property tests (fast-check)', () => {
   try {
     fc = require('fast-check');
   } catch {
-    test('fast-check not installed — property tests skipped', { skip: true }, () => {});
+    test('fast-check not installed — property tests skipped', { skip: true }, () => { });
     return;
   }
 
@@ -425,7 +425,7 @@ describe('stale-bake-guard parity with bin/install.js bake paths', () => {
   try {
     install = require(path.join(REPO_ROOT, 'bin', 'install.js'));
   } catch {
-    test('bin/install.js not loadable in this env — parity test skipped', { skip: true }, () => {});
+    test('bin/install.js not loadable in this env — parity test skipped', { skip: true }, () => { });
     return;
   }
 
@@ -440,23 +440,6 @@ describe('stale-bake-guard parity with bin/install.js bake paths', () => {
       typeof out === 'string' && out.includes('model: opencode-go/deepseek-v4-flash'),
       'opencode converter no longer bakes modelOverride — STATIC_FRONTMATTER_RUNTIMES is stale vs bin/install.js',
     );
-  });
-
-  // #2093: kilo bakes model: the same way opencode does (same static-frontmatter constraint).
-  test('kilo converter bakes a model: line when modelOverride is provided', () => {
-    const sample = '---\nname: gsd-executor\ndescription: x\nmodel: sonnet\ntools: Read\n---\nbody\n';
-    const out = install.convertClaudeToKiloFrontmatter(sample, { isAgent: true, modelOverride: 'anthropic/claude-sonnet-5' });
-    assert.ok(
-      typeof out === 'string' && out.includes('model: anthropic/claude-sonnet-5'),
-      'kilo converter no longer bakes modelOverride — STATIC_FRONTMATTER_RUNTIMES is stale vs bin/install.js',
-    );
-  });
-
-  test('kilo converter omits model: when no override (stale-bake fallback shape)', () => {
-    const sample = '---\nname: gsd-executor\ndescription: x\nmodel: sonnet\ntools: Read\n---\nbody\n';
-    const out = install.convertClaudeToKiloFrontmatter(sample, { isAgent: true });
-    assert.ok(typeof out === 'string', 'converter must return a string');
-    assert.doesNotMatch(out, /^model:/m, 'no-override path should not emit a model: line');
   });
 
   test('opencode converter omits model: when no override (stale-bake fallback shape)', () => {

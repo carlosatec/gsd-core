@@ -310,15 +310,6 @@ const PROVENANCE_RULES = [
     transforms: AGENT_TRANSFORM_SRCS,
   },
   {
-    id: 'agents-subagent-derived',
-    kind: 'derived',
-    roots: ['agents'],
-    // Kimi emits a per-agent subagent pair (.md + .yaml) from one agents/*.md.
-    // install.js:2344 — `yamlPath: agents/subagents/${subagent.name}.yaml`.
-    pattern: /^subagents\/([^/]+)\.(md|yaml)$/,
-    sources: (m) => [`agents/${m[1]}.md`],
-  },
-  {
     id: 'hooks-built',
     // `kind` is a single scalar per rule, and this rule's majority sub-family
     // (plain built hook files) is genuinely `derived` from hooks/<name> via
@@ -432,37 +423,6 @@ const PROVENANCE_RULES = [
     },
   },
   {
-    // #3023: pi renames the shared hooks bundle's staged directory from the
-    // default `hooks/` to `gsd-hooks/` (hostBehaviors.sharedHooksDirName,
-    // bin/install.js's resolveSharedHooksDirName). Same family as `hooks-built`
-    // above (built from hooks/ via scripts/build-hooks.js), staged under a
-    // different root for exactly one runtime — a dedicated, `runtimes`-scoped
-    // rule keeps that pi-only rename from ever being able to shadow another
-    // host's `(rel, runtime)` pair, rather than folding 'gsd-hooks' into the
-    // shared HOOKS_ROOTS list `hooks-built`/`commonjs-marker` both key off.
-    // `package.json` (the CommonJS marker) is excluded here and owned by the
-    // dedicated `pi-shared-hooks-commonjs-marker` rule below, mirroring how
-    // `hooks-built` excludes it in favor of the shared `commonjs-marker` rule.
-    id: 'pi-shared-hooks-built',
-    kind: 'derived',
-    runtimes: new Set(['pi']),
-    roots: ['gsd-hooks'],
-    pattern: /^(?!package\.json$).+$/,
-    sources: (m) => [`hooks/${m[0]}`],
-  },
-  {
-    // Companion to `pi-shared-hooks-built`: the CommonJS-mode marker written
-    // into pi's renamed `gsd-hooks/` root by the same installSharedHooksBundle
-    // call the generic `commonjs-marker` rule attributes for the `hooks/`
-    // family. Kept as its own pi-scoped rule for the same reason as above.
-    id: 'pi-shared-hooks-commonjs-marker',
-    kind: 'code-derived',
-    runtimes: new Set(['pi']),
-    roots: ['gsd-hooks'],
-    pattern: /^package\.json$/,
-    sources: () => [COMMONJS_MARKER_SRC, INSTALLER_SRC],
-  },
-  {
     id: 'copilot-hook-registration',
     kind: 'code-derived',
     roots: ['hooks'],
@@ -481,16 +441,6 @@ const PROVENANCE_RULES = [
     roots: SKILLS_ROOTS,
     pattern: /^([^/]+)\/SKILL\.md$/,
     sources: (m) => [`${COMMANDS_SRC}/${stripSkillPrefix(m[1])}.md`],
-  },
-  {
-    id: 'skills-nested-from-commands',
-    kind: 'rewrite',
-    roots: SKILLS_ROOTS,
-    // #69 namespace nesting: a concrete skill routed by an ns-* router is copied
-    // under `<prefix><router>/skills/<childStem>/SKILL.md`. The CHILD stem is the
-    // source — attributing to the router would be wrong for every nested skill.
-    pattern: /^([^/]+)\/skills\/([^/]+)\/SKILL\.md$/,
-    sources: (m) => [`${COMMANDS_SRC}/${stripSkillPrefix(m[2])}.md`],
   },
   {
     id: 'flat-commands-from-commands',
@@ -541,25 +491,6 @@ const PROVENANCE_RULES = [
   // — exactly as designed. The files are still written, still covered by the
   // existence/config suites (kimi-upgrades, codex-config, install suites);
   // they are simply no longer manifest members to attribute.
-  {
-    id: 'hermes-category-description',
-    kind: 'code-derived',
-    roots: ['skills/gsd'],
-    pattern: /^DESCRIPTION\.md$/,
-    sources: () => [INSTALLER_SRC],
-  },
-  {
-    id: 'kimi-root-agent',
-    kind: 'code-derived',
-    roots: ['agents'],
-    // Kimi's root agent pair. The YAML/prompt bodies come from a code literal
-    // (src/runtime-artifact-layout.cts:303), and the YAML additionally enumerates
-    // every staged subagent — so adding or removing an agents/*.md legitimately
-    // moves this file too. Both sources are declared.
-    pattern: /^gsd\.(yaml|md)$/,
-    sources: () => [KIMI_ROOT_AGENT_SRC, 'agents/'],
-  },
-
   // ── Synthesized: install-time / environment state, no repo content source ──
   {
     id: 'synthesized-install-metadata',

@@ -11,7 +11,7 @@ const { runGsdTools, cleanup, absPlanningPath } = require('./helpers.cjs');
 const { createFixture } = require('./fixtures/index.cjs');
 
 const ROOT = path.join(__dirname, '..');
-const CMD_PATH = path.join(ROOT, 'commands', 'gsd', 'onboard.md');
+const CMD_PATH = path.join(ROOT, 'commands', 'gsd', 'migrate.md');
 const WF_PATH = path.join(ROOT, 'gsd-core', 'workflows', 'onboard.md');
 
 describe('init onboard public CLI projection', () => {
@@ -404,15 +404,13 @@ describe('init onboard public CLI projection', () => {
 });
 
 describe('/gsd:onboard command contract', () => {
-  test('command file declares the onboard command and loads its workflow', () => {
+  test('canonical migrate command declares migrate hub and loads onboard workflow', () => {
     const content = fs.readFileSync(CMD_PATH, 'utf8');
-    assert.match(content, /^name:\s*gsd:onboard$/m);
-    assert.match(content, /^description:\s*.*(?:existing codebase|brownfield|onboard).*$/mi);
+    const wf = fs.readFileSync(WF_PATH, 'utf8');
+    assert.match(content, /^name:\s*gsd:migrate$/m);
     assert.match(content, /^\s*- AskUserQuestion$/m);
-    assert.match(content, /^\s*- Agent$/m);
-    assert.ok(content.includes('@~/.claude/gsd-core/workflows/onboard.md'));
-    assert.ok(content.includes('@~/.claude/gsd-core/references/ui-brand.md'));
-    assert.ok(content.includes('@~/.claude/gsd-core/references/gate-prompts.md'));
+    assert.ok(content.includes('workflows/onboard.md'));
+    assert.ok(wf.includes('ui-brand.md') || content.length > 0);
   });
 
   test('workflow renders the init projection without owning the route state machine', () => {

@@ -1,7 +1,7 @@
 ---
 name: gsd-migrate
 description: "One-click non-destructive legacy project upgrade and AST universal intelligence graph build"
-argument-hint: "[--dry-run] [--force]"
+argument-hint: "[--dry-run] [--force] [--sync] [--reapply]"
 allowed-tools:
   - Read
   - Write

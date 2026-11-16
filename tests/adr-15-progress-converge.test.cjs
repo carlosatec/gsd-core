@@ -13,7 +13,8 @@ const { throwIfFailed } = require('./helpers/git-fixture.cjs');
 const { PROBE_TIMEOUT_MS } = require('./helpers/timeouts.cjs');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'progress.md');
+const COMMAND_PATH = path.join(REPO_ROOT, 'commands', 'gsd', 'status.md');
+const PROGRESS_WF_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'progress.md');
 const WORKFLOW_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'next.md');
 const FULL_MD_PATH = path.join(REPO_ROOT, 'gsd-core', 'workflows', 'help', 'modes', 'full.md');
 const COMMANDS_DOC_PATH = path.join(REPO_ROOT, 'docs', 'COMMANDS.md');
@@ -25,25 +26,19 @@ function read(filePath) {
 }
 
 describe('ADR-15: /gsd:progress --next --auto --converge (#1190)', () => {
-  test('progress command advertises --converge, --auto, and notes --cross-ai alias', () => {
+  test('canonical status command advertises --auto/--next and loads progress + next workflows', () => {
     const command = read(COMMAND_PATH);
+    const workflow = read(WORKFLOW_PATH);
 
     assert.match(
       command,
-      /^argument-hint:.*--converge/m,
-      'progress command should advertise --converge in argument-hint',
+      /^argument-hint:.*--next.*--auto/m,
+      'status command should advertise --next and --auto in argument-hint',
     );
-    assert.match(
-      command,
-      /^argument-hint:.*--auto/m,
-      'progress command should advertise --auto in argument-hint',
-    );
-    assert.match(command, /--cross-ai/, 'progress command should document --cross-ai alias');
-    assert.match(
-      command,
-      /workflow\.plan_review_convergence=true/,
-      'progress command should mention the convergence feature gate',
-    );
+    assert.match(command, /workflows\/progress\.md/, 'status command must wire workflows/progress.md');
+    assert.match(command, /workflows\/next\.md/, 'status command must wire workflows/next.md');
+    assert.match(workflow, /--cross-ai/, 'next workflow should document --cross-ai alias');
+    assert.ok(fs.existsSync(PROGRESS_WF_PATH), 'progress workflow should exist');
   });
 
   test('next workflow parses converge aliases into a plan strategy', () => {

@@ -69,8 +69,6 @@ const {
   walk,
 } = require('./helpers/install-shared.cjs');
 
-const { CHILD_ROUTER, nestedSkillPath } = require('./helpers/nested-layout.cjs');
-
 // ─── Section 1: getDirName / getGlobalConfigDir / getConfigDirFromHome ──────────
 
 describe('getDirName — all runtimes', () => {
@@ -120,7 +118,7 @@ describe('getGlobalConfigDir — all runtimes default paths', () => {
   }
 });
 
-describe('getGlobalConfigDir/getConfigDirFromHome — antigravity 2.x layout detection', () => {
+describe('getGlobalConfigDir/getConfigDirFromHome — antigravity canonical global layout', () => {
   const saved = {};
   beforeEach(() => {
     saved.HOME = process.env.HOME;
@@ -137,81 +135,27 @@ describe('getGlobalConfigDir/getConfigDirFromHome — antigravity 2.x layout det
     else delete process.env.ANTIGRAVITY_CONFIG_DIR;
   });
 
-  test('uses ~/.gemini/antigravity-ide when legacy dir is absent and ide dir exists', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-ide-'));
-    try {
-      fs.mkdirSync(path.join(home, '.gemini', 'antigravity-ide'), { recursive: true });
-      process.env.HOME = home;
-      process.env.USERPROFILE = home;
-      assert.strictEqual(
-        getGlobalConfigDir('antigravity'),
-        path.join(home, '.gemini', 'antigravity-ide'),
-      );
-      assert.strictEqual(
-        getConfigDirFromHome('antigravity', true),
-        "'.gemini', 'antigravity-ide'",
-      );
-    } finally {
-      cleanup(home);
-    }
-  });
-
-  test('uses ~/.gemini/antigravity-cli when only cli dir exists', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-cli-'));
-    try {
-      fs.mkdirSync(path.join(home, '.gemini', 'antigravity-cli'), { recursive: true });
-      process.env.HOME = home;
-      process.env.USERPROFILE = home;
-      assert.strictEqual(
-        getGlobalConfigDir('antigravity'),
-        path.join(home, '.gemini', 'antigravity-cli'),
-      );
-      assert.strictEqual(
-        getConfigDirFromHome('antigravity', true),
-        "'.gemini', 'antigravity-cli'",
-      );
-    } finally {
-      cleanup(home);
-    }
-  });
-
-  // #213/#217 coexistence regression (end-to-end through the registry descriptor).
-  // A CLI user who ALSO has the Antigravity-IDE's ~/.gemini/antigravity dir was
-  // previously shadowed to the legacy dir because it is probed first. The
-  // The probeExists marker (gsd-core/VERSION) makes the dir GSD installed into win.
-  test('coexistence: legacy antigravity + GSD-marked antigravity-cli both present → resolves to antigravity-cli', (t) => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-coexist-'));
+  test('defaults to ~/.gemini/config regardless of legacy subdirs', (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-cfg-'));
     t.after(() => cleanup(home));
-    // Both dirs exist on disk...
-    fs.mkdirSync(path.join(home, '.gemini', 'antigravity'), { recursive: true });
-    fs.mkdirSync(path.join(home, '.gemini', 'antigravity-cli', 'gsd-core'), { recursive: true });
-    // ...but only the cli dir carries the GSD marker.
-    fs.writeFileSync(path.join(home, '.gemini', 'antigravity-cli', 'gsd-core', 'VERSION'), '1.6.0\n');
+    fs.mkdirSync(path.join(home, '.gemini', 'antigravity-ide'), { recursive: true });
     process.env.HOME = home;
     process.env.USERPROFILE = home;
     assert.strictEqual(
       getGlobalConfigDir('antigravity'),
-      path.join(home, '.gemini', 'antigravity-cli'),
-      'GSD-marked antigravity-cli must win over the bare-existing legacy antigravity dir',
+      path.join(home, '.gemini', 'config'),
     );
     assert.strictEqual(
       getConfigDirFromHome('antigravity', true),
-      "'.gemini', 'antigravity-cli'",
+      "'.gemini', 'config'",
     );
   });
 
-  test('coexistence: legacy antigravity carries the GSD marker (real 1.x install) → resolves to legacy even when cli dir exists bare', (t) => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-legacy-marked-'));
-    t.after(() => cleanup(home));
-    fs.mkdirSync(path.join(home, '.gemini', 'antigravity', 'gsd-core'), { recursive: true });
-    fs.writeFileSync(path.join(home, '.gemini', 'antigravity', 'gsd-core', 'VERSION'), '1.5.0\n');
-    fs.mkdirSync(path.join(home, '.gemini', 'antigravity-cli'), { recursive: true });
-    process.env.HOME = home;
-    process.env.USERPROFILE = home;
+  test('respects ANTIGRAVITY_CONFIG_DIR override when set', () => {
+    process.env.ANTIGRAVITY_CONFIG_DIR = '/custom/antigravity';
     assert.strictEqual(
-      getGlobalConfigDir('antigravity'),
-      path.join(home, '.gemini', 'antigravity'),
-      'a genuine GSD install in the legacy dir must not be abandoned for a bare sibling',
+      String(getGlobalConfigDir('antigravity')).replace(/\\/g, '/'),
+      '/custom/antigravity',
     );
   });
 });
@@ -233,7 +177,7 @@ describe('getConfigDirFromHome — spot-checks', () => {
     assert.strictEqual(getConfigDirFromHome('qwen', true), "'.qwen'");
   });
 
-  test('antigravity returns .agents (local) and legacy fallback global path when no 2.x dirs exist', () => {
+  test('antigravity returns .agents (local) and .gemini/config (global)', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-antigravity-empty-'));
     const savedHome = process.env.HOME;
     const savedUserProfile = process.env.USERPROFILE;
@@ -243,7 +187,7 @@ describe('getConfigDirFromHome — spot-checks', () => {
     process.env.USERPROFILE = home;
     try {
       assert.strictEqual(getConfigDirFromHome('antigravity', false), "'.agents'");
-      assert.strictEqual(getConfigDirFromHome('antigravity', true), "'.gemini', 'antigravity'");
+      assert.strictEqual(getConfigDirFromHome('antigravity', true), "'.gemini', 'config'");
     } finally {
       if (savedHome === undefined) delete process.env.HOME;
       else process.env.HOME = savedHome;
@@ -309,16 +253,10 @@ describe('install/uninstall — qwen (nested skills/gsd-<router>/skills/<stem>/ 
       'qwen executed plan must record a skills-kind write to skills/ and an agents-kind write to agents/',
     );
 
-    // qwen nests: skills/gsd-<router>/skills/<stem>/SKILL.md. The plan above
-    // proves the skills-kind DESTINATION ROOT; which concrete stem (e.g.
-    // "help") landed under it is finer-grained than the plan's per-kind
-    // contract (one destDir per kind, not a file list), so that specific
-    // fact still needs an fs probe — nothing here is a regression from the
-    // pre-migration test, only the destDir-existence checks moved to the
-    // plan value above.
-    const qwenHelpPath = nestedSkillPath(path.join(targetDir, 'skills'), 'gsd-', 'help');
+    // qwen installs skills flat: skills/gsd-<stem>/SKILL.md.
+    const qwenHelpPath = path.join(targetDir, 'skills', 'gsd-help', 'SKILL.md');
     assert.ok(fs.existsSync(qwenHelpPath),
-      `help SKILL.md must exist at nested path: ${path.relative(targetDir, qwenHelpPath)}`);
+      `help SKILL.md must exist at flat path: ${path.relative(targetDir, qwenHelpPath)}`);
     // gsd-core/VERSION is written by install()'s own gsd-core copy step, not
     // by installRuntimeArtifacts (outside the executed-plan contract) — stays
     // an fs probe.
@@ -327,7 +265,7 @@ describe('install/uninstall — qwen (nested skills/gsd-<router>/skills/<stem>/ 
     const manifest = writeManifest(targetDir, 'qwen');
     assert.ok(
       Object.keys(manifest.files).some(f =>
-        f.startsWith('skills/gsd-' + CHILD_ROUTER['help'] + '/skills/help/')
+        f.startsWith('skills/gsd-help/')
       )
     );
 
@@ -722,15 +660,15 @@ describe('antigravity local install writes to .agents/ canonical dir (#791)', ()
     const skillsDir = path.join(tmpDir, '.agents', 'skills');
 
     assert.ok(
-      fs.existsSync(path.join(skillsDir, 'gsd-progress', 'SKILL.md')),
-      'AGY scans immediate skill folders, so /gsd-progress must be installed at .agents/skills/gsd-progress/SKILL.md',
+      fs.existsSync(path.join(skillsDir, 'gsd-status', 'SKILL.md')),
+      'AGY scans immediate skill folders, so /gsd-status must be installed at .agents/skills/gsd-status/SKILL.md',
     );
     assert.ok(
-      fs.existsSync(path.join(skillsDir, 'gsd-verify-work', 'SKILL.md')),
-      'AGY scans immediate skill folders, so /gsd-verify-work must be installed at .agents/skills/gsd-verify-work/SKILL.md',
+      fs.existsSync(path.join(skillsDir, 'gsd-verify', 'SKILL.md')),
+      'AGY scans immediate skill folders, so /gsd-verify must be installed at .agents/skills/gsd-verify/SKILL.md',
     );
     assert.ok(
-      !fs.existsSync(path.join(skillsDir, 'gsd-ns-workflow', 'skills', 'progress', 'SKILL.md')),
+      !fs.existsSync(path.join(skillsDir, 'gsd-ns-workflow', 'skills', 'status', 'SKILL.md')),
       'Antigravity must not rely on router-nested concrete skills that AGY does not discover',
     );
   });
@@ -1036,7 +974,15 @@ describe('cleanupWindsurfLegacyDevinSkills — removes pre-#1615 skill artifacts
     const outsideTarget = path.join(tmpDir, 'secret');
     fs.mkdirSync(outsideTarget);
     fs.writeFileSync(path.join(outsideTarget, 'secret.txt'), 'secret\n');
-    fs.symlinkSync(outsideTarget, path.join(legacySkillsDir, 'gsd-symlinked'));
+    try {
+      fs.symlinkSync(outsideTarget, path.join(legacySkillsDir, 'gsd-symlinked'));
+    } catch (err) {
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        t.skip('symlink creation unavailable on this host');
+        return;
+      }
+      throw err;
+    }
 
     const removed = cleanupWindsurfLegacyDevinSkills(tmpDir);
 
@@ -4270,18 +4216,18 @@ describe('#1736: local Claude install deploys slash commands (flat gsd-<cmd>.md 
     );
   });
 
-  test('local install deploys gsd-quick.md to .claude/commands/ (#1367: flat hyphen form)', (t) => {
-    // Was: .claude/commands/gsd/quick.md (caused /gsd:quick colon form).
-    // Now: .claude/commands/gsd-quick.md (produces /gsd-quick hyphen form).
+  test('local install deploys gsd-plan.md to .claude/commands/ (#1367: flat hyphen form)', (t) => {
+    // Was: .claude/commands/gsd/plan.md (caused /gsd:plan colon form).
+    // Now: .claude/commands/gsd-plan.md (produces /gsd-plan hyphen form).
     const origCwd = process.cwd();
     t.after(() => { process.chdir(origCwd); });
     process.chdir(tmpDir);
     install(false, 'claude');
 
-    const quickCmd = path.join(tmpDir, '.claude', 'commands', 'gsd-quick.md');
+    const planCmd = path.join(tmpDir, '.claude', 'commands', 'gsd-plan.md');
     assert.ok(
-      fs.existsSync(quickCmd),
-      '.claude/commands/gsd-quick.md must exist after local install (#1367 flat layout)'
+      fs.existsSync(planCmd),
+      '.claude/commands/gsd-plan.md must exist after local install (#1367 flat layout)'
     );
   });
 });
@@ -5637,10 +5583,9 @@ describe('bug #1367 — Claude local install uses flat gsd-<cmd>.md command layo
   });
 
   test('L2: known commands land as flat gsd-<cmd>.md files', () => {
-    // Spot-check: the three commands mentioned in the issue must be present
-    // as flat hyphen-prefixed files.
+    // Spot-check: three canonical commands must be present as flat hyphen-prefixed files.
     const commandsDir = path.join(tmpDir, '.claude', 'commands');
-    const knownCommands = ['gsd-update.md', 'gsd-plan-phase.md', 'gsd-help.md'];
+    const knownCommands = ['gsd-migrate.md', 'gsd-plan.md', 'gsd-help.md'];
     for (const name of knownCommands) {
       const filePath = path.join(commandsDir, name);
       assert.ok(
@@ -5664,15 +5609,16 @@ describe('bug #1367 — Claude local install uses flat gsd-<cmd>.md command layo
   });
 
   test('L4: total flat command file count matches the staged source', () => {
-    // There should be a substantial number of commands (not 0, not 1).
-    // The exact count varies with profile but must be >= 20 for a full install.
+    const expectedCount = fs.readdirSync(path.join(REPO_ROOT, 'commands', 'gsd'))
+      .filter(f => f.endsWith('.md')).length;
     const commandsDir = path.join(tmpDir, '.claude', 'commands');
     const count = fs.readdirSync(commandsDir, { withFileTypes: true })
       .filter(e => e.isFile() && e.name.startsWith('gsd-') && e.name.endsWith('.md'))
       .length;
-    assert.ok(
-      count >= 20,
-      `commands/ must have >= 20 flat gsd-*.md files for a full install. ` +
+    assert.strictEqual(
+      count,
+      expectedCount,
+      `commands/ must have ${expectedCount} flat gsd-*.md files matching commands/gsd/. ` +
       `Got ${count}. Install may be silently dropping commands.`,
     );
   });
@@ -5683,7 +5629,7 @@ describe('bug #1367 — Claude local install uses flat gsd-<cmd>.md command layo
     const commandsDir = path.join(tmpDir, '.claude', 'commands');
     const legacyDir = path.join(commandsDir, 'gsd');
     fs.mkdirSync(legacyDir, { recursive: true });
-    fs.writeFileSync(path.join(legacyDir, 'update.md'), '# legacy update');
+    fs.writeFileSync(path.join(legacyDir, 'migrate.md'), '# legacy migrate');
 
     // Re-run install — should remove commands/gsd/ and write flat gsd-*.md
     runClaudeLocalInstall(tmpDir);
@@ -5695,8 +5641,8 @@ describe('bug #1367 — Claude local install uses flat gsd-<cmd>.md command layo
     );
     // Flat form must still be present
     assert.ok(
-      fs.existsSync(path.join(commandsDir, 'gsd-update.md')),
-      `gsd-update.md must exist as flat file after re-install.`,
+      fs.existsSync(path.join(commandsDir, 'gsd-migrate.md')),
+      `gsd-migrate.md must exist as flat file after re-install.`,
     );
   });
 });
@@ -6361,30 +6307,30 @@ describe('sync-skills.md — required behavioral specs', () => {
 });
 
 // ── commands/gsd/sync-skills.md ───────────────────────────────────────────────
-// #2790: sync-skills.md was consolidated into update.md as the --sync flag.
+// #2790: sync-skills.md was consolidated into update.md (--sync), now invoked via migrate.md.
 
 describe('commands/gsd/sync-skills.md', () => {
-  test('sync-skills is now --sync flag on update.md (#2790)', () => {
-    const updateCmd = path.join(__dirname, '../commands/gsd/update.md');
-    assert.ok(fs.existsSync(updateCmd), 'commands/gsd/update.md must exist');
-    const content = fs.readFileSync(updateCmd, 'utf-8');
+  test('sync-skills is routed via migrate.md --sync (#2790)', () => {
+    const migrateCmd = path.join(__dirname, '../commands/gsd/migrate.md');
+    assert.ok(fs.existsSync(migrateCmd), 'commands/gsd/migrate.md must exist');
+    const content = fs.readFileSync(migrateCmd, 'utf-8');
     assert.ok(
-      content.includes('--sync'),
-      'update.md must document --sync flag (absorbed sync-skills)'
+      content.includes('--sync') && content.includes('workflows/sync-skills.md'),
+      'migrate.md must document --sync flag and load workflows/sync-skills.md'
     );
   });
 
   test('sync-skills.md command file is deleted (#2790)', () => {
-    assert.ok(!fs.existsSync(COMMAND), 'commands/gsd/sync-skills.md should be deleted (consolidated into update.md)');
+    assert.ok(!fs.existsSync(COMMAND), 'commands/gsd/sync-skills.md should be deleted (consolidated)');
   });
 });
 
 // ── INVENTORY sync ────────────────────────────────────────────────────────────
 
 describe('INVENTORY sync', () => {
-  test('INVENTORY.md lists /gsd-update --sync command (#2790: absorbed /gsd-sync-skills)', () => {
+  test('INVENTORY.md lists /gsd-migrate --sync command (#2790: absorbed /gsd-sync-skills)', () => {
     const inventory = fs.readFileSync(path.join(__dirname, '../docs/INVENTORY.md'), 'utf-8');
-    assert.ok(inventory.includes('/gsd-update --sync'), 'INVENTORY.md must list /gsd-update --sync (absorbed /gsd-sync-skills in #2790)');
+    assert.ok(inventory.includes('/gsd-migrate --sync'), 'INVENTORY.md must list /gsd-migrate --sync');
   });
 
   test('INVENTORY.md lists sync-skills.md workflow', () => {
@@ -6392,15 +6338,13 @@ describe('INVENTORY sync', () => {
     assert.ok(inventory.includes('sync-skills.md'), 'INVENTORY.md must list sync-skills.md workflow');
   });
 
-  test('INVENTORY-MANIFEST.json includes /gsd-update (#2790: sync-skills absorbed into update.md --sync)', () => {
-    // #2790: /gsd-sync-skills was absorbed into /gsd-update as the --sync flag.
-    // The manifest now records /gsd-update instead of /gsd-sync-skills.
+  test('INVENTORY-MANIFEST.json includes /gsd-migrate (#2790: consolidated update/sync-skills)', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(__dirname, '../docs/INVENTORY-MANIFEST.json'), 'utf-8')
     );
     assert.ok(
-      manifest.families.commands.includes('/gsd-update'),
-      'INVENTORY-MANIFEST.json must include /gsd-update in commands (absorbed /gsd-sync-skills via #2790)'
+      manifest.families.commands.includes('/gsd-migrate'),
+      'INVENTORY-MANIFEST.json must include /gsd-migrate in commands'
     );
   });
 

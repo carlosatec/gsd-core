@@ -12,47 +12,40 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SKILL = path.join(__dirname, '..', 'skills', 'gsd-mempalace-capture', 'SKILL.md');
-const COMMAND = path.join(__dirname, '..', 'commands', 'gsd', 'mempalace-capture.md');
+const CAPTURE_FRAGMENT = path.join(__dirname, '..', 'capabilities', 'mempalace', 'fragments', 'capture-problems.md');
+const RECALL_FRAGMENT = path.join(__dirname, '..', 'capabilities', 'mempalace', 'fragments', 'recall-discuss.md');
+const CURATOR = path.join(__dirname, '..', 'agents', 'gsd-mempalace-curator.md');
 
-describe('#2641 — mempalace-capture gate treats absent capture_artifacts as enabled', () => {
-  test('SKILL.md uses === false (disabled only on explicit false), not !== true', () => {
-    const text = fs.readFileSync(SKILL, 'utf8');
+describe('#2641 — mempalace fragments treat absent default-true toggles as enabled', () => {
+  test('capture-problems.md checks mempalace.capture_artifacts is false (disabled only on explicit false)', () => {
+    const text = fs.readFileSync(CAPTURE_FRAGMENT, 'utf8');
     assert.ok(
-      text.includes('capture_artifacts === false'),
-      'SKILL.md must use capture_artifacts === false (defaults to enabled when absent, matching the schema) — not !== true (#2641)',
+      text.includes('`mempalace.capture_artifacts` is `false`'),
+      'capture-problems.md must gate only on explicit false (`mempalace.capture_artifacts` is `false`), not !== true (#2641)',
     );
     assert.ok(
-      !text.includes('capture_artifacts !== true'),
-      'SKILL.md must NOT use the inverted capture_artifacts !== true check (#2641)',
+      !text.includes('capture_artifacts !== true') && !text.includes('`mempalace.capture_artifacts` is not `true`'),
+      'capture-problems.md must NOT use an inverted !== true check for default-true capture_artifacts (#2641)',
     );
   });
 
-  test('commands/gsd/mempalace-capture.md uses === false, not !== true', () => {
-    const text = fs.readFileSync(COMMAND, 'utf8');
+  test('recall-discuss.md checks mempalace.recall_on_discuss is false (disabled only on explicit false)', () => {
+    const text = fs.readFileSync(RECALL_FRAGMENT, 'utf8');
     assert.ok(
-      text.includes('capture_artifacts === false'),
-      'commands/gsd/mempalace-capture.md must use capture_artifacts === false (#2641)',
+      text.includes('`mempalace.recall_on_discuss` is `false`'),
+      'recall-discuss.md must gate only on explicit false (`mempalace.recall_on_discuss` is `false`), not !== true (#2641)',
     );
     assert.ok(
-      !text.includes('capture_artifacts !== true'),
-      'commands/gsd/mempalace-capture.md must NOT use the inverted check (#2641)',
+      !text.includes('recall_on_discuss !== true') && !text.includes('`mempalace.recall_on_discuss` is not `true`'),
+      'recall-discuss.md must NOT use an inverted !== true check for default-true recall_on_discuss (#2641)',
     );
   });
 });
 
-// #3479 — the #2982/#2641 fix was applied to the capture_artifacts gate but not
-// to the sibling gates on other mempalace sub-toggles whose registry-declared
-// default is `true`. A positive-presence gate ("when `X` is true") treats an
-// absent key as disabled — inverted from the registry default. Every gate on a
-// default-true key must treat absent as enabled (disabled only on an explicit
-// false); every gate on a default-false key must keep requiring positive
-// presence. The hand-maintained commands/gsd/*.md mirrors must stay in lockstep
-// with their skills/*/SKILL.md originals.
+// #3479 — gates on default-true mempalace sub-toggles treat an absent key as
+// enabled (disabled only on explicit false); default-false keys keep requiring
+// positive presence.
 
-const RECALL_SKILL = path.join(__dirname, '..', 'skills', 'gsd-mempalace-recall', 'SKILL.md');
-const RECALL_COMMAND = path.join(__dirname, '..', 'commands', 'gsd', 'mempalace-recall.md');
-const CURATOR = path.join(__dirname, '..', 'agents', 'gsd-mempalace-curator.md');
 const REGISTRY_PATH = path.join(__dirname, '..', 'gsd-core', 'bin', 'lib', 'capability-registry.cjs');
 
 /** Deep-search the mempalace capability for the flat settings schema keyed `mempalace.<key>`. */
@@ -84,51 +77,27 @@ function mempalaceBooleansByDefault() {
 }
 
 describe('#3479 — gates on default-true mempalace keys treat an absent key as enabled', () => {
-  test('capture SKILL.md mirror_kg gate is disabled-only-on-explicit-false', () => {
-    const text = fs.readFileSync(SKILL, 'utf8');
+  test('capture-problems.md uses negative-presence check for capture_artifacts (not positive-presence)', () => {
+    const text = fs.readFileSync(CAPTURE_FRAGMENT, 'utf8');
     assert.ok(
-      text.includes('config.mempalace.mirror_kg === false'),
-      'skills/gsd-mempalace-capture/SKILL.md step 3 must mirror KG facts unless config.mempalace.mirror_kg === false (#3479)',
+      text.includes('`mempalace.capture_artifacts` is `false`'),
+      'capture-problems.md must treat absent capture_artifacts as enabled (#3479)',
     );
     assert.ok(
-      !text.includes('config.mempalace.mirror_kg` is true'),
-      'skills/gsd-mempalace-capture/SKILL.md must NOT gate mirror_kg on positive presence — absent means enabled per the registry default (#3479)',
-    );
-  });
-
-  test('commands/gsd/mempalace-capture.md mirror_kg gate matches the skill', () => {
-    const text = fs.readFileSync(COMMAND, 'utf8');
-    assert.ok(
-      text.includes('config.mempalace.mirror_kg === false'),
-      'commands/gsd/mempalace-capture.md is a hand-maintained mirror of the skill — its mirror_kg gate needs the same fix (#3479)',
-    );
-    assert.ok(
-      !text.includes('config.mempalace.mirror_kg` is true'),
-      'commands/gsd/mempalace-capture.md must NOT gate mirror_kg on positive presence (#3479)',
+      !text.includes('`mempalace.capture_artifacts` is true'),
+      'capture-problems.md must NOT gate capture_artifacts on positive presence (#3479)',
     );
   });
 
-  test('recall SKILL.md mirror_kg gate is disabled-only-on-explicit-false', () => {
-    const text = fs.readFileSync(RECALL_SKILL, 'utf8');
+  test('recall-discuss.md uses negative-presence check for recall_on_discuss (not positive-presence)', () => {
+    const text = fs.readFileSync(RECALL_FRAGMENT, 'utf8');
     assert.ok(
-      text.includes('config.mempalace.mirror_kg !== false'),
-      'skills/gsd-mempalace-recall/SKILL.md KG-facts step must include mirror_kg unless !== false, matching its recall_on_plan gate style (#3479)',
+      text.includes('`mempalace.recall_on_discuss` is `false`'),
+      'recall-discuss.md must treat absent recall_on_discuss as enabled (#3479)',
     );
     assert.ok(
-      !text.includes('config.mempalace.mirror_kg` is true'),
-      'skills/gsd-mempalace-recall/SKILL.md must NOT gate mirror_kg on positive presence (#3479)',
-    );
-  });
-
-  test('commands/gsd/mempalace-recall.md mirror_kg gate matches the skill', () => {
-    const text = fs.readFileSync(RECALL_COMMAND, 'utf8');
-    assert.ok(
-      text.includes('config.mempalace.mirror_kg !== false'),
-      'commands/gsd/mempalace-recall.md is a hand-maintained mirror of the skill — its mirror_kg gate needs the same fix (#3479)',
-    );
-    assert.ok(
-      !text.includes('config.mempalace.mirror_kg` is true'),
-      'commands/gsd/mempalace-recall.md must NOT gate mirror_kg on positive presence (#3479)',
+      !text.includes('`mempalace.recall_on_discuss` is true'),
+      'recall-discuss.md must NOT gate recall_on_discuss on positive presence (#3479)',
     );
   });
 
@@ -155,9 +124,6 @@ describe('#3479 — gates on default-true mempalace keys treat an absent key as 
 
 describe('#3479 — registry parity guard: no default-true mempalace key is positively gated', () => {
   test('every default-true mempalace boolean defaults to enabled in the registry', () => {
-    // Lock the declared defaults the corrected gates depend on: if one of these
-    // flips in the registry, the absence semantics of its prose gates must be
-    // re-audited — fail here so that happens consciously.
     const { defaultTrue } = mempalaceBooleansByDefault();
     for (const key of ['mempalace.capture_artifacts', 'mempalace.mirror_kg', 'mempalace.diary_journal']) {
       assert.ok(defaultTrue.includes(key), `${key} must declare default: true in the capability registry`);
@@ -166,7 +132,7 @@ describe('#3479 — registry parity guard: no default-true mempalace key is posi
 
   test('no gate file uses positive presence for a default-true key', () => {
     const { defaultTrue } = mempalaceBooleansByDefault();
-    const files = [SKILL, COMMAND, RECALL_SKILL, RECALL_COMMAND, CURATOR];
+    const files = [CAPTURE_FRAGMENT, RECALL_FRAGMENT, CURATOR];
     for (const file of files) {
       const text = fs.readFileSync(file, 'utf8');
       for (const key of defaultTrue) {
@@ -186,11 +152,16 @@ describe('#3479 — registry parity guard: no default-true mempalace key is posi
       defaultFalse.includes('mempalace.enabled'),
       'mempalace.enabled must stay default: false — the master switch is opt-in',
     );
-    const capture = fs.readFileSync(SKILL, 'utf8');
+    const capture = fs.readFileSync(CAPTURE_FRAGMENT, 'utf8');
+    const recall = fs.readFileSync(RECALL_FRAGMENT, 'utf8');
     const curator = fs.readFileSync(CURATOR, 'utf8');
     assert.ok(
-      capture.includes('config.mempalace.enabled !== true'),
-      'capture master gate must keep treating an absent mempalace.enabled as disabled (#3479)',
+      capture.includes('`mempalace.enabled` is not `true`'),
+      'capture fragment master gate must keep treating an absent mempalace.enabled as disabled (#3479)',
+    );
+    assert.ok(
+      recall.includes('`mempalace.enabled` is not `true`'),
+      'recall fragment master gate must keep treating an absent mempalace.enabled as disabled (#3479)',
     );
     assert.ok(
       curator.includes('mempalace.enabled !== true'),
